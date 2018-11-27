@@ -32,24 +32,22 @@ typedef struct read_result_t read_result_t;
 typedef struct write_pipeline_t write_pipeline_t;
 typedef struct iocpdesc_t iocpdesc_t;
 
-
 // One per pn_io_t.
 
 struct iocp_t {
-  HANDLE completion_port;
-  pn_hash_t *iocpdesc_map;
-  pn_list_t *zombie_list;
-  unsigned shared_pool_size;
-  char *shared_pool_memory;
-  write_result_t **shared_results;
-  write_result_t **available_results;
-  size_t shared_available_count;
-  size_t writer_count;
-  int loopback_bufsize;
-  bool iocp_trace;
-  pn_selector_t *selector;
+    HANDLE completion_port;
+    pn_hash_t *iocpdesc_map;
+    pn_list_t *zombie_list;
+    unsigned shared_pool_size;
+    char *shared_pool_memory;
+    write_result_t **shared_results;
+    write_result_t **available_results;
+    size_t shared_available_count;
+    size_t writer_count;
+    int loopback_bufsize;
+    bool iocp_trace;
+    pn_selector_t *selector;
 };
-
 
 // One for each socket.
 // This iocpdesc_t structure is ref counted by the iocpdesc_map, zombie_list,
@@ -57,47 +55,48 @@ struct iocp_t {
 // zombie_list until ops_in_progress == 0 or the completion port is closed.
 
 struct iocpdesc_t {
-  pn_socket_t socket;
-  iocp_t *iocp;
-  pni_acceptor_t *acceptor;
-  pn_error_t *error;
-  int ops_in_progress;
-  bool read_in_progress;
-  write_pipeline_t *pipeline;
-  read_result_t *read_result;
-  bool external;       // true if socket set up outside Proton
-  bool bound;          // associted with the completion port
-  bool closing;        // pn_close called by application
-  bool read_closed;    // EOF or read error
-  bool write_closed;   // shutdown sent or write error
-  bool poll_error;     // flag posix-like POLLERR/POLLHUP/POLLNVAL
-  bool deadline_desc;  // Socket-less deadline descriptor for selectors
-  pn_selector_t *selector;
-  pn_selectable_t *selectable;
-  int events;
-  int interests;
-  pn_timestamp_t deadline;
-  iocpdesc_t *triggered_list_next;
-  iocpdesc_t *triggered_list_prev;
-  iocpdesc_t *deadlines_next;
-  iocpdesc_t *deadlines_prev;
-  pn_timestamp_t reap_time;;
+    pn_socket_t socket;
+    iocp_t *iocp;
+    pni_acceptor_t *acceptor;
+    pn_error_t *error;
+    int ops_in_progress;
+    bool read_in_progress;
+    write_pipeline_t *pipeline;
+    read_result_t *read_result;
+    bool external;      // true if socket set up outside Proton
+    bool bound;         // associted with the completion port
+    bool closing;       // pn_close called by application
+    bool read_closed;   // EOF or read error
+    bool write_closed;  // shutdown sent or write error
+    bool poll_error;    // flag posix-like POLLERR/POLLHUP/POLLNVAL
+    bool deadline_desc; // Socket-less deadline descriptor for selectors
+    pn_selector_t *selector;
+    pn_selectable_t *selectable;
+    int events;
+    int interests;
+    pn_timestamp_t deadline;
+    iocpdesc_t *triggered_list_next;
+    iocpdesc_t *triggered_list_prev;
+    iocpdesc_t *deadlines_next;
+    iocpdesc_t *deadlines_prev;
+    pn_timestamp_t reap_time;
+    ;
 };
 
 typedef enum { IOCP_ACCEPT, IOCP_CONNECT, IOCP_READ, IOCP_WRITE } iocp_type_t;
 
 typedef struct {
-  OVERLAPPED overlapped;
-  iocp_type_t type;
-  iocpdesc_t *iocpd;
-  HRESULT status;
+    OVERLAPPED overlapped;
+    iocp_type_t type;
+    iocpdesc_t *iocpd;
+    HRESULT status;
 } iocp_result_t;
 
 struct write_result_t {
-  iocp_result_t base;
-  size_t requested;
-  bool in_use;
-  pn_bytes_t buffer;
+    iocp_result_t base;
+    size_t requested;
+    bool in_use;
+    pn_bytes_t buffer;
 };
 
 iocpdesc_t *pni_iocpdesc_create(iocp_t *, pn_socket_t s, bool external);
@@ -109,15 +108,21 @@ void pni_iocpdesc_start(iocpdesc_t *iocpd);
 void pni_iocp_drain_completions(iocp_t *);
 int pni_iocp_wait_one(iocp_t *, int timeout, pn_error_t *);
 void pni_iocp_start_accepting(iocpdesc_t *iocpd);
-pn_socket_t pni_iocp_end_accept(iocpdesc_t *ld, sockaddr *addr, socklen_t *addrlen, bool *would_block, pn_error_t *error);
-pn_socket_t pni_iocp_begin_connect(iocp_t *, pn_socket_t sock, struct addrinfo *addr, pn_error_t *error);
-ssize_t pni_iocp_begin_write(iocpdesc_t *, const void *, size_t, bool *, pn_error_t *);
-ssize_t pni_iocp_recv(iocpdesc_t *iocpd, void *buf, size_t size, bool *would_block, pn_error_t *error);
+pn_socket_t pni_iocp_end_accept(iocpdesc_t *ld, sockaddr *addr,
+                                socklen_t *addrlen, bool *would_block,
+                                pn_error_t *error);
+pn_socket_t pni_iocp_begin_connect(iocp_t *, pn_socket_t sock,
+                                   struct addrinfo *addr, pn_error_t *error);
+ssize_t pni_iocp_begin_write(iocpdesc_t *, const void *, size_t, bool *,
+                             pn_error_t *);
+ssize_t pni_iocp_recv(iocpdesc_t *iocpd, void *buf, size_t size,
+                      bool *would_block, pn_error_t *error);
 void pni_iocp_begin_close(iocpdesc_t *iocpd);
 iocp_t *pni_iocp();
 
 void pni_events_update(iocpdesc_t *iocpd, int events);
-write_result_t *pni_write_result(iocpdesc_t *iocpd, const char *buf, size_t buflen);
+write_result_t *pni_write_result(iocpdesc_t *iocpd, const char *buf,
+                                 size_t buflen);
 write_pipeline_t *pni_write_pipeline(iocpdesc_t *iocpd);
 size_t pni_write_pipeline_size(write_pipeline_t *);
 bool pni_write_pipeline_writable(write_pipeline_t *);

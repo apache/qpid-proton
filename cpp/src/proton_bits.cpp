@@ -20,8 +20,8 @@
 #include "proton_bits.hpp"
 #include "proton/error_condition.hpp"
 
-#include <string>
 #include <ostream>
+#include <string>
 
 #include <proton/condition.h>
 #include <proton/error.h>
@@ -30,38 +30,47 @@
 namespace proton {
 
 std::string error_str(long code) {
-  switch (code)
-  {
-  case 0: return "ok";
-  case PN_EOS: return "end of data stream";
-  case PN_ERR: return "error";
-  case PN_OVERFLOW: return "overflow";
-  case PN_UNDERFLOW: return "underflow";
-  case PN_STATE_ERR: return "invalid state";
-  case PN_ARG_ERR: return "invalid argument";
-  case PN_TIMEOUT: return "timeout";
-  case PN_INTR: return "interrupt";
-  default: return "unknown error code";
-  }
+    switch (code) {
+    case 0:
+        return "ok";
+    case PN_EOS:
+        return "end of data stream";
+    case PN_ERR:
+        return "error";
+    case PN_OVERFLOW:
+        return "overflow";
+    case PN_UNDERFLOW:
+        return "underflow";
+    case PN_STATE_ERR:
+        return "invalid state";
+    case PN_ARG_ERR:
+        return "invalid argument";
+    case PN_TIMEOUT:
+        return "timeout";
+    case PN_INTR:
+        return "interrupt";
+    default:
+        return "unknown error code";
+    }
 }
 
-std::string error_str(pn_error_t* err, long code) {
+std::string error_str(pn_error_t *err, long code) {
     if (err && pn_error_code(err)) {
-        const char* text = pn_error_text(err);
+        const char *text = pn_error_text(err);
         return text ? std::string(text) : error_str(pn_error_code(err));
     }
     return error_str(code);
 }
 
-std::ostream& operator<<(std::ostream& o, const inspectable& object) {
-    pn_string_t* str = pn_string("");
+std::ostream &operator<<(std::ostream &o, const inspectable &object) {
+    pn_string_t *str = pn_string("");
     pn_inspect(object.value, str);
     o << pn_string_get(str);
     pn_free(str);
     return o;
 }
 
-void set_error_condition(const error_condition& e, pn_condition_t *c) {
+void set_error_condition(const error_condition &e, pn_condition_t *c) {
     pn_condition_clear(c);
 
     if (!e.name().empty()) {
@@ -73,4 +82,4 @@ void set_error_condition(const error_condition& e, pn_condition_t *c) {
     value(pn_condition_info(c)) = e.properties();
 }
 
-}
+} // namespace proton

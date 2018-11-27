@@ -26,8 +26,8 @@
 #include "./internal/export.hpp"
 #include "./internal/object.hpp"
 
-#include <proton/disposition.h>
 #include <iosfwd>
+#include <proton/disposition.h>
 
 /// @file
 /// @copybrief proton::transfer
@@ -39,7 +39,7 @@ namespace proton {
 /// The base class for delivery and tracker.
 class transfer : public internal::object<pn_delivery_t> {
     /// @cond INTERNAL
-    transfer(pn_delivery_t* d) : internal::object<pn_delivery_t>(d) {}
+    transfer(pn_delivery_t *d) : internal::object<pn_delivery_t>(d) {}
     /// @endcond
 
   public:
@@ -54,7 +54,7 @@ class transfer : public internal::object<pn_delivery_t> {
         REJECTED = PN_REJECTED, ///< Settled as rejected
         RELEASED = PN_RELEASED, ///< Settled as released
         MODIFIED = PN_MODIFIED  ///< Settled as modified
-    }; // AMQP spec 3.4 delivery State
+    };                          // AMQP spec 3.4 delivery State
 
     /// Get the remote state for a delivery.
     PN_CPP_EXTERN enum state state() const;
@@ -66,7 +66,7 @@ class transfer : public internal::object<pn_delivery_t> {
     PN_CPP_EXTERN class connection connection() const;
 
     /// Get the work_queue for the transfer.
-    PN_CPP_EXTERN class work_queue& work_queue() const;
+    PN_CPP_EXTERN class work_queue &work_queue() const;
 
     /// Return the container for this transfer.
     PN_CPP_EXTERN class container &container() const;
@@ -78,15 +78,16 @@ class transfer : public internal::object<pn_delivery_t> {
     PN_CPP_EXTERN bool settled() const;
 
     /// @cond INTERNAL
-  friend class internal::factory<transfer>;
+    friend class internal::factory<transfer>;
     /// @endcond
 };
 
 /// Human-readalbe name of the transfer::state
 PN_CPP_EXTERN std::string to_string(enum transfer::state);
 /// Human-readalbe name of the transfer::state
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const enum transfer::state);
+PN_CPP_EXTERN std::ostream &operator<<(std::ostream &,
+                                       const enum transfer::state);
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_TRANSFER_HPP

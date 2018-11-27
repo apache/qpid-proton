@@ -22,8 +22,8 @@
  *
  */
 
-#include <proton/import_export.h>
 #include <proton/codec.h>
+#include <proton/import_export.h>
 #include <proton/type_compat.h>
 #include <stddef.h>
 
@@ -101,7 +101,8 @@ PN_EXTERN const char *pn_condition_get_name(pn_condition_t *condition);
  * @param[in] name the desired name
  * @return an error code or 0 on success
  */
-PN_EXTERN int pn_condition_set_name(pn_condition_t *condition, const char *name);
+PN_EXTERN int pn_condition_set_name(pn_condition_t *condition,
+                                    const char *name);
 
 /**
  * Gets the description associated with the exceptional condition.
@@ -118,7 +119,8 @@ PN_EXTERN const char *pn_condition_get_description(pn_condition_t *condition);
  * @param[in] description the desired description
  * @return an error code or 0 on success
  */
-PN_EXTERN int pn_condition_set_description(pn_condition_t *condition, const char *description);
+PN_EXTERN int pn_condition_set_description(pn_condition_t *condition,
+                                           const char *description);
 
 /**
  * Returns a data object that holds the additional information
@@ -134,12 +136,14 @@ PN_EXTERN pn_data_t *pn_condition_info(pn_condition_t *condition);
 /**
  * Set the name and printf-style formatted description.
  */
-PN_EXTERN int pn_condition_vformat(pn_condition_t *, const char *name, const char *fmt, va_list ap);
+PN_EXTERN int pn_condition_vformat(pn_condition_t *, const char *name,
+                                   const char *fmt, va_list ap);
 
 /**
  * Set the name and printf-style formatted description.
  */
-PN_EXTERN int pn_condition_format(pn_condition_t *, const char *name, const char *fmt, ...);
+PN_EXTERN int pn_condition_format(pn_condition_t *, const char *name,
+                                  const char *fmt, ...);
 
 /**
  * Returns true if the condition is a redirect.
@@ -181,7 +185,7 @@ PN_EXTERN pn_condition_t *pn_condition(void);
 
 /**
  * Free a condition object.
- */  
+ */
 PN_EXTERN void pn_condition_free(pn_condition_t *);
 
 /**

@@ -23,8 +23,8 @@
  */
 
 #include <proton/import_export.h>
-#include <proton/type_compat.h>
 #include <proton/reactor.h>
+#include <proton/type_compat.h>
 
 #ifdef __cplusplus
 extern "C" {

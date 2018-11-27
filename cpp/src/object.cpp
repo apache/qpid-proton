@@ -24,17 +24,18 @@ namespace proton {
 namespace internal {
 
 void pn_ptr_base::incref(void *p) {
-    if (p) ::pn_incref(const_cast<void*>(p));
+    if (p) ::pn_incref(const_cast<void *>(p));
 }
 
 void pn_ptr_base::decref(void *p) {
-    if (p) ::pn_decref(const_cast<void*>(p));
+    if (p) ::pn_decref(const_cast<void *>(p));
 }
 
-std::string pn_ptr_base::inspect(void* p) {
+std::string pn_ptr_base::inspect(void *p) {
     if (!p) return std::string();
-    ::pn_string_t* s = ::pn_string(NULL);
-    (void) ::pn_inspect(p, s);
+    ::pn_string_t *s = ::pn_string(NULL);
+    (void)::pn_inspect(p, s);
     return std::string(pn_string_get(s));
 }
-}}
+} // namespace internal
+} // namespace proton

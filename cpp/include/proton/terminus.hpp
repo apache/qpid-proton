@@ -22,8 +22,8 @@
  *
  */
 
-#include "./types_fwd.hpp"
 #include "./internal/export.hpp"
+#include "./types_fwd.hpp"
 
 #include <proton/terminus.h>
 
@@ -50,7 +50,7 @@ template <class T> class factory;
 /// @see proton::link
 class terminus {
     /// @cond INTERNAL
-    terminus(pn_terminus_t* t);
+    terminus(pn_terminus_t *t);
     /// @endcond
 
   public:
@@ -105,17 +105,18 @@ class terminus {
 
   protected:
     pn_terminus_t *pn_object() const { return object_; }
+
   private:
-    pn_terminus_t* object_;
-    pn_link_t* parent_;
+    pn_terminus_t *object_;
+    pn_link_t *parent_;
 
     /// @cond INTERNAL
-  friend class internal::factory<terminus>;
-  friend class source;
-  friend class target;
+    friend class internal::factory<terminus>;
+    friend class source;
+    friend class target;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_TERMINUS_HPP

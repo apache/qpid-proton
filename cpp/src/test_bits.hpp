@@ -22,147 +22,191 @@
 #include "msg.hpp"
 #include "proton/types.hpp"
 
-#include <stdexcept>
+#include <cstring>
 #include <iostream>
 #include <iterator>
-#include <sstream>
-#include <cstring>
 #include <math.h>
+#include <sstream>
+#include <stdexcept>
 
 namespace test {
 
 struct fail : public std::logic_error {
-    explicit fail(const std::string& what) : logic_error(what) {}
+    explicit fail(const std::string &what) : logic_error(what) {}
 };
 
 struct error : public std::logic_error {
-    explicit error(const std::string& what) : logic_error(what) {}
+    explicit error(const std::string &what) : logic_error(what) {}
 };
 
 template <class T, class U>
-void assert_equal(const T& want, const U& got, const std::string& what) {
-    if (!(want == got))
-        throw fail(MSG(what << " " << want << " != " << got));
+void assert_equal(const T &want, const U &got, const std::string &what) {
+    if (!(want == got)) throw fail(MSG(what << " " << want << " != " << got));
 }
 
 template <class T>
-inline void assert_equalish(T want, T got, T delta, const std::string& what)
-{
-    if (!(fabs(want-got) <= delta))
+inline void assert_equalish(T want, T got, T delta, const std::string &what) {
+    if (!(fabs(want - got) <= delta))
         throw fail(MSG(what << " " << want << " !=~ " << got));
 }
 
-void assert_substring(const std::string& want, const std::string& got, const std::string& what) {
+void assert_substring(const std::string &want, const std::string &got,
+                      const std::string &what) {
     if (got.find(want) == std::string::npos)
-        throw fail(MSG(what << " '" << want << "' not found in '" << got << "'"));
+        throw fail(
+            MSG(what << " '" << want << "' not found in '" << got << "'"));
 }
 
 #define FAIL_MSG(WHAT) (MSG(__FILE__ << ":" << __LINE__ << ": " << WHAT).str())
 #define FAIL(WHAT) throw test::fail(FAIL_MSG(WHAT))
-#define ASSERT(TEST) do { if (!(TEST)) FAIL("failed ASSERT(" #TEST ")"); } while(false)
-#define ASSERT_EQUAL(WANT, GOT) \
-    test::assert_equal((WANT), (GOT), FAIL_MSG("failed ASSERT_EQUAL(" #WANT ", " #GOT ")"))
-#define ASSERT_EQUALISH(WANT, GOT, DELTA) \
-    test::assert_equalish((WANT), (GOT), (DELTA), FAIL_MSG("failed ASSERT_EQUALISH(" #WANT ", " #GOT ")"))
-#define ASSERT_SUBSTRING(WANT, GOT) \
-    test::assert_substring((WANT), (GOT), FAIL_MSG("failed ASSERT_SUBSTRING(" #WANT ", " #GOT ")"))
-#define ASSERT_THROWS(WANT, EXPR) do { try { EXPR; FAIL("Expected " #WANT); } catch(const WANT&) {} } while(0)
-#define ASSERT_THROWS_MSG(CLASS, MSG, EXPR) do { try { EXPR; FAIL("Expected " #CLASS); } catch(const CLASS& e) { ASSERT_SUBSTRING((MSG), e.what()); } } while(0)
+#define ASSERT(TEST)                                                           \
+    do {                                                                       \
+        if (!(TEST)) FAIL("failed ASSERT(" #TEST ")");                         \
+    } while (false)
+#define ASSERT_EQUAL(WANT, GOT)                                                \
+    test::assert_equal((WANT), (GOT),                                          \
+                       FAIL_MSG("failed ASSERT_EQUAL(" #WANT ", " #GOT ")"))
+#define ASSERT_EQUALISH(WANT, GOT, DELTA)                                      \
+    test::assert_equalish(                                                     \
+        (WANT), (GOT), (DELTA),                                                \
+        FAIL_MSG("failed ASSERT_EQUALISH(" #WANT ", " #GOT ")"))
+#define ASSERT_SUBSTRING(WANT, GOT)                                            \
+    test::assert_substring(                                                    \
+        (WANT), (GOT),                                                         \
+        FAIL_MSG("failed ASSERT_SUBSTRING(" #WANT ", " #GOT ")"))
+#define ASSERT_THROWS(WANT, EXPR)                                              \
+    do {                                                                       \
+        try {                                                                  \
+            EXPR;                                                              \
+            FAIL("Expected " #WANT);                                           \
+        } catch (const WANT &) {                                               \
+        }                                                                      \
+    } while (0)
+#define ASSERT_THROWS_MSG(CLASS, MSG, EXPR)                                    \
+    do {                                                                       \
+        try {                                                                  \
+            EXPR;                                                              \
+            FAIL("Expected " #CLASS);                                          \
+        } catch (const CLASS &e) {                                             \
+            ASSERT_SUBSTRING((MSG), e.what());                                 \
+        }                                                                      \
+    } while (0)
 
-#define RUN_TEST(BAD_COUNT, TEST)                                       \
-    do {                                                                \
-        try {                                                           \
-            std::cout << "TEST: " << #TEST << std::endl;                \
-            TEST;                                                       \
-            break;                                                      \
-        } catch(const test::fail& e) {                                  \
-            std::cout << "FAIL " << #TEST << std::endl << e.what() << std::endl; \
-        } catch(const std::exception& e) {                              \
-            std::cout << "ERROR " << #TEST << std::endl << __FILE__ << ":" << __LINE__ << ": " << e.what() << std::endl; \
-        } catch(...) {                                                  \
-            std::cout << "ERROR " << #TEST << std::endl << __FILE__ << ":" << __LINE__ << ": (unknown)" << std::endl; \
-        }                                                               \
-        ++BAD_COUNT;                                                    \
-    } while(0)
+#define RUN_TEST(BAD_COUNT, TEST)                                              \
+    do {                                                                       \
+        try {                                                                  \
+            std::cout << "TEST: " << #TEST << std::endl;                       \
+            TEST;                                                              \
+            break;                                                             \
+        } catch (const test::fail &e) {                                        \
+            std::cout << "FAIL " << #TEST << std::endl                         \
+                      << e.what() << std::endl;                                \
+        } catch (const std::exception &e) {                                    \
+            std::cout << "ERROR " << #TEST << std::endl                        \
+                      << __FILE__ << ":" << __LINE__ << ": " << e.what()       \
+                      << std::endl;                                            \
+        } catch (...) {                                                        \
+            std::cout << "ERROR " << #TEST << std::endl                        \
+                      << __FILE__ << ":" << __LINE__ << ": (unknown)"          \
+                      << std::endl;                                            \
+        }                                                                      \
+        ++BAD_COUNT;                                                           \
+    } while (0)
 
-/* Like RUN_TEST but only if one of the argv strings is found in the test EXPR */
-#define RUN_ARGV_TEST(BAD_COUNT, EXPR) do {     \
-    if (argc == 1) {                            \
-      RUN_TEST(BAD_COUNT, EXPR);                \
-    } else {                                    \
-      for (int i = 1; i < argc; ++i) {          \
-        if (strstr(#EXPR, argv[i])) {           \
-            RUN_TEST(BAD_COUNT, EXPR);          \
-          break;                                \
-        }                                       \
-      }                                         \
-    }                                           \
-  } while(0)
+/* Like RUN_TEST but only if one of the argv strings is found in the test EXPR
+ */
+#define RUN_ARGV_TEST(BAD_COUNT, EXPR)                                         \
+    do {                                                                       \
+        if (argc == 1) {                                                       \
+            RUN_TEST(BAD_COUNT, EXPR);                                         \
+        } else {                                                               \
+            for (int i = 1; i < argc; ++i) {                                   \
+                if (strstr(#EXPR, argv[i])) {                                  \
+                    RUN_TEST(BAD_COUNT, EXPR);                                 \
+                    break;                                                     \
+                }                                                              \
+            }                                                                  \
+        }                                                                      \
+    } while (0)
 
-
-template<class T> std::string str(const T& x) {
-    std::ostringstream s; s << std::boolalpha << x; return s.str();
+template <class T> std::string str(const T &x) {
+    std::ostringstream s;
+    s << std::boolalpha << x;
+    return s.str();
 }
 
-// A way to easily create literal collections that can be compared to std:: collections
-// and to print std collections
-// e.g.
+// A way to easily create literal collections that can be compared to std::
+// collections and to print std collections e.g.
 //     std::vector<string> v = ...;
 //     ASSERT_EQUAL(many<string>() + "a" + "b" + "c", v);
 template <class T> struct many : public std::vector<T> {
     many() {}
-    template<class S> explicit many(const S& s) : std::vector<T>(s.begin(), s.end()) {}
-    many& operator+=(const T& t) { this->push_back(t); return *this; }
-    many& operator<<(const T& t) { return *this += t; }
-    many operator+(const T& t) { many<T> l(*this); return l += t; }
+    template <class S>
+    explicit many(const S &s) : std::vector<T>(s.begin(), s.end()) {}
+    many &operator+=(const T &t) {
+        this->push_back(t);
+        return *this;
+    }
+    many &operator<<(const T &t) { return *this += t; }
+    many operator+(const T &t) {
+        many<T> l(*this);
+        return l += t;
+    }
 };
 
-template <class T, class S> bool operator==(const many<T>& m, const S& s) {
+template <class T, class S> bool operator==(const many<T> &m, const S &s) {
     return m.size() == s.size() && S(m.begin(), m.end()) == s;
 }
 
-template <class T, class S> bool operator==(const S& s, const many<T>& m) {
+template <class T, class S> bool operator==(const S &s, const many<T> &m) {
     return m.size() == s.size() && S(m.begin(), m.end()) == s;
 }
 
-template <class T> std::ostream& operator<<(std::ostream& o, const many<T>& m) {
+template <class T> std::ostream &operator<<(std::ostream &o, const many<T> &m) {
     std::ostream_iterator<T> oi(o, " ");
     std::copy(m.begin(), m.end(), oi);
     return o;
 }
 
-}
+} // namespace test
 
 namespace std {
-template <class T> std::ostream& operator<<(std::ostream& o, const std::vector<T>& s) {
+template <class T>
+std::ostream &operator<<(std::ostream &o, const std::vector<T> &s) {
     return o << test::many<T>(s);
 }
 
-template <class T> std::ostream& operator<<(std::ostream& o, const std::deque<T>& s) {
+template <class T>
+std::ostream &operator<<(std::ostream &o, const std::deque<T> &s) {
     return o << test::many<T>(s);
 }
 
-template <class T> std::ostream& operator<<(std::ostream& o, const std::list<T>& s) {
+template <class T>
+std::ostream &operator<<(std::ostream &o, const std::list<T> &s) {
     return o << test::many<T>(s);
 }
 
-template <class K, class T> std::ostream& operator<<(std::ostream& o, const std::map<K, T>& x) {
-    return o << test::many<std::pair<K, T> >(x);
+template <class K, class T>
+std::ostream &operator<<(std::ostream &o, const std::map<K, T> &x) {
+    return o << test::many<std::pair<K, T>>(x);
 }
 
-template <class U, class V> std::ostream& operator<<(std::ostream& o, const std::pair<U, V>& p) {
+template <class U, class V>
+std::ostream &operator<<(std::ostream &o, const std::pair<U, V> &p) {
     return o << "( " << p.first << " , " << p.second << " )";
 }
 
 #if PN_CPP_HAS_CPP11
-template <class K, class T> std::ostream& operator<<(std::ostream& o, const std::unordered_map<K, T>& x) {
-    return o << test::many<std::pair<const K, T> >(x);
+template <class K, class T>
+std::ostream &operator<<(std::ostream &o, const std::unordered_map<K, T> &x) {
+    return o << test::many<std::pair<const K, T>>(x);
 }
 
-template <class T> std::ostream& operator<<(std::ostream& o, const std::forward_list<T>& s) {
+template <class T>
+std::ostream &operator<<(std::ostream &o, const std::forward_list<T> &s) {
     return o << test::many<T>(s);
 }
 #endif
-}
+} // namespace std
 
 #endif // TEST_BITS_HPP

@@ -22,9 +22,9 @@
  *
  */
 
-#include "proton/work_queue.hpp"
-#include "proton/message.hpp"
 #include "proton/internal/pn_unique_ptr.hpp"
+#include "proton/message.hpp"
+#include "proton/work_queue.hpp"
 
 struct pn_record_t;
 struct pn_link_t;
@@ -37,32 +37,36 @@ namespace proton {
 class proton_handler;
 class connector;
 
-namespace io {class link_namer;}
+namespace io {
+class link_namer;
+}
 
 // Base class for C++ classes that are used as proton contexts.
-// Contexts are pn_objects managed by pn reference counts, the C++ value is allocated in-place.
+// Contexts are pn_objects managed by pn reference counts, the C++ value is
+// allocated in-place.
 class context {
   public:
     // identifies a context, contains a record pointer and a handle.
-    typedef std::pair<pn_record_t*, pn_handle_t> id;
+    typedef std::pair<pn_record_t *, pn_handle_t> id;
 
     virtual ~context();
 
     // Allocate a default-constructed T as a proton object.
     // T must be a subclass of context.
-    template <class T> static T *create() { return new(alloc(sizeof(T))) T(); }
+    template <class T> static T *create() { return new (alloc(sizeof(T))) T(); }
 
     // The pn_class for a context
-    static pn_class_t* pn_class();
+    static pn_class_t *pn_class();
 
-    // Get the context identified by id as a C++ T*, return null pointer if not present.
-    template <class T> static T* ptr(id id_) {
-        return reinterpret_cast<T*>(pn_record_get(id_.first, id_.second));
+    // Get the context identified by id as a C++ T*, return null pointer if not
+    // present.
+    template <class T> static T *ptr(id id_) {
+        return reinterpret_cast<T *>(pn_record_get(id_.first, id_.second));
     }
 
     // If the context is not present, create it with value x.
-    template <class T> static T& ref(id id_) {
-        T* ctx = context::ptr<T>(id_);
+    template <class T> static T &ref(id id_) {
+        T *ctx = context::ptr<T>(id_);
         if (!ctx) {
             ctx = create<T>();
             pn_record_def(id_.first, id_.second, pn_class());
@@ -83,25 +87,25 @@ class reconnect_context;
 class connection_context : public context {
   public:
     connection_context();
-    static connection_context& get(pn_connection_t *c);
+    static connection_context &get(pn_connection_t *c);
 
-    class container* container;
+    class container *container;
     pn_session_t *default_session; // Owned by connection.
-    message event_message;      // re-used by messaging_adapter for performance.
-    io::link_namer* link_gen;      // Link name generator.
+    message event_message;    // re-used by messaging_adapter for performance.
+    io::link_namer *link_gen; // Link name generator.
 
-    messaging_handler* handler;
+    messaging_handler *handler;
     std::string connected_address_;
     internal::pn_unique_ptr<connection_options> connection_options_;
     internal::pn_unique_ptr<reconnect_context> reconnect_context_;
-    listener_context* listener_context_;
+    listener_context *listener_context_;
     work_queue work_queue_;
 };
 
 // This is not a context object on its own, but an optional part of connection
 class reconnect_context {
   public:
-    reconnect_context(const reconnect_options& ro);
+    reconnect_context(const reconnect_options &ro);
 
     internal::pn_unique_ptr<const reconnect_options> reconnect_options_;
     duration delay_;
@@ -113,18 +117,20 @@ class reconnect_context {
 class listener_context : public context {
   public:
     listener_context();
-    static listener_context& get(pn_listener_t* c);
+    static listener_context &get(pn_listener_t *c);
 
-    listen_handler* listen_handler_;
+    listen_handler *listen_handler_;
     internal::pn_unique_ptr<const connection_options> connection_options_;
 };
 
 class link_context : public context {
   public:
-    link_context() : handler(0), credit_window(10), pending_credit(0), auto_accept(true), auto_settle(true), draining(false) {}
-    static link_context& get(pn_link_t* l);
+    link_context()
+        : handler(0), credit_window(10), pending_credit(0), auto_accept(true),
+          auto_settle(true), draining(false) {}
+    static link_context &get(pn_link_t *l);
 
-    messaging_handler* handler;
+    messaging_handler *handler;
     int credit_window;
     uint32_t pending_credit;
     bool auto_accept;
@@ -135,11 +141,11 @@ class link_context : public context {
 class session_context : public context {
   public:
     session_context() : handler(0) {}
-    static session_context& get(pn_session_t* s);
+    static session_context &get(pn_session_t *s);
 
-    messaging_handler* handler;
+    messaging_handler *handler;
 };
 
-}
+} // namespace proton
 
-#endif  /*!PROTON_CPP_CONTEXTS_H*/
+#endif /*!PROTON_CPP_CONTEXTS_H*/

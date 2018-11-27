@@ -38,7 +38,7 @@ namespace internal {
 
 data data::create() { return internal::take_ownership(pn_data(0)).get(); }
 
-void data::copy(const data& x) { ::pn_data_copy(pn_object(), x.pn_object()); }
+void data::copy(const data &x) { ::pn_data_copy(pn_object(), x.pn_object()); }
 
 void data::clear() { ::pn_data_clear(pn_object()); }
 
@@ -46,25 +46,31 @@ void data::rewind() { ::pn_data_rewind(pn_object()); }
 
 bool data::empty() const { return ::pn_data_size(pn_object()) == 0; }
 
-const void* data::point() const { return pn_data_point(pn_object()); }
+const void *data::point() const { return pn_data_point(pn_object()); }
 
-void data::restore(const void* h) { pn_data_restore(pn_object(), pn_handle_t(h)); }
+void data::restore(const void *h) {
+    pn_data_restore(pn_object(), pn_handle_t(h));
+}
 
 void data::narrow() { pn_data_narrow(pn_object()); }
 
 void data::widen() { pn_data_widen(pn_object()); }
 
-int data::append(data src) { return pn_data_append(pn_object(), src.pn_object());}
+int data::append(data src) {
+    return pn_data_append(pn_object(), src.pn_object());
+}
 
-int data::appendn(data src, int limit) { return pn_data_appendn(pn_object(), src.pn_object(), limit);}
+int data::appendn(data src, int limit) {
+    return pn_data_appendn(pn_object(), src.pn_object(), limit);
+}
 
 bool data::next() { return pn_data_next(pn_object()); }
 
-std::ostream& operator<<(std::ostream& o, const data& d) {
-    state_guard sg(const_cast<data&>(d));
-    const_cast<data&>(d).rewind();
+std::ostream &operator<<(std::ostream &o, const data &d) {
+    state_guard sg(const_cast<data &>(d));
+    const_cast<data &>(d).rewind();
     return o << inspectable(d.pn_object());
 }
 
-} // internal
-} // proton
+} // namespace internal
+} // namespace proton

@@ -36,8 +36,8 @@ namespace proton {
 /// A network channel supporting an AMQP connection.
 class transport : public internal::object<pn_transport_t> {
     /// @cond INTERNAL
-    transport(pn_transport_t* t) : internal::object<pn_transport_t>(t) {}
-    /// @endcond 
+    transport(pn_transport_t *t) : internal::object<pn_transport_t>(t) {}
+    /// @endcond
 
   public:
     /// Create an empty transport.
@@ -60,6 +60,6 @@ class transport : public internal::object<pn_transport_t> {
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_TRANSPORT_HPP

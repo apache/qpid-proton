@@ -22,9 +22,9 @@
  *
  */
 
+#include <proton/condition.h>
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
-#include <proton/condition.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -107,7 +107,8 @@ typedef struct pn_disposition_t pn_disposition_t;
 PN_EXTERN uint64_t pn_disposition_type(pn_disposition_t *disposition);
 
 /**
- * Name of a disposition type for logging and debugging: "received", "accepted" etc.
+ * Name of a disposition type for logging and debugging: "received", "accepted"
+ * etc.
  */
 PN_EXTERN const char *pn_disposition_type_name(uint64_t disposition_type);
 
@@ -126,7 +127,8 @@ PN_EXTERN const char *pn_disposition_type_name(uint64_t disposition_type);
  * @param[in] disposition a disposition object
  * @return a pointer to the disposition condition
  */
-PN_EXTERN pn_condition_t *pn_disposition_condition(pn_disposition_t *disposition);
+PN_EXTERN pn_condition_t *
+pn_disposition_condition(pn_disposition_t *disposition);
 
 /**
  * Access the disposition as a raw pn_data_t.
@@ -151,7 +153,8 @@ PN_EXTERN pn_data_t *pn_disposition_data(pn_disposition_t *disposition);
  * @param[in] disposition a disposition object
  * @return a section number
  */
-PN_EXTERN uint32_t pn_disposition_get_section_number(pn_disposition_t *disposition);
+PN_EXTERN uint32_t
+pn_disposition_get_section_number(pn_disposition_t *disposition);
 
 /**
  * Set the section number associated with a disposition.
@@ -159,7 +162,8 @@ PN_EXTERN uint32_t pn_disposition_get_section_number(pn_disposition_t *dispositi
  * @param[in] disposition a disposition object
  * @param[in] section_number a section number
  */
-PN_EXTERN void pn_disposition_set_section_number(pn_disposition_t *disposition, uint32_t section_number);
+PN_EXTERN void pn_disposition_set_section_number(pn_disposition_t *disposition,
+                                                 uint32_t section_number);
 
 /**
  * Get the section offset associated with a disposition.
@@ -167,7 +171,8 @@ PN_EXTERN void pn_disposition_set_section_number(pn_disposition_t *disposition, 
  * @param[in] disposition a disposition object
  * @return a section offset
  */
-PN_EXTERN uint64_t pn_disposition_get_section_offset(pn_disposition_t *disposition);
+PN_EXTERN uint64_t
+pn_disposition_get_section_offset(pn_disposition_t *disposition);
 
 /**
  * Set the section offset associated with a disposition.
@@ -175,7 +180,8 @@ PN_EXTERN uint64_t pn_disposition_get_section_offset(pn_disposition_t *dispositi
  * @param[in] disposition a disposition object
  * @param[in] section_offset a section offset
  */
-PN_EXTERN void pn_disposition_set_section_offset(pn_disposition_t *disposition, uint64_t section_offset);
+PN_EXTERN void pn_disposition_set_section_offset(pn_disposition_t *disposition,
+                                                 uint64_t section_offset);
 
 /**
  * Check if a disposition has the failed flag set.
@@ -191,13 +197,15 @@ PN_EXTERN bool pn_disposition_is_failed(pn_disposition_t *disposition);
  * @param[in] disposition a disposition object
  * @param[in] failed the value of the failed flag
  */
-PN_EXTERN void pn_disposition_set_failed(pn_disposition_t *disposition, bool failed);
+PN_EXTERN void pn_disposition_set_failed(pn_disposition_t *disposition,
+                                         bool failed);
 
 /**
  * Check if a disposition has the undeliverable flag set.
  *
  * @param[in] disposition a disposition object
- * @return true if the disposition has the undeliverable flag set, false otherwise
+ * @return true if the disposition has the undeliverable flag set, false
+ * otherwise
  */
 PN_EXTERN bool pn_disposition_is_undeliverable(pn_disposition_t *disposition);
 
@@ -207,7 +215,8 @@ PN_EXTERN bool pn_disposition_is_undeliverable(pn_disposition_t *disposition);
  * @param[in] disposition a disposition object
  * @param[in] undeliverable the value of the undeliverable flag
  */
-PN_EXTERN void pn_disposition_set_undeliverable(pn_disposition_t *disposition, bool undeliverable);
+PN_EXTERN void pn_disposition_set_undeliverable(pn_disposition_t *disposition,
+                                                bool undeliverable);
 
 /**
  * Access the annotations associated with a disposition.

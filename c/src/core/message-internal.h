@@ -29,10 +29,10 @@ extern "C" {
 /** @cond INTERNAL */
 
 /** Construct a message with extra storage */
-PN_EXTERN pn_message_t * pni_message_with_extra(size_t extra);
+PN_EXTERN pn_message_t *pni_message_with_extra(size_t extra);
 
 /** Pointer to extra space allocated by pn_message_with_extra(). */
-PN_EXTERN void* pni_message_get_extra(pn_message_t *msg);
+PN_EXTERN void *pni_message_get_extra(pn_message_t *msg);
 
 /** @endcond */
 

@@ -1,5 +1,5 @@
 /*
-* Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -22,10 +22,13 @@
 
 namespace proton {
 namespace connect_config {
-namespace { const error nope("connection configuration is not supported"); }
+namespace {
+const error nope("connection configuration is not supported");
+}
 
 std::string default_file() { throw nope; }
-std::string parse(std::istream& is, connection_options& opts)  { throw nope; }
-std::string parse_default(proton::connection_options&)  { throw nope; }
+std::string parse(std::istream &is, connection_options &opts) { throw nope; }
+std::string parse_default(proton::connection_options &) { throw nope; }
 
-}} // namespace proton::connect_config
+} // namespace connect_config
+} // namespace proton

@@ -41,24 +41,25 @@ class PN_CPP_CLASS_EXTERN listen_handler {
     PN_CPP_EXTERN virtual ~listen_handler();
 
     /// Called when the listener is opened successfully.
-    PN_CPP_EXTERN virtual void on_open(listener&);
+    PN_CPP_EXTERN virtual void on_open(listener &);
 
     /// Called for each accepted connection.
     ///
-    /// Returns connection_options to apply, including a proton::messaging_handler for
-    /// the connection.  messaging_handler::on_connection_open() will be called with
-    /// the proton::connection, it can call connection::open() to accept or
+    /// Returns connection_options to apply, including a
+    /// proton::messaging_handler for the connection.
+    /// messaging_handler::on_connection_open() will be called with the
+    /// proton::connection, it can call connection::open() to accept or
     /// connection::close() to reject the connection.
-    PN_CPP_EXTERN virtual connection_options on_accept(listener&);
+    PN_CPP_EXTERN virtual connection_options on_accept(listener &);
 
     /// Called if there is a listening error, with an error message.
     /// close() will also be called.
-    PN_CPP_EXTERN virtual void on_error(listener&, const std::string&);
+    PN_CPP_EXTERN virtual void on_error(listener &, const std::string &);
 
     /// Called when this listen_handler is no longer needed, and can be deleted.
-    PN_CPP_EXTERN virtual void on_close(listener&);
+    PN_CPP_EXTERN virtual void on_close(listener &);
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_LISTEN_HANDLER_HPP

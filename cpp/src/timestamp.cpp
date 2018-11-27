@@ -27,10 +27,10 @@
 
 namespace proton {
 
-timestamp timestamp::now() {
-    return timestamp( pn_proactor_now() );
+timestamp timestamp::now() { return timestamp(pn_proactor_now()); }
+
+std::ostream &operator<<(std::ostream &o, timestamp ts) {
+    return o << ts.milliseconds();
 }
 
-std::ostream& operator<<(std::ostream& o, timestamp ts) { return o << ts.milliseconds(); }
-
-}
+} // namespace proton

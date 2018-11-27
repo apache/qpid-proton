@@ -35,14 +35,14 @@ class hello_world : public proton::messaging_handler {
     std::string addr_;
 
   public:
-    hello_world(const std::string& u, const std::string& a) :
-        conn_url_(u), addr_(a) {}
+    hello_world(const std::string &u, const std::string &a)
+        : conn_url_(u), addr_(a) {}
 
-    void on_container_start(proton::container& c) OVERRIDE {
+    void on_container_start(proton::container &c) OVERRIDE {
         c.connect(conn_url_);
     }
 
-    void on_connection_open(proton::connection& c) OVERRIDE {
+    void on_connection_open(proton::connection &c) OVERRIDE {
         c.open_receiver(addr_);
         c.open_sender(addr_);
     }
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
         proton::container(hw).run();
 
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

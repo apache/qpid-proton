@@ -27,96 +27,81 @@
 
 #ifdef PN_WINAPI
 #include <windows.h>
-int pn_i_getpid() {
-  return (int) GetCurrentProcessId();
-}
+int pn_i_getpid() { return (int)GetCurrentProcessId(); }
 #else
 #include <unistd.h>
-int pn_i_getpid() {
-  return (int) getpid();
-}
+int pn_i_getpid() { return (int)getpid(); }
 #endif
 
-void pni_vfatal(const char *fmt, va_list ap)
-{
-  vfprintf(stderr, fmt, ap);
-  abort();
+void pni_vfatal(const char *fmt, va_list ap) {
+    vfprintf(stderr, fmt, ap);
+    abort();
 }
 
-void pni_fatal(const char *fmt, ...)
-{
-  va_list ap;
-  va_start(ap, fmt);
-  pni_vfatal(fmt, ap);
-  va_end(ap);
+void pni_fatal(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    pni_vfatal(fmt, ap);
+    va_end(ap);
 }
 
 /* Allow for systems that do not implement clock_gettime()*/
 #ifdef USE_CLOCK_GETTIME
 #include <time.h>
-pn_timestamp_t pn_i_now(void)
-{
-  struct timespec now;
-  if (clock_gettime(CLOCK_REALTIME, &now)) pni_fatal("clock_gettime() failed\n");
-  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_nsec / 1000000);
+pn_timestamp_t pn_i_now(void) {
+    struct timespec now;
+    if (clock_gettime(CLOCK_REALTIME, &now))
+        pni_fatal("clock_gettime() failed\n");
+    return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_nsec / 1000000);
 }
 #elif defined(USE_WIN_FILETIME)
 #include <windows.h>
-pn_timestamp_t pn_i_now(void)
-{
-  FILETIME now;
-  GetSystemTimeAsFileTime(&now);
-  ULARGE_INTEGER t;
-  t.u.HighPart = now.dwHighDateTime;
-  t.u.LowPart = now.dwLowDateTime;
-  // Convert to milliseconds and adjust base epoch
-  return t.QuadPart / 10000 - 11644473600000;
+pn_timestamp_t pn_i_now(void) {
+    FILETIME now;
+    GetSystemTimeAsFileTime(&now);
+    ULARGE_INTEGER t;
+    t.u.HighPart = now.dwHighDateTime;
+    t.u.LowPart = now.dwLowDateTime;
+    // Convert to milliseconds and adjust base epoch
+    return t.QuadPart / 10000 - 11644473600000;
 }
 #else
 #include <sys/time.h>
-pn_timestamp_t pn_i_now(void)
-{
-  struct timeval now;
-  if (gettimeofday(&now, NULL)) pni_fatal("gettimeofday failed\n");
-  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
+pn_timestamp_t pn_i_now(void) {
+    struct timeval now;
+    if (gettimeofday(&now, NULL)) pni_fatal("gettimeofday failed\n");
+    return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
 }
 #endif
 
-#include <string.h>
 #include <stdio.h>
-static void pn_i_strerror(int errnum, char *buf, size_t buflen)
-{
-  // PROTON-1029 provide a simple default in case strerror fails
-  pni_snprintf(buf, buflen, "errno: %d", errnum);
+#include <string.h>
+static void pn_i_strerror(int errnum, char *buf, size_t buflen) {
+    // PROTON-1029 provide a simple default in case strerror fails
+    pni_snprintf(buf, buflen, "errno: %d", errnum);
 #ifdef USE_STRERROR_R
-  strerror_r(errnum, buf, buflen);
+    strerror_r(errnum, buf, buflen);
 #elif USE_STRERROR_S
-  strerror_s(buf, buflen, errnum);
+    strerror_s(buf, buflen, errnum);
 #elif USE_OLD_STRERROR
-  strncpy(buf, strerror(errnum), buflen);
+    strncpy(buf, strerror(errnum), buflen);
 #endif
 }
 
-int pn_i_error_from_errno(pn_error_t *error, const char *msg)
-{
-  char err[1024];
-  pn_i_strerror(errno, err, 1024);
-  int code = PN_ERR;
-  if (errno == EINTR)
-      code = PN_INTR;
-  return pn_error_format(error, code, "%s: %s", msg, err);
+int pn_i_error_from_errno(pn_error_t *error, const char *msg) {
+    char err[1024];
+    pn_i_strerror(errno, err, 1024);
+    int code = PN_ERR;
+    if (errno == EINTR) code = PN_INTR;
+    return pn_error_format(error, code, "%s: %s", msg, err);
 }
 
 #ifdef USE_ATOLL
 #include <stdlib.h>
-int64_t pn_i_atoll(const char* num) {
-  return atoll(num);
-}
+int64_t pn_i_atoll(const char *num) { return atoll(num); }
 #elif USE_ATOI64
 #include <stdlib.h>
-int64_t pn_i_atoll(const char* num) {
-  return _atoi64(num);
-}
+int64_t pn_i_atoll(const char *num) { return _atoi64(num); }
 #else
 #error "Don't know how to convert int64_t values on this platform"
 #endif

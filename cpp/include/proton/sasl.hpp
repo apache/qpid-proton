@@ -22,8 +22,8 @@
  *
  */
 
-#include "./internal/export.hpp"
 #include "./internal/config.hpp"
+#include "./internal/export.hpp"
 #include "./internal/object.hpp"
 
 #include <proton/sasl.h>
@@ -38,7 +38,7 @@ namespace proton {
 /// SASL information.
 class sasl {
     /// @cond INTERNAL
-    sasl(pn_sasl_t* s) : object_(s) {}
+    sasl(pn_sasl_t *s) : object_(s) {}
     /// @endcond
 
 #if PN_CPP_HAS_DELETED_FUNCTIONS
@@ -50,12 +50,12 @@ class sasl {
   public:
     /// The result of the SASL negotiation.
     enum outcome {
-        NONE = PN_SASL_NONE,   ///< Negotiation not completed
-        OK = PN_SASL_OK,       ///< Authentication succeeded
-        AUTH = PN_SASL_AUTH,   ///< Failed due to bad credentials
-        SYS = PN_SASL_SYS,     ///< Failed due to a system error
-        PERM = PN_SASL_PERM,   ///< Failed due to unrecoverable error
-        TEMP = PN_SASL_TEMP    ///< Failed due to transient error
+        NONE = PN_SASL_NONE, ///< Negotiation not completed
+        OK = PN_SASL_OK,     ///< Authentication succeeded
+        AUTH = PN_SASL_AUTH, ///< Failed due to bad credentials
+        SYS = PN_SASL_SYS,   ///< Failed due to a system error
+        PERM = PN_SASL_PERM, ///< Failed due to unrecoverable error
+        TEMP = PN_SASL_TEMP  ///< Failed due to transient error
     };
 
     /// Get the outcome.
@@ -69,12 +69,12 @@ class sasl {
 
     /// @cond INTERNAL
   private:
-    pn_sasl_t* const object_;
+    pn_sasl_t *const object_;
 
     friend class transport;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_SASL_HPP

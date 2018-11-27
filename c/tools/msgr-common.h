@@ -44,50 +44,49 @@
 #define PRIu64 "ul"
 #endif
 
-
-#include "proton/types.h"
 #include "proton/message.h"
+#include "proton/types.h"
 
 void msgr_die(const char *file, int line, const char *message);
-char *msgr_strdup( const char *src );
+char *msgr_strdup(const char *src);
 pn_timestamp_t msgr_now(void);
-void parse_password( const char *, char ** );
+void parse_password(const char *, char **);
 
-#define check_messenger(m)  \
-  { check(pn_messenger_errno(m) == 0, pn_error_text(pn_messenger_error(m))) }
+#define check_messenger(m)                                                     \
+    { check(pn_messenger_errno(m) == 0, pn_error_text(pn_messenger_error(m))) }
 
-#define check( expression, message )  \
-  { if (!(expression)) msgr_die(__FILE__,__LINE__, message); }
-
+#define check(expression, message)                                             \
+    {                                                                          \
+        if (!(expression)) msgr_die(__FILE__, __LINE__, message);              \
+    }
 
 // manage an ordered list of addresses
 
 typedef struct {
-  const char **addresses;
-  int size;     // room in 'addresses'
-  int count;    // # entries
+    const char **addresses;
+    int size;  // room in 'addresses'
+    int count; // # entries
 } Addresses_t;
 
 #define NEXT_ADDRESS(a, i) (((i) + 1) % (a).count)
-void addresses_init( Addresses_t *a );
-void addresses_free( Addresses_t *a );
-void addresses_add( Addresses_t *a, const char *addr );
-void addresses_merge( Addresses_t *a, const char *list );
+void addresses_init(Addresses_t *a);
+void addresses_free(Addresses_t *a);
+void addresses_add(Addresses_t *a, const char *addr);
+void addresses_merge(Addresses_t *a, const char *list);
 
 // Statistics handling
 
 typedef struct {
-  pn_timestamp_t start;
-  uint64_t latency_samples;
-  double latency_total;
-  double latency_min;
-  double latency_max;
+    pn_timestamp_t start;
+    uint64_t latency_samples;
+    double latency_total;
+    double latency_min;
+    double latency_max;
 } Statistics_t;
 
-void statistics_start( Statistics_t *s );
-void statistics_msg_received( Statistics_t *s, pn_message_t *message );
-void statistics_report( Statistics_t *s, uint64_t sent, uint64_t received );
+void statistics_start(Statistics_t *s);
+void statistics_msg_received(Statistics_t *s, pn_message_t *message);
+void statistics_report(Statistics_t *s, uint64_t sent, uint64_t received);
 
 void enable_logging(void);
-void LOG( const char *fmt, ... );
-
+void LOG(const char *fmt, ...);

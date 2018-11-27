@@ -43,9 +43,9 @@ class link_namer {
 };
 
 /// **Unsettled API** - Set the link_namer to use on a connection.
-PN_CPP_EXTERN void set_link_namer(connection&, link_namer&);
+PN_CPP_EXTERN void set_link_namer(connection &, link_namer &);
 
-} // io
-} // proton
+} // namespace io
+} // namespace proton
 
 #endif // PROTON_IO_LINK_NAMER_HPP

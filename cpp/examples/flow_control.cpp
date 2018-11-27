@@ -51,12 +51,13 @@ void verify(bool success, const std::string &msg) {
     }
 }
 
-}
+} // namespace
 
 // flow_sender manages the incoming connection and acts as the message sender.
 class flow_sender : public proton::messaging_handler {
   private:
-    int available;  // Number of messages the sender may send assuming sufficient credit.
+    int available; // Number of messages the sender may send assuming sufficient
+                   // credit.
     int sequence;
 
   public:
@@ -74,15 +75,17 @@ class flow_sender : public proton::messaging_handler {
 
     void on_sendable(proton::sender &s) OVERRIDE {
         if (verbose)
-            std::cout << "flow_sender in \"on_sendable\" with credit " << s.credit()
-                      << " and " << available << " available messages" << std::endl;
+            std::cout << "flow_sender in \"on_sendable\" with credit "
+                      << s.credit() << " and " << available
+                      << " available messages" << std::endl;
         send_available_messages(s);
     }
 
     void on_sender_drain_start(proton::sender &s) OVERRIDE {
         if (verbose)
-            std::cout << "flow_sender in \"on_drain_start\" with credit " << s.credit()
-                      << " and " << available << " available messages" << std::endl;
+            std::cout << "flow_sender in \"on_drain_start\" with credit "
+                      << s.credit() << " and " << available
+                      << " available messages" << std::endl;
         send_available_messages(s);
         if (s.credit()) {
             s.return_credit(); // return the rest
@@ -109,7 +112,8 @@ class flow_receiver : public proton::messaging_handler {
         // Serialize the progression of the flow control examples.
         switch (stage) {
         case 0:
-            if (verbose) std::cout << "Example 1.  Simple use of credit." << std::endl;
+            if (verbose)
+                std::cout << "Example 1.  Simple use of credit." << std::endl;
             // TODO: add timeout callbacks, show no messages until credit.
             example_setup(2);
             r.add_credit(2);
@@ -118,7 +122,10 @@ class flow_receiver : public proton::messaging_handler {
             if (r.credit() > 0) return;
             verify(received == 2, "Example 1: simple credit");
 
-            if (verbose) std::cout << "Example 2.   Use basic drain, sender has 3 \"immediate\" messages." << std::endl;
+            if (verbose)
+                std::cout << "Example 2.   Use basic drain, sender has 3 "
+                             "\"immediate\" messages."
+                          << std::endl;
             example_setup(3);
             r.add_credit(5); // ask for up to 5
             r.drain();       // but only use what's available
@@ -126,10 +133,14 @@ class flow_receiver : public proton::messaging_handler {
         case 2:
             if (caller == "on_message") return;
             if (caller == "on_receiver_drain_finish") {
-                // Note that unused credit of 2 at sender is returned and is now 0.
-                verify(received == 3 && r.credit() == 0, "Example 2: basic drain");
+                // Note that unused credit of 2 at sender is returned and is now
+                // 0.
+                verify(received == 3 && r.credit() == 0,
+                       "Example 2: basic drain");
 
-                if (verbose) std::cout << "Example 3. Drain use with no credit." << std::endl;
+                if (verbose)
+                    std::cout << "Example 3. Drain use with no credit."
+                              << std::endl;
                 example_setup(0);
                 r.drain();
                 break;
@@ -138,9 +149,13 @@ class flow_receiver : public proton::messaging_handler {
             return;
 
         case 3:
-            verify(caller == "on_receiver_drain_finish" && received == 0, "Example 3: drain without credit");
+            verify(caller == "on_receiver_drain_finish" && received == 0,
+                   "Example 3: drain without credit");
 
-            if (verbose) std::cout << "Example 4. Show using high(10)/low(3) watermark for 25 messages." << std::endl;
+            if (verbose)
+                std::cout << "Example 4. Show using high(10)/low(3) watermark "
+                             "for 25 messages."
+                          << std::endl;
             example_setup(25);
             r.add_credit(10);
             break;
@@ -152,19 +167,20 @@ class flow_receiver : public proton::messaging_handler {
                 if (credit <= 3) {
                     uint32_t new_credit = 10;
                     uint32_t remaining = 25 - received;
-                    if (new_credit > remaining)
-                        new_credit = remaining;
+                    if (new_credit > remaining) new_credit = remaining;
                     if (new_credit > credit) {
                         r.add_credit(new_credit - credit);
                         if (verbose)
-                            std::cout << "flow_receiver adding credit for " << new_credit - credit
-                                      << " messages" << std::endl;
+                            std::cout << "flow_receiver adding credit for "
+                                      << new_credit - credit << " messages"
+                                      << std::endl;
                     }
                 }
                 return;
             }
 
-            verify(received == 25 && r.credit() == 0, "Example 4: high/low watermark");
+            verify(received == 25 && r.credit() == 0,
+                   "Example 4: high/low watermark");
             r.connection().close();
             break;
 
@@ -180,7 +196,8 @@ class flow_receiver : public proton::messaging_handler {
 
     void on_message(proton::delivery &d, proton::message &m) OVERRIDE {
         if (verbose)
-            std::cout << "flow_receiver in \"on_message\" with " << m.body() << std::endl;
+            std::cout << "flow_receiver in \"on_message\" with " << m.body()
+                      << std::endl;
         proton::receiver r(d.receiver());
         received++;
         run_stage(r, "on_message");
@@ -188,25 +205,28 @@ class flow_receiver : public proton::messaging_handler {
 
     void on_receiver_drain_finish(proton::receiver &r) OVERRIDE {
         if (verbose)
-            std::cout << "flow_receiver in \"on_receiver_drain_finish\"" << std::endl;
+            std::cout << "flow_receiver in \"on_receiver_drain_finish\""
+                      << std::endl;
         run_stage(r, "on_receiver_drain_finish");
     }
 };
 
 class flow_listener : public proton::listen_handler {
     proton::connection_options opts;
-  public:
-    flow_listener(flow_sender& sh) {
-        opts.handler(sh);
-    }
 
-    void on_open(proton::listener& l) OVERRIDE {
+  public:
+    flow_listener(flow_sender &sh) { opts.handler(sh); }
+
+    void on_open(proton::listener &l) OVERRIDE {
         std::ostringstream url;
-        url << "//:" << l.port() << "/example"; // Connect to the actual listening port
+        url << "//:" << l.port()
+            << "/example"; // Connect to the actual listening port
         l.container().connect(url.str());
     }
 
-    proton::connection_options on_accept(proton::listener&) OVERRIDE { return opts; }
+    proton::connection_options on_accept(proton::listener &) OVERRIDE {
+        return opts;
+    }
 };
 
 class flow_control : public proton::messaging_handler {
@@ -217,7 +237,8 @@ class flow_control : public proton::messaging_handler {
     flow_listener listen_handler;
 
   public:
-    flow_control() : receive_handler(send_handler), listen_handler(send_handler) {}
+    flow_control()
+        : receive_handler(send_handler), listen_handler(send_handler) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         // Listen on a dynamic port on the local host.
@@ -227,13 +248,13 @@ class flow_control : public proton::messaging_handler {
     void on_connection_open(proton::connection &c) OVERRIDE {
         if (c.active()) {
             // outbound connection
-            c.open_receiver("flow_example", proton::receiver_options().handler(receive_handler).credit_window(0));
+            c.open_receiver("flow_example", proton::receiver_options()
+                                                .handler(receive_handler)
+                                                .credit_window(0));
         }
     }
 
-    void on_connection_close(proton::connection &) OVERRIDE {
-        listener.stop();
-    }
+    void on_connection_close(proton::connection &) OVERRIDE { listener.stop(); }
 };
 
 int main(int argc, char **argv) {
@@ -242,18 +263,19 @@ int main(int argc, char **argv) {
     bool quiet = false;
 
     example::options opts(argc, argv);
-    opts.add_flag(quiet, 'q', "quiet", "suppress additional commentary of credit allocation and consumption");
+    opts.add_flag(
+        quiet, 'q', "quiet",
+        "suppress additional commentary of credit allocation and consumption");
 
     try {
         opts.parse();
-        if (quiet)
-            verbose = false;
+        if (quiet) verbose = false;
 
         flow_control fc;
         proton::container(fc).run();
 
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

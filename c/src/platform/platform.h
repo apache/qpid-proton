@@ -22,8 +22,8 @@
  *
  */
 
-#include "proton/types.h"
 #include "proton/error.h"
+#include "proton/types.h"
 
 /** Get the current PID
  *
@@ -31,7 +31,6 @@
  * @internal
  */
 int pn_i_getpid(void);
-
 
 /** Get the current time in pn_timestamp_t format.
  *
@@ -63,7 +62,7 @@ int pn_i_error_from_errno(pn_error_t *error, const char *msg);
  *
  * @internal
  */
-int64_t pn_i_atoll(const char* num);
+int64_t pn_i_atoll(const char *num);
 
 int pni_snprintf(char *buf, size_t count, const char *fmt, ...);
 int pni_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap);
@@ -76,14 +75,14 @@ int pni_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap);
 #else
 
 #if !defined(S_ISDIR)
-# define S_ISDIR(X) ((X) & _S_IFDIR)
+#define S_ISDIR(X) ((X)&_S_IFDIR)
 #endif
 
 #endif
 
 #if defined _MSC_VER || defined _OPENVMS
 #if !defined(va_copy)
-#define va_copy(d,s) ((d) = (s))
+#define va_copy(d, s) ((d) = (s))
 #endif
 #endif
 

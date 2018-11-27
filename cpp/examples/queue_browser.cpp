@@ -36,10 +36,10 @@ class queue_browser : public proton::messaging_handler {
     std::string addr_;
 
   public:
-    queue_browser(const std::string& u, const std::string& a) :
-        conn_url_(u), addr_(a) {}
+    queue_browser(const std::string &u, const std::string &a)
+        : conn_url_(u), addr_(a) {}
 
-    void on_container_start(proton::container& c) OVERRIDE {
+    void on_container_start(proton::container &c) OVERRIDE {
         proton::receiver_options ropts;
         proton::source_options sopts;
         ropts.source(sopts.distribution_mode(proton::source::COPY));
@@ -48,12 +48,12 @@ class queue_browser : public proton::messaging_handler {
         conn.open_receiver(addr_, ropts);
     }
 
-    void on_message(proton::delivery&, proton::message& m) OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
         std::cout << m.body() << std::endl;
     }
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     try {
         std::string conn_url = argc > 1 ? argv[1] : "//127.0.0.1:5672";
         std::string addr = argc > 2 ? argv[2] : "examples";
@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
         proton::container(qb).run();
 
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

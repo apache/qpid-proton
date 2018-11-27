@@ -17,18 +17,17 @@
  * under the License.
  */
 
-
 #include "types_internal.hpp"
 
 #include "proton/byte_array.hpp"
 
-#include <ostream>
 #include <iomanip>
+#include <ostream>
 
 namespace proton {
 namespace internal {
 
-void print_hex(std::ostream& o, const uint8_t* p, size_t n) {
+void print_hex(std::ostream &o, const uint8_t *p, size_t n) {
     ios_guard restore_flags(o);
     o << "0x" << std::hex << std::setfill('0');
     for (size_t i = 0; i < n; ++i) {
@@ -36,4 +35,5 @@ void print_hex(std::ostream& o, const uint8_t* p, size_t n) {
     }
 }
 
-}}
+} // namespace internal
+} // namespace proton

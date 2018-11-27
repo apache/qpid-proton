@@ -22,8 +22,8 @@
  *
  */
 
-#include <sstream>
 #include <iostream>
+#include <sstream>
 
 namespace proton {
 
@@ -40,19 +40,24 @@ namespace proton {
 struct msg {
     std::ostringstream os;
     msg() {}
-    msg(const msg& m) : os(m.str()) {}
+    msg(const msg &m) : os(m.str()) {}
     std::string str() const { return os.str(); }
     operator std::string() const { return str(); }
-    template <class T> msg& operator<<(const T& t) { os << t; return *this; }
+    template <class T> msg &operator<<(const T &t) {
+        os << t;
+        return *this;
+    }
 };
 
-inline std::ostream& operator<<(std::ostream& o, const msg& m) { return o << m.str(); }
+inline std::ostream &operator<<(std::ostream &o, const msg &m) {
+    return o << m.str();
+}
 
 /** Construct a message using operator << and append (file:line) */
 #define QUOTe_(x) #x
 #define QUOTE(x) QUOTe_(x)
 #define MSG(message) (::proton::msg() << message)
 
-}
+} // namespace proton
 
-#endif  /*!PROTON_MSG_H*/
+#endif /*!PROTON_MSG_H*/

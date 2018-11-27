@@ -18,23 +18,21 @@
  * under the License.
  *
  */
-#include <stdint.h>
-#include <stdlib.h>
 #include <cxxabi.h>
 #include <iostream>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string>
-#include <vector>
 #include <typeinfo>
+#include <vector>
 
-void print_type(const char* type, const char* mangled_type)
-{
-  int status;
-  char* demangled_type =
-    abi::__cxa_demangle(mangled_type, 0, 0, &status);
-  if (demangled_type) {
-    std::cout << "s/" << type << "/" << demangled_type << "/g\n";
-  } 
-  ::free(demangled_type);
+void print_type(const char *type, const char *mangled_type) {
+    int status;
+    char *demangled_type = abi::__cxa_demangle(mangled_type, 0, 0, &status);
+    if (demangled_type) {
+        std::cout << "s/" << type << "/" << demangled_type << "/g\n";
+    }
+    ::free(demangled_type);
 }
 
 #define mangle_name(x) typeid(x).name()
@@ -42,15 +40,15 @@ void print_type(const char* type, const char* mangled_type)
 #define print_subst(x) print_type(#x, mangle_name(x))
 
 int main() {
-  print_subst(uint64_t);
-  print_subst(uint32_t);
-  print_subst(uint16_t);
-  print_subst(uint8_t);
-  print_subst(size_t);
-  print_subst(int64_t);
-  print_subst(int32_t);
-  print_subst(int16_t);
-  print_subst(int8_t);
-  print_subst(std::string);
-  print_subst(std::vector<char>);
+    print_subst(uint64_t);
+    print_subst(uint32_t);
+    print_subst(uint16_t);
+    print_subst(uint8_t);
+    print_subst(size_t);
+    print_subst(int64_t);
+    print_subst(int32_t);
+    print_subst(int16_t);
+    print_subst(int8_t);
+    print_subst(std::string);
+    print_subst(std::vector<char>);
 }

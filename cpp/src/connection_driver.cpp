@@ -33,17 +33,17 @@
 #include "proton_bits.hpp"
 
 #include <proton/connection.h>
-#include <proton/transport.h>
 #include <proton/event.h>
+#include <proton/transport.h>
 
 #include <algorithm>
-
 
 namespace proton {
 namespace io {
 
 void connection_driver::init() {
-    if (pn_connection_driver_init(&driver_, pn_connection(), pn_transport()) != 0) {
+    if (pn_connection_driver_init(&driver_, pn_connection(), pn_transport()) !=
+        0) {
         this->~connection_driver(); // Dtor won't be called on throw from ctor.
         throw proton::error(std::string("connection_driver allocation failed"));
     }
@@ -51,7 +51,8 @@ void connection_driver::init() {
 
 connection_driver::connection_driver() : handler_(0) { init(); }
 
-connection_driver::connection_driver(const std::string& id) : container_id_(id), handler_(0) {
+connection_driver::connection_driver(const std::string &id)
+    : container_id_(id), handler_(0) {
     init();
 }
 
@@ -59,7 +60,7 @@ connection_driver::~connection_driver() {
     pn_connection_driver_destroy(&driver_);
 }
 
-void connection_driver::configure(const connection_options& opts, bool server) {
+void connection_driver::configure(const connection_options &opts, bool server) {
     proton::connection c(connection());
     opts.apply_unbound(c);
     if (server) {
@@ -69,10 +70,10 @@ void connection_driver::configure(const connection_options& opts, bool server) {
         opts.apply_unbound_client(driver_.transport);
     }
     pn_connection_driver_bind(&driver_);
-    handler_ =  opts.handler();
+    handler_ = opts.handler();
 }
 
-void connection_driver::connect(const connection_options& opts) {
+void connection_driver::connect(const connection_options &opts) {
     connection_options all;
     all.container_id(container_id_);
     all.update(opts);
@@ -80,7 +81,7 @@ void connection_driver::connect(const connection_options& opts) {
     connection().open();
 }
 
-void connection_driver::accept(const connection_options& opts) {
+void connection_driver::accept(const connection_options &opts) {
     connection_options all;
     all.container_id(container_id_);
     all.update(opts);
@@ -92,13 +93,13 @@ bool connection_driver::has_events() const {
 }
 
 bool connection_driver::dispatch() {
-    pn_event_t* c_event;
+    pn_event_t *c_event;
     while ((c_event = pn_connection_driver_next_event(&driver_)) != NULL) {
         try {
             if (handler_ != 0) {
                 messaging_adapter::dispatch(*handler_, c_event);
             }
-        } catch (const std::exception& e) {
+        } catch (const std::exception &e) {
             pn_condition_t *cond = pn_transport_condition(driver_.transport);
             if (!pn_condition_is_set(cond)) {
                 pn_condition_format(cond, "exception", "%s", e.what());
@@ -138,9 +139,9 @@ timestamp connection_driver::tick(timestamp now) {
     return timestamp(pn_transport_tick(driver_.transport, now.milliseconds()));
 }
 
-void connection_driver::disconnected(const proton::error_condition& err) {
-    pn_condition_t* condition = pn_transport_condition(driver_.transport);
-    if (!pn_condition_is_set(condition))  {
+void connection_driver::disconnected(const proton::error_condition &err) {
+    pn_condition_t *condition = pn_transport_condition(driver_.transport);
+    if (!pn_condition_is_set(condition)) {
         set_error_condition(err, condition);
     }
     pn_connection_driver_close(&driver_);
@@ -154,4 +155,5 @@ proton::transport connection_driver::transport() const {
     return make_wrapper(driver_.transport);
 }
 
-}}
+} // namespace io
+} // namespace proton

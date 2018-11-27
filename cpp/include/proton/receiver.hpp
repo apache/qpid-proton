@@ -37,10 +37,9 @@ struct pn_session_t;
 namespace proton {
 
 /// A channel for receiving messages.
-class
-PN_CPP_CLASS_EXTERN receiver : public link {
+class PN_CPP_CLASS_EXTERN receiver : public link {
     /// @cond INTERNAL
-    PN_CPP_EXTERN receiver(pn_link_t* r);
+    PN_CPP_EXTERN receiver(pn_link_t *r);
     /// @endcond
 
   public:
@@ -77,31 +76,32 @@ PN_CPP_CLASS_EXTERN receiver : public link {
     PN_CPP_EXTERN void drain();
 
     /// @cond INTERNAL
-  friend class internal::factory<receiver>;
-  friend class receiver_iterator;
+    friend class internal::factory<receiver>;
+    friend class receiver_iterator;
     /// @endcond
 };
 
 /// @cond INTERNAL
 
 /// An iterator of receivers.
-class receiver_iterator : public internal::iter_base<receiver, receiver_iterator> {
-    explicit receiver_iterator(receiver r, pn_session_t* s = 0) :
-        internal::iter_base<receiver, receiver_iterator>(r), session_(s) {}
+class receiver_iterator
+    : public internal::iter_base<receiver, receiver_iterator> {
+    explicit receiver_iterator(receiver r, pn_session_t *s = 0)
+        : internal::iter_base<receiver, receiver_iterator>(r), session_(s) {}
 
   public:
     /// Create an iterator of receivers.
-    explicit receiver_iterator() :
-        internal::iter_base<receiver, receiver_iterator>(0), session_(0) {}
+    explicit receiver_iterator()
+        : internal::iter_base<receiver, receiver_iterator>(0), session_(0) {}
 
     /// Advance to the next receiver.
     PN_CPP_EXTERN receiver_iterator operator++();
 
   private:
-    pn_session_t* session_;
+    pn_session_t *session_;
 
-  friend class connection;
-  friend class session;
+    friend class connection;
+    friend class session;
 };
 
 /// A range of receivers.
@@ -109,6 +109,6 @@ typedef internal::iter_range<receiver_iterator> receiver_range;
 
 /// @endcond
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_RECEIVER_HPP

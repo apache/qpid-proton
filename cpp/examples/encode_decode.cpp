@@ -17,50 +17,54 @@
  * under the License.
  */
 
-#include <proton/types.hpp>
-#include <proton/codec/encoder.hpp>
 #include <proton/codec/decoder.hpp>
+#include <proton/codec/encoder.hpp>
+#include <proton/types.hpp>
 
 #include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <sstream>
 
-// Examples of how to use the encoder and decoder to create and examine AMQP values.
+// Examples of how to use the encoder and decoder to create and examine AMQP
+// values.
 //
 
 // Print is defined at the end as an example of how to query and extract complex
 // values from a decoder in terms of their simple components.
-void print(proton::value&);
+void print(proton::value &);
 
 // Some helper templates to print map and std::vector results.
 namespace std {
-template<class T, class U> ostream& operator<<(ostream& o, const std::pair<T,U>& p) {
+template <class T, class U>
+ostream &operator<<(ostream &o, const std::pair<T, U> &p) {
     return o << p.first << ":" << p.second;
 }
-template<class T> ostream& operator<<(ostream& o, const std::vector<T>& v) {
+template <class T> ostream &operator<<(ostream &o, const std::vector<T> &v) {
     o << "[ ";
     ostream_iterator<T> oi(o, " ");
     copy(v.begin(), v.end(), oi);
     return o << "]";
 }
-template<class T> ostream& operator<<(ostream& o, const std::list<T>& v) {
+template <class T> ostream &operator<<(ostream &o, const std::list<T> &v) {
     o << "[ ";
     ostream_iterator<T> oi(o, " ");
     copy(v.begin(), v.end(), oi);
     return o << "]";
 }
-template<class K, class T> ostream& operator<<(ostream& o, const map<K, T>& m) {
+template <class K, class T>
+ostream &operator<<(ostream &o, const map<K, T> &m) {
     o << "{ ";
-    ostream_iterator<std::pair<K,T> > oi(o, " ");
+    ostream_iterator<std::pair<K, T>> oi(o, " ");
     copy(m.begin(), m.end(), oi);
     return o << "}";
 }
-}
+} // namespace std
 
 // Insert/extract native C++ containers with uniform type values.
 static void uniform_containers() {
-    std::cout << std::endl << "== Array, list and map of uniform type." << std::endl;
+    std::cout << std::endl
+              << "== Array, list and map of uniform type." << std::endl;
     proton::value v;
 
     std::vector<int> a;
@@ -74,34 +78,39 @@ static void uniform_containers() {
     proton::get(v, a1);
     std::cout << a1 << std::endl;
 
-    // You can specify that a container should be encoded as an AMQP list instead.
+    // You can specify that a container should be encoded as an AMQP list
+    // instead.
     v = proton::codec::encoder::list(a1);
     print(v);
-    std::cout << proton::get<std::vector<int> >(v) << std::endl;
+    std::cout << proton::get<std::vector<int>>(v) << std::endl;
 
-    // C++ map types (types with key_type, mapped_type) convert to an AMQP map by default.
+    // C++ map types (types with key_type, mapped_type) convert to an AMQP map
+    // by default.
     std::map<std::string, int> m;
     m["one"] = 1;
     m["two"] = 2;
     v = m;
     print(v);
-    std::cout << proton::get<std::map<std::string, int> >(v) << std::endl;
+    std::cout << proton::get<std::map<std::string, int>>(v) << std::endl;
 
-    // A sequence of pairs encodes as an AMQP MAP, which lets you control the encoded order.
-    std::vector<std::pair<std::string, int> > pairs;
+    // A sequence of pairs encodes as an AMQP MAP, which lets you control the
+    // encoded order.
+    std::vector<std::pair<std::string, int>> pairs;
     pairs.push_back(std::make_pair("z", 3));
     pairs.push_back(std::make_pair("a", 4));
     v = pairs;
     print(v);
 
-    // You can also decode an AMQP map as a sequence of pairs to preserve encode order.
-    std::vector<std::pair<std::string, int> > pairs2;
+    // You can also decode an AMQP map as a sequence of pairs to preserve encode
+    // order.
+    std::vector<std::pair<std::string, int>> pairs2;
     proton::codec::decoder d(v);
     d >> pairs2;
     std::cout << pairs2 << std::endl;
 
     // A vector of proton::value is normally encoded as a mixed-type AMQP LIST,
-    // but you can encoded it as an array provided all the values match the array type.
+    // but you can encoded it as an array provided all the values match the
+    // array type.
     std::vector<proton::value> vv;
     vv.push_back(proton::value("a"));
     vv.push_back(proton::value("b"));
@@ -112,7 +121,8 @@ static void uniform_containers() {
 
 // Containers with mixed types use value to represent arbitrary AMQP types.
 static void mixed_containers() {
-    std::cout << std::endl << "== List and map of mixed type values." << std::endl;
+    std::cout << std::endl
+              << "== List and map of mixed type values." << std::endl;
     proton::value v;
 
     std::vector<proton::value> l;
@@ -121,116 +131,116 @@ static void mixed_containers() {
     // By default, a sequence of proton::value is treated as an AMQP list.
     v = l;
     print(v);
-    std::vector<proton::value> l2 = proton::get<std::vector<proton::value> >(v);
+    std::vector<proton::value> l2 = proton::get<std::vector<proton::value>>(v);
     std::cout << l2 << std::endl;
 
     std::map<proton::value, proton::value> m;
     m[proton::value("five")] = proton::value(5);
-    m[proton::value(4)] = proton::value("four"); v = m;
+    m[proton::value(4)] = proton::value("four");
+    v = m;
     print(v);
     typedef std::map<proton::value, proton::value> value_map;
     value_map m2(proton::get<value_map>(v));
     std::cout << m2 << std::endl;
 }
 
-// Insert using stream operators (see print_next for example of extracting with stream ops.)
+// Insert using stream operators (see print_next for example of extracting with
+// stream ops.)
 static void insert_stream_operators() {
     std::cout << std::endl << "== Insert with stream operators." << std::endl;
     proton::value v;
 
     // Create an array of INT with values [1, 2, 3]
     proton::codec::encoder e(v);
-    e << proton::codec::start::array(proton::INT)
-      << int32_t(1) << int32_t(2) << int32_t(3)
-      << proton::codec::finish();
+    e << proton::codec::start::array(proton::INT) << int32_t(1) << int32_t(2)
+      << int32_t(3) << proton::codec::finish();
     print(v);
 
     // Create a mixed-type list of the values [42, 0, "x"].
     proton::codec::encoder e2(v);
-    e2 << proton::codec::start::list()
-       << int32_t(42) << false << proton::symbol("x")
-       << proton::codec::finish();
+    e2 << proton::codec::start::list() << int32_t(42) << false
+       << proton::symbol("x") << proton::codec::finish();
     print(v);
 
     // Create a map { "k1":42, "k2": false }
     proton::codec::encoder e3(v);
-    e3 << proton::codec::start::map()
-       << "k1" << int32_t(42)
-       << proton::symbol("k2") << false
-       << proton::codec::finish();
+    e3 << proton::codec::start::map() << "k1" << int32_t(42)
+       << proton::symbol("k2") << false << proton::codec::finish();
     print(v);
 }
 
-int main(int, char**) {
+int main(int, char **) {
     try {
         uniform_containers();
         mixed_containers();
         insert_stream_operators();
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << std::endl << "error: " << e.what() << std::endl;
     }
     return 1;
 }
 
-// print_next prints the next value from values by recursively descending into complex values.
+// print_next prints the next value from values by recursively descending into
+// complex values.
 //
-// NOTE this is for example purposes only: There is a built in ostream operator<< for values.
+// NOTE this is for example purposes only: There is a built in ostream
+// operator<< for values.
 //
 //
-static void print_next(proton::codec::decoder& d) {
+static void print_next(proton::codec::decoder &d) {
     proton::type_id type = d.next_type();
     proton::codec::start s;
     switch (type) {
-      case proton::ARRAY: {
-          d >> s;
-          std::cout << "array<" << s.element;
-          if (s.is_described) {
-              std::cout  << ", descriptor=";
-              print_next(d);
-          }
-          std::cout << ">[";
-          for (size_t i = 0; i < s.size; ++i) {
-              if (i) std::cout << ", ";
-              print_next(d);
-          }
-          std::cout << "]";
-          d >> proton::codec::finish();
-          break;
-      }
-      case proton::LIST: {
-          d >> s;
-          std::cout << "list[";
-          for (size_t i = 0; i < s.size; ++i) {
-              if (i) std::cout << ", ";
-              print_next(d);
-          }
-          std::cout << "]";
-          d >> proton::codec::finish();
-          break;
-      }
-      case proton::MAP: {
-          d >> s;
-          std::cout << "map{";
-          for (size_t i = 0; i < s.size/2; ++i) {
-              if (i) std::cout << ", ";
-              print_next(d);
-              std::cout << ":";        // key:value
-              print_next(d);
-          }
-          std::cout << "}";
-          d >> proton::codec::finish();
-          break;
-      }
-      case proton::DESCRIBED: {
-          d >> s;
-          std::cout << "described(";
-          print_next(d);      // Descriptor
-          print_next(d);      // value
-          d >> proton::codec::finish();
-          break;
-      }
-      default:
+    case proton::ARRAY: {
+        d >> s;
+        std::cout << "array<" << s.element;
+        if (s.is_described) {
+            std::cout << ", descriptor=";
+            print_next(d);
+        }
+        std::cout << ">[";
+        for (size_t i = 0; i < s.size; ++i) {
+            if (i) std::cout << ", ";
+            print_next(d);
+        }
+        std::cout << "]";
+        d >> proton::codec::finish();
+        break;
+    }
+    case proton::LIST: {
+        d >> s;
+        std::cout << "list[";
+        for (size_t i = 0; i < s.size; ++i) {
+            if (i) std::cout << ", ";
+            print_next(d);
+        }
+        std::cout << "]";
+        d >> proton::codec::finish();
+        break;
+    }
+    case proton::MAP: {
+        d >> s;
+        std::cout << "map{";
+        for (size_t i = 0; i < s.size / 2; ++i) {
+            if (i) std::cout << ", ";
+            print_next(d);
+            std::cout << ":"; // key:value
+            print_next(d);
+        }
+        std::cout << "}";
+        d >> proton::codec::finish();
+        break;
+    }
+    case proton::DESCRIBED: {
+        d >> s;
+        std::cout << "described(";
+        print_next(d); // Descriptor
+        print_next(d); // value
+        d >> proton::codec::finish();
+        break;
+    }
+    default:
         // A simple type. We could continue the switch for all AMQP types but
         // we will take a short cut and extract to another value and print that.
         proton::value v2;
@@ -240,7 +250,7 @@ static void print_next(proton::codec::decoder& d) {
 }
 
 // Print a value, for example purposes. Normal code can use operator<<
-void print(proton::value& v) {
+void print(proton::value &v) {
     proton::codec::decoder d(v);
     d.rewind();
     while (d.more()) {

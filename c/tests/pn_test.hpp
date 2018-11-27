@@ -44,15 +44,15 @@ namespace pn_test {
 
 // Holder for T*, calls function Free() in dtor. Not copyable.
 template <class T, void (*Free)(T *)> class auto_free {
-  T *ptr_;
-  auto_free &operator=(auto_free &x);
-  auto_free(auto_free &x);
+    T *ptr_;
+    auto_free &operator=(auto_free &x);
+    auto_free(auto_free &x);
 
-public:
-  auto_free(T *p = 0) : ptr_(p) {}
-  ~auto_free() { Free(ptr_); }
-  T *get() const { return ptr_; }
-  operator T *() const { return ptr_; }
+  public:
+    auto_free(T *p = 0) : ptr_(p) {}
+    ~auto_free() { Free(ptr_); }
+    T *get() const { return ptr_; }
+    operator T *() const { return ptr_; }
 };
 
 // pn_free() works for some, but not all pn_xxx_t* types.
@@ -84,38 +84,38 @@ void message_decode(pn_message_t *m, pn_delivery_t *d, pn_rwbytes_t *buf);
 // slots to store all of the basic proton types for ad-hoc use in
 // tests. Subclass and override the handle() method.
 struct handler {
-  etypes log; // Log of events
-  auto_free<pn_condition_t, pn_condition_free>
-      last_condition; // Condition of last event
+    etypes log; // Log of events
+    auto_free<pn_condition_t, pn_condition_free>
+        last_condition; // Condition of last event
 
-  // Slots to save proton objects for use outside the handler.
-  pn_listener_t *listener;
-  pn_connection_t *connection;
-  pn_session_t *session;
-  pn_link_t *link;
-  pn_link_t *sender;
-  pn_link_t *receiver;
-  pn_delivery_t *delivery;
-  pn_message_t *message;
+    // Slots to save proton objects for use outside the handler.
+    pn_listener_t *listener;
+    pn_connection_t *connection;
+    pn_session_t *session;
+    pn_link_t *link;
+    pn_link_t *sender;
+    pn_link_t *receiver;
+    pn_delivery_t *delivery;
+    pn_message_t *message;
 
-  handler();
+    handler();
 
-  /// dispatch an event: log its type then call handle()
-  /// Returns the value of handle()
-  bool dispatch(pn_event_t *e);
+    /// dispatch an event: log its type then call handle()
+    /// Returns the value of handle()
+    bool dispatch(pn_event_t *e);
 
-  // Return the current log contents, clear the log.
-  etypes log_clear();
+    // Return the current log contents, clear the log.
+    etypes log_clear();
 
-  // Return the last event in the log, clear the log.
-  pn_event_type_t log_last();
+    // Return the last event in the log, clear the log.
+    pn_event_type_t log_last();
 
-protected:
-  // Override this function to handle events.
-  //
-  // Return true to stop dispatching and return control to the test function,
-  // false to continue processing.
-  virtual bool handle(pn_event_t *e) { return false; }
+  protected:
+    // Override this function to handle events.
+    //
+    // Return true to stop dispatching and return control to the test function,
+    // false to continue processing.
+    virtual bool handle(pn_event_t *e) { return false; }
 };
 
 // A pn_connection_driver_t that dispatches to a pn_test::handler
@@ -127,32 +127,32 @@ protected:
 // automate uninteresting work, the test function can make checks that are
 // clearly located in the flow of the test logic.
 struct driver : public ::pn_connection_driver_t {
-  struct handler &handler;
+    struct handler &handler;
 
-  driver(struct handler &h);
-  ~driver();
+    driver(struct handler &h);
+    ~driver();
 
-  // Dispatch events till a handler returns true, the `stop` event is handled,
-  // or there are no more events
-  // Returns the last event handled or PN_EVENT_NONE if none were.
-  pn_event_type_t run(pn_event_type_t stop = PN_EVENT_NONE);
+    // Dispatch events till a handler returns true, the `stop` event is handled,
+    // or there are no more events
+    // Returns the last event handled or PN_EVENT_NONE if none were.
+    pn_event_type_t run(pn_event_type_t stop = PN_EVENT_NONE);
 
-  // Transfer available data from src write buffer to this read-buffer and
-  // update both drivers. Return size of data transferred.
-  size_t read(pn_connection_driver_t &src);
+    // Transfer available data from src write buffer to this read-buffer and
+    // update both drivers. Return size of data transferred.
+    size_t read(pn_connection_driver_t &src);
 };
 
 // A client/server pair drivers. run() simulates a connection in memory.
 struct driver_pair {
-  driver client, server;
+    driver client, server;
 
-  // Associate handlers with drivers. Sets server.transport to server mode
-  driver_pair(handler &ch, handler &sh);
+    // Associate handlers with drivers. Sets server.transport to server mode
+    driver_pair(handler &ch, handler &sh);
 
-  // Run the drivers until a handle returns true or there is nothing left to
-  // do. Opens the client.connection() if not already open.
-  // Return the last event handled or PN_EVENT_NONE
-  pn_event_type_t run();
+    // Run the drivers until a handle returns true or there is nothing left to
+    // do. Opens the client.connection() if not already open.
+    // Return the last event handled or PN_EVENT_NONE
+    pn_event_type_t run();
 };
 
 // Matches for use with Catch macros CHECK_THAT and REQUIRE_THAT.
@@ -160,32 +160,33 @@ struct driver_pair {
 // description etc.
 
 struct cond_empty : public Catch::MatcherBase<pn_condition_t> {
-  std::string describe() const CATCH_OVERRIDE;
-  bool match(const pn_condition_t &cond) const CATCH_OVERRIDE;
+    std::string describe() const CATCH_OVERRIDE;
+    bool match(const pn_condition_t &cond) const CATCH_OVERRIDE;
 };
 
 class cond_matches : public Catch::MatcherBase<pn_condition_t> {
-  std::string name_, desc_;
+    std::string name_, desc_;
 
-public:
-  cond_matches(const std::string &name, const std::string &desc_contains = "");
-  std::string describe() const CATCH_OVERRIDE;
-  bool match(const pn_condition_t &cond) const CATCH_OVERRIDE;
+  public:
+    cond_matches(const std::string &name,
+                 const std::string &desc_contains = "");
+    std::string describe() const CATCH_OVERRIDE;
+    bool match(const pn_condition_t &cond) const CATCH_OVERRIDE;
 };
 
 struct error_empty : public Catch::MatcherBase<pn_error_t> {
-  std::string describe() const CATCH_OVERRIDE;
-  bool match(const pn_error_t &) const CATCH_OVERRIDE;
+    std::string describe() const CATCH_OVERRIDE;
+    bool match(const pn_error_t &) const CATCH_OVERRIDE;
 };
 
 class error_matches : public Catch::MatcherBase<pn_error_t> {
-  int code_;
-  std::string desc_;
+    int code_;
+    std::string desc_;
 
-public:
-  error_matches(int code, const std::string &desc_contains = "");
-  std::string describe() const CATCH_OVERRIDE;
-  bool match(const pn_error_t &) const CATCH_OVERRIDE;
+  public:
+    error_matches(int code, const std::string &desc_contains = "");
+    std::string describe() const CATCH_OVERRIDE;
+    bool match(const pn_error_t &) const CATCH_OVERRIDE;
 };
 
 } // namespace pn_test

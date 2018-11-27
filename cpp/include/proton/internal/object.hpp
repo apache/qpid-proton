@@ -22,9 +22,9 @@
  *
  */
 
+#include "./comparable.hpp"
 #include "./config.hpp"
 #include "./export.hpp"
-#include "./comparable.hpp"
 
 #include <memory>
 #include <string>
@@ -37,27 +37,35 @@ namespace internal {
 
 class pn_ptr_base {
   protected:
-    PN_CPP_EXTERN static void incref(void* p);
-    PN_CPP_EXTERN static void decref(void* p);
-    PN_CPP_EXTERN static std::string inspect(void* p);
+    PN_CPP_EXTERN static void incref(void *p);
+    PN_CPP_EXTERN static void decref(void *p);
+    PN_CPP_EXTERN static std::string inspect(void *p);
 };
 
-template <class T> class pn_ptr : private pn_ptr_base, private comparable<pn_ptr<T> > {
+template <class T>
+class pn_ptr : private pn_ptr_base, private comparable<pn_ptr<T>> {
   public:
     pn_ptr() : ptr_(0) {}
-    pn_ptr(T* p) : ptr_(p) { incref(ptr_); }
-    pn_ptr(const pn_ptr& o) : ptr_(o.ptr_) { incref(ptr_); }
+    pn_ptr(T *p) : ptr_(p) { incref(ptr_); }
+    pn_ptr(const pn_ptr &o) : ptr_(o.ptr_) { incref(ptr_); }
 
 #if PN_CPP_HAS_RVALUE_REFERENCES
-    pn_ptr(pn_ptr&& o) : ptr_(0) { std::swap(ptr_, o.ptr_); }
+    pn_ptr(pn_ptr &&o) : ptr_(0) { std::swap(ptr_, o.ptr_); }
 #endif
 
     ~pn_ptr() { decref(ptr_); }
 
-    pn_ptr& operator=(pn_ptr o) { std::swap(ptr_, o.ptr_); return *this; }
+    pn_ptr &operator=(pn_ptr o) {
+        std::swap(ptr_, o.ptr_);
+        return *this;
+    }
 
-    T* get() const { return ptr_; }
-    T* release() { T *p = ptr_; ptr_ = 0; return p; }
+    T *get() const { return ptr_; }
+    T *release() {
+        T *p = ptr_;
+        ptr_ = 0;
+        return p;
+    }
 
     bool operator!() const { return !ptr_; }
 
@@ -67,23 +75,30 @@ template <class T> class pn_ptr : private pn_ptr_base, private comparable<pn_ptr
 
     std::string inspect() const { return pn_ptr_base::inspect(ptr_); }
 
-    static pn_ptr take_ownership(T* p) { return pn_ptr<T>(p, true); }
+    static pn_ptr take_ownership(T *p) { return pn_ptr<T>(p, true); }
 
   private:
     T *ptr_;
 
-    // Note that it is the presence of the bool in the constructor signature that matters
-    // to get the "transfer ownership" constructor: The value of the bool isn't checked.
-    pn_ptr(T* p, bool) : ptr_(p) {}
+    // Note that it is the presence of the bool in the constructor signature
+    // that matters to get the "transfer ownership" constructor: The value of
+    // the bool isn't checked.
+    pn_ptr(T *p, bool) : ptr_(p) {}
 
-    friend bool operator==(const pn_ptr& a, const pn_ptr& b) { return a.ptr_ == b.ptr_; }
-    friend bool operator<(const pn_ptr& a, const pn_ptr& b) { return a.ptr_ < b.ptr_; }
+    friend bool operator==(const pn_ptr &a, const pn_ptr &b) {
+        return a.ptr_ == b.ptr_;
+    }
+    friend bool operator<(const pn_ptr &a, const pn_ptr &b) {
+        return a.ptr_ < b.ptr_;
+    }
 };
 
-template <class T> pn_ptr<T> take_ownership(T* p) { return pn_ptr<T>::take_ownership(p); }
+template <class T> pn_ptr<T> take_ownership(T *p) {
+    return pn_ptr<T>::take_ownership(p);
+}
 
 /// Base class for proton object types.
-template <class T> class object : private comparable<object<T> > {
+template <class T> class object : private comparable<object<T>> {
   public:
     bool operator!() const { return !object_; }
 #if PN_CPP_HAS_EXPLICIT_CONVERSIONS
@@ -93,22 +108,29 @@ template <class T> class object : private comparable<object<T> > {
   protected:
     typedef T pn_type;
     object(pn_ptr<T> o) : object_(o) {}
-    T* pn_object() const { return object_.get(); }
+    T *pn_object() const { return object_.get(); }
 
   private:
     pn_ptr<T> object_;
 
-    friend bool operator==(const object& a, const object& b) { return a.object_ == b.object_; }
-    friend bool operator<(const object& a, const object& b) { return a.object_ < b.object_; }
-    friend std::ostream& operator<<(std::ostream& o, const object& a) { o << a.object_.inspect(); return o; }
+    friend bool operator==(const object &a, const object &b) {
+        return a.object_ == b.object_;
+    }
+    friend bool operator<(const object &a, const object &b) {
+        return a.object_ < b.object_;
+    }
+    friend std::ostream &operator<<(std::ostream &o, const object &a) {
+        o << a.object_.inspect();
+        return o;
+    }
 
-  template <class U> friend class proton::returned;
+    template <class U> friend class proton::returned;
 };
 
 /// Factory class used internally to make wrappers and extract proton objects
 template <class T> class factory;
 
-} // internal
-} // proton
+} // namespace internal
+} // namespace proton
 
 #endif // PROTON_INTERNAL_OBJECT_HPP

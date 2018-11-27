@@ -26,24 +26,22 @@
 #include "proton/source.hpp"
 #include "proton/target.hpp"
 
+#include "contexts.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
-#include "contexts.hpp"
 
 #include <proton/connection.h>
-#include <proton/session.h>
-#include <proton/link.h>
 #include <proton/event.h>
+#include <proton/link.h>
+#include <proton/session.h>
 
 namespace proton {
 
-receiver::receiver(pn_link_t* r): link(make_wrapper(r)) {}
+receiver::receiver(pn_link_t *r) : link(make_wrapper(r)) {}
 
 receiver::~receiver() {}
 
-void receiver::open() {
-    attach();
-}
+void receiver::open() { attach(); }
 
 void receiver::open(const receiver_options &opts) {
     opts.apply(*this);
@@ -75,10 +73,13 @@ void receiver::drain() {
         if (credit() > 0)
             pn_link_set_drain(pn_object(), true);
         else {
-            // Drain is already complete.  No state to communicate over the wire.
-            // Create dummy flow event where "drain finish" can be detected.
-            pn_connection_t *pnc = pn_session_connection(pn_link_session(pn_object()));
-            pn_collector_put(pn_connection_collector(pnc), PN_OBJECT, pn_object(), PN_LINK_FLOW);
+            // Drain is already complete.  No state to communicate over the
+            // wire. Create dummy flow event where "drain finish" can be
+            // detected.
+            pn_connection_t *pnc =
+                pn_session_connection(pn_link_session(pn_object()));
+            pn_collector_put(pn_connection_collector(pnc), PN_OBJECT,
+                             pn_object(), PN_LINK_FLOW);
         }
     }
 }
@@ -96,4 +97,4 @@ receiver_iterator receiver_iterator::operator++() {
     return *this;
 }
 
-}
+} // namespace proton

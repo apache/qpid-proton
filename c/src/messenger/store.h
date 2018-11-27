@@ -50,5 +50,4 @@ int pni_store_update(pni_store_t *store, pn_sequence_t id, pn_status_t status,
 int pni_store_get_window(pni_store_t *store);
 void pni_store_set_window(pni_store_t *store, int window);
 
-
 #endif /* store.h */

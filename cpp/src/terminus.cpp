@@ -19,18 +19,16 @@
  *
  */
 
-#include "proton/duration.hpp"
 #include "proton/terminus.hpp"
-#include "proton/value.hpp"
 #include "proton/codec/vector.hpp"
+#include "proton/duration.hpp"
+#include "proton/value.hpp"
 
 #include "proton_bits.hpp"
 
 namespace proton {
 
-terminus::terminus(pn_terminus_t* t) :
-    object_(t), parent_(0)
-{}
+terminus::terminus(pn_terminus_t *t) : object_(t), parent_(0) {}
 
 enum terminus::expiry_policy terminus::expiry_policy() const {
     return (enum expiry_policy)pn_terminus_get_expiry_policy(object_);
@@ -41,12 +39,10 @@ duration terminus::timeout() const {
 }
 
 enum terminus::durability_mode terminus::durability_mode() {
-    return (enum durability_mode) pn_terminus_get_durability(object_);
+    return (enum durability_mode)pn_terminus_get_durability(object_);
 }
 
-bool terminus::dynamic() const {
-    return pn_terminus_is_dynamic(object_);
-}
+bool terminus::dynamic() const { return pn_terminus_is_dynamic(object_); }
 
 bool terminus::anonymous() const {
     return pn_terminus_get_address(object_) == NULL;
@@ -58,7 +54,8 @@ value terminus::node_properties() const {
 
 std::vector<symbol> terminus::capabilities() const {
     value caps(pn_terminus_capabilities(object_));
-    return caps.empty() ? std::vector<symbol>() : caps.get<std::vector<symbol> >();
+    return caps.empty() ? std::vector<symbol>()
+                        : caps.get<std::vector<symbol>>();
 }
 
-}
+} // namespace proton

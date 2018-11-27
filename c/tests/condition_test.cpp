@@ -26,25 +26,25 @@ using Catch::Matchers::Equals;
 using namespace pn_test;
 
 TEST_CASE("condition") {
-  auto_free<pn_connection_t, pn_connection_free> c(pn_connection());
-  REQUIRE(c);
-  pn_condition_t *cond = pn_connection_condition(c);
-  REQUIRE(cond);
+    auto_free<pn_connection_t, pn_connection_free> c(pn_connection());
+    REQUIRE(c);
+    pn_condition_t *cond = pn_connection_condition(c);
+    REQUIRE(cond);
 
-  // Verify empty
-  CHECK(!pn_condition_is_set(cond));
-  CHECK(!pn_condition_get_name(cond));
-  CHECK(!pn_condition_get_description(cond));
+    // Verify empty
+    CHECK(!pn_condition_is_set(cond));
+    CHECK(!pn_condition_get_name(cond));
+    CHECK(!pn_condition_get_description(cond));
 
-  // Format a condition
-  pn_condition_format(cond, "foo", "hello %d", 42);
-  CHECK(pn_condition_is_set(cond));
-  CHECK_THAT("foo", Equals(pn_condition_get_name(cond)));
-  CHECK_THAT("hello 42", Equals(pn_condition_get_description(cond)));
+    // Format a condition
+    pn_condition_format(cond, "foo", "hello %d", 42);
+    CHECK(pn_condition_is_set(cond));
+    CHECK_THAT("foo", Equals(pn_condition_get_name(cond)));
+    CHECK_THAT("hello 42", Equals(pn_condition_get_description(cond)));
 
-  // Clear and verify empty
-  pn_condition_clear(cond);
-  CHECK(!pn_condition_is_set(cond));
-  CHECK(!pn_condition_get_name(cond));
-  CHECK(!pn_condition_get_description(cond));
+    // Clear and verify empty
+    pn_condition_clear(cond);
+    CHECK(!pn_condition_is_set(cond));
+    CHECK(!pn_condition_get_name(cond));
+    CHECK(!pn_condition_get_description(cond));
 }

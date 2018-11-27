@@ -20,9 +20,9 @@
  * under the License.
  */
 
+#include <proton/event.h>
 #include <proton/import_export.h>
 #include <proton/types.h>
-#include <proton/event.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,12 +74,15 @@ PNP_EXTERN void pn_listener_free(pn_listener_t *l);
  * @param[in] transport If NULL a new transport is created.
  * Memory management is the same as for pn_proactor_connect2()
  */
-PNP_EXTERN void pn_listener_accept2(pn_listener_t *listener, pn_connection_t *connection, pn_transport_t *transport);
+PNP_EXTERN void pn_listener_accept2(pn_listener_t *listener,
+                                    pn_connection_t *connection,
+                                    pn_transport_t *transport);
 
 /**
  * **Deprecated** - Use ::pn_listener_accept2().
  */
-PNP_EXTERN void pn_listener_accept(pn_listener_t* listener, pn_connection_t *connection);
+PNP_EXTERN void pn_listener_accept(pn_listener_t *listener,
+                                   pn_connection_t *connection);
 
 /**
  * Get the error condition for a listener.
@@ -115,7 +118,8 @@ PNP_EXTERN pn_record_t *pn_listener_attachments(pn_listener_t *listener);
 
 /**
  * Close the listener.
- * The PN_LISTENER_CLOSE event is generated when the listener has stopped listening.
+ * The PN_LISTENER_CLOSE event is generated when the listener has stopped
+ * listening.
  *
  * @note Thread safe. Must not be called after the PN_LISTENER_CLOSE event has
  * been handled as the listener may be freed .

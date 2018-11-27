@@ -37,20 +37,24 @@
 
 namespace proton {
 
-messaging_handler::messaging_handler(){}
+messaging_handler::messaging_handler() {}
 
-messaging_handler::~messaging_handler(){}
+messaging_handler::~messaging_handler() {}
 
 void messaging_handler::on_container_start(container &) {}
 void messaging_handler::on_container_stop(container &) {}
 void messaging_handler::on_message(delivery &, message &) {}
 void messaging_handler::on_sendable(sender &) {}
 void messaging_handler::on_transport_close(transport &) {}
-void messaging_handler::on_transport_error(transport &t) { on_error(t.error()); }
+void messaging_handler::on_transport_error(transport &t) {
+    on_error(t.error());
+}
 void messaging_handler::on_transport_open(transport &) {}
 
 void messaging_handler::on_connection_close(connection &) {}
-void messaging_handler::on_connection_error(connection &c) { on_error(c.error()); }
+void messaging_handler::on_connection_error(connection &c) {
+    on_error(c.error());
+}
 void messaging_handler::on_connection_open(connection &c) {
     if (c.uninitialized()) {
         pn_connection_open(unwrap(c));
@@ -58,7 +62,7 @@ void messaging_handler::on_connection_open(connection &c) {
 }
 void messaging_handler::on_connection_reconnecting(connection &) {}
 void messaging_handler::on_connection_start(connection &) {}
-void messaging_handler::on_connection_wake(connection&) {}
+void messaging_handler::on_connection_wake(connection &) {}
 
 void messaging_handler::on_session_close(session &) {}
 void messaging_handler::on_session_error(session &s) { on_error(s.error()); }
@@ -91,6 +95,8 @@ void messaging_handler::on_delivery_settle(delivery &) {}
 void messaging_handler::on_sender_drain_start(sender &) {}
 void messaging_handler::on_receiver_drain_finish(receiver &) {}
 
-void messaging_handler::on_error(const error_condition& c) { throw proton::error(c.what()); }
-
+void messaging_handler::on_error(const error_condition &c) {
+    throw proton::error(c.what());
 }
+
+} // namespace proton

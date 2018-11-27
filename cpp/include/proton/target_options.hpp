@@ -22,9 +22,9 @@
  *
  */
 
+#include "./duration.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
-#include "./duration.hpp"
 #include "./target.hpp"
 
 #include <string>
@@ -47,55 +47,55 @@ class target_options {
     PN_CPP_EXTERN target_options();
 
     /// Copy options.
-    PN_CPP_EXTERN target_options(const target_options&);
+    PN_CPP_EXTERN target_options(const target_options &);
 
     PN_CPP_EXTERN ~target_options();
 
     /// Copy options.
-    PN_CPP_EXTERN target_options& operator=(const target_options&);
+    PN_CPP_EXTERN target_options &operator=(const target_options &);
 
     /// Set the address for the target.  It is unset by default.  The
     /// address is ignored if dynamic() is true.
-    PN_CPP_EXTERN target_options& address(const std::string& addr);
+    PN_CPP_EXTERN target_options &address(const std::string &addr);
 
     /// Request that a node be dynamically created by the remote peer.
     /// The default is false.  Any specified target address() is
     /// ignored if true.
-    PN_CPP_EXTERN target_options& dynamic(bool);
+    PN_CPP_EXTERN target_options &dynamic(bool);
 
     /// Request an anonymous node on the remote peer.
     /// The default is false.  Any specified target address() is
     /// ignored if true.
-    PN_CPP_EXTERN target_options& anonymous(bool);
+    PN_CPP_EXTERN target_options &anonymous(bool);
 
     /// Control the persistence of the target node.  The default is
     /// target::NONDURABLE, meaning non-persistent.
-    PN_CPP_EXTERN target_options& durability_mode(enum target::durability_mode);
+    PN_CPP_EXTERN target_options &durability_mode(enum target::durability_mode);
 
     /// The expiry period after which the target is discarded.  The
     /// default is no timeout.
-    PN_CPP_EXTERN target_options& timeout(duration);
+    PN_CPP_EXTERN target_options &timeout(duration);
 
     /// Control when the clock for expiration begins.  The default is
     /// target::LINK_CLOSE.
-    PN_CPP_EXTERN target_options& expiry_policy(enum target::expiry_policy);
+    PN_CPP_EXTERN target_options &expiry_policy(enum target::expiry_policy);
 
     /// Extension capabilities that are supported/requested
-    PN_CPP_EXTERN target_options& capabilities(const std::vector<symbol>&);
+    PN_CPP_EXTERN target_options &capabilities(const std::vector<symbol> &);
 
   private:
-    void apply(target&) const;
+    void apply(target &) const;
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
-  friend class target;
-  friend class sender_options;
-  friend class receiver_options;
+    friend class target;
+    friend class sender_options;
+    friend class receiver_options;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_TARGET_OPTIONS_HPP

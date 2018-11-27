@@ -22,12 +22,12 @@
  *
  */
 
-#include <proton/import_export.h>
-#include <proton/type_compat.h>
 #include <proton/condition.h>
-#include <proton/terminus.h>
-#include <proton/types.h>
+#include <proton/import_export.h>
 #include <proton/object.h>
+#include <proton/terminus.h>
+#include <proton/type_compat.h>
+#include <proton/types.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -223,7 +223,8 @@ PN_EXTERN pn_session_t *pn_link_session(pn_link_t *link);
  * @return the first link owned by the connection that matches the
  * mask, else NULL if no links match
  */
-PN_EXTERN pn_link_t *pn_link_head(pn_connection_t *connection, pn_state_t state);
+PN_EXTERN pn_link_t *pn_link_head(pn_connection_t *connection,
+                                  pn_state_t state);
 
 /**
  * Retrieve the next link that matches the given state mask.
@@ -469,12 +470,12 @@ PN_EXTERN int pn_link_available(pn_link_t *link);
  * See ::pn_delivery_settle for more details.
  */
 typedef enum {
-  PN_SND_UNSETTLED = 0, /**< The sender will send all deliveries
-                           initially unsettled. */
-  PN_SND_SETTLED = 1, /**< The sender will send all deliveries settled
-                         to the receiver. */
-  PN_SND_MIXED = 2 /**< The sender may send a mixture of settled and
-                      unsettled deliveries. */
+    PN_SND_UNSETTLED = 0, /**< The sender will send all deliveries
+                             initially unsettled. */
+    PN_SND_SETTLED = 1,   /**< The sender will send all deliveries settled
+                             to the receiver. */
+    PN_SND_MIXED = 2      /**< The sender may send a mixture of settled and
+                             unsettled deliveries. */
 } pn_snd_settle_mode_t;
 
 /**
@@ -486,10 +487,10 @@ typedef enum {
  * deliveries. See ::pn_delivery_settle for more details.
  */
 typedef enum {
-  PN_RCV_FIRST = 0,  /**< The receiver will settle deliveries
-                        regardless of what the sender does. */
-  PN_RCV_SECOND = 1  /**< The receiver will only settle deliveries
-                        after the sender settles. */
+    PN_RCV_FIRST = 0, /**< The receiver will settle deliveries
+                         regardless of what the sender does. */
+    PN_RCV_SECOND = 1 /**< The receiver will only settle deliveries
+                         after the sender settles. */
 } pn_rcv_settle_mode_t;
 
 /**
@@ -514,7 +515,8 @@ PN_EXTERN pn_rcv_settle_mode_t pn_link_rcv_settle_mode(pn_link_t *link);
  * @param[in] link a link object
  * @param[in] mode the sender settle mode
  */
-PN_EXTERN void pn_link_set_snd_settle_mode(pn_link_t *link, pn_snd_settle_mode_t mode);
+PN_EXTERN void pn_link_set_snd_settle_mode(pn_link_t *link,
+                                           pn_snd_settle_mode_t mode);
 
 /**
  * Set the local receiver settle mode for a link.
@@ -522,7 +524,8 @@ PN_EXTERN void pn_link_set_snd_settle_mode(pn_link_t *link, pn_snd_settle_mode_t
  * @param[in] link a link object
  * @param[in] mode the receiver settle mode
  */
-PN_EXTERN void pn_link_set_rcv_settle_mode(pn_link_t *link, pn_rcv_settle_mode_t mode);
+PN_EXTERN void pn_link_set_rcv_settle_mode(pn_link_t *link,
+                                           pn_rcv_settle_mode_t mode);
 
 /**
  * Get the remote sender settle mode for a link.
@@ -622,7 +625,8 @@ PN_EXTERN void pn_link_set_drain(pn_link_t *receiver, bool drain);
  * message data has been read, either invoke ::pn_link_recv until
  * PN_EOS is returned, or verify that
  *
- *     (!pn_delivery_partial(d) && !pn_delivery_aborted(d) && pn_delivery_pending(d)==0)
+ *     (!pn_delivery_partial(d) && !pn_delivery_aborted(d) &&
+ * pn_delivery_pending(d)==0)
  *
  * @param[in] receiver a receiving link object
  * @param[in] bytes a pointer to an empty buffer
@@ -630,7 +634,8 @@ PN_EXTERN void pn_link_set_drain(pn_link_t *receiver, bool drain);
  * @return The number of bytes received, or an error code:
  *   - ::PN_EOS: The message has been completely received
  *   - 0: No data available now.
- *     If pn_delivery_partial() there will be further ::PN_DELIVERY events with more data.
+ *     If pn_delivery_partial() there will be further ::PN_DELIVERY events with
+ * more data.
  *   - ::PN_STATE_ERR: The link has no current delivery
  *   - ::PN_ABORTED: See pn_delivery_aborted()
  */
@@ -668,7 +673,8 @@ PN_EXTERN uint64_t pn_link_max_message_size(pn_link_t *link);
 PN_EXTERN void pn_link_set_max_message_size(pn_link_t *link, uint64_t size);
 
 /**
- * **Unsettled API** - Get the remote view of the maximum message size for a link.
+ * **Unsettled API** - Get the remote view of the maximum message size for a
+ * link.
  *
  * A zero maximum message size means the size is unlimited.
  *
@@ -686,4 +692,3 @@ PN_EXTERN uint64_t pn_link_remote_max_message_size(pn_link_t *link);
 #endif
 
 #endif /* link.h */
-

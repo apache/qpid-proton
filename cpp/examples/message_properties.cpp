@@ -17,10 +17,10 @@
  * under the License.
  */
 
-#include <proton/message.hpp>
-#include <proton/types.hpp>
 #include <iostream>
 #include <map>
+#include <proton/message.hpp>
+#include <proton/types.hpp>
 
 int main(int argc, char **argv) {
     try {
@@ -49,10 +49,8 @@ int main(int argc, char **argv) {
 
         // proton::scalar has its own ostream <<
         std::cout << "using put/get:"
-                  << " short=" << i
-                  << " string=" << s
-                  << " symbol=" << m.properties().get("symbol")
-                  << std::endl;
+                  << " short=" << i << " string=" << s
+                  << " symbol=" << m.properties().get("symbol") << std::endl;
 
         // Converting properties to a convertible type
         std::cout << "using coerce:"
@@ -61,7 +59,8 @@ int main(int argc, char **argv) {
                   << std::endl;
 
         // Extract the properties as a std::map for more complex map operations.
-        // You can use other map and sequence types to hold a map, see @ref types_page
+        // You can use other map and sequence types to hold a map, see @ref
+        // types_page
         typedef std::map<std::string, proton::scalar> property_map;
         property_map props;
         proton::get(m.properties(), props);
@@ -74,27 +73,30 @@ int main(int argc, char **argv) {
         m.properties() = props;
 
         std::cout << "short=" << m.properties().get("short")
-                  << " string=" << m.properties().get("string")
-                  << std::endl;
+                  << " string=" << m.properties().get("string") << std::endl;
 
         // proton::get throws an exception if types do not match exactly.
         try {
-            proton::get<uint32_t>(m.properties().get("short")); // bad: uint32_t != int16_t
+            proton::get<uint32_t>(
+                m.properties().get("short")); // bad: uint32_t != int16_t
             throw std::logic_error("expected exception");
-        } catch (const proton::conversion_error& e) {
-            std::cout << "expected conversion_error: \"" << e.what() << '"' << std::endl;
+        } catch (const proton::conversion_error &e) {
+            std::cout << "expected conversion_error: \"" << e.what() << '"'
+                      << std::endl;
         }
 
         // proton::coerce throws an exception if types are not convertible.
         try {
-            proton::get<uint32_t>(m.properties().get("string"));  // bad: string to uint32_t
+            proton::get<uint32_t>(
+                m.properties().get("string")); // bad: string to uint32_t
             throw std::logic_error("expected exception");
-        } catch (const proton::conversion_error& e) {
-            std::cout << "expected conversion_error: \"" << e.what() << '"' << std::endl;
+        } catch (const proton::conversion_error &e) {
+            std::cout << "expected conversion_error: \"" << e.what() << '"'
+                      << std::endl;
         }
 
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << "unexpected exception: " << e.what() << std::endl;
         return 1;
     }

@@ -24,12 +24,12 @@
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
 #include <proton/delivery.hpp>
-#include <proton/message.hpp>
-#include <proton/message_id.hpp>
-#include <proton/messaging_handler.hpp>
 #include <proton/link.hpp>
 #include <proton/listen_handler.hpp>
 #include <proton/listener.hpp>
+#include <proton/message.hpp>
+#include <proton/message_id.hpp>
+#include <proton/messaging_handler.hpp>
 #include <proton/value.hpp>
 
 #include <iostream>
@@ -40,7 +40,7 @@
 class direct_recv : public proton::messaging_handler {
   private:
     class listener_ready_handler : public proton::listen_handler {
-        void on_open(proton::listener& l) OVERRIDE {
+        void on_open(proton::listener &l) OVERRIDE {
             std::cout << "listening on " << l.port() << std::endl;
         }
     };
@@ -52,7 +52,8 @@ class direct_recv : public proton::messaging_handler {
     int received;
 
   public:
-    direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
+    direct_recv(const std::string &s, int c)
+        : url(s), expected(c), received(0) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         listener = c.listen(url, listen_handler);
@@ -82,7 +83,8 @@ int main(int argc, char **argv) {
     example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "listen and receive on URL", "URL");
-    opts.add_value(message_count, 'm', "messages", "receive COUNT messages", "COUNT");
+    opts.add_value(message_count, 'm', "messages", "receive COUNT messages",
+                   "COUNT");
 
     try {
         opts.parse();
@@ -91,9 +93,9 @@ int main(int argc, char **argv) {
         proton::container(recv).run();
 
         return 0;
-    } catch (const example::bad_option& e) {
+    } catch (const example::bad_option &e) {
         std::cout << opts << std::endl << e.what() << std::endl;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

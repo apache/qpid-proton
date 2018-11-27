@@ -29,7 +29,7 @@ extern "C" {
 /**
  * @cond INTERNAL
  */
-    
+
 /**
  * @file
  *
@@ -54,9 +54,10 @@ PN_EXTERN void pn_log_enable(bool enabled);
  * Set the logger.
  *
  * By default a logger that prints to stderr is installed.
- *  
+ *
  * @param logger is called with each log message if logging is enabled.
- * Passing 0 disables logging regardless of pn_log_enable() or environment settings.
+ * Passing 0 disables logging regardless of pn_log_enable() or environment
+ * settings.
  */
 PN_EXTERN void pn_log_logger(pn_logger_t logger);
 

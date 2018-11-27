@@ -47,7 +47,7 @@ struct delivery_mode {
     };
 
     /// @cond INTERNAL
-    
+
     delivery_mode() : modes_(NONE) {}
     delivery_mode(modes m) : modes_(m) {}
     operator modes() { return modes_; }
@@ -58,6 +58,6 @@ struct delivery_mode {
     modes modes_;
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_DELIVERY_MODE_H

@@ -23,11 +23,11 @@
  */
 
 #include <proton/import_export.h>
+#include <proton/link.h>
 #include <proton/message.h>
 #include <proton/selectable.h>
-#include <proton/link.h>
-#include <proton/transport.h>
 #include <proton/ssl.h>
+#include <proton/transport.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -133,14 +133,15 @@ extern "C" {
  * Authentication Mechanisms
  * ========================
  *
- * The messenger API authenticates using some specific mechanisms. In prior versions
- * of Proton the only authentication mechanism available was the PLAIN mechanism
- * which transports the user's password over the network unencrypted. The Proton versions
- * 0.10 and newer support other more secure mechanisms which avoid sending the users's
- * password over the network unencrypted. For backwards compatibility the 0.10 version
- * of the messenger API will also allow the use of the unencrypted PLAIN mechanism. From the
- * 0.11 version and onwards you will need to set the flag PN_FLAGS_ALLOW_INSECURE_MECHS to
- * carry on using the unencrypted PLAIN mechanism.
+ * The messenger API authenticates using some specific mechanisms. In prior
+ * versions of Proton the only authentication mechanism available was the PLAIN
+ * mechanism which transports the user's password over the network unencrypted.
+ * The Proton versions 0.10 and newer support other more secure mechanisms which
+ * avoid sending the users's password over the network unencrypted. For
+ * backwards compatibility the 0.10 version of the messenger API will also allow
+ * the use of the unencrypted PLAIN mechanism. From the 0.11 version and onwards
+ * you will need to set the flag PN_FLAGS_ALLOW_INSECURE_MECHS to carry on using
+ * the unencrypted PLAIN mechanism.
  *
  * The code for this looks like:
  *
@@ -148,8 +149,8 @@ extern "C" {
  *   pn_messenger_set_flags(messenger, PN_FLAGS_ALLOW_INSECURE_MECHS);
  *   ...
  *
- * Note that the use of the PLAIN mechanism over an SSL connection is allowed as the
- * password is not sent unencrypted.
+ * Note that the use of the PLAIN mechanism over an SSL connection is allowed as
+ * the password is not sent unencrypted.
  */
 typedef struct pn_messenger_t pn_messenger_t;
 
@@ -169,16 +170,16 @@ typedef int64_t pn_tracker_t;
  * given tracker.
  */
 typedef enum {
-  PN_STATUS_UNKNOWN = 0, /**< The tracker is unknown. */
-  PN_STATUS_PENDING = 1, /**< The message is in flight. For outgoing
-                            messages, use ::pn_messenger_buffered to
-                            see if it has been sent or not. */
-  PN_STATUS_ACCEPTED = 2, /**< The message was accepted. */
-  PN_STATUS_REJECTED = 3, /**< The message was rejected. */
-  PN_STATUS_RELEASED = 4, /**< The message was released. */
-  PN_STATUS_MODIFIED = 5, /**< The message was modified. */
-  PN_STATUS_ABORTED = 6, /**< The message was aborted. */
-  PN_STATUS_SETTLED = 7 /**< The remote party has settled the message. */
+    PN_STATUS_UNKNOWN = 0,  /**< The tracker is unknown. */
+    PN_STATUS_PENDING = 1,  /**< The message is in flight. For outgoing
+                               messages, use ::pn_messenger_buffered to
+                               see if it has been sent or not. */
+    PN_STATUS_ACCEPTED = 2, /**< The message was accepted. */
+    PN_STATUS_REJECTED = 3, /**< The message was rejected. */
+    PN_STATUS_RELEASED = 4, /**< The message was released. */
+    PN_STATUS_MODIFIED = 5, /**< The message was modified. */
+    PN_STATUS_ABORTED = 6,  /**< The message was aborted. */
+    PN_STATUS_SETTLED = 7   /**< The remote party has settled the message. */
 } pn_status_t;
 
 /**
@@ -212,7 +213,8 @@ PNX_EXTERN const char *pn_messenger_name(pn_messenger_t *messenger);
  * @return an error code of zero if there is no error
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_set_certificate(pn_messenger_t *messenger, const char *certificate);
+PNX_EXTERN int pn_messenger_set_certificate(pn_messenger_t *messenger,
+                                            const char *certificate);
 
 /**
  * Get the certificate path. This value may be set by
@@ -233,7 +235,8 @@ PNX_EXTERN const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
  * @return an error code of zero if there is no error
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_set_private_key(pn_messenger_t *messenger, const char *private_key);
+PNX_EXTERN int pn_messenger_set_private_key(pn_messenger_t *messenger,
+                                            const char *private_key);
 
 /**
  * Gets the private key file for a messenger.
@@ -253,7 +256,8 @@ PNX_EXTERN const char *pn_messenger_get_private_key(pn_messenger_t *messenger);
  * @return an error code of zero if there is no error
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_set_password(pn_messenger_t *messenger, const char *password);
+PNX_EXTERN int pn_messenger_set_password(pn_messenger_t *messenger,
+                                         const char *password);
 
 /**
  * Gets the private key file password for a messenger.
@@ -276,7 +280,8 @@ PNX_EXTERN const char *pn_messenger_get_password(pn_messenger_t *messenger);
  * @return an error code of zero if there is no error
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, const char *cert_db);
+PNX_EXTERN int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger,
+                                                     const char *cert_db);
 
 /**
  * Gets the trusted certificates database for a messenger.
@@ -285,7 +290,8 @@ PNX_EXTERN int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, 
  * @return path to the trusted certificates database
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN const char *pn_messenger_get_trusted_certificates(pn_messenger_t *messenger);
+PNX_EXTERN const char *
+pn_messenger_get_trusted_certificates(pn_messenger_t *messenger);
 
 /**
  * Set the default timeout for a messenger.
@@ -331,7 +337,8 @@ PNX_EXTERN bool pn_messenger_is_blocking(pn_messenger_t *messenger);
  * @return an error code or zero if there is no error
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking);
+PNX_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger,
+                                         bool blocking);
 
 /**
  * Check if a messenger is in passive mode.
@@ -359,7 +366,8 @@ PNX_EXTERN bool pn_messenger_is_passive(pn_messenger_t *messenger);
  * @return an error code or zero on success
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_set_passive(pn_messenger_t *messenger, bool passive);
+PNX_EXTERN int pn_messenger_set_passive(pn_messenger_t *messenger,
+                                        bool passive);
 
 /** Frees a Messenger.
  *
@@ -428,7 +436,8 @@ PNX_EXTERN int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
  * @see error.h
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window);
+PNX_EXTERN int pn_messenger_set_outgoing_window(pn_messenger_t *messenger,
+                                                int window);
 
 /**
  * Get the size of a messenger's incoming window.
@@ -463,7 +472,7 @@ PNX_EXTERN int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_incoming_window(pn_messenger_t *messenger,
-                                               int window);
+                                                int window);
 
 /**
  * Currently a no-op placeholder. For future compatibility, do not
@@ -511,7 +520,8 @@ PNX_EXTERN bool pn_messenger_stopped(pn_messenger_t *messenger);
  * @return a subscription
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
+PNX_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger,
+                                                     const char *source);
 
 /**
  * Subscribes a messenger to messages from the specified source with the given
@@ -539,7 +549,7 @@ pn_messenger_subscribe_ttl(pn_messenger_t *messenger, const char *source,
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_link_t *pn_messenger_get_link(pn_messenger_t *messenger,
-                                           const char *address, bool sender);
+                                            const char *address, bool sender);
 
 /**
  * Get a subscription's application context.
@@ -559,7 +569,8 @@ PNX_EXTERN void *pn_subscription_get_context(pn_subscription_t *sub);
  * @param[in] context the application context for the subscription
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN void pn_subscription_set_context(pn_subscription_t *sub, void *context);
+PNX_EXTERN void pn_subscription_set_context(pn_subscription_t *sub,
+                                            void *context);
 
 /**
  * Get the source address of a subscription.
@@ -595,7 +606,8 @@ PNX_EXTERN int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
  * @return a status code for the delivery
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker);
+PNX_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger,
+                                           pn_tracker_t tracker);
 
 /**
  * Get delivery information about a delivery.
@@ -610,7 +622,7 @@ PNX_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_delivery_t *pn_messenger_delivery(pn_messenger_t *messenger,
-                                               pn_tracker_t tracker);
+                                                pn_tracker_t tracker);
 
 /**
  * Check if the delivery associated with a given tracker is still
@@ -625,7 +637,8 @@ PNX_EXTERN pn_delivery_t *pn_messenger_delivery(pn_messenger_t *messenger,
  * @return true if the delivery is still buffered
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN bool pn_messenger_buffered(pn_messenger_t *messenger, pn_tracker_t tracker);
+PNX_EXTERN bool pn_messenger_buffered(pn_messenger_t *messenger,
+                                      pn_tracker_t tracker);
 
 /**
  * Frees a Messenger from tracking the status associated with a given
@@ -640,7 +653,8 @@ PNX_EXTERN bool pn_messenger_buffered(pn_messenger_t *messenger, pn_tracker_t tr
  * @see error.h
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+PNX_EXTERN int pn_messenger_settle(pn_messenger_t *messenger,
+                                   pn_tracker_t tracker, int flags);
 
 /**
  * Get a tracker for the outgoing message most recently given to
@@ -656,7 +670,8 @@ PNX_EXTERN int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t track
  *         has never been called for the given messenger
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
+PNX_EXTERN pn_tracker_t
+pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
 
 /**
  * Sends or receives any outstanding messages queued for a messenger.
@@ -770,12 +785,14 @@ PNX_EXTERN int pn_messenger_receiving(pn_messenger_t *messenger);
  * messages left on the incoming queue.
  *
  * @param[in] messenger a messenger object
- * @param[out] message upon return contains the message from the head of the queue
+ * @param[out] message upon return contains the message from the head of the
+ * queue
  * @return an error code or zero on success
  * @see error.h
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *message);
+PNX_EXTERN int pn_messenger_get(pn_messenger_t *messenger,
+                                pn_message_t *message);
 
 /**
  * Get a tracker for the message most recently retrieved by
@@ -791,10 +808,12 @@ PNX_EXTERN int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *message
  *         has never been called for the given messenger
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger);
+PNX_EXTERN pn_tracker_t
+pn_messenger_incoming_tracker(pn_messenger_t *messenger);
 
 /**
- * Get the subscription of the message most recently retrieved by ::pn_messenger_get().
+ * Get the subscription of the message most recently retrieved by
+ * ::pn_messenger_get().
  *
  * This operation will return NULL if ::pn_messenger_get() has never
  * been successfully called.
@@ -803,7 +822,8 @@ PNX_EXTERN pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger)
  * @return a pn_subscription_t or NULL
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *messenger);
+PNX_EXTERN pn_subscription_t *
+pn_messenger_incoming_subscription(pn_messenger_t *messenger);
 
 /**
  * Indicates that an accept or reject should operate cumulatively.
@@ -832,7 +852,8 @@ PNX_EXTERN pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t 
  * @see error.h
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+PNX_EXTERN int pn_messenger_accept(pn_messenger_t *messenger,
+                                   pn_tracker_t tracker, int flags);
 
 /**
  * Signal unsuccessful processing of message(s).
@@ -856,7 +877,8 @@ PNX_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t track
  * @see error.h
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+PNX_EXTERN int pn_messenger_reject(pn_messenger_t *messenger,
+                                   pn_tracker_t tracker, int flags);
 
 /**
  * Get  link for the message referenced by the given tracker.
@@ -867,7 +889,7 @@ PNX_EXTERN int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t track
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_link_t *pn_messenger_tracker_link(pn_messenger_t *messenger,
-                                               pn_tracker_t tracker);
+                                                pn_tracker_t tracker);
 
 /**
  * Get the number of messages in the outgoing message queue of a
@@ -951,8 +973,8 @@ PNX_EXTERN int pn_messenger_incoming(pn_messenger_t *messenger);
 //! @return an error code or zero on success
 //! @see error.h
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern,
-                                 const char *address);
+PNX_EXTERN int pn_messenger_route(pn_messenger_t *messenger,
+                                  const char *pattern, const char *address);
 
 /**
  * Rewrite message addresses prior to transmission.
@@ -977,8 +999,8 @@ PNX_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern
  * @return an error code or zero on success
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *pattern,
-                                   const char *address);
+PNX_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger,
+                                    const char *pattern, const char *address);
 
 /**
  * Extract selectables from a passive messenger.
@@ -1018,15 +1040,15 @@ PNX_EXTERN pn_selectable_t *pn_messenger_selectable(pn_messenger_t *messenger);
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
 
-#define PN_FLAGS_CHECK_ROUTES                                                   \
-  (0x1) /**< Messenger flag to indicate that a call                             \
-             to pn_messenger_start should check that                            \
-             any defined routes are valid */
+#define PN_FLAGS_CHECK_ROUTES                                                  \
+    (0x1) /**< Messenger flag to indicate that a call                          \
+               to pn_messenger_start should check that                         \
+               any defined routes are valid */
 
-#define PN_FLAGS_ALLOW_INSECURE_MECHS                                           \
-  (0x2) /**< Messenger flag to indicate that the PLAIN                          \
-             mechanism is allowed on an unencrypted                             \
-             connection */
+#define PN_FLAGS_ALLOW_INSECURE_MECHS                                          \
+    (0x2) /**< Messenger flag to indicate that the PLAIN                       \
+               mechanism is allowed on an unencrypted                          \
+               connection */
 
 /**
  * Sets control flags to enable additional function for the Messenger.
@@ -1038,7 +1060,7 @@ PNX_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger,
-                                     const int flags);
+                                      const int flags);
 
 /**
  * Gets the flags for a Messenger.
@@ -1056,8 +1078,9 @@ PNX_EXTERN int pn_messenger_get_flags(pn_messenger_t *messenger);
  * @param[in] mode the sender settle mode
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
-                                               const pn_snd_settle_mode_t mode);
+PNX_EXTERN int
+pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
+                                 const pn_snd_settle_mode_t mode);
 
 /**
  * Set the local receiver settle mode for the underlying link.
@@ -1066,8 +1089,9 @@ PNX_EXTERN int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
  * @param[in] mode the receiver settle mode
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
-                                               const pn_rcv_settle_mode_t mode);
+PNX_EXTERN int
+pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
+                                 const pn_rcv_settle_mode_t mode);
 
 /**
  * Set the tracer associated with a messenger.
@@ -1077,7 +1101,7 @@ PNX_EXTERN int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
 PNX_EXTERN void pn_messenger_set_tracer(pn_messenger_t *messenger,
-                                       pn_tracer_t tracer);
+                                        pn_tracer_t tracer);
 
 /**
  * Gets the remote idle timeout for the specified remote service address
@@ -1087,9 +1111,8 @@ PNX_EXTERN void pn_messenger_set_tracer(pn_messenger_t *messenger,
  * @return the timeout in milliseconds or -1 if an error occurs
  */
 PN_DEPRECATED("Use the Proactor API or Qpid Proton C++")
-PNX_EXTERN pn_millis_t
-    pn_messenger_get_remote_idle_timeout(pn_messenger_t *messenger,
-                                         const char *address);
+PNX_EXTERN pn_millis_t pn_messenger_get_remote_idle_timeout(
+    pn_messenger_t *messenger, const char *address);
 
 /**
  * Sets the SSL peer authentication mode required when a trust

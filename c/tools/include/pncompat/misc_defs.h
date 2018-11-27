@@ -38,11 +38,11 @@
 #include <proton/types.h>
 
 #if defined(__IBMC__)
-#  include <stdlib.h>
-#elif !defined(_WIN32) || defined (__CYGWIN__)
-#  include <getopt.h>
+#include <stdlib.h>
+#elif !defined(_WIN32) || defined(__CYGWIN__)
+#include <getopt.h>
 #else
-#  include "internal/getopt.h"
+#include "internal/getopt.h"
 #endif
 
 pn_timestamp_t time_now(void);

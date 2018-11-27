@@ -30,18 +30,18 @@
 #include "libFuzzingEngine.h"
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  // null-terminate the string in Data in case it doesn't contain null already
-  char *str = (char *)malloc(Size + 1);
-  memcpy(str, Data, Size);
-  str[Size] = '\0';
+    // null-terminate the string in Data in case it doesn't contain null already
+    char *str = (char *)malloc(Size + 1);
+    memcpy(str, Data, Size);
+    str[Size] = '\0';
 
-  pn_url_t *url = pn_url_parse(str);
-  if (url != NULL) {
-    pn_url_free(url);
-  }
+    pn_url_t *url = pn_url_parse(str);
+    if (url != NULL) {
+        pn_url_free(url);
+    }
 
-  free(str);
-  return 0;
+    free(str);
+    return 0;
 }
 
 #undef PN_USE_DEPRECATED_API

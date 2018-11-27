@@ -24,9 +24,9 @@
 
 int main() {
 #if _GLIBCXX_USE_CXX11_ABI
-  std::cout << "s/\\[abi:cxx11\\]//";
-  return 0;
+    std::cout << "s/\\[abi:cxx11\\]//";
+    return 0;
 #else
-  return 1;
+    return 1;
 #endif
 }

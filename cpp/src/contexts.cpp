@@ -29,10 +29,10 @@
 #include "proton/reconnect_options.hpp"
 
 #include <proton/connection.h>
-#include <proton/object.h>
 #include <proton/link.h>
 #include <proton/listener.h>
 #include <proton/message.h>
+#include <proton/object.h>
 #include <proton/session.h>
 
 #include <typeinfo>
@@ -40,7 +40,9 @@
 namespace proton {
 
 namespace {
-void cpp_context_finalize(void* v) { reinterpret_cast<context*>(v)->~context(); }
+void cpp_context_finalize(void *v) {
+    reinterpret_cast<context *>(v)->~context();
+}
 #define CID_cpp_context CID_pn_object
 #define cpp_context_initialize NULL
 #define cpp_context_hashcode NULL
@@ -54,43 +56,44 @@ PN_HANDLE(LISTENER_CONTEXT)
 PN_HANDLE(SESSION_CONTEXT)
 PN_HANDLE(LINK_CONTEXT)
 
-template <class T>
-T* get_context(pn_record_t* record, pn_handle_t handle) {
-    return reinterpret_cast<T*>(pn_record_get(record, handle));
+template <class T> T *get_context(pn_record_t *record, pn_handle_t handle) {
+    return reinterpret_cast<T *>(pn_record_get(record, handle));
 }
 
-}
+} // namespace
 
 context::~context() {}
 
 void *context::alloc(size_t n) { return pn_object_new(&cpp_context_class, n); }
 
-pn_class_t* context::pn_class() { return &cpp_context_class; }
+pn_class_t *context::pn_class() { return &cpp_context_class; }
 
-connection_context::connection_context() :
-    container(0), default_session(0), link_gen(0), handler(0), listener_context_(0)
-{}
+connection_context::connection_context()
+    : container(0), default_session(0), link_gen(0), handler(0),
+      listener_context_(0) {}
 
-reconnect_context::reconnect_context(const reconnect_options& ro) :
-    reconnect_options_(new reconnect_options(ro)), retries_(0), current_url_(-1), reconnected_(false)
-{}
+reconnect_context::reconnect_context(const reconnect_options &ro)
+    : reconnect_options_(new reconnect_options(ro)), retries_(0),
+      current_url_(-1), reconnected_(false) {}
 
 listener_context::listener_context() : listen_handler_(0) {}
 
-connection_context& connection_context::get(pn_connection_t *c) {
-    return ref<connection_context>(id(pn_connection_attachments(c), CONNECTION_CONTEXT));
+connection_context &connection_context::get(pn_connection_t *c) {
+    return ref<connection_context>(
+        id(pn_connection_attachments(c), CONNECTION_CONTEXT));
 }
 
-listener_context& listener_context::get(pn_listener_t* l) {
-    return ref<listener_context>(id(pn_listener_attachments(l), LISTENER_CONTEXT));
+listener_context &listener_context::get(pn_listener_t *l) {
+    return ref<listener_context>(
+        id(pn_listener_attachments(l), LISTENER_CONTEXT));
 }
 
-link_context& link_context::get(pn_link_t* l) {
+link_context &link_context::get(pn_link_t *l) {
     return ref<link_context>(id(pn_link_attachments(l), LINK_CONTEXT));
 }
 
-session_context& session_context::get(pn_session_t* s) {
+session_context &session_context::get(pn_session_t *s) {
     return ref<session_context>(id(pn_session_attachments(s), SESSION_CONTEXT));
 }
 
-}
+} // namespace proton

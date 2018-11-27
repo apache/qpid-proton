@@ -47,11 +47,10 @@ class returned_factory;
 /// already be invalid by the time the function returns.
 /// Multithreaded applications can safely access the value inside @ref
 /// messaging_handler functions.
-template <class T>
-class PN_CPP_CLASS_EXTERN returned {
+template <class T> class PN_CPP_CLASS_EXTERN returned {
   public:
     /// Copy operator required to return a value
-    PN_CPP_EXTERN returned(const returned<T>&);
+    PN_CPP_EXTERN returned(const returned<T> &);
 
     /// Convert to the proton::object
     ///
@@ -59,12 +58,12 @@ class PN_CPP_CLASS_EXTERN returned {
     PN_CPP_EXTERN operator T() const;
 
   private:
-    typename T::pn_type* ptr_;
-    returned(typename T::pn_type*);
-    returned& operator=(const returned&); // Not defined
-  friend class internal::returned_factory;
+    typename T::pn_type *ptr_;
+    returned(typename T::pn_type *);
+    returned &operator=(const returned &); // Not defined
+    friend class internal::returned_factory;
 };
 
-} // proton
+} // namespace proton
 
-#endif  /*!PROTON_RETURNED_HPP*/
+#endif /*!PROTON_RETURNED_HPP*/

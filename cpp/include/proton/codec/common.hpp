@@ -34,19 +34,22 @@ namespace codec {
 struct start {
     /// @cond INTERNAL
     /// XXX Document
-    start(type_id type_=NULL_TYPE, type_id element_=NULL_TYPE,
-          bool described_=false, size_t size_=0) :
-        type(type_), element(element_), is_described(described_), size(size_) {}
+    start(type_id type_ = NULL_TYPE, type_id element_ = NULL_TYPE,
+          bool described_ = false, size_t size_ = 0)
+        : type(type_), element(element_), is_described(described_),
+          size(size_) {}
 
-    type_id type;            ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
-    type_id element;         ///< the element type for array only.
-    bool is_described;       ///< true if first value is a descriptor.
-    size_t size;             ///< the element count excluding the descriptor (if any)
+    type_id type;      ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
+    type_id element;   ///< the element type for array only.
+    bool is_described; ///< true if first value is a descriptor.
+    size_t size;       ///< the element count excluding the descriptor (if any)
     /// @endcond
 
     /// @cond INTERNAL
     /// XXX Document
-    static start array(type_id element, bool described=false) { return start(ARRAY, element, described); }
+    static start array(type_id element, bool described = false) {
+        return start(ARRAY, element, described);
+    }
     static start list() { return start(LIST); }
     static start map() { return start(MAP); }
     static start described() { return start(DESCRIBED, NULL_TYPE, true); }
@@ -56,7 +59,7 @@ struct start {
 /// **Unsettled API** - Finish inserting or extracting a complex type.
 struct finish {};
 
-} // codec
-} // proton
+} // namespace codec
+} // namespace proton
 
 #endif // PROTON_CODEC_COMMON_HPP

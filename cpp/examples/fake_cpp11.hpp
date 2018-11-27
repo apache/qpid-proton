@@ -20,7 +20,8 @@
  * under the License.
  */
 
-/// These definitions allow us to use some new C++11 features in previous compilers
+/// These definitions allow us to use some new C++11 features in previous
+/// compilers
 ///
 /// It is strongly recommended not to copy this - just use C++11/C++14 instead!
 
@@ -29,6 +30,5 @@
 #else
 #define OVERRIDE override
 #endif
-
 
 #endif // FAKE_CPP11_HPP

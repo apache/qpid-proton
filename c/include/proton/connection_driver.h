@@ -74,8 +74,8 @@
  * different threads.
  */
 
-#include <proton/import_export.h>
 #include <proton/event.h>
+#include <proton/import_export.h>
 #include <proton/types.h>
 
 #include <stdarg.h>
@@ -88,10 +88,10 @@ extern "C" {
  * The elements needed to drive AMQP IO and events.
  */
 typedef struct pn_connection_driver_t {
-  pn_connection_t *connection;
-  pn_transport_t *transport;
-  pn_collector_t *collector;
-  pn_event_batch_t batch;
+    pn_connection_t *connection;
+    pn_transport_t *transport;
+    pn_collector_t *collector;
+    pn_event_batch_t batch;
 } pn_connection_driver_t;
 
 /**
@@ -105,12 +105,13 @@ typedef struct pn_connection_driver_t {
  * pn_connection_driver_bind().
  *
  * The following functions must be called before the transport is
- * bound to have effect: pn_connection_set_username(), pn_connection_set_password(),
- * pn_transport_set_server().
+ * bound to have effect: pn_connection_set_username(),
+ * pn_connection_set_password(), pn_transport_set_server().
  *
  * @return PN_OUT_OF_MEMORY if any allocation fails.
  */
-PN_EXTERN int pn_connection_driver_init(pn_connection_driver_t*, pn_connection_t*, pn_transport_t*);
+PN_EXTERN int pn_connection_driver_init(pn_connection_driver_t *,
+                                        pn_connection_t *, pn_transport_t *);
 
 /**
  * Force binding of the transport.  This happens automatically after
@@ -131,12 +132,13 @@ PN_EXTERN void pn_connection_driver_destroy(pn_connection_driver_t *);
  * sets d->connection = NULL.  Returns the previous value, which must be freed
  * by the caller.
  *
- * The transport and collector are still owned by the driver and will be freed by
- * pn_connection_driver_destroy().
+ * The transport and collector are still owned by the driver and will be freed
+ * by pn_connection_driver_destroy().
  *
  * @note This has nothing to do with pn_connection_release()
  */
-PN_EXTERN pn_connection_t *pn_connection_driver_release_connection(pn_connection_driver_t *d);
+PN_EXTERN pn_connection_t *
+pn_connection_driver_release_connection(pn_connection_driver_t *d);
 
 /**
  * Get the read buffer.
@@ -144,15 +146,18 @@ PN_EXTERN pn_connection_t *pn_connection_driver_release_connection(pn_connection
  * Copy data from your input byte source to buf.start, up to buf.size.
  * Call pn_connection_driver_read_done() when reading is complete.
  *
- * buf.size==0 means reading is not possible: no buffer space or the read side is closed.
+ * buf.size==0 means reading is not possible: no buffer space or the read side
+ * is closed.
  */
-PN_EXTERN pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *);
+PN_EXTERN pn_rwbytes_t
+pn_connection_driver_read_buffer(pn_connection_driver_t *);
 
 /**
  * Process the first n bytes of data in pn_connection_driver_read_buffer() and
  * reclaim the buffer space.
  */
-PN_EXTERN void pn_connection_driver_read_done(pn_connection_driver_t *, size_t n);
+PN_EXTERN void pn_connection_driver_read_done(pn_connection_driver_t *,
+                                              size_t n);
 
 /**
  * Close the read side. Call when the IO can no longer be read.
@@ -172,13 +177,15 @@ PN_EXTERN bool pn_connection_driver_read_closed(pn_connection_driver_t *);
  *
  * buf.size==0 means there is nothing to write.
  */
- PN_EXTERN pn_bytes_t pn_connection_driver_write_buffer(pn_connection_driver_t *);
+PN_EXTERN pn_bytes_t
+pn_connection_driver_write_buffer(pn_connection_driver_t *);
 
 /**
  * Call when the first n bytes of pn_connection_driver_write_buffer() have been
  * written to IO. Reclaims the buffer space and reset the write buffer.
  */
-PN_EXTERN void pn_connection_driver_write_done(pn_connection_driver_t *, size_t n);
+PN_EXTERN void pn_connection_driver_write_done(pn_connection_driver_t *,
+                                               size_t n);
 
 /**
  * Close the write side. Call when IO can no longer be written to.
@@ -193,7 +200,7 @@ PN_EXTERN bool pn_connection_driver_write_closed(pn_connection_driver_t *);
 /**
  * Close both sides.
  */
-PN_EXTERN void pn_connection_driver_close(pn_connection_driver_t * c);
+PN_EXTERN void pn_connection_driver_close(pn_connection_driver_t *c);
 
 /**
  * Get the next event to handle.
@@ -202,7 +209,7 @@ PN_EXTERN void pn_connection_driver_close(pn_connection_driver_t * c);
  * pn_connection_driver_next(). NULL if there are no more events available now,
  * reading/writing may produce more.
  */
-PN_EXTERN pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *);
+PN_EXTERN pn_event_t *pn_connection_driver_next_event(pn_connection_driver_t *);
 
 /**
  * True if  pn_connection_driver_next_event() will return a non-NULL event.
@@ -221,63 +228,73 @@ PN_EXTERN bool pn_connection_driver_finished(pn_connection_driver_t *);
  * Set transport error.
  *
  * The name and formatted description are set on the transport condition, and
- * returned as a PN_TRANSPORT_ERROR event from pn_connection_driver_next_event().
+ * returned as a PN_TRANSPORT_ERROR event from
+ * pn_connection_driver_next_event().
  *
  * You must call this *before* pn_connection_driver_read_close() or
  * pn_connection_driver_write_close() to ensure the error is processed.
  */
-PN_EXTERN void pn_connection_driver_errorf(pn_connection_driver_t *d, const char *name, const char *fmt, ...);
+PN_EXTERN void pn_connection_driver_errorf(pn_connection_driver_t *d,
+                                           const char *name, const char *fmt,
+                                           ...);
 
 /**
  * Set transport error via a va_list, see pn_connection_driver_errorf()
  */
-PN_EXTERN void pn_connection_driver_verrorf(pn_connection_driver_t *d, const char *name, const char *fmt, va_list);
+PN_EXTERN void pn_connection_driver_verrorf(pn_connection_driver_t *d,
+                                            const char *name, const char *fmt,
+                                            va_list);
 
 /**
- * If batch is part of a connection_driver, return the connection_driver address,
- * else return NULL
+ * If batch is part of a connection_driver, return the connection_driver
+ * address, else return NULL
  */
-PN_EXTERN pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batch_t *batch);
+PN_EXTERN pn_connection_driver_t *
+pn_event_batch_connection_driver(pn_event_batch_t *batch);
 
 /**
- * The write side of the transport is closed, it will no longer produce bytes to write to
- * external IO. Synonym for PN_TRANSPORT_HEAD_CLOSED
+ * The write side of the transport is closed, it will no longer produce bytes to
+ * write to external IO. Synonym for PN_TRANSPORT_HEAD_CLOSED
  */
 #define PN_TRANSPORT_WRITE_CLOSED PN_TRANSPORT_HEAD_CLOSED
 
 /**
- * The read side of the transport is closed, it will no longer read bytes from external
- * IO. Alias for PN_TRANSPORT_TAIL_CLOSED
+ * The read side of the transport is closed, it will no longer read bytes from
+ * external IO. Alias for PN_TRANSPORT_TAIL_CLOSED
  */
 #define PN_TRANSPORT_READ_CLOSED PN_TRANSPORT_TAIL_CLOSED
 
 /**
  * **Deprecated** - Use pn_transport_log().
  */
-PN_EXTERN void pn_connection_driver_log(pn_connection_driver_t *d, const char *msg);
+PN_EXTERN void pn_connection_driver_log(pn_connection_driver_t *d,
+                                        const char *msg);
 
 /**
  * **Deprecated** - Use pn_transport_logf().
  */
-PN_EXTERN void pn_connection_driver_logf(pn_connection_driver_t *d, const char *fmt, ...);
+PN_EXTERN void pn_connection_driver_logf(pn_connection_driver_t *d,
+                                         const char *fmt, ...);
 
 /**
  * **Deprecated** - Use pn_transport_vlogf().
  */
-PN_EXTERN void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_list ap);
+PN_EXTERN void pn_connection_driver_vlogf(pn_connection_driver_t *d,
+                                          const char *fmt, va_list ap);
 
 /**
  * Associate a pn_connection_t with its pn_connection_driver_t.
  *
- * **NOTE**: this is only for use by IO integration writers. If you are using the standard
- * pn_proactor_t you *must not* use this function.
+ * **NOTE**: this is only for use by IO integration writers. If you are using
+ * the standard pn_proactor_t you *must not* use this function.
  *
  * @return pointer to the pn_connection_driver_t* field in a pn_connection_t.
  *
  * Return type is pointer to a pointer so that the caller can (if desired) use
  * atomic operations when loading and storing the value.
  */
-PN_EXTERN pn_connection_driver_t **pn_connection_driver_ptr(pn_connection_t *connection);
+PN_EXTERN pn_connection_driver_t **
+pn_connection_driver_ptr(pn_connection_t *connection);
 
 /**
  * @}

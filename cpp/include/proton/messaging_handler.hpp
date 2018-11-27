@@ -30,7 +30,6 @@
 
 namespace proton {
 
-
 /// Handler for Proton messaging events.
 ///
 /// Subclass and override the event-handling member functions.
@@ -78,9 +77,9 @@ namespace proton {
 /// is always called regardless of how the connection closed or failed.
 ///
 /// If the connection or transport closes with an error, on_connection_error()
-/// or on_transport_error() is called immediately before on_connection_close() or
-/// on_transport_close(). You can also check for error conditions in the close
-/// function with connection::error() or transport::error()
+/// or on_transport_error() is called immediately before on_connection_close()
+/// or on_transport_close(). You can also check for error conditions in the
+/// close function with connection::error() or transport::error()
 ///
 /// Note: closing a connection with the special error condition
 /// `amqp:connection-forced`is treated as a disconnect - it triggers
@@ -89,8 +88,7 @@ namespace proton {
 ///
 /// @see reconnect_options
 ///
-class
-PN_CPP_CLASS_EXTERN messaging_handler {
+class PN_CPP_CLASS_EXTERN messaging_handler {
   public:
     PN_CPP_EXTERN messaging_handler();
     PN_CPP_EXTERN virtual ~messaging_handler();
@@ -99,107 +97,108 @@ PN_CPP_CLASS_EXTERN messaging_handler {
     ///
     /// This is the first event received after calling
     /// `container::run()`.
-    PN_CPP_EXTERN virtual void on_container_start(container&);
+    PN_CPP_EXTERN virtual void on_container_start(container &);
 
     /// The container event loop is stopping.
     ///
     /// This is the last event received before the container event
     /// loop stops.
-    PN_CPP_EXTERN virtual void on_container_stop(container&);
+    PN_CPP_EXTERN virtual void on_container_stop(container &);
 
     /// A message is received.
-    PN_CPP_EXTERN virtual void on_message(delivery&, message&);
+    PN_CPP_EXTERN virtual void on_message(delivery &, message &);
 
     /// A message can be sent.
-    PN_CPP_EXTERN virtual void on_sendable(sender&);
+    PN_CPP_EXTERN virtual void on_sendable(sender &);
 
     /// The underlying network transport is open
-    PN_CPP_EXTERN virtual void on_transport_open(transport&);
+    PN_CPP_EXTERN virtual void on_transport_open(transport &);
 
     /// The underlying network transport has closed.
     /// This is the final event for a connection, there will be
     /// no more events or re-connect attempts.
-    PN_CPP_EXTERN virtual void on_transport_close(transport&);
+    PN_CPP_EXTERN virtual void on_transport_close(transport &);
 
     /// The underlying network transport has disconnected unexpectedly.
-    PN_CPP_EXTERN virtual void on_transport_error(transport&);
+    PN_CPP_EXTERN virtual void on_transport_error(transport &);
 
     /// **Unsettled API** - Called before the connection is opened.
     /// Use for initial setup, e.g. to open senders or receivers.
-    PN_CPP_EXTERN virtual void on_connection_start(connection&);
+    PN_CPP_EXTERN virtual void on_connection_start(connection &);
 
     /// The remote peer opened the connection.
-    /// Called for the initial open, and also after each successful re-connect if
+    /// Called for the initial open, and also after each successful re-connect
+    /// if
     /// @ref reconnect_options are set.
-    PN_CPP_EXTERN virtual void on_connection_open(connection&);
+    PN_CPP_EXTERN virtual void on_connection_open(connection &);
 
     /// **Unsettled API** - The connection has been disconnected and
     /// is about to attempt an automatic re-connect.
     /// If on_connection_reconnecting() calls connection::close() then
     /// the reconnect attempt will be canceled.
-    PN_CPP_EXTERN virtual void on_connection_reconnecting(connection&);
+    PN_CPP_EXTERN virtual void on_connection_reconnecting(connection &);
 
     /// The remote peer closed the connection.
-    PN_CPP_EXTERN virtual void on_connection_close(connection&);
+    PN_CPP_EXTERN virtual void on_connection_close(connection &);
 
     /// The remote peer closed the connection with an error condition.
-    PN_CPP_EXTERN virtual void on_connection_error(connection&);
+    PN_CPP_EXTERN virtual void on_connection_error(connection &);
 
     /// The remote peer opened the session.
-    PN_CPP_EXTERN virtual void on_session_open(session&);
+    PN_CPP_EXTERN virtual void on_session_open(session &);
 
     /// The remote peer closed the session.
-    PN_CPP_EXTERN virtual void on_session_close(session&);
+    PN_CPP_EXTERN virtual void on_session_close(session &);
 
     /// The remote peer closed the session with an error condition.
-    PN_CPP_EXTERN virtual void on_session_error(session&);
+    PN_CPP_EXTERN virtual void on_session_error(session &);
 
     /// The remote peer opened the link.
-    PN_CPP_EXTERN virtual void on_receiver_open(receiver&);
+    PN_CPP_EXTERN virtual void on_receiver_open(receiver &);
 
     /// The remote peer detached the link.
-    PN_CPP_EXTERN virtual void on_receiver_detach(receiver&);
+    PN_CPP_EXTERN virtual void on_receiver_detach(receiver &);
 
     /// The remote peer closed the link.
-    PN_CPP_EXTERN virtual void on_receiver_close(receiver&);
+    PN_CPP_EXTERN virtual void on_receiver_close(receiver &);
 
     /// The remote peer closed the link with an error condition.
-    PN_CPP_EXTERN virtual void on_receiver_error(receiver&);
+    PN_CPP_EXTERN virtual void on_receiver_error(receiver &);
 
     /// The remote peer opened the link.
-    PN_CPP_EXTERN virtual void on_sender_open(sender&);
+    PN_CPP_EXTERN virtual void on_sender_open(sender &);
 
     /// The remote peer detached the link.
-    PN_CPP_EXTERN virtual void on_sender_detach(sender&);
+    PN_CPP_EXTERN virtual void on_sender_detach(sender &);
 
     /// The remote peer closed the link.
-    PN_CPP_EXTERN virtual void on_sender_close(sender&);
+    PN_CPP_EXTERN virtual void on_sender_close(sender &);
 
     /// The remote peer closed the link with an error condition.
-    PN_CPP_EXTERN virtual void on_sender_error(sender&);
+    PN_CPP_EXTERN virtual void on_sender_error(sender &);
 
     /// The receiving peer accepted a transfer.
-    PN_CPP_EXTERN virtual void on_tracker_accept(tracker&);
+    PN_CPP_EXTERN virtual void on_tracker_accept(tracker &);
 
     /// The receiving peer rejected a transfer.
-    PN_CPP_EXTERN virtual void on_tracker_reject(tracker&);
+    PN_CPP_EXTERN virtual void on_tracker_reject(tracker &);
 
     /// The receiving peer released a transfer.
-    PN_CPP_EXTERN virtual void on_tracker_release(tracker&);
+    PN_CPP_EXTERN virtual void on_tracker_release(tracker &);
 
     /// The receiving peer settled a transfer.
-    PN_CPP_EXTERN virtual void on_tracker_settle(tracker&);
+    PN_CPP_EXTERN virtual void on_tracker_settle(tracker &);
 
     /// The sending peer settled a transfer.
-    PN_CPP_EXTERN virtual void on_delivery_settle(delivery&);
+    PN_CPP_EXTERN virtual void on_delivery_settle(delivery &);
 
     /// **Unsettled API** - The receiving peer has requested a drain of
     /// remaining credit.
-    PN_CPP_EXTERN virtual void on_sender_drain_start(sender&);
+    PN_CPP_EXTERN virtual void on_sender_drain_start(sender &);
 
     /// **Unsettled API** - The credit outstanding at the time of the
     /// drain request has been consumed or returned.
-    PN_CPP_EXTERN virtual void on_receiver_drain_finish(receiver&);
+    PN_CPP_EXTERN virtual void on_receiver_drain_finish(receiver &);
 
     /// **Unsettled API** - An event that can be triggered from
     /// another thread.
@@ -216,12 +215,12 @@ PN_CPP_CLASS_EXTERN messaging_handler {
     ///
     /// @note Spurious calls to `on_connection_wake()` can occur
     /// without any application call to `connection::wake()`.
-    PN_CPP_EXTERN virtual void on_connection_wake(connection&);
+    PN_CPP_EXTERN virtual void on_connection_wake(connection &);
 
     /// Fallback error handling.
-    PN_CPP_EXTERN virtual void on_error(const error_condition&);
+    PN_CPP_EXTERN virtual void on_error(const error_condition &);
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_MESSAGING_HANDLER_HPP

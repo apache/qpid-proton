@@ -26,12 +26,13 @@ using namespace proton;
 
 using test::scalar_test_group;
 
-// NOTE: proton::coerce<> and bad proton::get() are tested in value_test to avoid redundant test code.
+// NOTE: proton::coerce<> and bad proton::get() are tested in value_test to
+// avoid redundant test code.
 
 void encode_decode_test() {
     value v;
     scalar a("foo");
-    v = a;                      // Assignment to value does encode, get<> does decode.
+    v = a; // Assignment to value does encode, get<> does decode.
     ASSERT_EQUAL(v, a);
     ASSERT_EQUAL(std::string("foo"), get<std::string>(v));
     scalar a2 = get<scalar>(v);
@@ -56,11 +57,15 @@ void annotation_key_test() {
     ASSERT_EQUAL(scalar(symbol("foo")), annotation_key("foo"));
 }
 
-template <class T> T make(const char c) { T x; std::fill(x.begin(), x.end(), c); return x; }
-
+template <class T> T make(const char c) {
+    T x;
+    std::fill(x.begin(), x.end(), c);
+    return x;
 }
 
-int main(int, char**) {
+} // namespace
+
+int main(int, char **) {
     int failed = 0;
     scalar_test_group<scalar>(failed);
 

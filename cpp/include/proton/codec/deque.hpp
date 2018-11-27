@@ -21,10 +21,11 @@
  */
 
 /// @file
-/// **Unsettled API** - Enable conversions between `proton::value` and `std::deque`.
+/// **Unsettled API** - Enable conversions between `proton::value` and
+/// `std::deque`.
 
-#include "./encoder.hpp"
 #include "./decoder.hpp"
+#include "./encoder.hpp"
 
 #include <deque>
 #include <utility>
@@ -34,30 +35,42 @@ namespace codec {
 
 /// std::deque<T> for most T is encoded as an amqp::ARRAY (same type elements)
 template <class T, class A>
-encoder& operator<<(encoder& e, const std::deque<T, A>& x) {
+encoder &operator<<(encoder &e, const std::deque<T, A> &x) {
     return e << encoder::array(x, internal::type_id_of<T>::value);
 }
 
 /// std::deque<value> encodes as codec::list_type (mixed type elements)
 template <class A>
-encoder& operator<<(encoder& e, const std::deque<value, A>& x) { return e << encoder::list(x); }
+encoder &operator<<(encoder &e, const std::deque<value, A> &x) {
+    return e << encoder::list(x);
+}
 
 /// std::deque<scalar> encodes as codec::list_type (mixed type elements)
 template <class A>
-encoder& operator<<(encoder& e, const std::deque<scalar, A>& x) { return e << encoder::list(x); }
+encoder &operator<<(encoder &e, const std::deque<scalar, A> &x) {
+    return e << encoder::list(x);
+}
 
 /// std::deque<std::pair<k,t> > encodes as codec::map_type.
 /// Map entries are encoded in order they appear in the list.
 template <class A, class K, class T>
-encoder& operator<<(encoder& e, const std::deque<std::pair<K,T>, A>& x) { return e << encoder::map(x); }
+encoder &operator<<(encoder &e, const std::deque<std::pair<K, T>, A> &x) {
+    return e << encoder::map(x);
+}
 
 /// Decode to std::deque<T> from an amqp::LIST or amqp::ARRAY.
-template <class T, class A> decoder& operator>>(decoder& d, std::deque<T, A>& x) { return d >> decoder::sequence(x); }
+template <class T, class A>
+decoder &operator>>(decoder &d, std::deque<T, A> &x) {
+    return d >> decoder::sequence(x);
+}
 
 /// Decode to std::deque<std::pair<K, T> from an amqp::MAP.
-template <class A, class K, class T> decoder& operator>>(decoder& d, std::deque<std::pair<K, T> , A>& x) { return d >> decoder::pair_sequence(x); }
+template <class A, class K, class T>
+decoder &operator>>(decoder &d, std::deque<std::pair<K, T>, A> &x) {
+    return d >> decoder::pair_sequence(x);
+}
 
-} // codec
-} // proton
+} // namespace codec
+} // namespace proton
 
 #endif // PROTON_CODEC_DEQUE_HPP

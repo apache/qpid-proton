@@ -19,8 +19,4 @@
  *
  */
 
-int LLVMFuzzerInitialize(int *argc, char ***argv)
-{
-  return 0;
-}
-
+int LLVMFuzzerInitialize(int *argc, char ***argv) { return 0; }

@@ -21,20 +21,21 @@
 
 #include <proton/internal/export.hpp>
 
-#include <proton/returned.hpp>
 #include <proton/connection.hpp>
-#include <proton/sender.hpp>
 #include <proton/receiver.hpp>
+#include <proton/returned.hpp>
+#include <proton/sender.hpp>
 
 namespace proton {
 
-template <class T> PN_CPP_EXTERN returned<T>::returned(const returned<T>& x) : ptr_(x.ptr_) {}
+template <class T>
+PN_CPP_EXTERN returned<T>::returned(const returned<T> &x) : ptr_(x.ptr_) {}
 
 template <class T> PN_CPP_EXTERN returned<T>::operator T() const {
     return internal::factory<T>::wrap(ptr_);
 }
 
-template <class T> returned<T>::returned(typename T::pn_type* p) : ptr_(p) {}
+template <class T> returned<T>::returned(typename T::pn_type *p) : ptr_(p) {}
 
 // Explicit instantiations for allowed types
 
@@ -42,4 +43,4 @@ template class PN_CPP_CLASS_EXTERN returned<connection>;
 template class PN_CPP_CLASS_EXTERN returned<sender>;
 template class PN_CPP_CLASS_EXTERN returned<receiver>;
 
-}
+} // namespace proton

@@ -27,16 +27,13 @@
 namespace proton {
 
 /// **Unsettled API** - AMQP data encoding and decoding.
-namespace codec {
-}
+namespace codec {}
 
 /// **Unsettled API** - Interfaces for IO integration.
-namespace io {
-}
+namespace io {}
 
-namespace internal {
-}
+namespace internal {}
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_NAMESPACES_HPP

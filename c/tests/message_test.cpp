@@ -28,57 +28,57 @@
 using namespace pn_test;
 
 TEST_CASE("message_overflow_error") {
-  pn_message_t *message = pn_message();
-  char buf[6];
-  size_t size = 6;
+    pn_message_t *message = pn_message();
+    char buf[6];
+    size_t size = 6;
 
-  int err = pn_message_encode(message, buf, &size);
-  CHECK(PN_OVERFLOW == err);
-  CHECK(0 == pn_message_errno(message));
-  pn_message_free(message);
+    int err = pn_message_encode(message, buf, &size);
+    CHECK(PN_OVERFLOW == err);
+    CHECK(0 == pn_message_errno(message));
+    pn_message_free(message);
 }
 
 static void recode(pn_message_t *dst, pn_message_t *src) {
-  pn_rwbytes_t buf = {0};
-  int size = pn_message_encode2(src, &buf);
-  REQUIRE(size > 0);
-  pn_message_decode(dst, buf.start, size);
-  free(buf.start);
+    pn_rwbytes_t buf = {0};
+    int size = pn_message_encode2(src, &buf);
+    REQUIRE(size > 0);
+    pn_message_decode(dst, buf.start, size);
+    free(buf.start);
 }
 
 TEST_CASE("message_inferred") {
-  pn_message_t *src = pn_message();
-  pn_message_t *dst = pn_message();
+    pn_message_t *src = pn_message();
+    pn_message_t *dst = pn_message();
 
-  CHECK(!pn_message_is_inferred(src));
-  pn_data_put_binary(pn_message_body(src), pn_bytes("hello"));
-  recode(dst, src);
-  CHECK(!pn_message_is_inferred(dst));
-  pn_message_set_inferred(src, true);
-  recode(dst, src);
-  CHECK(pn_message_is_inferred(dst));
+    CHECK(!pn_message_is_inferred(src));
+    pn_data_put_binary(pn_message_body(src), pn_bytes("hello"));
+    recode(dst, src);
+    CHECK(!pn_message_is_inferred(dst));
+    pn_message_set_inferred(src, true);
+    recode(dst, src);
+    CHECK(pn_message_is_inferred(dst));
 
-  pn_message_clear(src);
-  CHECK(!pn_message_is_inferred(src));
-  pn_data_put_list(pn_message_body(src));
-  pn_data_enter(pn_message_body(src));
-  pn_data_put_binary(pn_message_body(src), pn_bytes("hello"));
-  recode(dst, src);
-  CHECK(!pn_message_is_inferred(dst));
-  pn_message_set_inferred(src, true);
-  recode(dst, src);
-  CHECK(pn_message_is_inferred(dst));
+    pn_message_clear(src);
+    CHECK(!pn_message_is_inferred(src));
+    pn_data_put_list(pn_message_body(src));
+    pn_data_enter(pn_message_body(src));
+    pn_data_put_binary(pn_message_body(src), pn_bytes("hello"));
+    recode(dst, src);
+    CHECK(!pn_message_is_inferred(dst));
+    pn_message_set_inferred(src, true);
+    recode(dst, src);
+    CHECK(pn_message_is_inferred(dst));
 
-  pn_message_clear(src);
-  CHECK(!pn_message_is_inferred(src));
-  pn_data_put_string(pn_message_body(src), pn_bytes("hello"));
-  recode(dst, src);
-  CHECK(!pn_message_is_inferred(dst));
-  pn_message_set_inferred(src, true);
-  recode(dst, src);
-  /* A value section is never considered to be inferred */
-  CHECK(!pn_message_is_inferred(dst));
+    pn_message_clear(src);
+    CHECK(!pn_message_is_inferred(src));
+    pn_data_put_string(pn_message_body(src), pn_bytes("hello"));
+    recode(dst, src);
+    CHECK(!pn_message_is_inferred(dst));
+    pn_message_set_inferred(src, true);
+    recode(dst, src);
+    /* A value section is never considered to be inferred */
+    CHECK(!pn_message_is_inferred(dst));
 
-  pn_message_free(src);
-  pn_message_free(dst);
+    pn_message_free(src);
+    pn_message_free(dst);
 }

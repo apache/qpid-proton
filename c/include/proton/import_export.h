@@ -34,48 +34,48 @@
 
 #if defined(_WIN32) && !defined(PROTON_DECLARE_STATIC)
 /* Import and Export definitions for Windows */
-#  define PN_EXPORT __declspec(dllexport)
-#  define PN_IMPORT __declspec(dllimport)
+#define PN_EXPORT __declspec(dllexport)
+#define PN_IMPORT __declspec(dllimport)
 #else
 /* Non-Windows (Linux, etc.) definitions */
-#  define PN_EXPORT __attribute ((visibility ("default")))
-#  define PN_IMPORT
+#define PN_EXPORT __attribute((visibility("default")))
+#define PN_IMPORT
 #endif
 
 /* For core proton library symbols */
 #if defined(qpid_proton_core_EXPORTS) || defined(qpid_proton_EXPORTS)
-#  define PN_EXTERN PN_EXPORT
+#define PN_EXTERN PN_EXPORT
 #else
-#  define PN_EXTERN PN_IMPORT
+#define PN_EXTERN PN_IMPORT
 #endif
 
 /* For proactor proton symbols */
 #if defined(qpid_proton_proactor_EXPORTS) || defined(qpid_proton_EXPORTS)
-#  define PNP_EXTERN PN_EXPORT
+#define PNP_EXTERN PN_EXPORT
 #else
-#  define PNP_EXTERN PN_IMPORT
+#define PNP_EXTERN PN_IMPORT
 #endif
 
 /* For extra proton symbols */
 #if defined(qpid_proton_EXPORTS)
-#  define PNX_EXTERN PN_EXPORT
+#define PNX_EXTERN PN_EXPORT
 #else
-#  define PNX_EXTERN PN_IMPORT
+#define PNX_EXTERN PN_IMPORT
 #endif
 
-#if ! defined(PN_USE_DEPRECATED_API)
-#  if defined(_WIN32)
-#    define PN_DEPRECATED(message) __declspec(deprecated(message))
-#  elif defined __GNUC__
-#    if (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) < 40500
-#      define PN_DEPRECATED(message) __attribute__((deprecated))
-#    else
-#      define PN_DEPRECATED(message) __attribute__((deprecated(message)))
-#    endif
-#  endif
+#if !defined(PN_USE_DEPRECATED_API)
+#if defined(_WIN32)
+#define PN_DEPRECATED(message) __declspec(deprecated(message))
+#elif defined __GNUC__
+#if (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) < 40500
+#define PN_DEPRECATED(message) __attribute__((deprecated))
+#else
+#define PN_DEPRECATED(message) __attribute__((deprecated(message)))
+#endif
+#endif
 #endif
 #ifndef PN_DEPRECATED
-#  define  PN_DEPRECATED(message)
+#define PN_DEPRECATED(message)
 #endif
 
 /**

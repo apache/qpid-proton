@@ -22,10 +22,10 @@
  *
  */
 
+#include "./endpoint.hpp"
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./internal/object.hpp"
-#include "./endpoint.hpp"
 #include "./session.hpp"
 #include "./symbol.hpp"
 
@@ -41,10 +41,11 @@ struct pn_connection_t;
 namespace proton {
 
 /// A connection to a remote AMQP peer.
-class
-PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, public endpoint {
+class PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>,
+                                       public endpoint {
     /// @cond INTERNAL
-    PN_CPP_EXTERN connection(pn_connection_t* c) : internal::object<pn_connection_t>(c) {}
+    PN_CPP_EXTERN connection(pn_connection_t *c)
+        : internal::object<pn_connection_t>(c) {}
     /// @endcond
 
   public:
@@ -63,10 +64,10 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     ///
     /// @throw proton::error if this connection is not managed by a
     /// container
-    PN_CPP_EXTERN class container& container() const;
+    PN_CPP_EXTERN class container &container() const;
 
     /// Get the work_queue for the connection.
-    PN_CPP_EXTERN class work_queue& work_queue() const;
+    PN_CPP_EXTERN class work_queue &work_queue() const;
 
     /// Get the transport for the connection.
     PN_CPP_EXTERN class transport transport() const;
@@ -78,7 +79,8 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN std::string container_id() const;
 
     /// Return authenticated user for the connection
-    /// Note: The value returned is not stable until the on_transport_open event is received
+    /// Note: The value returned is not stable until the on_transport_open event
+    /// is received
     PN_CPP_EXTERN std::string user() const;
 
     /// Open the connection.
@@ -86,37 +88,38 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN void open();
 
     /// @copydoc open
-    PN_CPP_EXTERN void open(const connection_options&);
+    PN_CPP_EXTERN void open(const connection_options &);
 
     /// Close the connection.
     /// @see messaging_handler
     PN_CPP_EXTERN void close();
 
     /// @copydoc close
-    PN_CPP_EXTERN void close(const error_condition&);
+    PN_CPP_EXTERN void close(const error_condition &);
 
     /// Open a new session.
     PN_CPP_EXTERN session open_session();
 
     /// @copydoc open_session
-    PN_CPP_EXTERN session open_session(const session_options&);
+    PN_CPP_EXTERN session open_session(const session_options &);
 
     /// Get the default session.  A default session is created on the
     /// first call and reused for the lifetime of the connection.
     PN_CPP_EXTERN session default_session();
 
     /// Open a sender for `addr` on default_session().
-    PN_CPP_EXTERN sender open_sender(const std::string& addr);
+    PN_CPP_EXTERN sender open_sender(const std::string &addr);
 
     /// @copydoc open_sender
-    PN_CPP_EXTERN sender open_sender(const std::string& addr, const sender_options&);
+    PN_CPP_EXTERN sender open_sender(const std::string &addr,
+                                     const sender_options &);
 
     /// Open a receiver for `addr` on default_session().
-    PN_CPP_EXTERN receiver open_receiver(const std::string& addr);
+    PN_CPP_EXTERN receiver open_receiver(const std::string &addr);
 
     /// @copydoc open_receiver
-    PN_CPP_EXTERN receiver open_receiver(const std::string& addr,
-                                         const receiver_options&);
+    PN_CPP_EXTERN receiver open_receiver(const std::string &addr,
+                                         const receiver_options &);
 
     /// @see proton::container::sender_options()
     PN_CPP_EXTERN class sender_options sender_options() const;
@@ -182,11 +185,11 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN bool reconnected() const;
 
     /// @cond INTERNAL
-  friend class internal::factory<connection>;
-  friend class container;
+    friend class internal::factory<connection>;
+    friend class container;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_CONNECTION_HPP

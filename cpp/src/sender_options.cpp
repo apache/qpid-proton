@@ -24,9 +24,9 @@
 #include "proton/source_options.hpp"
 #include "proton/target_options.hpp"
 
-#include "proactor_container_impl.hpp"
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
+#include "proactor_container_impl.hpp"
 #include "proton_bits.hpp"
 
 namespace proton {
@@ -36,12 +36,18 @@ template <class T> struct option {
     bool set;
 
     option() : value(), set(false) {}
-    option& operator=(const T& x) { value = x;  set = true; return *this; }
-    void update(const option<T>& x) { if (x.set) *this = x.value; }
+    option &operator=(const T &x) {
+        value = x;
+        set = true;
+        return *this;
+    }
+    void update(const option<T> &x) {
+        if (x.set) *this = x.value;
+    }
 };
 
 class sender_options::impl {
-    static link_context& get_context(sender l) {
+    static link_context &get_context(sender l) {
         return link_context::get(unwrap(l));
     }
 
@@ -60,30 +66,33 @@ class sender_options::impl {
     }
 
   public:
-    option<messaging_handler*> handler;
+    option<messaging_handler *> handler;
     option<proton::delivery_mode> delivery_mode;
     option<bool> auto_settle;
     option<source_options> source;
     option<target_options> target;
     option<std::string> name;
 
-    void apply(sender& s) {
+    void apply(sender &s) {
         if (s.uninitialized()) {
             if (delivery_mode.set) set_delivery_mode(s, delivery_mode.value);
-            if (handler.set && handler.value) container::impl::set_handler(s, handler.value);
+            if (handler.set && handler.value)
+                container::impl::set_handler(s, handler.value);
             if (auto_settle.set) get_context(s).auto_settle = auto_settle.value;
             if (source.set) {
-                proton::source local_s(make_wrapper<proton::source>(pn_link_source(unwrap(s))));
+                proton::source local_s(
+                    make_wrapper<proton::source>(pn_link_source(unwrap(s))));
                 source.value.apply(local_s);
             }
             if (target.set) {
-                proton::target local_t(make_wrapper<proton::target>(pn_link_target(unwrap(s))));
+                proton::target local_t(
+                    make_wrapper<proton::target>(pn_link_target(unwrap(s))));
                 target.value.apply(local_t);
             }
         }
     }
 
-    void update(const impl& x) {
+    void update(const impl &x) {
         handler.update(x.handler);
         delivery_mode.update(x.delivery_mode);
         auto_settle.update(x.auto_settle);
@@ -91,32 +100,51 @@ class sender_options::impl {
         target.update(x.target);
         name.update(x.name);
     }
-
 };
 
 sender_options::sender_options() : impl_(new impl()) {}
-sender_options::sender_options(const sender_options& x) : impl_(new impl()) {
+sender_options::sender_options(const sender_options &x) : impl_(new impl()) {
     *this = x;
 }
 sender_options::~sender_options() {}
 
-sender_options& sender_options::operator=(const sender_options& x) {
+sender_options &sender_options::operator=(const sender_options &x) {
     *impl_ = *x.impl_;
     return *this;
 }
 
-void sender_options::update(const sender_options& x) { impl_->update(*x.impl_); }
+void sender_options::update(const sender_options &x) {
+    impl_->update(*x.impl_);
+}
 
-sender_options& sender_options::handler(class messaging_handler &h) { impl_->handler = &h; return *this; }
-sender_options& sender_options::delivery_mode(proton::delivery_mode m) {impl_->delivery_mode = m; return *this; }
-sender_options& sender_options::auto_settle(bool b) {impl_->auto_settle = b; return *this; }
-sender_options& sender_options::source(const source_options &s) {impl_->source = s; return *this; }
-sender_options& sender_options::target(const target_options &s) {impl_->target = s; return *this; }
-sender_options& sender_options::name(const std::string &s) {impl_->name = s; return *this; }
+sender_options &sender_options::handler(class messaging_handler &h) {
+    impl_->handler = &h;
+    return *this;
+}
+sender_options &sender_options::delivery_mode(proton::delivery_mode m) {
+    impl_->delivery_mode = m;
+    return *this;
+}
+sender_options &sender_options::auto_settle(bool b) {
+    impl_->auto_settle = b;
+    return *this;
+}
+sender_options &sender_options::source(const source_options &s) {
+    impl_->source = s;
+    return *this;
+}
+sender_options &sender_options::target(const target_options &s) {
+    impl_->target = s;
+    return *this;
+}
+sender_options &sender_options::name(const std::string &s) {
+    impl_->name = s;
+    return *this;
+}
 
-void sender_options::apply(sender& s) const { impl_->apply(s); }
+void sender_options::apply(sender &s) const { impl_->apply(s); }
 
-const std::string* sender_options::get_name() const {
+const std::string *sender_options::get_name() const {
     return impl_->name.set ? &impl_->name.value : 0;
 }
 } // namespace proton

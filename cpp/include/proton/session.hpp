@@ -22,9 +22,9 @@
  *
  */
 
+#include "./endpoint.hpp"
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
-#include "./endpoint.hpp"
 #include "./receiver.hpp"
 #include "./sender.hpp"
 
@@ -38,11 +38,12 @@ struct pn_session_t;
 namespace proton {
 
 /// A container of senders and receivers.
-class
-PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endpoint {
+class PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>,
+                                    public endpoint {
   public:
     /// @cond INTERNAL
-    PN_CPP_EXTERN session(pn_session_t* s) : internal::object<pn_session_t>(s) {}
+    PN_CPP_EXTERN session(pn_session_t *s)
+        : internal::object<pn_session_t>(s) {}
     /// @endcond
 
   public:
@@ -64,13 +65,13 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN void open(const session_options &opts);
 
     PN_CPP_EXTERN void close();
-    PN_CPP_EXTERN void close(const error_condition&);
+    PN_CPP_EXTERN void close(const error_condition &);
 
     /// Get the container for this session.
     PN_CPP_EXTERN class container &container() const;
 
     /// Get the work_queue for the session.
-    PN_CPP_EXTERN class work_queue& work_queue() const;
+    PN_CPP_EXTERN class work_queue &work_queue() const;
 
     /// Get the connection this session belongs to.
     PN_CPP_EXTERN class connection connection() const;
@@ -79,13 +80,15 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN sender open_sender(const std::string &addr);
 
     /// @copydoc open_sender
-    PN_CPP_EXTERN sender open_sender(const std::string &addr, const sender_options &opts);
+    PN_CPP_EXTERN sender open_sender(const std::string &addr,
+                                     const sender_options &opts);
 
     /// Open a receiver for `addr`.
     PN_CPP_EXTERN receiver open_receiver(const std::string &addr);
 
     /// @copydoc open_receiver
-    PN_CPP_EXTERN receiver open_receiver(const std::string &addr, const receiver_options &opts);
+    PN_CPP_EXTERN receiver open_receiver(const std::string &addr,
+                                         const receiver_options &opts);
 
     /// The number of incoming bytes currently buffered.
     PN_CPP_EXTERN size_t incoming_bytes() const;
@@ -100,17 +103,18 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN receiver_range receivers() const;
 
     /// @cond INTERNAL
-  friend class internal::factory<session>;
-  friend class session_iterator;
+    friend class internal::factory<session>;
+    friend class session_iterator;
     /// @endcond
 };
 
 /// @cond INTERNAL
-    
+
 /// An iterator of sessions.
 class session_iterator : public internal::iter_base<session, session_iterator> {
- public:
-    explicit session_iterator(session s = 0) : internal::iter_base<session, session_iterator>(s) {}
+  public:
+    explicit session_iterator(session s = 0)
+        : internal::iter_base<session, session_iterator>(s) {}
 
     /// Advance to the next session.
     PN_CPP_EXTERN session_iterator operator++();
@@ -120,7 +124,7 @@ class session_iterator : public internal::iter_base<session, session_iterator> {
 typedef internal::iter_range<session_iterator> session_range;
 
 /// @endcond
-    
-} // proton
+
+} // namespace proton
 
 #endif // PROTON_SESSION_HPP

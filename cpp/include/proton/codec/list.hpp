@@ -23,10 +23,11 @@
  */
 
 /// @file
-/// **Unsettled API** - Enable conversions between `proton::value` and `std::list`.
+/// **Unsettled API** - Enable conversions between `proton::value` and
+/// `std::list`.
 
-#include "./encoder.hpp"
 #include "./decoder.hpp"
+#include "./encoder.hpp"
 
 #include <list>
 #include <utility>
@@ -36,30 +37,42 @@ namespace codec {
 
 /// std::list<T> for most T is encoded as an AMQP array.
 template <class T, class A>
-encoder& operator<<(encoder& e, const std::list<T, A>& x) {
+encoder &operator<<(encoder &e, const std::list<T, A> &x) {
     return e << encoder::array(x, internal::type_id_of<T>::value);
 }
 
 /// Specialize for std::list<value>, encode as AMQP list (variable type)
 template <class A>
-encoder& operator<<(encoder& e, const std::list<value, A>& x) { return e << encoder::list(x); }
+encoder &operator<<(encoder &e, const std::list<value, A> &x) {
+    return e << encoder::list(x);
+}
 
 /// Specialize for std::list<scalar>, encode as AMQP list (variable type)
 template <class A>
-encoder& operator<<(encoder& e, const std::list<scalar, A>& x) { return e << encoder::list(x); }
+encoder &operator<<(encoder &e, const std::list<scalar, A> &x) {
+    return e << encoder::list(x);
+}
 
 /// Specialize for std::list<std::pair<k,t> >, encode as AMQP map.
 /// Allows control over the order of encoding map entries.
 template <class A, class K, class T>
-encoder& operator<<(encoder& e, const std::list<std::pair<K,T>, A>& x) { return e << encoder::map(x); }
+encoder &operator<<(encoder &e, const std::list<std::pair<K, T>, A> &x) {
+    return e << encoder::map(x);
+}
 
 /// Decode to std::list<T> from an amqp::LIST or amqp::ARRAY.
-template <class T, class A> decoder& operator>>(decoder& d, std::list<T, A>& x) { return d >> decoder::sequence(x); }
+template <class T, class A>
+decoder &operator>>(decoder &d, std::list<T, A> &x) {
+    return d >> decoder::sequence(x);
+}
 
 /// Decode to std::list<std::pair<K, T> from an amqp::MAP.
-template <class A, class K, class T> decoder& operator>>(decoder& d, std::list<std::pair<K, T> , A>& x) { return d >> decoder::pair_sequence(x); }
+template <class A, class K, class T>
+decoder &operator>>(decoder &d, std::list<std::pair<K, T>, A> &x) {
+    return d >> decoder::pair_sequence(x);
+}
 
-} // codec
-} // proton
+} // namespace codec
+} // namespace proton
 
 #endif // PROTON_CODEC_LIST_HPP

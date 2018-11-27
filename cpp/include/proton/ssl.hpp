@@ -22,9 +22,8 @@
  *
  */
 
-#include "./internal/export.hpp"
 #include "./internal/config.hpp"
-
+#include "./internal/export.hpp"
 
 #include <proton/ssl.h>
 
@@ -38,7 +37,7 @@ namespace proton {
 /// SSL information.
 class ssl {
     /// @cond INTERNAL
-    ssl(pn_ssl_t* s) : object_(s) {}
+    ssl(pn_ssl_t *s) : object_(s) {}
     /// @endcond
 
 #if PN_CPP_HAS_DELETED_FUNCTIONS
@@ -60,9 +59,10 @@ class ssl {
 
     /// Outcome specifier for an attempted session resume.
     enum resume_status {
-        UNKNOWN = PN_SSL_RESUME_UNKNOWN, ///< Session resume state unknown or not supported
+        UNKNOWN = PN_SSL_RESUME_UNKNOWN, ///< Session resume state unknown or
+                                         ///< not supported
         NEW = PN_SSL_RESUME_NEW,         ///< Session renegotiated, not resumed
-        REUSED = PN_SSL_RESUME_REUSED    ///< Session resumed from previous session
+        REUSED = PN_SSL_RESUME_REUSED ///< Session resumed from previous session
     };
 
     /// @cond INTERNAL
@@ -82,17 +82,17 @@ class ssl {
     PN_CPP_EXTERN std::string remote_subject() const;
 
     /// XXX setters? versus connection options
-    PN_CPP_EXTERN void resume_session_id(const std::string& session_id);
+    PN_CPP_EXTERN void resume_session_id(const std::string &session_id);
 
     PN_CPP_EXTERN enum resume_status resume_status() const;
 
     /// @endcond
 
   private:
-    pn_ssl_t* const object_;
+    pn_ssl_t *const object_;
 
     /// @cond INTERNAL
-  friend class transport;
+    friend class transport;
     /// @endcond
 };
 
@@ -105,10 +105,13 @@ class ssl_certificate {
     // XXX Document the following constructors
 
     /// @copydoc ssl_certificate
-    PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main, const std::string &certdb_extra);
+    PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main,
+                                  const std::string &certdb_extra);
 
     /// @copydoc ssl_certificate
-    PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main, const std::string &certdb_extra, const std::string &passwd);
+    PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main,
+                                  const std::string &certdb_extra,
+                                  const std::string &passwd);
     /// @endcond
 
   private:
@@ -118,8 +121,8 @@ class ssl_certificate {
     bool pw_set_;
 
     /// @cond INTERNAL
-  friend class ssl_client_options;
-  friend class ssl_server_options;
+    friend class ssl_client_options;
+    friend class ssl_server_options;
     /// @endcond
 };
 
@@ -130,8 +133,8 @@ namespace internal {
 // Base class for SSL configuration
 class ssl_domain {
   public:
-    PN_CPP_EXTERN ssl_domain(const ssl_domain&);
-    PN_CPP_EXTERN ssl_domain& operator=(const ssl_domain&);
+    PN_CPP_EXTERN ssl_domain(const ssl_domain &);
+    PN_CPP_EXTERN ssl_domain &operator=(const ssl_domain &);
     PN_CPP_EXTERN ~ssl_domain();
 
   protected:
@@ -143,7 +146,7 @@ class ssl_domain {
     bool server_type_;
 };
 
-}
+} // namespace internal
 
 /// **Unsettled API** - SSL configuration for inbound connections.
 class ssl_server_options : private internal::ssl_domain {
@@ -154,9 +157,10 @@ class ssl_server_options : private internal::ssl_domain {
 
     /// Server SSL options requiring connecting clients to provide a
     /// client certificate.
-    PN_CPP_EXTERN ssl_server_options(ssl_certificate &cert, const std::string &trust_db,
-                                     const std::string &advertise_db = std::string(),
-                                     enum ssl::verify_mode mode = ssl::VERIFY_PEER);
+    PN_CPP_EXTERN
+    ssl_server_options(ssl_certificate &cert, const std::string &trust_db,
+                       const std::string &advertise_db = std::string(),
+                       enum ssl::verify_mode mode = ssl::VERIFY_PEER);
 
     /// Server SSL options restricted to available anonymous cipher
     /// suites on the platform.
@@ -168,7 +172,7 @@ class ssl_server_options : private internal::ssl_domain {
     using internal::ssl_domain::pn_domain;
 
     /// @cond INTERNAL
-  friend class connection_options;
+    friend class connection_options;
     /// @endcond
 };
 
@@ -176,12 +180,14 @@ class ssl_server_options : private internal::ssl_domain {
 class ssl_client_options : private internal::ssl_domain {
   public:
     /// Create SSL client options (no client certificate).
-    PN_CPP_EXTERN ssl_client_options(const std::string &trust_db,
-                                     enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
+    PN_CPP_EXTERN
+    ssl_client_options(const std::string &trust_db,
+                       enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
 
     /// Create SSL client options with a client certificate.
-    PN_CPP_EXTERN ssl_client_options(ssl_certificate&, const std::string &trust_db,
-                                     enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
+    PN_CPP_EXTERN
+    ssl_client_options(ssl_certificate &, const std::string &trust_db,
+                       enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
 
     /// SSL connections restricted to available anonymous cipher
     /// suites on the platform.
@@ -193,10 +199,10 @@ class ssl_client_options : private internal::ssl_domain {
     using internal::ssl_domain::pn_domain;
 
     /// @cond INTERNAL
-  friend class connection_options;
+    friend class connection_options;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_SSL_HPP

@@ -17,17 +17,15 @@
  * under the License.
  */
 
-
 #include "test_bits.hpp"
 
-#include <proton/sender_options.hpp>
-#include <proton/receiver_options.hpp>
 #include <proton/container.hpp>
+#include <proton/receiver_options.hpp>
+#include <proton/sender_options.hpp>
 
 #include <iostream>
 
-int test_link_name()
-{
+int test_link_name() {
     proton::container c;
 
     proton::sender_options so;
@@ -45,7 +43,7 @@ int test_link_name()
     return 0;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     int failed = 0;
     RUN_ARGV_TEST(failed, test_link_name());
     return failed;

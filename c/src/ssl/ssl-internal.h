@@ -26,7 +26,8 @@
 /** @file
  * Internal API for SSL/TLS support in the Driver Layer.
  *
- * Generic API to abstract the implementation of SSL/TLS from the Driver codebase.
+ * Generic API to abstract the implementation of SSL/TLS from the Driver
+ * codebase.
  *
  */
 

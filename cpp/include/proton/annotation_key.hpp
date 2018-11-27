@@ -41,47 +41,65 @@ class annotation_key : public scalar_base {
     annotation_key() {}
 
     /// Construct from any type that can be assigned.
-    template <class T> annotation_key(const T& x) { *this = x; }
+    template <class T> annotation_key(const T &x) { *this = x; }
 
     /// @name Assign from a uint64_t or symbol.
     /// @{
-    annotation_key& operator=(uint64_t x) { put_(x); return *this; }
-    annotation_key& operator=(const symbol& x) { put_(x); return *this; }
+    annotation_key &operator=(uint64_t x) {
+        put_(x);
+        return *this;
+    }
+    annotation_key &operator=(const symbol &x) {
+        put_(x);
+        return *this;
+    }
     /// @}
 
     /// @name Extra conversions for strings, treated as codec::SYMBOL.
     /// @{
-    annotation_key& operator=(const std::string& x) { put_(symbol(x)); return *this; }
-    annotation_key& operator=(const char *x) { put_(symbol(x)); return *this; }
+    annotation_key &operator=(const std::string &x) {
+        put_(symbol(x));
+        return *this;
+    }
+    annotation_key &operator=(const char *x) {
+        put_(symbol(x));
+        return *this;
+    }
     /// @}
 
     /// @cond INTERNAL
-  friend class message;
-  friend class codec::decoder;
+    friend class message;
+    friend class codec::decoder;
     /// @endcond
 };
 
 /// @cond INTERNAL
 /// Primary template for get<T>(message_id), specialized for legal types.
-template <class T> T get(const annotation_key& x);
+template <class T> T get(const annotation_key &x);
 /// @endcond
 
 /// Get the uint64_t value or throw conversion_error.
 ///
 /// @relatedalso annotation_key
-template<> inline uint64_t get<uint64_t>(const annotation_key& x) { return internal::get<uint64_t>(x); }
+template <> inline uint64_t get<uint64_t>(const annotation_key &x) {
+    return internal::get<uint64_t>(x);
+}
 
 /// Get the @ref symbol value or throw conversion_error.
 ///
 /// @relatedalso annotation_key
-template<> inline symbol get<symbol>(const annotation_key& x) { return internal::get<symbol>(x); }
+template <> inline symbol get<symbol>(const annotation_key &x) {
+    return internal::get<symbol>(x);
+}
 
 /// Get the @ref binary value or throw conversion_error.
 ///
 /// @copydoc scalar::coerce
 /// @relatedalso annotation_key
-template<class T> T coerce(const annotation_key& x) { return internal::coerce<T>(x); }
+template <class T> T coerce(const annotation_key &x) {
+    return internal::coerce<T>(x);
+}
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_ANNOTATION_KEY_HPP

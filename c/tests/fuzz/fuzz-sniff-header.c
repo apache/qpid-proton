@@ -27,7 +27,7 @@
 #include "libFuzzingEngine.h"
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  /* pni_protocol_type_t protocol = */ pni_sniff_header((const char *)Data,
-                                                        Size);
-  return 0;
+    /* pni_protocol_type_t protocol = */ pni_sniff_header((const char *)Data,
+                                                          Size);
+    return 0;
 }

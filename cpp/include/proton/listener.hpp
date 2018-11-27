@@ -32,7 +32,7 @@ namespace proton {
 /// A listener for incoming connections.
 class PN_CPP_CLASS_EXTERN listener {
     /// @cond INTERNAL
-    listener(pn_listener_t*);
+    listener(pn_listener_t *);
     /// @endcond
 
   public:
@@ -40,12 +40,12 @@ class PN_CPP_CLASS_EXTERN listener {
     PN_CPP_EXTERN listener();
 
     /// Copy a listener.
-    PN_CPP_EXTERN listener(const listener&);
+    PN_CPP_EXTERN listener(const listener &);
 
     PN_CPP_EXTERN ~listener();
 
     /// Copy a listener.
-    PN_CPP_EXTERN listener& operator=(const listener&);
+    PN_CPP_EXTERN listener &operator=(const listener &);
 
     /// Stop listening on the address provided to the call to
     /// container::listen that returned this listener.
@@ -54,7 +54,8 @@ class PN_CPP_CLASS_EXTERN listener {
     /// **Unsettedled API**
     ///
     /// Return the port used by the listener.
-    /// If port 0 was passed to container::listen, this will be a dynamically allocated port.
+    /// If port 0 was passed to container::listen, this will be a dynamically
+    /// allocated port.
     /// @throw proton::error if the listener does not have a port
     PN_CPP_EXTERN int port();
 
@@ -62,14 +63,14 @@ class PN_CPP_CLASS_EXTERN listener {
     ///
     /// Get the container.
     /// @throw proton::error if this listener is not managed by a container.
-    PN_CPP_EXTERN class container& container() const;
+    PN_CPP_EXTERN class container &container() const;
 
   private:
-    pn_listener_t* listener_;
+    pn_listener_t *listener_;
 
-  friend class container;
+    friend class container;
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_LISTENER_HPP

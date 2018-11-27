@@ -26,17 +26,17 @@
 #include "libFuzzingEngine.h"
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  if (Size < 1) {
-    // pn_message_decode would die on assert
+    if (Size < 1) {
+        // pn_message_decode would die on assert
+        return 0;
+    }
+    pn_message_t *msg = pn_message();
+    int ret = pn_message_decode(msg, (const char *)Data, Size);
+    if (ret == 0) {
+        // FUTURE: do something like encode msg and compare again with Data
+    }
+    if (msg != NULL) {
+        pn_message_free(msg);
+    }
     return 0;
-  }
-  pn_message_t *msg = pn_message();
-  int ret = pn_message_decode(msg, (const char *)Data, Size);
-  if (ret == 0) {
-    // FUTURE: do something like encode msg and compare again with Data
-  }
-  if (msg != NULL) {
-    pn_message_free(msg);
-  }
-  return 0;
 }

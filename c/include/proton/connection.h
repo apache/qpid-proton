@@ -22,10 +22,10 @@
  *
  */
 
-#include <proton/import_export.h>
 #include <proton/codec.h>
 #include <proton/condition.h>
 #include <proton/error.h>
+#include <proton/import_export.h>
 #include <proton/type_compat.h>
 #include <proton/types.h>
 
@@ -154,13 +154,14 @@ PN_EXTERN pn_error_t *pn_connection_error(pn_connection_t *connection);
  * @param[in] connection the connection object
  * @param[in] collector the event collector
  */
-PN_EXTERN void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collector);
+PN_EXTERN void pn_connection_collect(pn_connection_t *connection,
+                                     pn_collector_t *collector);
 
 /**
  * Get the collector set with pn_connection_collect()
  * @return NULL if pn_connection_collect() has not been called.
  */
-PN_EXTERN pn_collector_t* pn_connection_collector(pn_connection_t *connection);
+PN_EXTERN pn_collector_t *pn_connection_collector(pn_connection_t *connection);
 
 /**
  * Get the application context that is associated with a connection
@@ -183,7 +184,8 @@ PN_EXTERN void *pn_connection_get_context(pn_connection_t *connection);
  * @param[in] connection the connection object
  * @param[in] context the application context
  */
-PN_EXTERN void pn_connection_set_context(pn_connection_t *connection, void *context);
+PN_EXTERN void pn_connection_set_context(pn_connection_t *connection,
+                                         void *context);
 
 /**
  * Get the attachments that are associated with a connection object.
@@ -265,7 +267,8 @@ PN_EXTERN pn_condition_t *pn_connection_condition(pn_connection_t *connection);
  * @param[in] connection the connection object
  * @return the connection's remote condition object
  */
-PN_EXTERN pn_condition_t *pn_connection_remote_condition(pn_connection_t *connection);
+PN_EXTERN pn_condition_t *
+pn_connection_remote_condition(pn_connection_t *connection);
 
 /**
  * Get the AMQP Container name advertised by a connection object.
@@ -285,13 +288,15 @@ PN_EXTERN const char *pn_connection_get_container(pn_connection_t *connection);
  * @param[in] connection the connection object
  * @param[in] container the container name
  */
-PN_EXTERN void pn_connection_set_container(pn_connection_t *connection, const char *container);
+PN_EXTERN void pn_connection_set_container(pn_connection_t *connection,
+                                           const char *container);
 
 /**
  * Set the authentication username for a client connection
  *
- * It is necessary to set the username and password before binding the connection
- * to a transport and it isn't allowed to change them after the binding.
+ * It is necessary to set the username and password before binding the
+ * connection to a transport and it isn't allowed to change them after the
+ * binding.
  *
  * If not set then no authentication will be negotiated unless the client
  * sasl layer is explicitly created (this would be for something like Kerberos
@@ -301,22 +306,26 @@ PN_EXTERN void pn_connection_set_container(pn_connection_t *connection, const ch
  * @param[in] connection the connection
  * @param[in] user the username
  */
-PN_EXTERN void pn_connection_set_user(pn_connection_t *connection, const char *user);
+PN_EXTERN void pn_connection_set_user(pn_connection_t *connection,
+                                      const char *user);
 
 /**
  * Set the authentication password for a client connection
  *
- * It is necessary to set the username and password before binding the connection
- * to a transport and it isn't allowed to change them after the binding.
+ * It is necessary to set the username and password before binding the
+ * connection to a transport and it isn't allowed to change them after the
+ * binding.
  *
  * Note that the password is write only and has no accessor as the underlying
  * implementation should be zeroing the password after use to avoid the password
  * being present in memory longer than necessary
  *
  * @param[in] connection the connection
- * @param[in] password the password corresponding to the username - this will be copied and zeroed out after use
+ * @param[in] password the password corresponding to the username - this will be
+ * copied and zeroed out after use
  */
-PN_EXTERN void pn_connection_set_password(pn_connection_t *connection, const char *password);
+PN_EXTERN void pn_connection_set_password(pn_connection_t *connection,
+                                          const char *password);
 
 /**
  * Get the authentication username for a client connection
@@ -351,7 +360,8 @@ PN_EXTERN const char *pn_connection_get_hostname(pn_connection_t *connection);
  * @param[in] connection the connection object
  * @param[in] hostname the virtual host name
  */
-PN_EXTERN void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname);
+PN_EXTERN void pn_connection_set_hostname(pn_connection_t *connection,
+                                          const char *hostname);
 
 /**
  * Get the AMQP Container name advertised by the remote connection
@@ -367,7 +377,8 @@ PN_EXTERN void pn_connection_set_hostname(pn_connection_t *connection, const cha
  * @param[in] connection the connection object
  * @return a pointer to the remote container name
  */
-PN_EXTERN const char *pn_connection_remote_container(pn_connection_t *connection);
+PN_EXTERN const char *
+pn_connection_remote_container(pn_connection_t *connection);
 
 /**
  * Get the AMQP Hostname set by the remote connection endpoint.
@@ -382,7 +393,8 @@ PN_EXTERN const char *pn_connection_remote_container(pn_connection_t *connection
  * @param[in] connection the connection object
  * @return a pointer to the remote hostname
  */
-PN_EXTERN const char *pn_connection_remote_hostname(pn_connection_t *connection);
+PN_EXTERN const char *
+pn_connection_remote_hostname(pn_connection_t *connection);
 
 /**
  * Access/modify the AMQP offered capabilities data for a connection
@@ -400,7 +412,8 @@ PN_EXTERN const char *pn_connection_remote_hostname(pn_connection_t *connection)
  * @param[in] connection the connection object
  * @return a pointer to a pn_data_t representing the offered capabilities
  */
-PN_EXTERN pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connection);
+PN_EXTERN pn_data_t *
+pn_connection_offered_capabilities(pn_connection_t *connection);
 
 /**
  * Access/modify the AMQP desired capabilities data for a connection
@@ -418,7 +431,8 @@ PN_EXTERN pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connect
  * @param[in] connection the connection object
  * @return a pointer to a pn_data_t representing the desired capabilities
  */
-PN_EXTERN pn_data_t *pn_connection_desired_capabilities(pn_connection_t *connection);
+PN_EXTERN pn_data_t *
+pn_connection_desired_capabilities(pn_connection_t *connection);
 
 /**
  * Access/modify the AMQP properties data for a connection object.
@@ -449,7 +463,8 @@ PN_EXTERN pn_data_t *pn_connection_properties(pn_connection_t *connection);
  * @param[in] connection the connection object
  * @return the remote offered capabilities
  */
-PN_EXTERN pn_data_t *pn_connection_remote_offered_capabilities(pn_connection_t *connection);
+PN_EXTERN pn_data_t *
+pn_connection_remote_offered_capabilities(pn_connection_t *connection);
 
 /**
  * Access the AMQP desired capabilities supplied by the remote
@@ -463,7 +478,8 @@ PN_EXTERN pn_data_t *pn_connection_remote_offered_capabilities(pn_connection_t *
  * @param[in] connection the connection object
  * @return the remote desired capabilities
  */
-PN_EXTERN pn_data_t *pn_connection_remote_desired_capabilities(pn_connection_t *connection);
+PN_EXTERN pn_data_t *
+pn_connection_remote_desired_capabilities(pn_connection_t *connection);
 
 /**
  * Access the AMQP connection properties supplied by the remote
@@ -477,7 +493,8 @@ PN_EXTERN pn_data_t *pn_connection_remote_desired_capabilities(pn_connection_t *
  * @param[in] connection the connection object
  * @return the remote connection properties
  */
-PN_EXTERN pn_data_t *pn_connection_remote_properties(pn_connection_t *connection);
+PN_EXTERN pn_data_t *
+pn_connection_remote_properties(pn_connection_t *connection);
 
 /**
  * Get the transport bound to a connection object.

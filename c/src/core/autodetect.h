@@ -25,16 +25,16 @@
 #include "proton/types.h"
 
 typedef enum {
-  PNI_PROTOCOL_INSUFFICIENT,
-  PNI_PROTOCOL_UNKNOWN,
-  PNI_PROTOCOL_SSL,
-  PNI_PROTOCOL_AMQP_SSL,
-  PNI_PROTOCOL_AMQP_SASL,
-  PNI_PROTOCOL_AMQP1,
-  PNI_PROTOCOL_AMQP_OTHER
+    PNI_PROTOCOL_INSUFFICIENT,
+    PNI_PROTOCOL_UNKNOWN,
+    PNI_PROTOCOL_SSL,
+    PNI_PROTOCOL_AMQP_SSL,
+    PNI_PROTOCOL_AMQP_SASL,
+    PNI_PROTOCOL_AMQP1,
+    PNI_PROTOCOL_AMQP_OTHER
 } pni_protocol_type_t;
 
 pni_protocol_type_t pni_sniff_header(const char *data, size_t len);
-const char* pni_protocol_name(pni_protocol_type_t p);
+const char *pni_protocol_name(pni_protocol_type_t p);
 
 #endif

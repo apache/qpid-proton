@@ -19,8 +19,8 @@
  *
  */
 #include "proton/ssl.hpp"
-#include "proton/error.hpp"
 #include "msg.hpp"
+#include "proton/error.hpp"
 
 #include <proton/ssl.h>
 
@@ -33,9 +33,7 @@ std::string ssl::cipher() const {
     return std::string();
 }
 
-int ssl::ssf() const {
-    return pn_ssl_get_ssf(object_);
-}
+int ssl::ssf() const { return pn_ssl_get_ssf(object_); }
 
 std::string ssl::protocol() const {
     char buf[128];
@@ -53,5 +51,4 @@ std::string ssl::remote_subject() const {
     return s ? std::string(s) : std::string();
 }
 
-
-} // namespace
+} // namespace proton

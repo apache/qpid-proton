@@ -30,7 +30,7 @@
 namespace proton {
 
 /// A 64-bit timestamp in milliseconds since the Unix epoch.
-///    
+///
 /// The dawn of the Unix epoch was 00:00:00 (UTC), 1 January 1970.
 class timestamp : private internal::comparable<timestamp> {
   public:
@@ -44,7 +44,10 @@ class timestamp : private internal::comparable<timestamp> {
     explicit timestamp(numeric_type ms = 0) : ms_(ms) {}
 
     /// Assign a value in milliseconds.
-    timestamp& operator=(numeric_type ms) { ms_ = ms; return *this; }
+    timestamp &operator=(numeric_type ms) {
+        ms_ = ms;
+        return *this;
+    }
 
     /// Get the value in milliseconds.
     numeric_type milliseconds() const { return ms_; }
@@ -55,18 +58,28 @@ class timestamp : private internal::comparable<timestamp> {
 
 /// @name Comparison and arithmetic operators
 /// @{
-inline bool operator==(timestamp x, timestamp y) { return x.milliseconds() == y.milliseconds(); }
-inline bool operator<(timestamp x, timestamp y) { return x.milliseconds() < y.milliseconds(); }
+inline bool operator==(timestamp x, timestamp y) {
+    return x.milliseconds() == y.milliseconds();
+}
+inline bool operator<(timestamp x, timestamp y) {
+    return x.milliseconds() < y.milliseconds();
+}
 
-inline timestamp operator+(timestamp ts, duration d) { return timestamp(ts.milliseconds() + d.milliseconds()); }
-inline timestamp operator-(timestamp ts, duration d) { return timestamp(ts.milliseconds() - d.milliseconds()); }
-inline duration operator-(timestamp t0, timestamp t1) { return duration(t0.milliseconds() - t1.milliseconds()); }
+inline timestamp operator+(timestamp ts, duration d) {
+    return timestamp(ts.milliseconds() + d.milliseconds());
+}
+inline timestamp operator-(timestamp ts, duration d) {
+    return timestamp(ts.milliseconds() - d.milliseconds());
+}
+inline duration operator-(timestamp t0, timestamp t1) {
+    return duration(t0.milliseconds() - t1.milliseconds());
+}
 inline timestamp operator+(duration d, timestamp ts) { return ts + d; }
 /// @}
 
 /// Print a timestamp.
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, timestamp);
+PN_CPP_EXTERN std::ostream &operator<<(std::ostream &, timestamp);
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_TIMESTAMP_HPP

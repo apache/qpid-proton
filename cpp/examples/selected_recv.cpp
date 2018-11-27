@@ -32,34 +32,33 @@
 
 namespace {
 
-    // Example custom function to configure an AMQP filter,
-    // specifically an APACHE.ORG:SELECTOR
-    // (http://www.amqp.org/specification/1.0/filters)
+// Example custom function to configure an AMQP filter,
+// specifically an APACHE.ORG:SELECTOR
+// (http://www.amqp.org/specification/1.0/filters)
 
-    void set_filter(proton::source_options &opts, const std::string& selector_str) {
-        proton::source::filter_map map;
-        proton::symbol filter_key("selector");
-        proton::value filter_value;
-        // The value is a specific AMQP "described type": binary string with symbolic descriptor
-        proton::codec::encoder enc(filter_value);
-        enc << proton::codec::start::described()
-            << proton::symbol("apache.org:selector-filter:string")
-            << selector_str
-            << proton::codec::finish();
-        // In our case, the map has this one element
-        map.put(filter_key, filter_value);
-        opts.filters(map);
-    }
+void set_filter(proton::source_options &opts, const std::string &selector_str) {
+    proton::source::filter_map map;
+    proton::symbol filter_key("selector");
+    proton::value filter_value;
+    // The value is a specific AMQP "described type": binary string with
+    // symbolic descriptor
+    proton::codec::encoder enc(filter_value);
+    enc << proton::codec::start::described()
+        << proton::symbol("apache.org:selector-filter:string") << selector_str
+        << proton::codec::finish();
+    // In our case, the map has this one element
+    map.put(filter_key, filter_value);
+    opts.filters(map);
 }
-
+} // namespace
 
 class selected_recv : public proton::messaging_handler {
     std::string conn_url_;
     std::string addr_;
 
   public:
-    selected_recv(const std::string& u, const std::string& a) :
-        conn_url_(u), addr_(a) {}
+    selected_recv(const std::string &u, const std::string &a)
+        : conn_url_(u), addr_(a) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         proton::source_options opts;
@@ -82,7 +81,7 @@ int main(int argc, char **argv) {
         proton::container(recv).run();
 
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

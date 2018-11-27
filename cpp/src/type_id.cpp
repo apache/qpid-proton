@@ -27,47 +27,74 @@ namespace proton {
 
 std::string type_name(type_id t) {
     switch (t) {
-      case NULL_TYPE: return "null";
-      case BOOLEAN: return "boolean";
-      case UBYTE: return "ubyte";
-      case BYTE: return "byte";
-      case USHORT: return "ushort";
-      case SHORT: return "short";
-      case UINT: return "uint";
-      case INT: return "int";
-      case CHAR: return "char";
-      case ULONG: return "ulong";
-      case LONG: return "long";
-      case TIMESTAMP: return "timestamp";
-      case FLOAT: return "float";
-      case DOUBLE: return "double";
-      case DECIMAL32: return "decimal32";
-      case DECIMAL64: return "decimal64";
-      case DECIMAL128: return "decimal128";
-      case UUID: return "uuid";
-      case BINARY: return "binary";
-      case STRING: return "string";
-      case SYMBOL: return "symbol";
-      case DESCRIBED: return "described";
-      case ARRAY: return "array";
-      case LIST: return "list";
-      case  MAP: return "map";
+    case NULL_TYPE:
+        return "null";
+    case BOOLEAN:
+        return "boolean";
+    case UBYTE:
+        return "ubyte";
+    case BYTE:
+        return "byte";
+    case USHORT:
+        return "ushort";
+    case SHORT:
+        return "short";
+    case UINT:
+        return "uint";
+    case INT:
+        return "int";
+    case CHAR:
+        return "char";
+    case ULONG:
+        return "ulong";
+    case LONG:
+        return "long";
+    case TIMESTAMP:
+        return "timestamp";
+    case FLOAT:
+        return "float";
+    case DOUBLE:
+        return "double";
+    case DECIMAL32:
+        return "decimal32";
+    case DECIMAL64:
+        return "decimal64";
+    case DECIMAL128:
+        return "decimal128";
+    case UUID:
+        return "uuid";
+    case BINARY:
+        return "binary";
+    case STRING:
+        return "string";
+    case SYMBOL:
+        return "symbol";
+    case DESCRIBED:
+        return "described";
+    case ARRAY:
+        return "array";
+    case LIST:
+        return "list";
+    case MAP:
+        return "map";
     }
 // Avoid unreached diagnostic from clang
 #if defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunreachable-code"
 #endif
-     return "unknown";
+    return "unknown";
 #if defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
 }
 
-std::ostream& operator<<(std::ostream& o, type_id t) { return o << type_name(t); }
+std::ostream &operator<<(std::ostream &o, type_id t) {
+    return o << type_name(t);
+}
 
 void assert_type_equal(type_id want, type_id got) {
     if (want != got) throw make_conversion_error(want, got);
 }
 
-} // proton
+} // namespace proton

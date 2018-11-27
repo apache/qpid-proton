@@ -39,7 +39,7 @@ namespace proton {
 /// correspond to multiple trackers.
 class tracker : public transfer {
     /// @cond INTERNAL
-    tracker(pn_delivery_t* d);
+    tracker(pn_delivery_t *d);
     /// @endcond
 
   public:
@@ -50,10 +50,10 @@ class tracker : public transfer {
     PN_CPP_EXTERN class sender sender() const;
 
     /// @cond INTERNAL
-  friend class internal::factory<tracker>;
+    friend class internal::factory<tracker>;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_TRACKER_HPP

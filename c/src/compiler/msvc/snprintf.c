@@ -28,29 +28,25 @@
 // Note: [v]snprintf behavior changed in VS2015 to be C99 compliant.
 // vsnprintf_s is unchanged.  This platform code can go away some day.
 
-
 int pni_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap) {
-  if (fmt == NULL)
+    if (fmt == NULL) return -1;
+    if ((buf == NULL) && (count > 0)) return -1;
+    if (count > 0) {
+        int n = vsnprintf_s(buf, count, _TRUNCATE, fmt, ap);
+        if (n >= 0)   // no overflow
+            return n; // same as C99
+        buf[count - 1] = '\0';
+    }
+    // separate call to get needed buffer size on overflow
+    int n = _vscprintf(fmt, ap);
+    if (n >= (int)count) return n;
     return -1;
-  if ((buf == NULL) && (count > 0))
-    return -1;
-  if (count > 0) {
-    int n = vsnprintf_s(buf, count, _TRUNCATE, fmt, ap);
-    if (n >= 0)  // no overflow
-      return n;  // same as C99
-    buf[count-1] = '\0';
-  }
-  // separate call to get needed buffer size on overflow
-  int n = _vscprintf(fmt, ap);
-  if (n >= (int) count)
-    return n;
-  return -1;
 }
 
 int pni_snprintf(char *buf, size_t count, const char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  int n = pni_vsnprintf(buf, count, fmt, ap);
-  va_end(ap);
-  return n;
+    va_list ap;
+    va_start(ap, fmt);
+    int n = pni_vsnprintf(buf, count, fmt, ap);
+    va_end(ap);
+    return n;
 }

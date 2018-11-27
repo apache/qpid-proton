@@ -27,9 +27,9 @@
 
 namespace proton {
 
-std::ostream& operator<<(std::ostream& os, const null& n) {
+std::ostream &operator<<(std::ostream &os, const null &n) {
     os << to_string(n);
     return os;
 }
 
-}
+} // namespace proton

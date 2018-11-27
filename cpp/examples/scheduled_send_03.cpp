@@ -21,8 +21,8 @@
 
 #include "options.hpp"
 
-#include <proton/container.hpp>
 #include <proton/connection.hpp>
+#include <proton/container.hpp>
 #include <proton/duration.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
@@ -44,24 +44,27 @@ class scheduled_sender : public proton::messaging_handler {
     bool ready, canceled;
 
   public:
-    scheduled_sender(const std::string &s, double d, double t) :
-        url(s),
-        interval(int(d*proton::duration::SECOND.milliseconds())), // Send interval.
-        timeout(int(t*proton::duration::SECOND.milliseconds())), // Cancel after timeout.
-        work_queue(0),
-        ready(true),            // Ready to send.
-        canceled(false)         // Canceled.
+    scheduled_sender(const std::string &s, double d, double t)
+        : url(s),
+          interval(int(
+              d *proton::duration::SECOND.milliseconds())), // Send interval.
+          timeout(int(t *proton::duration::SECOND
+                          .milliseconds())), // Cancel after timeout.
+          work_queue(0), ready(true),        // Ready to send.
+          canceled(false)                    // Canceled.
     {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         c.open_sender(url);
     }
 
-    void on_sender_open(proton::sender & s) OVERRIDE {
+    void on_sender_open(proton::sender &s) OVERRIDE {
         work_queue = &s.work_queue();
 
-        work_queue->schedule(timeout, make_work(&scheduled_sender::cancel, this, s));
-        work_queue->schedule(interval, make_work(&scheduled_sender::tick, this, s));
+        work_queue->schedule(timeout,
+                             make_work(&scheduled_sender::cancel, this, s));
+        work_queue->schedule(interval,
+                             make_work(&scheduled_sender::tick, this, s));
     }
 
     void cancel(proton::sender sender) {
@@ -71,26 +74,28 @@ class scheduled_sender : public proton::messaging_handler {
 
     void tick(proton::sender sender) {
         if (!canceled) {
-            work_queue->schedule(interval, make_work(&scheduled_sender::tick, this, sender)); // Next tick
+            work_queue->schedule(
+                interval,
+                make_work(&scheduled_sender::tick, this, sender)); // Next tick
             if (sender.credit() > 0) // Only send if we have credit
                 send(sender);
             else
-                ready = true; // Set the ready flag, send as soon as we get credit.
+                ready =
+                    true; // Set the ready flag, send as soon as we get credit.
         }
     }
 
     void on_sendable(proton::sender &sender) OVERRIDE {
-        if (ready)              // We have been ticked since the last send.
+        if (ready) // We have been ticked since the last send.
             send(sender);
     }
 
-    void send(proton::sender& sender) {
+    void send(proton::sender &sender) {
         std::cout << "send" << std::endl;
         sender.send(proton::message("ping"));
         ready = false;
     }
 };
-
 
 int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
@@ -100,7 +105,8 @@ int main(int argc, char **argv) {
     example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
-    opts.add_value(interval, 'i', "interval", "send a message every INTERVAL seconds", "INTERVAL");
+    opts.add_value(interval, 'i', "interval",
+                   "send a message every INTERVAL seconds", "INTERVAL");
     opts.add_value(timeout, 't', "timeout", "stop after T seconds", "T");
 
     try {
@@ -108,9 +114,9 @@ int main(int argc, char **argv) {
         scheduled_sender h(address, interval, timeout);
         proton::container(h).run();
         return 0;
-    } catch (const example::bad_option& e) {
+    } catch (const example::bad_option &e) {
         std::cout << opts << std::endl << e.what() << std::endl;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

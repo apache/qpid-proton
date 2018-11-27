@@ -20,9 +20,9 @@
  */
 
 #include "proton/session_options.hpp"
-#include "proton/session.hpp"
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
+#include "proton/session.hpp"
 
 #include <proton/session.h>
 
@@ -37,38 +37,44 @@ template <class T> struct option {
     bool set;
 
     option() : value(), set(false) {}
-    option& operator=(const T& x) { value = x;  set = true; return *this; }
-    void update(const option<T>& x) { if (x.set) *this = x.value; }
+    option &operator=(const T &x) {
+        value = x;
+        set = true;
+        return *this;
+    }
+    void update(const option<T> &x) {
+        if (x.set) *this = x.value;
+    }
 };
 
 class session_options::impl {
   public:
     option<messaging_handler *> handler;
 
-    void apply(session& s) {
+    void apply(session &s) {
         if (s.uninitialized()) {
-            if (handler.set && handler.value) container::impl::set_handler(s, handler.value);
+            if (handler.set && handler.value)
+                container::impl::set_handler(s, handler.value);
         }
     }
-
 };
 
 session_options::session_options() : impl_(new impl()) {}
-session_options::session_options(const session_options& x) : impl_(new impl()) {
+session_options::session_options(const session_options &x) : impl_(new impl()) {
     *this = x;
 }
 session_options::~session_options() {}
 
-session_options& session_options::operator=(const session_options& x) {
+session_options &session_options::operator=(const session_options &x) {
     *impl_ = *x.impl_;
     return *this;
 }
 
-session_options& session_options::handler(class messaging_handler &h) { impl_->handler = &h; return *this; }
+session_options &session_options::handler(class messaging_handler &h) {
+    impl_->handler = &h;
+    return *this;
+}
 
-void session_options::apply(session& s) const { impl_->apply(s); }
-
-
-
+void session_options::apply(session &s) const { impl_->apply(s); }
 
 } // namespace proton

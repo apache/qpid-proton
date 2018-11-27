@@ -23,8 +23,8 @@
  */
 
 #include <proton/import_export.h>
-#include <proton/type_compat.h>
 #include <proton/object.h>
+#include <proton/type_compat.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -78,278 +78,278 @@ typedef struct pn_event_t pn_event_t;
  * An event type.
  */
 typedef enum {
-  /**
-   * Defined as a programming convenience. No event of this type will
-   * ever be generated.
-   */
-  PN_EVENT_NONE = 0,
+    /**
+     * Defined as a programming convenience. No event of this type will
+     * ever be generated.
+     */
+    PN_EVENT_NONE = 0,
 
-  /**
-   * A reactor has been started. Events of this type point to the reactor.
-   */
-  PN_REACTOR_INIT,
+    /**
+     * A reactor has been started. Events of this type point to the reactor.
+     */
+    PN_REACTOR_INIT,
 
-  /**
-   * A reactor has no more events to process. Events of this type
-   * point to the reactor.
-   */
-  PN_REACTOR_QUIESCED,
+    /**
+     * A reactor has no more events to process. Events of this type
+     * point to the reactor.
+     */
+    PN_REACTOR_QUIESCED,
 
-  /**
-   * A reactor has been stopped. Events of this type point to the reactor.
-   */
-  PN_REACTOR_FINAL,
+    /**
+     * A reactor has been stopped. Events of this type point to the reactor.
+     */
+    PN_REACTOR_FINAL,
 
-  /**
-   * A timer event has occurred.
-   */
-  PN_TIMER_TASK,
+    /**
+     * A timer event has occurred.
+     */
+    PN_TIMER_TASK,
 
-  /**
-   * The connection has been created. This is the first event that
-   * will ever be issued for a connection. Events of this type point
-   * to the relevant connection.
-   */
-  PN_CONNECTION_INIT,
+    /**
+     * The connection has been created. This is the first event that
+     * will ever be issued for a connection. Events of this type point
+     * to the relevant connection.
+     */
+    PN_CONNECTION_INIT,
 
-  /**
-   * The connection has been bound to a transport. This event is
-   * issued when the ::pn_transport_bind() operation is invoked.
-   */
-  PN_CONNECTION_BOUND,
+    /**
+     * The connection has been bound to a transport. This event is
+     * issued when the ::pn_transport_bind() operation is invoked.
+     */
+    PN_CONNECTION_BOUND,
 
-  /**
-   * The connection has been unbound from its transport. This event is
-   * issued when the ::pn_transport_unbind() operation is invoked.
-   */
-  PN_CONNECTION_UNBOUND,
+    /**
+     * The connection has been unbound from its transport. This event is
+     * issued when the ::pn_transport_unbind() operation is invoked.
+     */
+    PN_CONNECTION_UNBOUND,
 
-  /**
-   * The local connection endpoint has been closed. Events of this
-   * type point to the relevant connection.
-   */
-  PN_CONNECTION_LOCAL_OPEN,
+    /**
+     * The local connection endpoint has been closed. Events of this
+     * type point to the relevant connection.
+     */
+    PN_CONNECTION_LOCAL_OPEN,
 
-  /**
-   * The remote endpoint has opened the connection. Events of this
-   * type point to the relevant connection.
-   */
-  PN_CONNECTION_REMOTE_OPEN,
+    /**
+     * The remote endpoint has opened the connection. Events of this
+     * type point to the relevant connection.
+     */
+    PN_CONNECTION_REMOTE_OPEN,
 
-  /**
-   * The local connection endpoint has been closed. Events of this
-   * type point to the relevant connection.
-   */
-  PN_CONNECTION_LOCAL_CLOSE,
+    /**
+     * The local connection endpoint has been closed. Events of this
+     * type point to the relevant connection.
+     */
+    PN_CONNECTION_LOCAL_CLOSE,
 
-  /**
-   *  The remote endpoint has closed the connection. Events of this
-   *  type point to the relevant connection.
-   */
-  PN_CONNECTION_REMOTE_CLOSE,
+    /**
+     *  The remote endpoint has closed the connection. Events of this
+     *  type point to the relevant connection.
+     */
+    PN_CONNECTION_REMOTE_CLOSE,
 
-  /**
-   * The connection has been freed and any outstanding processing has
-   * been completed. This is the final event that will ever be issued
-   * for a connection.
-   */
-  PN_CONNECTION_FINAL,
+    /**
+     * The connection has been freed and any outstanding processing has
+     * been completed. This is the final event that will ever be issued
+     * for a connection.
+     */
+    PN_CONNECTION_FINAL,
 
-  /**
-   * The session has been created. This is the first event that will
-   * ever be issued for a session.
-   */
-  PN_SESSION_INIT,
+    /**
+     * The session has been created. This is the first event that will
+     * ever be issued for a session.
+     */
+    PN_SESSION_INIT,
 
-  /**
-   * The local session endpoint has been opened. Events of this type
-   * point ot the relevant session.
-   */
-  PN_SESSION_LOCAL_OPEN,
+    /**
+     * The local session endpoint has been opened. Events of this type
+     * point ot the relevant session.
+     */
+    PN_SESSION_LOCAL_OPEN,
 
-  /**
-   * The remote endpoint has opened the session. Events of this type
-   * point to the relevant session.
-   */
-  PN_SESSION_REMOTE_OPEN,
+    /**
+     * The remote endpoint has opened the session. Events of this type
+     * point to the relevant session.
+     */
+    PN_SESSION_REMOTE_OPEN,
 
-  /**
-   * The local session endpoint has been closed. Events of this type
-   * point ot the relevant session.
-   */
-  PN_SESSION_LOCAL_CLOSE,
+    /**
+     * The local session endpoint has been closed. Events of this type
+     * point ot the relevant session.
+     */
+    PN_SESSION_LOCAL_CLOSE,
 
-  /**
-   * The remote endpoint has closed the session. Events of this type
-   * point to the relevant session.
-   */
-  PN_SESSION_REMOTE_CLOSE,
+    /**
+     * The remote endpoint has closed the session. Events of this type
+     * point to the relevant session.
+     */
+    PN_SESSION_REMOTE_CLOSE,
 
-  /**
-   * The session has been freed and any outstanding processing has
-   * been completed. This is the final event that will ever be issued
-   * for a session.
-   */
-  PN_SESSION_FINAL,
+    /**
+     * The session has been freed and any outstanding processing has
+     * been completed. This is the final event that will ever be issued
+     * for a session.
+     */
+    PN_SESSION_FINAL,
 
-  /**
-   * The link has been created. This is the first event that will ever
-   * be issued for a link.
-   */
-  PN_LINK_INIT,
+    /**
+     * The link has been created. This is the first event that will ever
+     * be issued for a link.
+     */
+    PN_LINK_INIT,
 
-  /**
-   * The local link endpoint has been opened. Events of this type
-   * point ot the relevant link.
-   */
-  PN_LINK_LOCAL_OPEN,
+    /**
+     * The local link endpoint has been opened. Events of this type
+     * point ot the relevant link.
+     */
+    PN_LINK_LOCAL_OPEN,
 
-  /**
-   * The remote endpoint has opened the link. Events of this type
-   * point to the relevant link.
-   */
-  PN_LINK_REMOTE_OPEN,
+    /**
+     * The remote endpoint has opened the link. Events of this type
+     * point to the relevant link.
+     */
+    PN_LINK_REMOTE_OPEN,
 
-  /**
-   * The local link endpoint has been closed. Events of this type
-   * point ot the relevant link.
-   */
-  PN_LINK_LOCAL_CLOSE,
+    /**
+     * The local link endpoint has been closed. Events of this type
+     * point ot the relevant link.
+     */
+    PN_LINK_LOCAL_CLOSE,
 
-  /**
-   * The remote endpoint has closed the link. Events of this type
-   * point to the relevant link.
-   */
-  PN_LINK_REMOTE_CLOSE,
+    /**
+     * The remote endpoint has closed the link. Events of this type
+     * point to the relevant link.
+     */
+    PN_LINK_REMOTE_CLOSE,
 
-  /**
-   * The local link endpoint has been detached. Events of this type
-   * point to the relevant link.
-   */
-  PN_LINK_LOCAL_DETACH,
+    /**
+     * The local link endpoint has been detached. Events of this type
+     * point to the relevant link.
+     */
+    PN_LINK_LOCAL_DETACH,
 
-  /**
-   * The remote endpoint has detached the link. Events of this type
-   * point to the relevant link.
-   */
-  PN_LINK_REMOTE_DETACH,
+    /**
+     * The remote endpoint has detached the link. Events of this type
+     * point to the relevant link.
+     */
+    PN_LINK_REMOTE_DETACH,
 
-  /**
-   * The flow control state for a link has changed. Events of this
-   * type point to the relevant link.
-   */
-  PN_LINK_FLOW,
+    /**
+     * The flow control state for a link has changed. Events of this
+     * type point to the relevant link.
+     */
+    PN_LINK_FLOW,
 
-  /**
-   * The link has been freed and any outstanding processing has been
-   * completed. This is the final event that will ever be issued for a
-   * link. Events of this type point to the relevant link.
-   */
-  PN_LINK_FINAL,
+    /**
+     * The link has been freed and any outstanding processing has been
+     * completed. This is the final event that will ever be issued for a
+     * link. Events of this type point to the relevant link.
+     */
+    PN_LINK_FINAL,
 
-  /**
-   * A delivery has been created or updated. Events of this type point
-   * to the relevant delivery.
-   */
-  PN_DELIVERY,
+    /**
+     * A delivery has been created or updated. Events of this type point
+     * to the relevant delivery.
+     */
+    PN_DELIVERY,
 
-  /**
-   * The transport has new data to read and/or write. Events of this
-   * type point to the relevant transport.
-   */
-  PN_TRANSPORT,
+    /**
+     * The transport has new data to read and/or write. Events of this
+     * type point to the relevant transport.
+     */
+    PN_TRANSPORT,
 
-  /**
-   * The transport has authenticated. If this is received by a server
-   * the associated transport has authenticated an incoming connection
-   * and pn_transport_get_user() can be used to obtain the authenticated
-   * user.
-   */
-  PN_TRANSPORT_AUTHENTICATED,
+    /**
+     * The transport has authenticated. If this is received by a server
+     * the associated transport has authenticated an incoming connection
+     * and pn_transport_get_user() can be used to obtain the authenticated
+     * user.
+     */
+    PN_TRANSPORT_AUTHENTICATED,
 
-  /**
-   * Indicates that a transport error has occurred. Use
-   * ::pn_transport_condition() to access the details of the error
-   * from the associated transport.
-   */
-  PN_TRANSPORT_ERROR,
+    /**
+     * Indicates that a transport error has occurred. Use
+     * ::pn_transport_condition() to access the details of the error
+     * from the associated transport.
+     */
+    PN_TRANSPORT_ERROR,
 
-  /**
-   * Indicates that the "head" or writing end of the transport has been closed. This
-   * means the transport will never produce more bytes for output to
-   * the network. Events of this type point to the relevant transport.
-   */
-  PN_TRANSPORT_HEAD_CLOSED,
+    /**
+     * Indicates that the "head" or writing end of the transport has been
+     * closed. This means the transport will never produce more bytes for output
+     * to the network. Events of this type point to the relevant transport.
+     */
+    PN_TRANSPORT_HEAD_CLOSED,
 
-  /**
-   * Indicates that the tail of the transport has been closed. This
-   * means the transport will never be able to process more bytes from
-   * the network. Events of this type point to the relevant transport.
-   */
-  PN_TRANSPORT_TAIL_CLOSED,
+    /**
+     * Indicates that the tail of the transport has been closed. This
+     * means the transport will never be able to process more bytes from
+     * the network. Events of this type point to the relevant transport.
+     */
+    PN_TRANSPORT_TAIL_CLOSED,
 
-  /**
-   * Indicates that the both the head and tail of the transport are
-   * closed. Events of this type point to the relevant transport.
-   */
-  PN_TRANSPORT_CLOSED,
+    /**
+     * Indicates that the both the head and tail of the transport are
+     * closed. Events of this type point to the relevant transport.
+     */
+    PN_TRANSPORT_CLOSED,
 
-  PN_SELECTABLE_INIT,
-  PN_SELECTABLE_UPDATED,
-  PN_SELECTABLE_READABLE,
-  PN_SELECTABLE_WRITABLE,
-  PN_SELECTABLE_ERROR,
-  PN_SELECTABLE_EXPIRED,
-  PN_SELECTABLE_FINAL,
+    PN_SELECTABLE_INIT,
+    PN_SELECTABLE_UPDATED,
+    PN_SELECTABLE_READABLE,
+    PN_SELECTABLE_WRITABLE,
+    PN_SELECTABLE_ERROR,
+    PN_SELECTABLE_EXPIRED,
+    PN_SELECTABLE_FINAL,
 
-  /**
-   * pn_connection_wake() was called.
-   * Events of this type point to the @ref pn_connection_t.
-   */
-  PN_CONNECTION_WAKE,
+    /**
+     * pn_connection_wake() was called.
+     * Events of this type point to the @ref pn_connection_t.
+     */
+    PN_CONNECTION_WAKE,
 
-  /**
-   * Indicates the listener has an incoming connection, call pn_listener_accept2()
-   * to accept it.
-   * Events of this type point to the @ref pn_listener_t.
-   */
-  PN_LISTENER_ACCEPT,
+    /**
+     * Indicates the listener has an incoming connection, call
+     * pn_listener_accept2() to accept it. Events of this type point to the @ref
+     * pn_listener_t.
+     */
+    PN_LISTENER_ACCEPT,
 
-  /**
-   * Indicates the listener has closed. pn_listener_condition() provides error information.
-   * Events of this type point to the @ref pn_listener_t.
-   */
-  PN_LISTENER_CLOSE,
+    /**
+     * Indicates the listener has closed. pn_listener_condition() provides error
+     * information. Events of this type point to the @ref pn_listener_t.
+     */
+    PN_LISTENER_CLOSE,
 
-  /**
-   * Indicates pn_proactor_interrupt() was called to interrupt a proactor thread.
-   * Events of this type point to the @ref pn_proactor_t.
-   */
-  PN_PROACTOR_INTERRUPT,
+    /**
+     * Indicates pn_proactor_interrupt() was called to interrupt a proactor
+     * thread. Events of this type point to the @ref pn_proactor_t.
+     */
+    PN_PROACTOR_INTERRUPT,
 
-  /**
-   * Timeout set by pn_proactor_set_timeout() time limit expired.
-   * Events of this type point to the @ref pn_proactor_t.
-   */
-  PN_PROACTOR_TIMEOUT,
+    /**
+     * Timeout set by pn_proactor_set_timeout() time limit expired.
+     * Events of this type point to the @ref pn_proactor_t.
+     */
+    PN_PROACTOR_TIMEOUT,
 
-  /**
-   * The proactor has become inactive: all listeners and connections were closed
-   * and the timeout (if set) expired or was cancelled. There will be no
-   * further events unless new listeners or connections are opened, or a new
-   * timeout is set (possibly in other threads in a multi-threaded program.)
-   *
-   * Events of this type point to the @ref pn_proactor_t.
-   */
-  PN_PROACTOR_INACTIVE,
+    /**
+     * The proactor has become inactive: all listeners and connections were
+     * closed and the timeout (if set) expired or was cancelled. There will be
+     * no further events unless new listeners or connections are opened, or a
+     * new timeout is set (possibly in other threads in a multi-threaded
+     * program.)
+     *
+     * Events of this type point to the @ref pn_proactor_t.
+     */
+    PN_PROACTOR_INACTIVE,
 
-  /**
-   * The listener is listening.
-   * Events of this type point to the @ref pn_listener_t.
-   */
-  PN_LISTENER_OPEN
+    /**
+     * The listener is listening.
+     * Events of this type point to the @ref pn_listener_t.
+     */
+    PN_LISTENER_OPEN
 } pn_event_type_t;
-
 
 /**
  * Get a human readable name for an event type.
@@ -448,7 +448,8 @@ PN_EXTERN pn_event_t *pn_collector_next(pn_collector_t *collector);
  * Return the same pointer as the most recent call to pn_collector_next().
  *
  * @param[in] collector a collector object
- * @return a pointer to the event returned by previous call to pn_collector_next()
+ * @return a pointer to the event returned by previous call to
+ * pn_collector_next()
  */
 PN_EXTERN pn_event_t *pn_collector_prev(pn_collector_t *collector);
 
@@ -460,7 +461,7 @@ PN_EXTERN pn_event_t *pn_collector_prev(pn_collector_t *collector);
  * @param[in] collector a collector object
  * @return true if the collector has more than the current event
  */
-PN_EXTERN  bool pn_collector_more(pn_collector_t *collector);
+PN_EXTERN bool pn_collector_more(pn_collector_t *collector);
 
 /**
  * Get the type of an event.
@@ -562,10 +563,11 @@ PN_EXTERN pn_event_t *pn_event_batch_next(pn_event_batch_t *batch);
 /**
  * @cond INTERNAL
  *
- * pn_event_batch_next() can be re-implemented for different behaviors in different contexts.
+ * pn_event_batch_next() can be re-implemented for different behaviors in
+ * different contexts.
  */
 struct pn_event_batch_t {
-  pn_event_t *(*next_event)(pn_event_batch_t *batch);
+    pn_event_t *(*next_event)(pn_event_batch_t *batch);
 };
 /**
  * @endcond

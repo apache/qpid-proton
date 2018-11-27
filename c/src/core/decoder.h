@@ -25,6 +25,7 @@
 typedef struct pn_decoder_t pn_decoder_t;
 
 pn_decoder_t *pn_decoder(void);
-ssize_t pn_decoder_decode(pn_decoder_t *decoder, const char *src, size_t size, pn_data_t *dst);
+ssize_t pn_decoder_decode(pn_decoder_t *decoder, const char *src, size_t size,
+                          pn_data_t *dst);
 
 #endif /* decoder.h */

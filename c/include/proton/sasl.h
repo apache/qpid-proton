@@ -52,12 +52,12 @@ typedef struct pn_sasl_t pn_sasl_t;
  * The result of the SASL negotiation.
  */
 typedef enum {
-  PN_SASL_NONE = -1,  /** negotiation not completed */
-  PN_SASL_OK = 0,     /** authentication succeeded */
-  PN_SASL_AUTH = 1,   /** failed due to bad credentials */
-  PN_SASL_SYS = 2,    /** failed due to a system error */
-  PN_SASL_PERM = 3,   /** failed due to unrecoverable error */
-  PN_SASL_TEMP = 4    /** failed due to transient error */
+    PN_SASL_NONE = -1, /** negotiation not completed */
+    PN_SASL_OK = 0,    /** authentication succeeded */
+    PN_SASL_AUTH = 1,  /** failed due to bad credentials */
+    PN_SASL_SYS = 2,   /** failed due to a system error */
+    PN_SASL_PERM = 3,  /** failed due to unrecoverable error */
+    PN_SASL_TEMP = 4   /** failed due to transient error */
 } pn_sasl_outcome_t;
 
 /**
@@ -86,7 +86,8 @@ PN_EXTERN pn_sasl_t *pn_sasl(pn_transport_t *transport);
  * Extended SASL implementations use an external library (Cyrus SASL)
  * to support other mechanisms beyond these basic ones.
  *
- * @return true if we support extended SASL negotiation, false if we only support basic negotiation.
+ * @return true if we support extended SASL negotiation, false if we only
+ * support basic negotiation.
  */
 PN_EXTERN bool pn_sasl_extended(void);
 
@@ -108,12 +109,13 @@ PN_EXTERN pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl);
 /**
  * Retrieve the authenticated user
  *
- * This is usually used at the the server end to find the name of the authenticated user.
- * On the client it will merely return whatever user was passed in to the
- * pn_transport_set_user_password() API.
+ * This is usually used at the the server end to find the name of the
+ * authenticated user. On the client it will merely return whatever user was
+ * passed in to the pn_transport_set_user_password() API.
  *
- * If pn_sasl_outcome() returns a value other than PN_SASL_OK, then there will be no user to return.
- * The returned value is only reliable after the PN_TRANSPORT_AUTHENTICATED event has been received.
+ * If pn_sasl_outcome() returns a value other than PN_SASL_OK, then there will
+ * be no user to return. The returned value is only reliable after the
+ * PN_TRANSPORT_AUTHENTICATED event has been received.
  *
  * @param[in] sasl the sasl layer
  *
@@ -127,7 +129,8 @@ PN_EXTERN const char *pn_sasl_get_user(pn_sasl_t *sasl);
 /**
  * Return the selected SASL mechanism
  *
- * The returned value is only reliable after the PN_TRANSPORT_AUTHENTICATED event has been received.
+ * The returned value is only reliable after the PN_TRANSPORT_AUTHENTICATED
+ * event has been received.
  *
  * @param[in] sasl the SASL layer
  *
@@ -141,16 +144,18 @@ PN_EXTERN const char *pn_sasl_get_mech(pn_sasl_t *sasl);
  * This can be used on either the client or the server to restrict the SASL
  * mechanisms that may be used to the mechanisms on the list.
  *
- * @note By default the GSSAPI and GSS-SPNEGO mechanisms are not enabled for clients. This is because
- * these mechanisms have the problematic behaviour of 'capturing' the client whenever they are installed
- * so that they will be used by the client if offered by the server even if the client can't successfully
+ * @note By default the GSSAPI and GSS-SPNEGO mechanisms are not enabled for
+ * clients. This is because these mechanisms have the problematic behaviour of
+ * 'capturing' the client whenever they are installed so that they will be used
+ * by the client if offered by the server even if the client can't successfully
  * authenticate this way. This can lead to some very hard to debug failures.
  *
- * @note The GSSAPI or GSS-SPNEGO mechanisms need to be explicitly enabled if they are required (together
- * with any other required mechanisms).
+ * @note The GSSAPI or GSS-SPNEGO mechanisms need to be explicitly enabled if
+ * they are required (together with any other required mechanisms).
  *
  * @param[in] sasl the SASL layer
- * @param[in] mechs space separated list of mechanisms that are allowed for authentication
+ * @param[in] mechs space separated list of mechanisms that are allowed for
+ * authentication
  */
 PN_EXTERN void pn_sasl_allowed_mechs(pn_sasl_t *sasl, const char *mechs);
 
@@ -158,17 +163,19 @@ PN_EXTERN void pn_sasl_allowed_mechs(pn_sasl_t *sasl, const char *mechs);
  * Boolean to allow use of clear text authentication mechanisms
  *
  * By default the SASL layer is configured not to allow mechanisms that disclose
- * the clear text of the password over an unencrypted AMQP connection. This specifically
- * will disallow the use of the PLAIN mechanism without using SSL encryption.
+ * the clear text of the password over an unencrypted AMQP connection. This
+ * specifically will disallow the use of the PLAIN mechanism without using SSL
+ * encryption.
  *
  * This default is to avoid disclosing password information accidentally over an
  * insecure network.
  *
- * If you actually wish to use a clear text password unencrypted then you can use this
- * API to set allow_insecure_mechs to true.
+ * If you actually wish to use a clear text password unencrypted then you can
+ * use this API to set allow_insecure_mechs to true.
  *
  * @param[in] sasl the SASL layer
- * @param[in] insecure set this to true to allow unencrypted PLAIN authentication.
+ * @param[in] insecure set this to true to allow unencrypted PLAIN
+ * authentication.
  *
  */
 PN_EXTERN void pn_sasl_set_allow_insecure_mechs(pn_sasl_t *sasl, bool insecure);
@@ -183,11 +190,12 @@ PN_EXTERN bool pn_sasl_get_allow_insecure_mechs(pn_sasl_t *sasl);
 /**
  * Set the sasl configuration name
  *
- * This is used to construct the SASL configuration filename. In the current implementation
- * it ".conf" is added to the name and the file is looked for in the configuration directory.
+ * This is used to construct the SASL configuration filename. In the current
+ * implementation it ".conf" is added to the name and the file is looked for in
+ * the configuration directory.
  *
- * If not set it will default to "proton-server" for a sasl server and "proton-client"
- * for a client.
+ * If not set it will default to "proton-server" for a sasl server and
+ * "proton-client" for a client.
  *
  * @param[in] sasl the SASL layer
  * @param[in] name the configuration name
@@ -198,10 +206,12 @@ PN_EXTERN void pn_sasl_config_name(pn_sasl_t *sasl, const char *name);
  * Set the sasl configuration path
  *
  * This is used to tell SASL where to look for the configuration file.
- * In the current implementation it can be a colon separated list of directories.
+ * In the current implementation it can be a colon separated list of
+ * directories.
  *
- * The environment variable PN_SASL_CONFIG_PATH can also be used to set this path,
- * but if both methods are used then this pn_sasl_config_path() will take precedence.
+ * The environment variable PN_SASL_CONFIG_PATH can also be used to set this
+ * path, but if both methods are used then this pn_sasl_config_path() will take
+ * precedence.
  *
  * If not set the underlying implementation default will be used.
  * for a client.

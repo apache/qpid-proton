@@ -33,10 +33,10 @@ typedef max_align_t pn_max_align_t;
 #else
 /* Align on a union of likely largest types for older compilers */
 typedef union pn_max_align_t {
-  uint64_t i;
-  long double d;
-  void *v;
-  void (*fp)(void);
+    uint64_t i;
+    long double d;
+    void *v;
+    void (*fp)(void);
 } pn_max_align_t;
 #endif
 

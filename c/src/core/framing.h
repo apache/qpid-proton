@@ -24,24 +24,25 @@
 
 #include "buffer.h"
 
+#include <proton/error.h>
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
-#include <proton/error.h>
 
 #define AMQP_HEADER_SIZE (8)
 #define AMQP_MIN_MAX_FRAME_SIZE ((uint32_t)512) // minimum allowable max-frame
 #define AMQP_MAX_WINDOW_SIZE (2147483647)
 
 typedef struct {
-  uint8_t type;
-  uint16_t channel;
-  size_t ex_size;
-  const char *extended;
-  size_t size;
-  const char *payload;
+    uint8_t type;
+    uint16_t channel;
+    size_t ex_size;
+    const char *extended;
+    size_t size;
+    const char *payload;
 } pn_frame_t;
 
-ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, uint32_t max);
-size_t pn_write_frame(pn_buffer_t* buffer, pn_frame_t frame);
+ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available,
+                      uint32_t max);
+size_t pn_write_frame(pn_buffer_t *buffer, pn_frame_t frame);
 
 #endif /* framing.h */

@@ -30,8 +30,8 @@
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/reconnect_options.hpp>
-#include <proton/value.hpp>
 #include <proton/types.hpp>
+#include <proton/value.hpp>
 
 #include <iostream>
 #include <map>
@@ -49,8 +49,9 @@ class reconnect_client : public proton::messaging_handler {
     int received;
 
   public:
-    reconnect_client(const std::string &u, const std::string& a, int c, const std::vector<std::string>& f) :
-        url(u), address(a), failovers(f), sent(0), expected(c), received(0) {}
+    reconnect_client(const std::string &u, const std::string &a, int c,
+                     const std::vector<std::string> &f)
+        : url(u), address(a), failovers(f), sent(0), expected(c), received(0) {}
 
   private:
     void on_container_start(proton::container &c) OVERRIDE {
@@ -62,7 +63,7 @@ class reconnect_client : public proton::messaging_handler {
         c.connect(url, co);
     }
 
-    void on_connection_open(proton::connection & c) OVERRIDE {
+    void on_connection_open(proton::connection &c) OVERRIDE {
         c.open_receiver(address);
         c.open_sender(address);
         // reconnect we probably lost the last message sent
@@ -90,9 +91,9 @@ class reconnect_client : public proton::messaging_handler {
         }
     }
 
-    void send(proton::sender& s) {
+    void send(proton::sender &s) {
         // Only send with credit and only allow one outstanding message
-        while (s.credit() && sent < received+1) {
+        while (s.credit() && sent < received + 1) {
             std::map<std::string, int> m;
             m["sequence"] = sent + 1;
 
@@ -100,30 +101,28 @@ class reconnect_client : public proton::messaging_handler {
             msg.id(sent + 1);
             msg.body(m);
 
-            std::cout << "Sending: " << sent+1 << std::endl;
+            std::cout << "Sending: " << sent + 1 << std::endl;
             s.send(msg);
             sent++;
         }
     }
 
-    void on_sender_open(proton::sender & s) OVERRIDE {
-        sender = s;
-    }
+    void on_sender_open(proton::sender &s) OVERRIDE { sender = s; }
 
-    void on_sendable(proton::sender &s) OVERRIDE {
-        send(s);
-    }
+    void on_sendable(proton::sender &s) OVERRIDE { send(s); }
 };
 
-int main(int argc, const char** argv) {
+int main(int argc, const char **argv) {
     try {
         if (argc < 4) {
-            std ::cerr <<
-                "Usage: " << argv[0] << " CONNECTION-URL AMQP-ADDRESS MESSAGE-COUNT FAILOVER-URL...\n"
-                "CONNECTION-URL: connection address, e.g.'amqp://127.0.0.1'\n"
-                "AMQP-ADDRESS: AMQP node address, e.g. 'examples'\n"
-                "MESSAGE-COUNT: number of messages to receive\n"
-                "FAILOVER_URL...: zero or more failover urls\n";
+            std ::cerr << "Usage: " << argv[0]
+                       << " CONNECTION-URL AMQP-ADDRESS MESSAGE-COUNT "
+                          "FAILOVER-URL...\n"
+                          "CONNECTION-URL: connection address, "
+                          "e.g.'amqp://127.0.0.1'\n"
+                          "AMQP-ADDRESS: AMQP node address, e.g. 'examples'\n"
+                          "MESSAGE-COUNT: number of messages to receive\n"
+                          "FAILOVER_URL...: zero or more failover urls\n";
             return 1;
         }
         const char *url = argv[1];
@@ -135,7 +134,7 @@ int main(int argc, const char** argv) {
         proton::container(client).run();
 
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

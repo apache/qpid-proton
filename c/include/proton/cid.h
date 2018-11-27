@@ -27,46 +27,46 @@
  */
 
 typedef enum {
-  CID_pn_object = 1,
-  CID_pn_void,
-  CID_pn_weakref,
+    CID_pn_object = 1,
+    CID_pn_void,
+    CID_pn_weakref,
 
-  CID_pn_string,
-  CID_pn_list,
-  CID_pn_map,
-  CID_pn_hash,
-  CID_pn_record,
+    CID_pn_string,
+    CID_pn_list,
+    CID_pn_map,
+    CID_pn_hash,
+    CID_pn_record,
 
-  CID_pn_collector,
-  CID_pn_event,
+    CID_pn_collector,
+    CID_pn_event,
 
-  CID_pn_encoder,
-  CID_pn_decoder,
-  CID_pn_data,
+    CID_pn_encoder,
+    CID_pn_decoder,
+    CID_pn_data,
 
-  CID_pn_connection,
-  CID_pn_session,
-  CID_pn_link,
-  CID_pn_delivery,
-  CID_pn_transport,
+    CID_pn_connection,
+    CID_pn_session,
+    CID_pn_link,
+    CID_pn_delivery,
+    CID_pn_transport,
 
-  CID_pn_message,
+    CID_pn_message,
 
-  CID_pn_reactor,
-  CID_pn_handler,
-  CID_pn_timer,
-  CID_pn_task,
+    CID_pn_reactor,
+    CID_pn_handler,
+    CID_pn_timer,
+    CID_pn_task,
 
-  CID_pn_io,
-  CID_pn_selector,
-  CID_pn_selectable,
+    CID_pn_io,
+    CID_pn_selector,
+    CID_pn_selectable,
 
-  CID_pn_url,
+    CID_pn_url,
 
-  CID_pn_listener,
-  CID_pn_proactor,
+    CID_pn_listener,
+    CID_pn_proactor,
 
-  CID_pn_listener_socket
+    CID_pn_listener_socket
 } pn_cid_t;
 
 /**

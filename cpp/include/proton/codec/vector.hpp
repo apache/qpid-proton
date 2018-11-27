@@ -23,39 +23,55 @@
  */
 
 /// @file
-/// **Unsettled API** - Enable conversions between `proton::value` and `std::vector`.
+/// **Unsettled API** - Enable conversions between `proton::value` and
+/// `std::vector`.
 
-#include "./encoder.hpp"
 #include "./decoder.hpp"
+#include "./encoder.hpp"
 
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace proton {
 namespace codec {
 
 /// Encode std::vector<T> as amqp::ARRAY (same type elements)
-template <class T, class A> encoder& operator<<(encoder& e, const std::vector<T, A>& x) {
+template <class T, class A>
+encoder &operator<<(encoder &e, const std::vector<T, A> &x) {
     return e << encoder::array(x, internal::type_id_of<T>::value);
 }
 
 /// Encode std::vector<value> encode as amqp::LIST (mixed type elements)
-template <class A> encoder& operator<<(encoder& e, const std::vector<value, A>& x) { return e << encoder::list(x); }
+template <class A>
+encoder &operator<<(encoder &e, const std::vector<value, A> &x) {
+    return e << encoder::list(x);
+}
 
 /// Encode std::vector<scalar> as amqp::LIST (mixed type elements)
-template <class A> encoder& operator<<(encoder& e, const std::vector<scalar, A>& x) { return e << encoder::list(x); }
+template <class A>
+encoder &operator<<(encoder &e, const std::vector<scalar, A> &x) {
+    return e << encoder::list(x);
+}
 
 /// Encode std::deque<std::pair<k,t> > as amqp::MAP, preserves order of entries.
 template <class A, class K, class T>
-encoder& operator<<(encoder& e, const std::vector<std::pair<K,T>, A>& x) { return e << encoder::map(x); }
+encoder &operator<<(encoder &e, const std::vector<std::pair<K, T>, A> &x) {
+    return e << encoder::map(x);
+}
 
 /// Decode to std::vector<T> from an amqp::LIST or amqp::ARRAY.
-template <class T, class A> decoder& operator>>(decoder& d, std::vector<T, A>& x) { return d >> decoder::sequence(x); }
+template <class T, class A>
+decoder &operator>>(decoder &d, std::vector<T, A> &x) {
+    return d >> decoder::sequence(x);
+}
 
 /// Decode to std::vector<std::pair<K, T> from an amqp::MAP.
-template <class A, class K, class T> decoder& operator>>(decoder& d, std::vector<std::pair<K, T> , A>& x) { return d >> decoder::pair_sequence(x); }
+template <class A, class K, class T>
+decoder &operator>>(decoder &d, std::vector<std::pair<K, T>, A> &x) {
+    return d >> decoder::pair_sequence(x);
+}
 
-} // codec
-} // proton
+} // namespace codec
+} // namespace proton
 
 #endif // PROTON_CODEC_VECTOR_HPP

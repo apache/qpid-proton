@@ -31,15 +31,17 @@ namespace proton {
 
 class reconnect_options::impl {
   public:
-    impl() : delay(10), delay_multiplier(2.0), max_delay(duration::FOREVER), max_attempts(0) {}
+    impl()
+        : delay(10), delay_multiplier(2.0), max_delay(duration::FOREVER),
+          max_attempts(0) {}
 
     duration delay;
-    float    delay_multiplier;
+    float delay_multiplier;
     duration max_delay;
-    int      max_attempts;
+    int max_attempts;
     std::vector<std::string> failover_urls;
 };
 
-}
+} // namespace proton
 
-#endif  /*!PROTON_CPP_RECONNECT_OPTIONSIMPL_H*/
+#endif /*!PROTON_CPP_RECONNECT_OPTIONSIMPL_H*/

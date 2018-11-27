@@ -30,13 +30,13 @@ namespace proton {
 
 class messaging_handler;
 
-/// Convert the low level proton-c events to the higher level proton::messaging_handler calls
-class messaging_adapter
-{
+/// Convert the low level proton-c events to the higher level
+/// proton::messaging_handler calls
+class messaging_adapter {
   public:
-    static void dispatch(messaging_handler& delegate, pn_event_t* e);
+    static void dispatch(messaging_handler &delegate, pn_event_t *e);
 };
 
-}
+} // namespace proton
 ///@endcond INTERNAL
-#endif  /*!PROTON_CPP_MESSAGING_ADAPTER_H*/
+#endif /*!PROTON_CPP_MESSAGING_ADAPTER_H*/

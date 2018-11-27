@@ -36,10 +36,9 @@ struct pn_session_t;
 namespace proton {
 
 /// A channel for sending messages.
-class
-PN_CPP_CLASS_EXTERN sender : public link {
+class PN_CPP_CLASS_EXTERN sender : public link {
     /// @cond INTERNAL
-    PN_CPP_EXTERN sender(pn_link_t* s);
+    PN_CPP_EXTERN sender(pn_link_t *s);
     /// @endcond
 
   public:
@@ -72,8 +71,8 @@ PN_CPP_CLASS_EXTERN sender : public link {
     PN_CPP_EXTERN void return_credit();
 
     /// @cond INTERNAL
-  friend class internal::factory<sender>;
-  friend class sender_iterator;
+    friend class internal::factory<sender>;
+    friend class sender_iterator;
     /// @endcond
 };
 
@@ -81,21 +80,21 @@ PN_CPP_CLASS_EXTERN sender : public link {
 
 /// An iterator of senders.
 class sender_iterator : public internal::iter_base<sender, sender_iterator> {
-    sender_iterator(sender snd, pn_session_t* s = 0) :
-        internal::iter_base<sender, sender_iterator>(snd), session_(s) {}
+    sender_iterator(sender snd, pn_session_t *s = 0)
+        : internal::iter_base<sender, sender_iterator>(snd), session_(s) {}
 
   public:
     /// Create an iterator of senders.
-    sender_iterator() :
-        internal::iter_base<sender, sender_iterator>(0), session_(0) {}
+    sender_iterator()
+        : internal::iter_base<sender, sender_iterator>(0), session_(0) {}
     /// Advance to the next sender.
     PN_CPP_EXTERN sender_iterator operator++();
 
   private:
-    pn_session_t* session_;
+    pn_session_t *session_;
 
-  friend class connection;
-  friend class session;
+    friend class connection;
+    friend class session;
 };
 
 /// A range of senders.
@@ -103,6 +102,6 @@ typedef internal::iter_range<sender_iterator> sender_range;
 
 /// @endcond
 
-}
+} // namespace proton
 
 #endif // PROTON_SENDER_HPP

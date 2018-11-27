@@ -21,18 +21,23 @@
 
 #include "proton_bits.hpp"
 
-#include "proton/target.hpp"
-#include "proton/sender.hpp"
 #include "proton/receiver.hpp"
+#include "proton/sender.hpp"
+#include "proton/target.hpp"
 
 #include "proton_bits.hpp"
 
 namespace proton {
 
-// Set parent_ non-null when the local terminus is authoritative and may need to be looked up.
+// Set parent_ non-null when the local terminus is authoritative and may need to
+// be looked up.
 target::target(pn_terminus_t *t) : terminus(make_wrapper(t)) {}
-target::target(const sender& snd) : terminus(make_wrapper(pn_link_remote_target(unwrap(snd)))) {}
-target::target(const receiver& rcv) : terminus(make_wrapper(pn_link_remote_target(unwrap(rcv)))) { parent_ = unwrap(rcv); }
+target::target(const sender &snd)
+    : terminus(make_wrapper(pn_link_remote_target(unwrap(snd)))) {}
+target::target(const receiver &rcv)
+    : terminus(make_wrapper(pn_link_remote_target(unwrap(rcv)))) {
+    parent_ = unwrap(rcv);
+}
 
 std::string target::address() const {
     pn_terminus_t *authoritative = object_;
@@ -41,4 +46,4 @@ std::string target::address() const {
     return str(pn_terminus_get_address(authoritative));
 }
 
-}
+} // namespace proton

@@ -46,7 +46,7 @@ class void_function0 {
     virtual void operator()() = 0;
 };
 
-} // proton
+} // namespace proton
 
 /// @endcond
 

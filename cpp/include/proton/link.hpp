@@ -22,9 +22,9 @@
  *
  */
 
+#include "./endpoint.hpp"
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
-#include "./endpoint.hpp"
 #include "./internal/object.hpp"
 
 #include <string>
@@ -38,10 +38,10 @@ namespace proton {
 
 /// A named channel for sending or receiving messages.  It is the base
 /// class for sender and receiver.
-class
-PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint {
+class PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t>,
+                                 public endpoint {
     /// @cond INTERNAL
-    link(pn_link_t* l) : internal::object<pn_link_t>(l) {}
+    link(pn_link_t *l) : internal::object<pn_link_t>(l) {}
     /// @endcond
 
   public:
@@ -55,7 +55,7 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     PN_CPP_EXTERN class error_condition error() const;
 
     PN_CPP_EXTERN void close();
-    PN_CPP_EXTERN void close(const error_condition&);
+    PN_CPP_EXTERN void close(const error_condition &);
 
     /// Suspend the link without closing it.  A suspended link may be
     /// reopened with the same or different link options if supported
@@ -72,7 +72,7 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// event is still pending.  True for a sender if the receiver has
     /// requested a drain of credit and the sender has unused credit.
     ///
-    /// @see @ref receiver::drain. 
+    /// @see @ref receiver::drain.
     PN_CPP_EXTERN bool draining();
 
     /// Get the link name.
@@ -82,7 +82,7 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     PN_CPP_EXTERN class container &container() const;
 
     /// Get the work_queue for the link.
-    PN_CPP_EXTERN class work_queue& work_queue() const;
+    PN_CPP_EXTERN class work_queue &work_queue() const;
 
     /// The connection that owns this link.
     PN_CPP_EXTERN class connection connection() const;
@@ -92,15 +92,15 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
 
   protected:
     /// @cond INTERNAL
-    
+
     // Initiate the AMQP attach frame.
     void attach();
 
-  friend class internal::factory<link>;
+    friend class internal::factory<link>;
 
     /// @endcond
 };
 
-}
+} // namespace proton
 
 #endif // PROTON_LINK_HPP

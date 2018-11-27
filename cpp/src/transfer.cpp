@@ -35,18 +35,28 @@
 
 namespace proton {
 
-session transfer::session() const { return make_wrapper(pn_link_session(pn_delivery_link(pn_object()))); }
-connection transfer::connection() const { return make_wrapper(pn_session_connection(pn_link_session(pn_delivery_link(pn_object())))); }
-container& transfer::container() const { return connection().container(); }
-work_queue& transfer::work_queue() const { return connection().work_queue(); }
-
+session transfer::session() const {
+    return make_wrapper(pn_link_session(pn_delivery_link(pn_object())));
+}
+connection transfer::connection() const {
+    return make_wrapper(
+        pn_session_connection(pn_link_session(pn_delivery_link(pn_object()))));
+}
+container &transfer::container() const { return connection().container(); }
+work_queue &transfer::work_queue() const { return connection().work_queue(); }
 
 bool transfer::settled() const { return pn_delivery_settled(pn_object()); }
 
 void transfer::settle() { pn_delivery_settle(pn_object()); }
 
-enum transfer::state transfer::state() const { return static_cast<enum state>(pn_delivery_remote_state(pn_object())); }
-
-std::string to_string(enum transfer::state s) { return pn_disposition_type_name(s); }
-std::ostream& operator<<(std::ostream& o, const enum transfer::state s) { return o << to_string(s); }
+enum transfer::state transfer::state() const {
+    return static_cast<enum state>(pn_delivery_remote_state(pn_object()));
 }
+
+std::string to_string(enum transfer::state s) {
+    return pn_disposition_type_name(s);
+}
+std::ostream &operator<<(std::ostream &o, const enum transfer::state s) {
+    return o << to_string(s);
+}
+} // namespace proton

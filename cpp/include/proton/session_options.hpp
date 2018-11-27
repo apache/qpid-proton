@@ -43,21 +43,21 @@ class session_options {
     PN_CPP_EXTERN session_options();
 
     /// Copy options.
-    PN_CPP_EXTERN session_options(const session_options&);
+    PN_CPP_EXTERN session_options(const session_options &);
 
     PN_CPP_EXTERN ~session_options();
 
     /// Copy options.
-    PN_CPP_EXTERN session_options& operator=(const session_options&);
+    PN_CPP_EXTERN session_options &operator=(const session_options &);
 
     /// Set a messaging_handler for the session.
-    PN_CPP_EXTERN session_options& handler(class messaging_handler &);
+    PN_CPP_EXTERN session_options &handler(class messaging_handler &);
 
     // Other useful session configuration TBD.
 
     /// @cond INTERNAL
   private:
-    void apply(session&) const;
+    void apply(session &) const;
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
@@ -66,6 +66,6 @@ class session_options {
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_SESSION_OPTIONS_HPP

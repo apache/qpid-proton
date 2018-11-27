@@ -21,14 +21,14 @@
 
 #include "proton/binary.hpp"
 
-#include <ostream>
 #include <iomanip>
+#include <ostream>
 
 #include <ctype.h>
 
 namespace proton {
 
-std::ostream& operator<<(std::ostream& o, const binary& x) {
+std::ostream &operator<<(std::ostream &o, const binary &x) {
     ios_guard restore_flags(o);
     o << std::hex << std::setfill('0') << "b\"";
     for (binary::const_iterator i = x.begin(); i != x.end(); ++i) {
@@ -41,4 +41,4 @@ std::ostream& operator<<(std::ostream& o, const binary& x) {
     return o << '"';
 }
 
-}
+} // namespace proton

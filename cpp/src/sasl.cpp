@@ -23,7 +23,9 @@
 
 namespace proton {
 
-enum sasl::outcome sasl::outcome() const { return static_cast<enum outcome>(pn_sasl_outcome(object_)); }
+enum sasl::outcome sasl::outcome() const {
+    return static_cast<enum outcome>(pn_sasl_outcome(object_));
+}
 
 std::string sasl::user() const {
     const char *name = pn_sasl_get_user(object_);
@@ -35,4 +37,4 @@ std::string sasl::mech() const {
     return m ? std::string(m) : std::string();
 }
 
-} // namespace
+} // namespace proton

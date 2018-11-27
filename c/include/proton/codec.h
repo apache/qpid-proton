@@ -22,11 +22,11 @@
  *
  */
 
+#include <proton/error.h>
 #include <proton/import_export.h>
 #include <proton/object.h>
-#include <proton/types.h>
-#include <proton/error.h>
 #include <proton/type_compat.h>
+#include <proton/types.h>
 #include <stdarg.h>
 
 #ifdef __cplusplus
@@ -45,140 +45,140 @@ extern "C" {
  * @ingroup amqp_types
  */
 typedef enum {
-  /**
-   * The NULL AMQP type.
-   */
-  PN_NULL = 1,
+    /**
+     * The NULL AMQP type.
+     */
+    PN_NULL = 1,
 
-  /**
-   * The boolean AMQP type.
-   */
-  PN_BOOL = 2,
+    /**
+     * The boolean AMQP type.
+     */
+    PN_BOOL = 2,
 
-  /**
-   * The unsigned byte AMQP type. An 8 bit unsigned integer.
-   */
-  PN_UBYTE = 3,
+    /**
+     * The unsigned byte AMQP type. An 8 bit unsigned integer.
+     */
+    PN_UBYTE = 3,
 
-  /**
-   * The byte AMQP type. An 8 bit signed integer.
-   */
-  PN_BYTE = 4,
+    /**
+     * The byte AMQP type. An 8 bit signed integer.
+     */
+    PN_BYTE = 4,
 
-  /**
-   * The unsigned short AMQP type. A 16 bit unsigned integer.
-   */
-  PN_USHORT = 5,
+    /**
+     * The unsigned short AMQP type. A 16 bit unsigned integer.
+     */
+    PN_USHORT = 5,
 
-  /**
-   * The short AMQP type. A 16 bit signed integer.
-   */
-  PN_SHORT = 6,
+    /**
+     * The short AMQP type. A 16 bit signed integer.
+     */
+    PN_SHORT = 6,
 
-  /**
-   * The unsigned int AMQP type. A 32 bit unsigned integer.
-   */
-  PN_UINT = 7,
+    /**
+     * The unsigned int AMQP type. A 32 bit unsigned integer.
+     */
+    PN_UINT = 7,
 
-  /**
-   * The signed int AMQP type. A 32 bit signed integer.
-   */
-  PN_INT = 8,
+    /**
+     * The signed int AMQP type. A 32 bit signed integer.
+     */
+    PN_INT = 8,
 
-  /**
-   * The char AMQP type. A 32 bit unicode character.
-   */
-  PN_CHAR = 9,
+    /**
+     * The char AMQP type. A 32 bit unicode character.
+     */
+    PN_CHAR = 9,
 
-  /**
-   * The ulong AMQP type. An unsigned 32 bit integer.
-   */
-  PN_ULONG = 10,
+    /**
+     * The ulong AMQP type. An unsigned 32 bit integer.
+     */
+    PN_ULONG = 10,
 
-  /**
-   * The long AMQP type. A signed 32 bit integer.
-   */
-  PN_LONG = 11,
+    /**
+     * The long AMQP type. A signed 32 bit integer.
+     */
+    PN_LONG = 11,
 
-  /**
-   * The timestamp AMQP type. A signed 64 bit value measuring
-   * milliseconds since the epoch.
-   */
-  PN_TIMESTAMP = 12,
+    /**
+     * The timestamp AMQP type. A signed 64 bit value measuring
+     * milliseconds since the epoch.
+     */
+    PN_TIMESTAMP = 12,
 
-  /**
-   * The float AMQP type. A 32 bit floating point value.
-   */
-  PN_FLOAT = 13,
+    /**
+     * The float AMQP type. A 32 bit floating point value.
+     */
+    PN_FLOAT = 13,
 
-  /**
-   * The double AMQP type. A 64 bit floating point value.
-   */
-  PN_DOUBLE = 14,
+    /**
+     * The double AMQP type. A 64 bit floating point value.
+     */
+    PN_DOUBLE = 14,
 
-  /**
-   * The decimal32 AMQP type. A 32 bit decimal floating point value.
-   */
-  PN_DECIMAL32 = 15,
+    /**
+     * The decimal32 AMQP type. A 32 bit decimal floating point value.
+     */
+    PN_DECIMAL32 = 15,
 
-  /**
-   * The decimal64 AMQP type. A 64 bit decimal floating point value.
-   */
-  PN_DECIMAL64 = 16,
+    /**
+     * The decimal64 AMQP type. A 64 bit decimal floating point value.
+     */
+    PN_DECIMAL64 = 16,
 
-  /**
-   * The decimal128 AMQP type. A 128 bit decimal floating point value.
-   */
-  PN_DECIMAL128 = 17,
+    /**
+     * The decimal128 AMQP type. A 128 bit decimal floating point value.
+     */
+    PN_DECIMAL128 = 17,
 
-  /**
-   * The UUID AMQP type. A 16 byte UUID.
-   */
-  PN_UUID = 18,
+    /**
+     * The UUID AMQP type. A 16 byte UUID.
+     */
+    PN_UUID = 18,
 
-  /**
-   * The binary AMQP type. A variable length sequence of bytes.
-   */
-  PN_BINARY = 19,
+    /**
+     * The binary AMQP type. A variable length sequence of bytes.
+     */
+    PN_BINARY = 19,
 
-  /**
-   * The string AMQP type. A variable length sequence of unicode
-   * characters.
-   */
-  PN_STRING = 20,
+    /**
+     * The string AMQP type. A variable length sequence of unicode
+     * characters.
+     */
+    PN_STRING = 20,
 
-  /**
-   * The symbol AMQP type. A variable length sequence of unicode
-   * characters.
-   */
-  PN_SYMBOL = 21,
+    /**
+     * The symbol AMQP type. A variable length sequence of unicode
+     * characters.
+     */
+    PN_SYMBOL = 21,
 
-  /**
-   * A described AMQP type.
-   */
-  PN_DESCRIBED = 22,
+    /**
+     * A described AMQP type.
+     */
+    PN_DESCRIBED = 22,
 
-  /**
-   * An AMQP array. A monomorphic sequence of other AMQP values.
-   */
-  PN_ARRAY = 23,
+    /**
+     * An AMQP array. A monomorphic sequence of other AMQP values.
+     */
+    PN_ARRAY = 23,
 
-  /**
-   *  An AMQP list. A polymorphic sequence of other AMQP values.
-   */
-  PN_LIST = 24,
+    /**
+     *  An AMQP list. A polymorphic sequence of other AMQP values.
+     */
+    PN_LIST = 24,
 
-  /**
-   * An AMQP map. A polymorphic container of other AMQP values formed
-   * into key/value pairs.
-   */
-  PN_MAP = 25,
+    /**
+     * An AMQP map. A polymorphic container of other AMQP values formed
+     * into key/value pairs.
+     */
+    PN_MAP = 25,
 
-  /**
-   * A special invalid type value that is returned when no valid type
-   * is available.
-   */
-  PN_INVALID = -1
+    /**
+     * A special invalid type value that is returned when no valid type
+     * is available.
+     */
+    PN_INVALID = -1
 } pn_type_t;
 
 /**
@@ -198,106 +198,106 @@ PN_EXTERN const char *pn_type_name(pn_type_t type);
  * @ingroup api_types
  */
 typedef struct {
-  /**
-   * Indicates the type of value the atom is currently pointing to.
-   * See ::pn_type_t for details on AMQP types.
-   */
-  pn_type_t type;
-  union {
     /**
-     * Valid when type is ::PN_BOOL.
+     * Indicates the type of value the atom is currently pointing to.
+     * See ::pn_type_t for details on AMQP types.
      */
-    bool as_bool;
+    pn_type_t type;
+    union {
+        /**
+         * Valid when type is ::PN_BOOL.
+         */
+        bool as_bool;
 
-    /**
-     * Valid when type is ::PN_UBYTE.
-     */
-    uint8_t as_ubyte;
+        /**
+         * Valid when type is ::PN_UBYTE.
+         */
+        uint8_t as_ubyte;
 
-    /**
-     * Valid when type is ::PN_BYTE.
-     */
-    int8_t as_byte;
+        /**
+         * Valid when type is ::PN_BYTE.
+         */
+        int8_t as_byte;
 
-    /**
-     * Valid when type is ::PN_USHORT.
-     */
-    uint16_t as_ushort;
+        /**
+         * Valid when type is ::PN_USHORT.
+         */
+        uint16_t as_ushort;
 
-    /**
-     * Valid when type is ::PN_SHORT.
-     */
-    int16_t as_short;
+        /**
+         * Valid when type is ::PN_SHORT.
+         */
+        int16_t as_short;
 
-    /**
-     * Valid when type is ::PN_UINT.
-     */
-    uint32_t as_uint;
+        /**
+         * Valid when type is ::PN_UINT.
+         */
+        uint32_t as_uint;
 
-    /**
-     * Valid when type is ::PN_INT.
-     */
-    int32_t as_int;
+        /**
+         * Valid when type is ::PN_INT.
+         */
+        int32_t as_int;
 
-    /**
-     * Valid when type is ::PN_CHAR.
-     */
-    pn_char_t as_char;
+        /**
+         * Valid when type is ::PN_CHAR.
+         */
+        pn_char_t as_char;
 
-    /**
-     * Valid when type is ::PN_ULONG.
-     */
-    uint64_t as_ulong;
+        /**
+         * Valid when type is ::PN_ULONG.
+         */
+        uint64_t as_ulong;
 
-    /**
-     * Valid when type is ::PN_LONG.
-     */
-    int64_t as_long;
+        /**
+         * Valid when type is ::PN_LONG.
+         */
+        int64_t as_long;
 
-    /**
-     * Valid when type is ::PN_TIMESTAMP.
-     */
-    pn_timestamp_t as_timestamp;
+        /**
+         * Valid when type is ::PN_TIMESTAMP.
+         */
+        pn_timestamp_t as_timestamp;
 
-    /**
-     * Valid when type is ::PN_FLOAT.
-     */
-    float as_float;
+        /**
+         * Valid when type is ::PN_FLOAT.
+         */
+        float as_float;
 
-    /**
-     * Valid when type is ::PN_DOUBLE.
-     */
-    double as_double;
+        /**
+         * Valid when type is ::PN_DOUBLE.
+         */
+        double as_double;
 
-    /**
-     * Valid when type is ::PN_DECIMAL32.
-     */
-    pn_decimal32_t as_decimal32;
+        /**
+         * Valid when type is ::PN_DECIMAL32.
+         */
+        pn_decimal32_t as_decimal32;
 
-    /**
-     * Valid when type is ::PN_DECIMAL64.
-     */
-    pn_decimal64_t as_decimal64;
+        /**
+         * Valid when type is ::PN_DECIMAL64.
+         */
+        pn_decimal64_t as_decimal64;
 
-    /**
-     * Valid when type is ::PN_DECIMAL128.
-     */
-    pn_decimal128_t as_decimal128;
+        /**
+         * Valid when type is ::PN_DECIMAL128.
+         */
+        pn_decimal128_t as_decimal128;
 
-    /**
-     * Valid when type is ::PN_UUID.
-     */
-    pn_uuid_t as_uuid;
+        /**
+         * Valid when type is ::PN_UUID.
+         */
+        pn_uuid_t as_uuid;
 
-    /**
-     * Valid when type is ::PN_BINARY or ::PN_STRING or ::PN_SYMBOL.
-     * When the type is ::PN_STRING the field will point to utf8
-     * encoded unicode. When the type is ::PN_SYMBOL, the field will
-     * point to 7-bit ASCII. In the latter two cases, the bytes
-     * pointed to are *not* necessarily null terminated.
-     */
-    pn_bytes_t as_bytes;
-  } u;
+        /**
+         * Valid when type is ::PN_BINARY or ::PN_STRING or ::PN_SYMBOL.
+         * When the type is ::PN_STRING the field will point to utf8
+         * encoded unicode. When the type is ::PN_SYMBOL, the field will
+         * point to 7-bit ASCII. In the latter two cases, the bytes
+         * pointed to are *not* necessarily null terminated.
+         */
+        pn_bytes_t as_bytes;
+    } u;
 } pn_atom_t;
 
 /**
@@ -558,9 +558,11 @@ PN_EXTERN ssize_t pn_data_encoded_size(pn_data_t *data);
  * @param data a pn_data_t object
  * @param bytes a pointer to an encoded AMQP data stream
  * @param size the size of the encoded AMQP data stream
- * @return the number of bytes consumed from the AMQP data stream or an error code
+ * @return the number of bytes consumed from the AMQP data stream or an error
+ * code
  */
-PN_EXTERN ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size);
+PN_EXTERN ssize_t pn_data_decode(pn_data_t *data, const char *bytes,
+                                 size_t size);
 
 /**
  * Puts an empty list value into a pn_data_t. Elements may be filled
@@ -639,7 +641,8 @@ PN_EXTERN int pn_data_put_map(pn_data_t *data);
  *
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int pn_data_put_array(pn_data_t *data, bool described, pn_type_t type);
+PN_EXTERN int pn_data_put_array(pn_data_t *data, bool described,
+                                pn_type_t type);
 
 /**
  * Puts a described value into a pn_data_t object. A described node

@@ -41,6 +41,6 @@ class uuid;
 class value;
 class null;
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_TYPES_FWD_HPP

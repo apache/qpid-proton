@@ -39,7 +39,8 @@ extern "C" {
  *
  * @return 0 on success, PN_OVERFLOW if buf is too small.
  */
-PNP_EXTERN int pni_parse_addr(const char *addr, char *buf, size_t len, const char **host, const char **port);
+PNP_EXTERN int pni_parse_addr(const char *addr, char *buf, size_t len,
+                              const char **host, const char **port);
 
 /**
  * Condition name for error conditions related to proton-IO.
@@ -47,13 +48,14 @@ PNP_EXTERN int pni_parse_addr(const char *addr, char *buf, size_t len, const cha
 extern const char *PNI_IO_CONDITION;
 
 /**
- * Format a proactor error condition with message "<what> (<host>:<port>): <msg>"
+ * Format a proactor error condition with message "<what> (<host>:<port>):
+ * <msg>"
  */
-void pni_proactor_set_cond(
-  pn_condition_t *cond, const char *what, const char *host, const char *port, const char *msg);
+void pni_proactor_set_cond(pn_condition_t *cond, const char *what,
+                           const char *host, const char *port, const char *msg);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /*!PROACTOR_PROACTOR_INTERNAL_H*/
+#endif /*!PROACTOR_PROACTOR_INTERNAL_H*/

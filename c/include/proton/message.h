@@ -22,11 +22,11 @@
  *
  */
 
-#include <proton/import_export.h>
-#include <proton/types.h>
 #include <proton/codec.h>
 #include <proton/error.h>
+#include <proton/import_export.h>
 #include <proton/type_compat.h>
+#include <proton/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,14 +63,14 @@ typedef struct pn_message_t pn_message_t;
  *
  * @return pointer to a new ::pn_message_t
  */
-PN_EXTERN pn_message_t * pn_message(void);
+PN_EXTERN pn_message_t *pn_message(void);
 
 /**
  * Free a previously constructed ::pn_message_t.
  *
  * @param[in] msg pointer to a ::pn_message_t or NULL
  */
-PN_EXTERN void           pn_message_free(pn_message_t *msg);
+PN_EXTERN void pn_message_free(pn_message_t *msg);
 
 /**
  * Clears the content of a ::pn_message_t.
@@ -81,7 +81,7 @@ PN_EXTERN void           pn_message_free(pn_message_t *msg);
  *
  * @param[in] msg pointer to the ::pn_message_t to be cleared
  */
-PN_EXTERN void           pn_message_clear(pn_message_t *msg);
+PN_EXTERN void pn_message_clear(pn_message_t *msg);
 
 /**
  * Access the error code of a message.
@@ -94,7 +94,7 @@ PN_EXTERN void           pn_message_clear(pn_message_t *msg);
  * @param[in] msg a message
  * @return the message's error code
  */
-PN_EXTERN int            pn_message_errno(pn_message_t *msg);
+PN_EXTERN int pn_message_errno(pn_message_t *msg);
 
 /**
  * Access the error information for a message.
@@ -108,7 +108,7 @@ PN_EXTERN int            pn_message_errno(pn_message_t *msg);
  * @param[in] msg a message
  * @return the message's error descriptor
  */
-PN_EXTERN pn_error_t    *pn_message_error(pn_message_t *msg);
+PN_EXTERN pn_error_t *pn_message_error(pn_message_t *msg);
 
 /**
  * Get the inferred flag for a message.
@@ -124,7 +124,7 @@ PN_EXTERN pn_error_t    *pn_message_error(pn_message_t *msg);
  * @param[in] msg a message object
  * @return the value of the inferred flag for the message
  */
-PN_EXTERN bool           pn_message_is_inferred(pn_message_t *msg);
+PN_EXTERN bool pn_message_is_inferred(pn_message_t *msg);
 
 /**
  * Set the inferred flag for a message.
@@ -136,7 +136,7 @@ PN_EXTERN bool           pn_message_is_inferred(pn_message_t *msg);
  * @param[in] inferred the new value of the inferred flag
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_inferred(pn_message_t *msg, bool inferred);
+PN_EXTERN int pn_message_set_inferred(pn_message_t *msg, bool inferred);
 
 /**
  * Get the durable flag for a message.
@@ -147,7 +147,7 @@ PN_EXTERN int            pn_message_set_inferred(pn_message_t *msg, bool inferre
  * @param[in] msg a message object
  * @return the value of the durable flag
  */
-PN_EXTERN bool           pn_message_is_durable            (pn_message_t *msg);
+PN_EXTERN bool pn_message_is_durable(pn_message_t *msg);
 
 /**
  * Set the durable flag for a message.
@@ -159,7 +159,7 @@ PN_EXTERN bool           pn_message_is_durable            (pn_message_t *msg);
  * @param[in] durable the new value of the durable flag
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_durable           (pn_message_t *msg, bool durable);
+PN_EXTERN int pn_message_set_durable(pn_message_t *msg, bool durable);
 
 /**
  * Get the priority for a message.
@@ -171,7 +171,7 @@ PN_EXTERN int            pn_message_set_durable           (pn_message_t *msg, bo
  * @param[in] msg a message object
  * @return the message priority
  */
-PN_EXTERN uint8_t        pn_message_get_priority          (pn_message_t *msg);
+PN_EXTERN uint8_t pn_message_get_priority(pn_message_t *msg);
 
 /**
  * Set the priority for a message.
@@ -182,7 +182,7 @@ PN_EXTERN uint8_t        pn_message_get_priority          (pn_message_t *msg);
  * @param[in] priority the new priority for the message
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_priority          (pn_message_t *msg, uint8_t priority);
+PN_EXTERN int pn_message_set_priority(pn_message_t *msg, uint8_t priority);
 
 /**
  * Get the ttl for a message.
@@ -196,7 +196,7 @@ PN_EXTERN int            pn_message_set_priority          (pn_message_t *msg, ui
  * @param[in] msg a message object
  * @return the ttl in milliseconds
  */
-PN_EXTERN pn_millis_t    pn_message_get_ttl               (pn_message_t *msg);
+PN_EXTERN pn_millis_t pn_message_get_ttl(pn_message_t *msg);
 
 /**
  * Set the ttl for a message.
@@ -207,7 +207,7 @@ PN_EXTERN pn_millis_t    pn_message_get_ttl               (pn_message_t *msg);
  * @param[in] ttl the new value for the message ttl
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_ttl               (pn_message_t *msg, pn_millis_t ttl);
+PN_EXTERN int pn_message_set_ttl(pn_message_t *msg, pn_millis_t ttl);
 
 /**
  * Get the first acquirer flag for a message.
@@ -221,7 +221,7 @@ PN_EXTERN int            pn_message_set_ttl               (pn_message_t *msg, pn
  * @param[in] msg a message object
  * @return the first acquirer flag for the message
  */
-PN_EXTERN bool           pn_message_is_first_acquirer     (pn_message_t *msg);
+PN_EXTERN bool pn_message_is_first_acquirer(pn_message_t *msg);
 
 /**
  * Set the first acquirer flag for a message.
@@ -233,7 +233,7 @@ PN_EXTERN bool           pn_message_is_first_acquirer     (pn_message_t *msg);
  * @param[in] first the new value for the first acquirer flag
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_first_acquirer    (pn_message_t *msg, bool first);
+PN_EXTERN int pn_message_set_first_acquirer(pn_message_t *msg, bool first);
 
 /**
  * Get the delivery count for a message.
@@ -245,7 +245,7 @@ PN_EXTERN int            pn_message_set_first_acquirer    (pn_message_t *msg, bo
  * @param[in] msg a message object
  * @return the delivery count for the message
  */
-PN_EXTERN uint32_t       pn_message_get_delivery_count    (pn_message_t *msg);
+PN_EXTERN uint32_t pn_message_get_delivery_count(pn_message_t *msg);
 
 /**
  * Set the delivery count for a message.
@@ -257,7 +257,7 @@ PN_EXTERN uint32_t       pn_message_get_delivery_count    (pn_message_t *msg);
  * @param[in] count the new delivery count
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_delivery_count    (pn_message_t *msg, uint32_t count);
+PN_EXTERN int pn_message_set_delivery_count(pn_message_t *msg, uint32_t count);
 
 /**
  * Get/set the id for a message.
@@ -272,7 +272,7 @@ PN_EXTERN int            pn_message_set_delivery_count    (pn_message_t *msg, ui
  * @param[in] msg a message object
  * @return pointer to a ::pn_data_t holding the id
  */
-PN_EXTERN pn_data_t *    pn_message_id                    (pn_message_t *msg);
+PN_EXTERN pn_data_t *pn_message_id(pn_message_t *msg);
 
 /**
  * Get the id for a message.
@@ -286,7 +286,7 @@ PN_EXTERN pn_data_t *    pn_message_id                    (pn_message_t *msg);
  * @param[in] msg a message object
  * @return the message id
  */
-PN_EXTERN pn_atom_t      pn_message_get_id                (pn_message_t *msg);
+PN_EXTERN pn_atom_t pn_message_get_id(pn_message_t *msg);
 
 /**
  * Set the id for a message.
@@ -299,7 +299,7 @@ PN_EXTERN pn_atom_t      pn_message_get_id                (pn_message_t *msg);
  * @param[in] id the new value of the message id
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_id                (pn_message_t *msg, pn_atom_t id);
+PN_EXTERN int pn_message_set_id(pn_message_t *msg, pn_atom_t id);
 
 /**
  * Get the user id for a message.
@@ -314,7 +314,7 @@ PN_EXTERN int            pn_message_set_id                (pn_message_t *msg, pn
  * @param[in] msg a message object
  * @return a pn_bytes_t referencing the message's user_id
  */
-PN_EXTERN pn_bytes_t     pn_message_get_user_id           (pn_message_t *msg);
+PN_EXTERN pn_bytes_t pn_message_get_user_id(pn_message_t *msg);
 
 /**
  * Set the user id for a message.
@@ -326,7 +326,7 @@ PN_EXTERN pn_bytes_t     pn_message_get_user_id           (pn_message_t *msg);
  * @param[in] user_id the new user_id for the message
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_user_id           (pn_message_t *msg, pn_bytes_t user_id);
+PN_EXTERN int pn_message_set_user_id(pn_message_t *msg, pn_bytes_t user_id);
 
 /**
  * Get the address for a message.
@@ -342,7 +342,7 @@ PN_EXTERN int            pn_message_set_user_id           (pn_message_t *msg, pn
  * @param[in] msg a message object
  * @return a pointer to the address of the message (or NULL)
  */
-PN_EXTERN const char *   pn_message_get_address           (pn_message_t *msg);
+PN_EXTERN const char *pn_message_get_address(pn_message_t *msg);
 
 /**
  * Set the address for a message.
@@ -356,7 +356,7 @@ PN_EXTERN const char *   pn_message_get_address           (pn_message_t *msg);
  * @param[in] address a pointer to the new address (or NULL)
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_address           (pn_message_t *msg, const char *address);
+PN_EXTERN int pn_message_set_address(pn_message_t *msg, const char *address);
 
 /**
  * Get the subject for a message.
@@ -372,7 +372,7 @@ PN_EXTERN int            pn_message_set_address           (pn_message_t *msg, co
  * @param[in] msg a message object
  * @return a pointer to the subject of the message (or NULL)
  */
-PN_EXTERN const char *   pn_message_get_subject           (pn_message_t *msg);
+PN_EXTERN const char *pn_message_get_subject(pn_message_t *msg);
 
 /**
  * Set the subject for a message.
@@ -386,7 +386,7 @@ PN_EXTERN const char *   pn_message_get_subject           (pn_message_t *msg);
  * @param[in] subject a pointer to the new subject (or NULL)
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_subject           (pn_message_t *msg, const char *subject);
+PN_EXTERN int pn_message_set_subject(pn_message_t *msg, const char *subject);
 
 /**
  * Get the reply_to for a message.
@@ -402,7 +402,7 @@ PN_EXTERN int            pn_message_set_subject           (pn_message_t *msg, co
  * @param[in] msg a message object
  * @return a pointer to the reply_to of the message (or NULL)
  */
-PN_EXTERN const char *   pn_message_get_reply_to          (pn_message_t *msg);
+PN_EXTERN const char *pn_message_get_reply_to(pn_message_t *msg);
 
 /**
  * Set the reply_to for a message.
@@ -416,7 +416,7 @@ PN_EXTERN const char *   pn_message_get_reply_to          (pn_message_t *msg);
  * @param[in] reply_to a pointer to the new reply_to (or NULL)
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_reply_to          (pn_message_t *msg, const char *reply_to);
+PN_EXTERN int pn_message_set_reply_to(pn_message_t *msg, const char *reply_to);
 
 /**
  * Get/set the correlation id for a message.
@@ -430,7 +430,7 @@ PN_EXTERN int            pn_message_set_reply_to          (pn_message_t *msg, co
  * @param[in] msg a message object
  * @return pointer to a ::pn_data_t holding the correlation id
  */
-PN_EXTERN pn_data_t *    pn_message_correlation_id        (pn_message_t *msg);
+PN_EXTERN pn_data_t *pn_message_correlation_id(pn_message_t *msg);
 
 /**
  * Get the correlation id for a message.
@@ -443,7 +443,7 @@ PN_EXTERN pn_data_t *    pn_message_correlation_id        (pn_message_t *msg);
  * @param[in] msg a message object
  * @return the message id
  */
-PN_EXTERN pn_atom_t      pn_message_get_correlation_id    (pn_message_t *msg);
+PN_EXTERN pn_atom_t pn_message_get_correlation_id(pn_message_t *msg);
 
 /**
  * Set the correlation id for a message.
@@ -456,7 +456,7 @@ PN_EXTERN pn_atom_t      pn_message_get_correlation_id    (pn_message_t *msg);
  * @param[in] id the new value of the message id
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_correlation_id    (pn_message_t *msg, pn_atom_t id);
+PN_EXTERN int pn_message_set_correlation_id(pn_message_t *msg, pn_atom_t id);
 
 /**
  * Get the content_type for a message.
@@ -472,7 +472,7 @@ PN_EXTERN int            pn_message_set_correlation_id    (pn_message_t *msg, pn
  * @param[in] msg a message object
  * @return a pointer to the content_type of the message (or NULL)
  */
-PN_EXTERN const char *   pn_message_get_content_type      (pn_message_t *msg);
+PN_EXTERN const char *pn_message_get_content_type(pn_message_t *msg);
 
 /**
  * Set the content_type for a message.
@@ -486,7 +486,7 @@ PN_EXTERN const char *   pn_message_get_content_type      (pn_message_t *msg);
  * @param[in] type a pointer to the new content_type (or NULL)
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_content_type      (pn_message_t *msg, const char *type);
+PN_EXTERN int pn_message_set_content_type(pn_message_t *msg, const char *type);
 
 /**
  * Get the content_encoding for a message.
@@ -502,7 +502,7 @@ PN_EXTERN int            pn_message_set_content_type      (pn_message_t *msg, co
  * @param[in] msg a message object
  * @return a pointer to the content_encoding of the message (or NULL)
  */
-PN_EXTERN const char *   pn_message_get_content_encoding  (pn_message_t *msg);
+PN_EXTERN const char *pn_message_get_content_encoding(pn_message_t *msg);
 
 /**
  * Set the content_encoding for a message.
@@ -516,7 +516,8 @@ PN_EXTERN const char *   pn_message_get_content_encoding  (pn_message_t *msg);
  * @param[in] encoding a pointer to the new content_encoding (or NULL)
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_content_encoding  (pn_message_t *msg, const char *encoding);
+PN_EXTERN int pn_message_set_content_encoding(pn_message_t *msg,
+                                              const char *encoding);
 
 /**
  * Get the expiry time for a message.
@@ -527,7 +528,7 @@ PN_EXTERN int            pn_message_set_content_encoding  (pn_message_t *msg, co
  * @param[in] msg a message object
  * @return the expiry time for the message
  */
-PN_EXTERN pn_timestamp_t pn_message_get_expiry_time       (pn_message_t *msg);
+PN_EXTERN pn_timestamp_t pn_message_get_expiry_time(pn_message_t *msg);
 
 /**
  * Set the expiry time for a message.
@@ -538,7 +539,8 @@ PN_EXTERN pn_timestamp_t pn_message_get_expiry_time       (pn_message_t *msg);
  * @param[in] time the new expiry time for the message
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_expiry_time       (pn_message_t *msg, pn_timestamp_t time);
+PN_EXTERN int pn_message_set_expiry_time(pn_message_t *msg,
+                                         pn_timestamp_t time);
 
 /**
  * Get the creation time for a message.
@@ -549,7 +551,7 @@ PN_EXTERN int            pn_message_set_expiry_time       (pn_message_t *msg, pn
  * @param[in] msg a message object
  * @return the creation time for the message
  */
-PN_EXTERN pn_timestamp_t pn_message_get_creation_time     (pn_message_t *msg);
+PN_EXTERN pn_timestamp_t pn_message_get_creation_time(pn_message_t *msg);
 
 /**
  * Set the creation time for a message.
@@ -560,7 +562,8 @@ PN_EXTERN pn_timestamp_t pn_message_get_creation_time     (pn_message_t *msg);
  * @param[in] time the new creation time for the message
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_creation_time     (pn_message_t *msg, pn_timestamp_t time);
+PN_EXTERN int pn_message_set_creation_time(pn_message_t *msg,
+                                           pn_timestamp_t time);
 
 /**
  * Get the group_id for a message.
@@ -576,7 +579,7 @@ PN_EXTERN int            pn_message_set_creation_time     (pn_message_t *msg, pn
  * @param[in] msg a message object
  * @return a pointer to the group_id of the message (or NULL)
  */
-PN_EXTERN const char *   pn_message_get_group_id          (pn_message_t *msg);
+PN_EXTERN const char *pn_message_get_group_id(pn_message_t *msg);
 
 /**
  * Set the group_id for a message.
@@ -590,7 +593,7 @@ PN_EXTERN const char *   pn_message_get_group_id          (pn_message_t *msg);
  * @param[in] group_id a pointer to the new group_id (or NULL)
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_group_id          (pn_message_t *msg, const char *group_id);
+PN_EXTERN int pn_message_set_group_id(pn_message_t *msg, const char *group_id);
 
 /**
  * Get the group sequence for a message.
@@ -602,7 +605,7 @@ PN_EXTERN int            pn_message_set_group_id          (pn_message_t *msg, co
  * @param[in] msg a message object
  * @return the group sequence for the message
  */
-PN_EXTERN pn_sequence_t  pn_message_get_group_sequence    (pn_message_t *msg);
+PN_EXTERN pn_sequence_t pn_message_get_group_sequence(pn_message_t *msg);
 
 /**
  * Set the group sequence for a message.
@@ -614,7 +617,7 @@ PN_EXTERN pn_sequence_t  pn_message_get_group_sequence    (pn_message_t *msg);
  * @param[in] n the new group sequence for the message
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_group_sequence    (pn_message_t *msg, pn_sequence_t n);
+PN_EXTERN int pn_message_set_group_sequence(pn_message_t *msg, pn_sequence_t n);
 
 /**
  * Get the reply_to_group_id for a message.
@@ -630,7 +633,7 @@ PN_EXTERN int            pn_message_set_group_sequence    (pn_message_t *msg, pn
  * @param[in] msg a message object
  * @return a pointer to the reply_to_group_id of the message (or NULL)
  */
-PN_EXTERN const char *   pn_message_get_reply_to_group_id (pn_message_t *msg);
+PN_EXTERN const char *pn_message_get_reply_to_group_id(pn_message_t *msg);
 
 /**
  * Set the reply_to_group_id for a message.
@@ -644,7 +647,8 @@ PN_EXTERN const char *   pn_message_get_reply_to_group_id (pn_message_t *msg);
  * @param[in] reply_to_group_id a pointer to the new reply_to_group_id (or NULL)
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_reply_to_group_id (pn_message_t *msg, const char *reply_to_group_id);
+PN_EXTERN int pn_message_set_reply_to_group_id(pn_message_t *msg,
+                                               const char *reply_to_group_id);
 
 /**
  * Get/set the delivery instructions for a message.
@@ -720,7 +724,8 @@ PN_EXTERN pn_data_t *pn_message_body(pn_message_t *msg);
  * @param[in] size the size of the encoded AMQP data
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size);
+PN_EXTERN int pn_message_decode(pn_message_t *msg, const char *bytes,
+                                size_t size);
 
 /**
  * Encode a message as AMQP formatted binary data.
@@ -769,15 +774,18 @@ struct pn_link_t;
  * @param[in] msg A message object.
  * @param[in] sender A sending link.
  * @param[inout] buf See pn_message_encode2. If buf == NULL then
- * any memory needed for encoding will be allocated and freed by pn_message_send().
+ * any memory needed for encoding will be allocated and freed by
+ * pn_message_send().
  *
  * @return The length of the encoded message or an error code (<0).
  * On error pn_message_error(msg) will provide more information.
  */
-PN_EXTERN ssize_t pn_message_send(pn_message_t *msg, pn_link_t *sender, pn_rwbytes_t *buf);
+PN_EXTERN ssize_t pn_message_send(pn_message_t *msg, pn_link_t *sender,
+                                  pn_rwbytes_t *buf);
 
 /**
- * Save message content into a pn_data_t object data. The data object will first be cleared.
+ * Save message content into a pn_data_t object data. The data object will first
+ * be cleared.
  */
 PN_EXTERN int pn_message_data(pn_message_t *msg, pn_data_t *data);
 

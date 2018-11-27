@@ -23,8 +23,8 @@
  */
 
 #include "./duration.hpp"
-#include "./fwd.hpp"
 #include "./function.hpp"
+#include "./fwd.hpp"
 #include "./internal/config.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
@@ -46,42 +46,47 @@ namespace proton {
 
 /// @cond INTERNAL
 
-namespace internal { namespace v03 {
+namespace internal {
+namespace v03 {
 
 struct invocable {
     invocable() {}
     virtual ~invocable() {}
 
-    virtual invocable& clone() const = 0;
-    virtual void operator() () = 0;
+    virtual invocable &clone() const = 0;
+    virtual void operator()() = 0;
 };
 
-template <class T>
-struct invocable_cloner : invocable {
+template <class T> struct invocable_cloner : invocable {
     virtual ~invocable_cloner() {}
-    virtual invocable& clone() const {
-        return *new T(static_cast<T const&>(*this));
+    virtual invocable &clone() const {
+        return *new T(static_cast<T const &>(*this));
     }
 };
 
 struct invocable_wrapper {
-    invocable_wrapper(): wrapped_(0) {}
-    invocable_wrapper(const invocable_wrapper& w): wrapped_(&w.wrapped_->clone()) {}
-    invocable_wrapper& operator=(const invocable_wrapper& that) {
+    invocable_wrapper() : wrapped_(0) {}
+    invocable_wrapper(const invocable_wrapper &w)
+        : wrapped_(&w.wrapped_->clone()) {}
+    invocable_wrapper &operator=(const invocable_wrapper &that) {
         invocable_wrapper newthis(that);
         std::swap(wrapped_, newthis.wrapped_);
         return *this;
     }
 #if PN_CPP_HAS_RVALUE_REFERENCES
-    invocable_wrapper(invocable_wrapper&& w): wrapped_(w.wrapped_) {}
-    invocable_wrapper& operator=(invocable_wrapper&& that) {delete wrapped_; wrapped_ = that.wrapped_; return *this; }
+    invocable_wrapper(invocable_wrapper &&w) : wrapped_(w.wrapped_) {}
+    invocable_wrapper &operator=(invocable_wrapper &&that) {
+        delete wrapped_;
+        wrapped_ = that.wrapped_;
+        return *this;
+    }
 #endif
     ~invocable_wrapper() { delete wrapped_; }
 
-    invocable_wrapper(const invocable& i): wrapped_(&i.clone()) {}
+    invocable_wrapper(const invocable &i) : wrapped_(&i.clone()) {}
     void operator()() { (*wrapped_)(); }
 
-    invocable* wrapped_;
+    invocable *wrapped_;
 };
 
 /// **Unsettled API** - A work item for a @ref work_queue "work queue".
@@ -93,7 +98,7 @@ class work {
     /// Create a work item.
     work() {}
 
-    work(const invocable& i): item_(i) {}
+    work(const invocable &i) : item_(i) {}
 
     /// Invoke the work item.
     void operator()() { item_(); }
@@ -105,154 +110,125 @@ class work {
 };
 
 // Utilities to make work from functions/member functions (C++03 version)
-// Lots of repetition to handle functions/member functions with up to 3 arguments
+// Lots of repetition to handle functions/member functions with up to 3
+// arguments
 
-template <class R>
-struct work0 : public invocable_cloner<work0<R> > {
-    R (* fn_)();
+template <class R> struct work0 : public invocable_cloner<work0<R>> {
+    R (*fn_)();
 
-    work0(R (* f)()) :
-        fn_(f) {}
+    work0(R (*f)()) : fn_(f) {}
 
-    void operator()() {
-        (*fn_)();
-    }
+    void operator()() { (*fn_)(); }
 };
 
 template <class R, class A>
-struct work1 : public invocable_cloner<work1<R,A> > {
-    R (* fn_)(A);
+struct work1 : public invocable_cloner<work1<R, A>> {
+    R (*fn_)(A);
     A a_;
 
-    work1(R (* t)(A), A a) :
-        fn_(t), a_(a) {}
+    work1(R (*t)(A), A a) : fn_(t), a_(a) {}
 
-    void operator()() {
-        (*fn_)(a_);
-    }
+    void operator()() { (*fn_)(a_); }
 };
 
 template <class R, class A, class B>
-struct work2 : public invocable_cloner<work2<R,A,B> > {
-    R (* fn_)(A, B);
+struct work2 : public invocable_cloner<work2<R, A, B>> {
+    R (*fn_)(A, B);
     A a_;
     B b_;
 
-    work2(R (* t)(A, B), A a, B b) :
-        fn_(t), a_(a), b_(b) {}
+    work2(R (*t)(A, B), A a, B b) : fn_(t), a_(a), b_(b) {}
 
-    void operator()() {
-        (*fn_)(a_, b_);
-    }
+    void operator()() { (*fn_)(a_, b_); }
 };
 
 template <class R, class A, class B, class C>
-struct work3 : public invocable_cloner<work3<R,A,B,C> > {
-    R (* fn_)(A, B, C);
+struct work3 : public invocable_cloner<work3<R, A, B, C>> {
+    R (*fn_)(A, B, C);
     A a_;
     B b_;
     C c_;
 
-    work3(R (* t)(A, B, C), A a, B b, C c) :
-        fn_(t), a_(a), b_(b), c_(c) {}
+    work3(R (*t)(A, B, C), A a, B b, C c) : fn_(t), a_(a), b_(b), c_(c) {}
 
-    void operator()() {
-        (*fn_)(a_, b_, c_);
-    }
+    void operator()() { (*fn_)(a_, b_, c_); }
 };
 
 template <class R, class T>
-struct work_pmf0 : public invocable_cloner<work_pmf0<R,T> > {
-    T& holder_;
-    R (T::* fn_)();
+struct work_pmf0 : public invocable_cloner<work_pmf0<R, T>> {
+    T &holder_;
+    R (T::*fn_)();
 
-    work_pmf0(R (T::* a)(), T& h) :
-        holder_(h), fn_(a) {}
+    work_pmf0(R (T::*a)(), T &h) : holder_(h), fn_(a) {}
 
-    void operator()() {
-        (holder_.*fn_)();
-    }
+    void operator()() { (holder_.*fn_)(); }
 };
 
 template <class R, class T, class A>
-struct work_pmf1 : public invocable_cloner<work_pmf1<R,T,A> > {
-    T& holder_;
-    R (T::* fn_)(A);
+struct work_pmf1 : public invocable_cloner<work_pmf1<R, T, A>> {
+    T &holder_;
+    R (T::*fn_)(A);
     A a_;
 
-    work_pmf1(R (T::* t)(A), T& h, A a) :
-        holder_(h), fn_(t), a_(a) {}
+    work_pmf1(R (T::*t)(A), T &h, A a) : holder_(h), fn_(t), a_(a) {}
 
-    void operator()() {
-        (holder_.*fn_)(a_);
-    }
+    void operator()() { (holder_.*fn_)(a_); }
 };
 
 template <class R, class T, class A, class B>
-struct work_pmf2 : public invocable_cloner<work_pmf2<R,T,A,B> > {
-    T& holder_;
-    R (T::* fn_)(A, B);
+struct work_pmf2 : public invocable_cloner<work_pmf2<R, T, A, B>> {
+    T &holder_;
+    R (T::*fn_)(A, B);
     A a_;
     B b_;
 
-    work_pmf2(R (T::* t)(A, B), T& h, A a, B b) :
-        holder_(h), fn_(t), a_(a), b_(b) {}
+    work_pmf2(R (T::*t)(A, B), T &h, A a, B b)
+        : holder_(h), fn_(t), a_(a), b_(b) {}
 
-    void operator()() {
-        (holder_.*fn_)(a_, b_);
-    }
+    void operator()() { (holder_.*fn_)(a_, b_); }
 };
 
 template <class R, class T, class A, class B, class C>
-struct work_pmf3 : public invocable_cloner<work_pmf3<R,T,A,B,C> > {
-    T& holder_;
-    R (T::* fn_)(A, B, C);
+struct work_pmf3 : public invocable_cloner<work_pmf3<R, T, A, B, C>> {
+    T &holder_;
+    R (T::*fn_)(A, B, C);
     A a_;
     B b_;
     C c_;
 
-    work_pmf3(R (T::* t)(A, B, C), T& h, A a, B b, C c) :
-        holder_(h), fn_(t), a_(a), b_(b), c_(c) {}
+    work_pmf3(R (T::*t)(A, B, C), T &h, A a, B b, C c)
+        : holder_(h), fn_(t), a_(a), b_(b), c_(c) {}
 
-    void operator()() {
-        (holder_.*fn_)(a_, b_, c_);
-    }
+    void operator()() { (holder_.*fn_)(a_, b_, c_); }
 };
 
 /// `make_work` is the equivalent of C++11 `std::bind` for C++03.  It
 /// will bind both free functions and pointers to member functions.
-template <class R, class T>
-work make_work(R (T::*f)(), T* t) {
+template <class R, class T> work make_work(R (T::*f)(), T *t) {
     return work_pmf0<R, T>(f, *t);
 }
 
-template <class R, class T, class A>
-work make_work(R (T::*f)(A), T* t, A a) {
+template <class R, class T, class A> work make_work(R (T::*f)(A), T *t, A a) {
     return work_pmf1<R, T, A>(f, *t, a);
 }
 
 template <class R, class T, class A, class B>
-work make_work(R (T::*f)(A, B), T* t, A a, B b) {
+work make_work(R (T::*f)(A, B), T *t, A a, B b) {
     return work_pmf2<R, T, A, B>(f, *t, a, b);
 }
 
 template <class R, class T, class A, class B, class C>
-work make_work(R (T::*f)(A, B, C), T* t, A a, B b, C c) {
+work make_work(R (T::*f)(A, B, C), T *t, A a, B b, C c) {
     return work_pmf3<R, T, A, B, C>(f, *t, a, b, c);
 }
 
-template <class R>
-work make_work(R (*f)()) {
-    return work0<R>(f);
-}
+template <class R> work make_work(R (*f)()) { return work0<R>(f); }
 
-template <class R, class A>
-work make_work(R (*f)(A), A a) {
+template <class R, class A> work make_work(R (*f)(A), A a) {
     return work1<R, A>(f, a);
 }
 
-template <class R, class A, class B>
-work make_work(R (*f)(A, B), A a, B b) {
+template <class R, class A, class B> work make_work(R (*f)(A, B), A a, B b) {
     return work2<R, A, B>(f, a, b);
 }
 
@@ -261,11 +237,13 @@ work make_work(R (*f)(A, B, C), A a, B b, C c) {
     return work3<R, A, B, C>(f, a, b, c);
 }
 
-} } // internal::v03
+} // namespace v03
+} // namespace internal
 
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 
-namespace internal { namespace v11 {
+namespace internal {
+namespace v11 {
 
 class work {
   public:
@@ -278,10 +256,10 @@ class work {
     /// function-like that takes no arguments and returns
     /// no result.
     template <class T,
-        // Make sure we don't match the copy or move constructors
-        class = typename std::enable_if<!std::is_same<typename std::decay<T>::type,work>::value>::type
-    >
-    work(T&& f): item_(std::forward<T>(f)) {}
+              // Make sure we don't match the copy or move constructors
+              class = typename std::enable_if<!std::is_same<
+                  typename std::decay<T>::type, work>::value>::type>
+    work(T &&f) : item_(std::forward<T>(f)) {}
 
     /// **Unsettled API**
     ///
@@ -301,20 +279,20 @@ class work {
 ///
 /// **C++ versions** - This C++11 version is just a wrapper for
 /// `std::bind`.
-template <class... Rest>
-work make_work(Rest&&... r) {
+template <class... Rest> work make_work(Rest &&... r) {
     return std::bind(std::forward<Rest>(r)...);
 }
 
-} } // internal::v11
+} // namespace v11
+} // namespace internal
 
-using internal::v11::work;
 using internal::v11::make_work;
+using internal::v11::work;
 
 #else
 
-using internal::v03::work;
 using internal::v03::make_work;
+using internal::v03::work;
 
 #endif
 
@@ -339,7 +317,7 @@ using internal::v03::make_work;
 class PN_CPP_CLASS_EXTERN work_queue {
     /// @cond INTERNAL
     class impl;
-    work_queue& operator=(impl* i);
+    work_queue &operator=(impl *i);
     /// @endcond
 
   public:
@@ -347,7 +325,7 @@ class PN_CPP_CLASS_EXTERN work_queue {
     PN_CPP_EXTERN work_queue();
 
     /// **Unsettled API** - Create a work queue backed by a container.
-    PN_CPP_EXTERN work_queue(container&);
+    PN_CPP_EXTERN work_queue(container &);
 
     PN_CPP_EXTERN ~work_queue();
 
@@ -362,7 +340,8 @@ class PN_CPP_CLASS_EXTERN work_queue {
     PN_CPP_EXTERN bool add(work fn);
 
     /// **Deprecated** - Use `add(work)`.
-    PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'work_queue::add(work)'") bool add(void_function0& fn);
+    PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'work_queue::add(work)'") bool add(
+        void_function0 &fn);
 
     /// **Unsettled API** - Add work `fn` to the work queue after a
     /// duration.
@@ -375,28 +354,31 @@ class PN_CPP_CLASS_EXTERN work_queue {
     PN_CPP_EXTERN void schedule(duration, work fn);
 
     /// **Deprecated** - Use `schedule(duration, work)`.
-    PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'work_queue::schedule(duration, work)'") void schedule(duration, void_function0& fn);
+    PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'work_queue::schedule(duration, "
+                                    "work)'") void schedule(duration,
+                                                            void_function0 &fn);
 
   private:
-    /// Declare both v03 and v11 if compiling with c++11 as the library contains both.
-    /// A C++11 user should never call the v03 overload so it is private in this case
+    /// Declare both v03 and v11 if compiling with c++11 as the library contains
+    /// both. A C++11 user should never call the v03 overload so it is private
+    /// in this case
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
     PN_CPP_EXTERN bool add(internal::v03::work fn);
     PN_CPP_EXTERN void schedule(duration, internal::v03::work fn);
 #endif
 
-    PN_CPP_EXTERN static work_queue& get(pn_connection_t*);
-    PN_CPP_EXTERN static work_queue& get(pn_session_t*);
-    PN_CPP_EXTERN static work_queue& get(pn_link_t*);
+    PN_CPP_EXTERN static work_queue &get(pn_connection_t *);
+    PN_CPP_EXTERN static work_queue &get(pn_session_t *);
+    PN_CPP_EXTERN static work_queue &get(pn_link_t *);
 
     internal::pn_unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
-  friend class container;
-  friend class io::connection_driver;
+    friend class container;
+    friend class io::connection_driver;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_WORK_QUEUE_HPP

@@ -25,39 +25,41 @@
 #include "core/buffer.h"
 #include "core/engine-internal.h"
 
-#include "proton/types.h"
-#include "proton/sasl.h"
 #include "proton/sasl-plugin.h"
+#include "proton/sasl.h"
+#include "proton/types.h"
 
 extern const pnx_sasl_implementation default_sasl_impl;
-extern const pnx_sasl_implementation * const cyrus_sasl_impl;
+extern const pnx_sasl_implementation *const cyrus_sasl_impl;
 
 // SASL APIs used by transport code
 void pn_sasl_free(pn_transport_t *transport);
-void pni_sasl_set_user_password(pn_transport_t *transport, const char *user, const char *password);
-void pni_sasl_set_remote_hostname(pn_transport_t *transport, const char* fqdn);
-void pni_sasl_set_external_security(pn_transport_t *transport, int ssf, const char *authid);
+void pni_sasl_set_user_password(pn_transport_t *transport, const char *user,
+                                const char *password);
+void pni_sasl_set_remote_hostname(pn_transport_t *transport, const char *fqdn);
+void pni_sasl_set_external_security(pn_transport_t *transport, int ssf,
+                                    const char *authid);
 
 struct pni_sasl_t {
-  void *impl_context;
-  const pnx_sasl_implementation* impl;
-  char *selected_mechanism;
-  char *included_mechanisms;
-  const char *username;
-  char *password;
-  const char *remote_fqdn;
-  char *local_fqdn;
-  char *external_auth;
-  int external_ssf;
-  size_t max_encrypt_size;
-  pn_buffer_t* decoded_buffer;
-  pn_buffer_t* encoded_buffer;
-  pn_bytes_t bytes_out;
-  pn_sasl_outcome_t outcome;
-  enum pnx_sasl_state desired_state;
-  enum pnx_sasl_state last_state;
-  bool allow_insecure_mechs;
-  bool client;
+    void *impl_context;
+    const pnx_sasl_implementation *impl;
+    char *selected_mechanism;
+    char *included_mechanisms;
+    const char *username;
+    char *password;
+    const char *remote_fqdn;
+    char *local_fqdn;
+    char *external_auth;
+    int external_ssf;
+    size_t max_encrypt_size;
+    pn_buffer_t *decoded_buffer;
+    pn_buffer_t *encoded_buffer;
+    pn_bytes_t bytes_out;
+    pn_sasl_outcome_t outcome;
+    enum pnx_sasl_state desired_state;
+    enum pnx_sasl_state last_state;
+    bool allow_insecure_mechs;
+    bool client;
 };
 
 #endif /* sasl-internal.h */

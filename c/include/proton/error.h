@@ -86,13 +86,15 @@ PN_EXTERN int pn_error_set(pn_error_t *error, int code, const char *text);
  * Set the code and set the text using a printf-style formatted
  * string.
  */
-PN_EXTERN int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap);
+PN_EXTERN int pn_error_vformat(pn_error_t *error, int code, const char *fmt,
+                               va_list ap);
 
 /**
  * Set the code and set the text using a printf-style formatted
  * string.
  */
-PN_EXTERN int pn_error_format(pn_error_t *error, int code, const char *fmt, ...);
+PN_EXTERN int pn_error_format(pn_error_t *error, int code, const char *fmt,
+                              ...);
 
 /**
  * Get the the error code.
@@ -113,11 +115,11 @@ PN_EXTERN int pn_error_copy(pn_error_t *error, pn_error_t *src);
 /**
  * @cond INTERNAL
  */
-#define PN_RETURN_IF_ERROR(x) \
-do {\
-int r = (x);\
-if (r < 0) return r; \
-} while (0)
+#define PN_RETURN_IF_ERROR(x)                                                  \
+    do {                                                                       \
+        int r = (x);                                                           \
+        if (r < 0) return r;                                                   \
+    } while (0)
 /**
  * @endcond
  */

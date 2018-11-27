@@ -25,10 +25,10 @@
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
 
+#include <cctype>
 #include <iostream>
 #include <map>
 #include <string>
-#include <cctype>
 
 #include "fake_cpp11.hpp"
 
@@ -39,28 +39,28 @@ class server : public proton::messaging_handler {
     std::map<std::string, proton::sender> senders_;
 
   public:
-    server(const std::string& u, const std::string& a) :
-        conn_url_(u), addr_(a) {}
+    server(const std::string &u, const std::string &a)
+        : conn_url_(u), addr_(a) {}
 
-    void on_container_start(proton::container& c) OVERRIDE {
+    void on_container_start(proton::container &c) OVERRIDE {
         conn_ = c.connect(conn_url_);
         conn_.open_receiver(addr_);
 
         std::cout << "Server connected to " << conn_url_ << std::endl;
     }
 
-    std::string to_upper(const std::string& s) {
+    std::string to_upper(const std::string &s) {
         std::string uc(s);
         size_t l = uc.size();
 
-        for (size_t i=0; i<l; i++) {
+        for (size_t i = 0; i < l; i++) {
             uc[i] = static_cast<char>(std::toupper(uc[i]));
         }
 
         return uc;
     }
 
-    void on_message(proton::delivery&, proton::message& m) OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
         std::cout << "Received " << m.body() << std::endl;
 
         std::string reply_to = m.reply_to();
@@ -78,7 +78,7 @@ class server : public proton::messaging_handler {
     }
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     try {
         std::string conn_url = argc > 1 ? argv[1] : "//127.0.0.1:5672";
         std::string addr = argc > 2 ? argv[2] : "examples";
@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
         proton::container(srv).run();
 
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

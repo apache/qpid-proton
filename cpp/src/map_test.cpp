@@ -17,7 +17,6 @@
  * under the License.
  */
 
-
 #include "proton/map.hpp"
 #include "test_bits.hpp"
 
@@ -85,11 +84,11 @@ void test_cppmap() {
     m2.value(v);
 
     // Use a vector as map storage
-    vector<pair<string, scalar> > vm;
+    vector<pair<string, scalar>> vm;
 
     vm.push_back(std::make_pair(string("x"), 8));
     vm.push_back(std::make_pair(string("y"), 9));
-    m.value(vm);                // Can't use type-safe op=, not enabled
+    m.value(vm); // Can't use type-safe op=, not enabled
     ASSERT_EQUAL(scalar(8), m.get("x"));
     ASSERT_EQUAL(scalar(9), m.get("y"));
     ASSERT_EQUAL(2U, m.size());
@@ -110,13 +109,13 @@ void test_value() {
     // Wrong type of map.
     // Note we can't detect an empty map of bad type because AMQP maps allow
     // mixed types, so there must be data to object to.
-    bad[1]=1.0;
+    bad[1] = 1.0;
     ASSERT_THROWS(conversion_error, m.value(bad));
 }
 
-}
+} // namespace
 
-int main(int, char**) {
+int main(int, char **) {
     int failed = 0;
     RUN_TEST(failed, test_empty());
     RUN_TEST(failed, test_use());

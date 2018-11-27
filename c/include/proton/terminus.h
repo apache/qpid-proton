@@ -22,9 +22,9 @@
  *
  */
 
+#include <proton/codec.h>
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
-#include <proton/codec.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -56,12 +56,12 @@ typedef struct pn_terminus_t pn_terminus_t;
  * Type of an AMQP terminus.
  */
 typedef enum {
-  PN_UNSPECIFIED = 0, /**< indicates a nonexistent terminus, may used
-                         as a source or target */
-  PN_SOURCE = 1, /**< indicates a source of messages */
-  PN_TARGET = 2, /**< indicates a target for messages */
-  PN_COORDINATOR = 3 /**< a special target identifying a transaction
-                        coordinator */
+    PN_UNSPECIFIED = 0, /**< indicates a nonexistent terminus, may used
+                           as a source or target */
+    PN_SOURCE = 1,      /**< indicates a source of messages */
+    PN_TARGET = 2,      /**< indicates a target for messages */
+    PN_COORDINATOR = 3  /**< a special target identifying a transaction
+                           coordinator */
 } pn_terminus_type_t;
 
 /**
@@ -73,12 +73,12 @@ typedef enum {
  * only, or to all delivery state as well.
  */
 typedef enum {
-  PN_NONDURABLE = 0, /**< indicates a non durable terminus */
-  PN_CONFIGURATION = 1, /**< indicates a terminus with durably held
-                           configuration, but not delivery state */
-  PN_DELIVERIES = 2 /**< indicates a terminus with both durably held
-                       configuration and durably held delivery
-                       state. */
+    PN_NONDURABLE = 0,    /**< indicates a non durable terminus */
+    PN_CONFIGURATION = 1, /**< indicates a terminus with durably held
+                             configuration, but not delivery state */
+    PN_DELIVERIES = 2     /**< indicates a terminus with both durably held
+                             configuration and durably held delivery
+                             state. */
 } pn_durability_t;
 
 /**
@@ -90,10 +90,13 @@ typedef enum {
  * counting down.
  */
 typedef enum {
-  PN_EXPIRE_WITH_LINK, /**< the terminus is orphaned when the parent link is closed */
-  PN_EXPIRE_WITH_SESSION, /**< the terminus is orphaned when the parent session is closed */
-  PN_EXPIRE_WITH_CONNECTION, /**< the terminus is orphaned when the parent connection is closed */
-  PN_EXPIRE_NEVER /**< the terminus is never considered orphaned */
+    PN_EXPIRE_WITH_LINK, /**< the terminus is orphaned when the parent link is
+                            closed */
+    PN_EXPIRE_WITH_SESSION,    /**< the terminus is orphaned when the parent
+                                  session is closed */
+    PN_EXPIRE_WITH_CONNECTION, /**< the terminus is orphaned when the parent
+                                  connection is closed */
+    PN_EXPIRE_NEVER            /**< the terminus is never considered orphaned */
 } pn_expiry_policy_t;
 
 /**
@@ -104,9 +107,9 @@ typedef enum {
  * same node.
  */
 typedef enum {
-  PN_DIST_MODE_UNSPECIFIED = 0, /**< the behaviour is defined by the node */
-  PN_DIST_MODE_COPY = 1, /**< the receiver gets all messages */
-  PN_DIST_MODE_MOVE = 2 /**< the receiver competes for messages */
+    PN_DIST_MODE_UNSPECIFIED = 0, /**< the behaviour is defined by the node */
+    PN_DIST_MODE_COPY = 1,        /**< the receiver gets all messages */
+    PN_DIST_MODE_MOVE = 2         /**< the receiver competes for messages */
 } pn_distribution_mode_t;
 
 /**
@@ -124,7 +127,8 @@ PN_EXTERN pn_terminus_type_t pn_terminus_get_type(pn_terminus_t *terminus);
  * @param[in] type the terminus type
  * @return 0 on success or an error code on failure
  */
-PN_EXTERN int pn_terminus_set_type(pn_terminus_t *terminus, pn_terminus_type_t type);
+PN_EXTERN int pn_terminus_set_type(pn_terminus_t *terminus,
+                                   pn_terminus_type_t type);
 
 /**
  * Get the address of a terminus object.
@@ -145,7 +149,8 @@ PN_EXTERN const char *pn_terminus_get_address(pn_terminus_t *terminus);
  * @param[in] address an AMQP address string
  * @return 0 on success or an error code on failure
  */
-PN_EXTERN int pn_terminus_set_address(pn_terminus_t *terminus, const char *address);
+PN_EXTERN int pn_terminus_set_address(pn_terminus_t *terminus,
+                                      const char *address);
 
 /**
  * Get the distribution mode of a terminus object.
@@ -153,7 +158,8 @@ PN_EXTERN int pn_terminus_set_address(pn_terminus_t *terminus, const char *addre
  * @param[in] terminus a terminus object
  * @return the distribution mode of the terminus
  */
-PN_EXTERN pn_distribution_mode_t pn_terminus_get_distribution_mode(const pn_terminus_t *terminus);
+PN_EXTERN pn_distribution_mode_t
+pn_terminus_get_distribution_mode(const pn_terminus_t *terminus);
 
 /**
  * Set the distribution mode of a terminus object.
@@ -162,7 +168,8 @@ PN_EXTERN pn_distribution_mode_t pn_terminus_get_distribution_mode(const pn_term
  * @param[in] mode the distribution mode for the terminus
  * @return 0 on success or an error code on failure
  */
-PN_EXTERN int pn_terminus_set_distribution_mode(pn_terminus_t *terminus, pn_distribution_mode_t mode);
+PN_EXTERN int pn_terminus_set_distribution_mode(pn_terminus_t *terminus,
+                                                pn_distribution_mode_t mode);
 
 /**
  * Get the durability mode of a terminus object.
@@ -188,7 +195,8 @@ PN_EXTERN int pn_terminus_set_durability(pn_terminus_t *terminus,
  * @param[in] terminus a terminus object
  * @return the expiry policy of the terminus
  */
-PN_EXTERN pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *terminus);
+PN_EXTERN pn_expiry_policy_t
+pn_terminus_get_expiry_policy(pn_terminus_t *terminus);
 
 /**
  * Return true if the terminus has an explicit expiry policy set,
@@ -206,9 +214,8 @@ PN_EXTERN bool pn_terminus_has_expiry_policy(const pn_terminus_t *terminus);
  * @param[in] policy the expiry policy for the terminus
  * @return 0 on success or an error code on failure
  */
-PN_EXTERN int pn_terminus_set_expiry_policy(pn_terminus_t *terminus, pn_expiry_policy_t policy);
-
-
+PN_EXTERN int pn_terminus_set_expiry_policy(pn_terminus_t *terminus,
+                                            pn_expiry_policy_t policy);
 
 /**
  * Get the timeout of a terminus object.
@@ -225,7 +232,8 @@ PN_EXTERN pn_seconds_t pn_terminus_get_timeout(pn_terminus_t *terminus);
  * @param[in] timeout the timeout for the terminus
  * @return 0 on success or an error code on failure
  */
-PN_EXTERN int pn_terminus_set_timeout(pn_terminus_t *terminus, pn_seconds_t timeout);
+PN_EXTERN int pn_terminus_set_timeout(pn_terminus_t *terminus,
+                                      pn_seconds_t timeout);
 
 /**
  * Get the dynamic flag for a terminus object.

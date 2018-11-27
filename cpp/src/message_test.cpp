@@ -20,22 +20,22 @@
 #include "proton/message.hpp"
 #include "proton/scalar.hpp"
 #include "test_bits.hpp"
-#include <string>
 #include <fstream>
-#include <streambuf>
 #include <iosfwd>
+#include <streambuf>
+#include <string>
 
 namespace {
 
 using namespace std;
 using namespace proton;
 
-#define CHECK_STR(ATTR) \
-    m.ATTR(#ATTR); \
+#define CHECK_STR(ATTR)                                                        \
+    m.ATTR(#ATTR);                                                             \
     ASSERT_EQUAL(std::string(#ATTR), m.ATTR())
 
-#define CHECK_MESSAGE_ID(ATTR) \
-    m.ATTR(#ATTR); \
+#define CHECK_MESSAGE_ID(ATTR)                                                 \
+    m.ATTR(#ATTR);                                                             \
     ASSERT_EQUAL(scalar(#ATTR), m.ATTR())
 
 void test_message_defaults() {
@@ -150,13 +150,14 @@ void test_message_maps() {
 
     message m2(m);
 
-    ASSERT_EQUAL(m.properties().get("foo"), scalar(12)); // Decoding shouldn't change it
+    ASSERT_EQUAL(m.properties().get("foo"),
+                 scalar(12)); // Decoding shouldn't change it
 
     ASSERT_EQUAL(m2.properties().get("foo"), scalar(12));
     ASSERT_EQUAL(m2.delivery_annotations().get("bar"), scalar("xyz"));
     ASSERT_EQUAL(m2.message_annotations().get(23), scalar(int8_t(42)));
 
-    m.properties().put("foo","newfoo");
+    m.properties().put("foo", "newfoo");
     m.delivery_annotations().put(24, 1000);
     m.message_annotations().erase(23);
 
@@ -173,7 +174,7 @@ void test_message_maps() {
     message msg;
     msg.message_annotations().put("x-opt-jms-msg-type", int8_t(1));
 
-    proton::message::annotation_map& am_ref = msg.message_annotations();
+    proton::message::annotation_map &am_ref = msg.message_annotations();
     uint8_t t = am_ref.get(proton::symbol("x-opt-jms-msg-type")).get<int8_t>();
     ASSERT_EQUAL(1, t);
 
@@ -189,27 +190,30 @@ void test_message_reuse() {
     message m2("two");
     m2.properties().put("a", "b");
 
-    m1.decode(m2.encode());     // Use m1 for a newly decoded message
+    m1.decode(m2.encode()); // Use m1 for a newly decoded message
     ASSERT_EQUAL(value("two"), m1.body());
     ASSERT_EQUAL(value("b"), m1.properties().get("a"));
 }
 
 void test_message_print() {
-  message m("hello");
-  m.to("to");
-  m.user("user");
-  m.subject("subject");
-  m.content_type("weird");
-  m.correlation_id(23);
-  m.properties().put("foo", "bar");
-  m.properties().put("num", 9);
-  m.delivery_annotations().put("deliverme", "please");
-  ASSERT_EQUAL("Message{address=\"to\", user_id=\"user\", subject=\"subject\", correlation_id=23, content_type=\"weird\", body=\"hello\"}", to_string(m));
+    message m("hello");
+    m.to("to");
+    m.user("user");
+    m.subject("subject");
+    m.content_type("weird");
+    m.correlation_id(23);
+    m.properties().put("foo", "bar");
+    m.properties().put("num", 9);
+    m.delivery_annotations().put("deliverme", "please");
+    ASSERT_EQUAL(
+        "Message{address=\"to\", user_id=\"user\", subject=\"subject\", "
+        "correlation_id=23, content_type=\"weird\", body=\"hello\"}",
+        to_string(m));
 }
 
-}
+} // namespace
 
-int main(int, char**) {
+int main(int, char **) {
     int failed = 0;
     RUN_TEST(failed, test_message_properties());
     RUN_TEST(failed, test_message_defaults());

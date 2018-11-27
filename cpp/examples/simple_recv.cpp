@@ -46,8 +46,9 @@ class simple_recv : public proton::messaging_handler {
     int received;
 
   public:
-    simple_recv(const std::string &s, const std::string &u, const std::string &p, int c) :
-        url(s), user(u), password(p), expected(c), received(0) {}
+    simple_recv(const std::string &s, const std::string &u,
+                const std::string &p, int c)
+        : url(s), user(u), password(p), expected(c), received(0) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         proton::connection_options co;
@@ -80,11 +81,13 @@ int main(int argc, char **argv) {
     int message_count = 100;
     example::options opts(argc, argv);
 
-    opts.add_value(address, 'a', "address", "connect to and receive from URL", "URL");
-    opts.add_value(message_count, 'm', "messages", "receive COUNT messages", "COUNT");
+    opts.add_value(address, 'a', "address", "connect to and receive from URL",
+                   "URL");
+    opts.add_value(message_count, 'm', "messages", "receive COUNT messages",
+                   "COUNT");
     opts.add_value(user, 'u', "user", "authenticate as USER", "USER");
-    opts.add_value(password, 'p', "password", "authenticate with PASSWORD", "PASSWORD");
-
+    opts.add_value(password, 'p', "password", "authenticate with PASSWORD",
+                   "PASSWORD");
 
     try {
         opts.parse();
@@ -93,9 +96,9 @@ int main(int argc, char **argv) {
         proton::container(recv).run();
 
         return 0;
-    } catch (const example::bad_option& e) {
+    } catch (const example::bad_option &e) {
         std::cout << opts << std::endl << e.what() << std::endl;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

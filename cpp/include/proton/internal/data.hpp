@@ -37,7 +37,7 @@ namespace internal {
 /// A wrapper for a proton data object.
 class data : public object<pn_data_t> {
     /// Wrap an existing Proton-C data object.
-    data(pn_data_t* d) : internal::object<pn_data_t>(d) {}
+    data(pn_data_t *d) : internal::object<pn_data_t>(d) {}
 
   public:
     /// Create an empty data object.
@@ -47,7 +47,7 @@ class data : public object<pn_data_t> {
     PN_CPP_EXTERN static data create();
 
     /// Copy the contents of another data object.
-    PN_CPP_EXTERN void copy(const data&);
+    PN_CPP_EXTERN void copy(const data &);
 
     /// Clear the data.
     PN_CPP_EXTERN void clear();
@@ -65,16 +65,16 @@ class data : public object<pn_data_t> {
     PN_CPP_EXTERN int appendn(data src, int limit);
 
     PN_CPP_EXTERN bool next();
-    PN_CPP_EXTERN const void* point() const;
-    PN_CPP_EXTERN void restore(const void* h);
+    PN_CPP_EXTERN const void *point() const;
+    PN_CPP_EXTERN void restore(const void *h);
 
   protected:
     void narrow();
     void widen();
 
-  friend class internal::factory<data>;
-  friend struct state_guard;
-  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const data&);
+    friend class internal::factory<data>;
+    friend struct state_guard;
+    friend PN_CPP_EXTERN std::ostream &operator<<(std::ostream &, const data &);
 };
 /// @endcond
 
@@ -84,22 +84,24 @@ class data : public object<pn_data_t> {
 /// unless `cancel()` is called.
 struct state_guard {
     /// @cond INTERNAL
-    data& data_;
-    const void* point_;
+    data &data_;
+    const void *point_;
     bool cancel_;
     /// @endcond
 
     /// @cond INTERNAL
-    state_guard(data& d) : data_(d), point_(data_.point()), cancel_(false) {}
+    state_guard(data &d) : data_(d), point_(data_.point()), cancel_(false) {}
     /// @endcond
 
-    ~state_guard() { if (!cancel_) data_.restore(point_); }
+    ~state_guard() {
+        if (!cancel_) data_.restore(point_);
+    }
 
     /// Discard the saved state.
     void cancel() { cancel_ = true; }
 };
 
-} // internal
-} // proton
+} // namespace internal
+} // namespace proton
 
 #endif // PROTON_INTERNAL_DATA_HPP

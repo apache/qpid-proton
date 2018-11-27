@@ -30,7 +30,7 @@ namespace proton {
 namespace internal {
 
 template <class T> class pn_unique_ptr;
-template <class T> void swap(pn_unique_ptr<T>& x, pn_unique_ptr<T>& y);
+template <class T> void swap(pn_unique_ptr<T> &x, pn_unique_ptr<T> &y);
 
 /// A simple unique ownership pointer, used as a return value from
 /// functions that transfer ownership to the caller.
@@ -42,35 +42,50 @@ template <class T> void swap(pn_unique_ptr<T>& x, pn_unique_ptr<T>& y);
 /// around differences between C++11 and C++03.
 template <class T> class pn_unique_ptr {
   public:
-    pn_unique_ptr(T* p=0) : ptr_(p) {}
+    pn_unique_ptr(T *p = 0) : ptr_(p) {}
 #if PN_CPP_HAS_RVALUE_REFERENCES
-    pn_unique_ptr(pn_unique_ptr&& x) : ptr_(0)  { std::swap(ptr_, x.ptr_); }
+    pn_unique_ptr(pn_unique_ptr &&x) : ptr_(0) { std::swap(ptr_, x.ptr_); }
 #else
-    pn_unique_ptr(const pn_unique_ptr& x) : ptr_() { std::swap(ptr_, const_cast<pn_unique_ptr&>(x).ptr_); }
+    pn_unique_ptr(const pn_unique_ptr &x) : ptr_() {
+        std::swap(ptr_, const_cast<pn_unique_ptr &>(x).ptr_);
+    }
 #endif
-    ~pn_unique_ptr() { delete(ptr_); }
-    T& operator*() const { return *ptr_; }
-    T* operator->() const { return ptr_; }
-    T* get() const { return ptr_; }
-    void reset(T* p = 0) { pn_unique_ptr<T> tmp(p); std::swap(ptr_, tmp.ptr_); }
-    T* release() { T *p = ptr_; ptr_ = 0; return p; }
+    ~pn_unique_ptr() { delete (ptr_); }
+    T &operator*() const { return *ptr_; }
+    T *operator->() const { return ptr_; }
+    T *get() const { return ptr_; }
+    void reset(T *p = 0) {
+        pn_unique_ptr<T> tmp(p);
+        std::swap(ptr_, tmp.ptr_);
+    }
+    T *release() {
+        T *p = ptr_;
+        ptr_ = 0;
+        return p;
+    }
 #if PN_CPP_HAS_EXPLICIT_CONVERSIONS
     explicit operator bool() const { return get(); }
 #endif
-    bool operator !() const { return !get(); }
-    void swap(pn_unique_ptr& x) { std::swap(ptr_, x.ptr_); }
+    bool operator!() const { return !get(); }
+    void swap(pn_unique_ptr &x) { std::swap(ptr_, x.ptr_); }
 
 #if PN_CPP_HAS_STD_UNIQUE_PTR
-    operator std::unique_ptr<T>() { T *p = ptr_; ptr_ = 0; return std::unique_ptr<T>(p); }
+    operator std::unique_ptr<T>() {
+        T *p = ptr_;
+        ptr_ = 0;
+        return std::unique_ptr<T>(p);
+    }
 #endif
 
   private:
-    T* ptr_;
+    T *ptr_;
 };
 
-template <class T> void swap(pn_unique_ptr<T>& x, pn_unique_ptr<T>& y) { x.swap(y); }
+template <class T> void swap(pn_unique_ptr<T> &x, pn_unique_ptr<T> &y) {
+    x.swap(y);
+}
 
-} // internal
-} // proton
+} // namespace internal
+} // namespace proton
 
 #endif // PROTON_INTERNAL_UNIQUE_PTR_HPP

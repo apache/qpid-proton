@@ -38,46 +38,38 @@ namespace proton {
 
 session::~session() {}
 
-void session::open() {
-    pn_session_open(pn_object());
-}
+void session::open() { pn_session_open(pn_object()); }
 
 void session::open(const session_options &opts) {
     opts.apply(*this);
     pn_session_open(pn_object());
 }
 
-void session::close()
-{
-    pn_session_close(pn_object());
-}
+void session::close() { pn_session_close(pn_object()); }
 
-container& session::container() const {
-    return connection().container();
-}
+container &session::container() const { return connection().container(); }
 
-work_queue& session::work_queue() const {
-    return connection().work_queue();
-}
+work_queue &session::work_queue() const { return connection().work_queue(); }
 
 connection session::connection() const {
     return make_wrapper(pn_session_connection(pn_object()));
 }
 
 namespace {
-std::string next_link_name(const connection& c) {
-    io::link_namer* ln = connection_context::get(unwrap(c)).link_gen;
+std::string next_link_name(const connection &c) {
+    io::link_namer *ln = connection_context::get(unwrap(c)).link_gen;
 
     return ln ? ln->link_name() : uuid::random().str();
 }
-}
+} // namespace
 
 sender session::open_sender(const std::string &addr) {
     return open_sender(addr, sender_options());
 }
 
 sender session::open_sender(const std::string &addr, const sender_options &so) {
-    std::string name = so.get_name() ? *so.get_name() : next_link_name(connection());
+    std::string name =
+        so.get_name() ? *so.get_name() : next_link_name(connection());
     pn_link_t *lnk = pn_sender(pn_object(), name.c_str());
     pn_terminus_set_address(pn_link_target(lnk), addr.c_str());
     sender snd(make_wrapper<sender>(lnk));
@@ -89,9 +81,10 @@ receiver session::open_receiver(const std::string &addr) {
     return open_receiver(addr, receiver_options());
 }
 
-receiver session::open_receiver(const std::string &addr, const receiver_options &ro)
-{
-    std::string name = ro.get_name() ? *ro.get_name() : next_link_name(connection());
+receiver session::open_receiver(const std::string &addr,
+                                const receiver_options &ro) {
+    std::string name =
+        ro.get_name() ? *ro.get_name() : next_link_name(connection());
     pn_link_t *lnk = pn_receiver(pn_object(), name.c_str());
     pn_terminus_set_address(pn_link_source(lnk), addr.c_str());
     receiver rcv(make_wrapper<receiver>(lnk));
@@ -118,7 +111,8 @@ sender_range session::senders() const {
             break;
         lnk = pn_link_next(lnk, 0);
     }
-    return sender_range(sender_iterator(make_wrapper<sender>(lnk), pn_object()));
+    return sender_range(
+        sender_iterator(make_wrapper<sender>(lnk), pn_object()));
 }
 
 receiver_range session::receivers() const {
@@ -128,7 +122,8 @@ receiver_range session::receivers() const {
             break;
         lnk = pn_link_next(lnk, 0);
     }
-    return receiver_range(receiver_iterator(make_wrapper<receiver>(lnk), pn_object()));
+    return receiver_range(
+        receiver_iterator(make_wrapper<receiver>(lnk), pn_object()));
 }
 
 session_iterator session_iterator::operator++() {

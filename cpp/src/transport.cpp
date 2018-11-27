@@ -19,18 +19,17 @@
  *
  */
 
-#include "proton/error.hpp"
 #include "proton/transport.hpp"
-#include "proton/error_condition.hpp"
 #include "proton/connection.hpp"
-#include "proton/ssl.hpp"
+#include "proton/error.hpp"
+#include "proton/error_condition.hpp"
 #include "proton/sasl.hpp"
-#include <proton/transport.h>
+#include "proton/ssl.hpp"
 #include <proton/error.h>
+#include <proton/transport.h>
 
 #include "msg.hpp"
 #include "proton_bits.hpp"
-
 
 namespace proton {
 
@@ -50,4 +49,4 @@ error_condition transport::error() const {
     return make_wrapper(pn_transport_condition(pn_object()));
 }
 
-}
+} // namespace proton

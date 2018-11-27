@@ -44,20 +44,25 @@ class binary : public std::vector<uint8_t> {
     explicit binary() : std::vector<value_type>() {}
     explicit binary(size_t n) : std::vector<value_type>(n) {}
     explicit binary(size_t n, value_type x) : std::vector<value_type>(n, x) {}
-    explicit binary(const std::string& s) : std::vector<value_type>(s.begin(), s.end()) {}
-    template <class Iter> binary(Iter first, Iter last) : std::vector<value_type>(first, last) {}
+    explicit binary(const std::string &s)
+        : std::vector<value_type>(s.begin(), s.end()) {}
+    template <class Iter>
+    binary(Iter first, Iter last) : std::vector<value_type>(first, last) {}
     /// @}
 
     /// Convert to std::string
     operator std::string() const { return std::string(begin(), end()); }
 
     /// Assignment
-    binary& operator=(const std::string& x) { assign(x.begin(), x.end()); return *this; }
+    binary &operator=(const std::string &x) {
+        assign(x.begin(), x.end());
+        return *this;
+    }
 };
 
 /// Print a binary value
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const binary&);
+PN_CPP_EXTERN std::ostream &operator<<(std::ostream &, const binary &);
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_BINARY_HPP

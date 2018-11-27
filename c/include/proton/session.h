@@ -22,12 +22,12 @@
  *
  */
 
+#include <proton/condition.h>
+#include <proton/error.h>
 #include <proton/import_export.h>
+#include <proton/object.h>
 #include <proton/type_compat.h>
 #include <proton/types.h>
-#include <proton/object.h>
-#include <proton/error.h>
-#include <proton/condition.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -219,7 +219,8 @@ PN_EXTERN size_t pn_session_get_incoming_capacity(pn_session_t *session);
  * @param[in] session the session object
  * @param[in] capacity the incoming capacity for the session in bytes
  */
-PN_EXTERN void pn_session_set_incoming_capacity(pn_session_t *session, size_t capacity);
+PN_EXTERN void pn_session_set_incoming_capacity(pn_session_t *session,
+                                                size_t capacity);
 
 /**
  * Get the outgoing window for a session object.
@@ -235,7 +236,8 @@ PN_EXTERN size_t pn_session_get_outgoing_window(pn_session_t *session);
  * @param[in] session the session object
  * @param[in] window the outgoing window for the session
  */
-PN_EXTERN void pn_session_set_outgoing_window(pn_session_t *session, size_t window);
+PN_EXTERN void pn_session_set_outgoing_window(pn_session_t *session,
+                                              size_t window);
 
 /**
  * Get the number of outgoing bytes currently buffered by a session.
@@ -269,7 +271,8 @@ PN_EXTERN size_t pn_session_incoming_bytes(pn_session_t *session);
  * @return the first session owned by the connection that matches the
  * mask, else NULL if no sessions match
  */
-PN_EXTERN pn_session_t *pn_session_head(pn_connection_t *connection, pn_state_t state);
+PN_EXTERN pn_session_t *pn_session_head(pn_connection_t *connection,
+                                        pn_state_t state);
 
 /**
  * Retrieve the next session from a given connection that matches the
@@ -285,7 +288,8 @@ PN_EXTERN pn_session_t *pn_session_head(pn_connection_t *connection, pn_state_t 
  * @return the next session owned by the connection that matches the
  * mask, else NULL if no sessions match
  */
-PN_EXTERN pn_session_t *pn_session_next(pn_session_t *session, pn_state_t state);
+PN_EXTERN pn_session_t *pn_session_next(pn_session_t *session,
+                                        pn_state_t state);
 
 /**
  * @}

@@ -28,11 +28,11 @@
 
 #include <proton/condition.h>
 #include <proton/connection.h>
-#include <proton/session.h>
-#include <proton/terminus.h>
-#include <proton/link.h>
 #include <proton/delivery.h>
 #include <proton/event.h>
+#include <proton/link.h>
+#include <proton/session.h>
+#include <proton/terminus.h>
 #include <proton/transport.h>
 
 /**

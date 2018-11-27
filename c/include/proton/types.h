@@ -23,8 +23,8 @@
  */
 
 #include <proton/import_export.h>
-#include <stddef.h>
 #include <proton/type_compat.h>
+#include <stddef.h>
 
 /**
  * @file
@@ -135,7 +135,7 @@ extern "C" {
  *
  * @ingroup api_types
  */
-typedef uint32_t  pn_sequence_t;
+typedef uint32_t pn_sequence_t;
 
 /**
  * A span of time in milliseconds.
@@ -192,7 +192,7 @@ typedef uint64_t pn_decimal64_t;
  * @ingroup amqp_types
  */
 typedef struct {
-  char bytes[16];
+    char bytes[16];
 } pn_decimal128_t;
 
 /**
@@ -201,7 +201,7 @@ typedef struct {
  * @ingroup amqp_types
  */
 typedef struct {
-  char bytes[16];
+    char bytes[16];
 } pn_uuid_t;
 
 /**
@@ -210,8 +210,8 @@ typedef struct {
  * @ingroup api_types
  */
 typedef struct pn_bytes_t {
-  size_t size;
-  const char *start;
+    size_t size;
+    const char *start;
 } pn_bytes_t;
 
 /**
@@ -221,7 +221,7 @@ typedef struct pn_bytes_t {
  */
 PN_EXTERN pn_bytes_t pn_bytes(size_t size, const char *start);
 
-static const pn_bytes_t pn_bytes_null = { 0, NULL };
+static const pn_bytes_t pn_bytes_null = {0, NULL};
 
 /**
  * A non-const byte buffer.
@@ -229,8 +229,8 @@ static const pn_bytes_t pn_bytes_null = { 0, NULL };
  * @ingroup api_types
  */
 typedef struct pn_rwbytes_t {
-  size_t size;
-  char *start;
+    size_t size;
+    char *start;
 } pn_rwbytes_t;
 
 /**
@@ -240,7 +240,7 @@ typedef struct pn_rwbytes_t {
  */
 PN_EXTERN pn_rwbytes_t pn_rwbytes(size_t size, char *start);
 
-static const pn_rwbytes_t pn_rwbytes_null = { 0, NULL };
+static const pn_rwbytes_t pn_rwbytes_null = {0, NULL};
 
 /**
  * Holds the state flags for an AMQP endpoint.

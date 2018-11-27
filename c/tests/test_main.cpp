@@ -27,18 +27,19 @@ namespace Catch {
 //     -r console.progress
 struct ConsoleProgresReporter : ConsoleReporter {
 
-  ConsoleProgresReporter(ReporterConfig const &config)
-      : ConsoleReporter(config) {}
+    ConsoleProgresReporter(ReporterConfig const &config)
+        : ConsoleReporter(config) {}
 
-  static std::string getDescription() {
-    return "Shows each test-case before running, results as plain lines of "
-           "text";
-  }
+    static std::string getDescription() {
+        return "Shows each test-case before running, results as plain lines of "
+               "text";
+    }
 
-  void testCaseStarting(TestCaseInfo const &testCaseInfo) CATCH_OVERRIDE {
-    stream << "running test case \"" << testCaseInfo.name << '"' << std::endl;
-    ConsoleReporter::testCaseStarting(testCaseInfo);
-  }
+    void testCaseStarting(TestCaseInfo const &testCaseInfo) CATCH_OVERRIDE {
+        stream << "running test case \"" << testCaseInfo.name << '"'
+               << std::endl;
+        ConsoleReporter::testCaseStarting(testCaseInfo);
+    }
 };
 
 INTERNAL_CATCH_REGISTER_REPORTER("console.progress", ConsoleProgresReporter)

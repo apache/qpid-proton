@@ -22,8 +22,8 @@
  *
  */
 
-#include <proton/import_export.h>
 #include <proton/disposition.h>
+#include <proton/import_export.h>
 #include <proton/type_compat.h>
 #include <stddef.h>
 
@@ -155,7 +155,8 @@ PN_EXTERN uint64_t pn_delivery_remote_state(pn_delivery_t *delivery);
  * Check if a delivery is remotely settled.
  *
  * @param[in] delivery a delivery object
- * @return true if the delivery is settled at the remote endpoint, false otherwise
+ * @return true if the delivery is settled at the remote endpoint, false
+ * otherwise
  */
 PN_EXTERN bool pn_delivery_settled(pn_delivery_t *delivery);
 
@@ -170,8 +171,8 @@ PN_EXTERN size_t pn_delivery_pending(pn_delivery_t *delivery);
 /**
  * Check if a delivery only has partial message data.
  *
- * The receiver can expect more ::PN_DELIVERY events for this delivery containing
- * the remainder of this message.
+ * The receiver can expect more ::PN_DELIVERY events for this delivery
+ * containing the remainder of this message.
  *
  * @param[in] delivery a delivery object
  * @return true if the delivery only contains part of a message, false otherwise

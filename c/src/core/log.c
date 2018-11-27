@@ -29,17 +29,14 @@ static void stderr_logger(const char *message) {
 }
 
 static pn_logger_t logger = stderr_logger;
-static int enabled_env  = -1;   /* Set from environment variable. */
-static int enabled_call = -1;   /* set by pn_log_enable */
+static int enabled_env = -1;  /* Set from environment variable. */
+static int enabled_call = -1; /* set by pn_log_enable */
 
-void pn_log_enable(bool value) {
-    enabled_call = value;
-}
+void pn_log_enable(bool value) { enabled_call = value; }
 
 bool pni_log_enabled(void) {
     if (enabled_call != -1) return enabled_call; /* Takes precedence */
-    if (enabled_env == -1) 
-        enabled_env = pn_env_bool("PN_TRACE_LOG");
+    if (enabled_env == -1) enabled_env = pn_env_bool("PN_TRACE_LOG");
     return enabled_env;
 }
 
@@ -63,21 +60,20 @@ void pni_vlogf_impl(const char *fmt, va_list ap) {
  * in nothing more than a call to pni_log_enabled().
  */
 void pni_logf_impl(const char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  pni_vlogf_impl(fmt, ap);
-  va_end(ap);
+    va_list ap;
+    va_start(ap, fmt);
+    pni_vlogf_impl(fmt, ap);
+    va_end(ap);
 }
 
-void pn_log_data(const char *msg, const char *bytes, size_t size)
-{
-  char buf[256];
-  ssize_t n = pn_quote_data(buf, 256, bytes, size);
-  if (n >= 0) {
-    pn_logf("%s: %s", msg, buf);
-  } else if (n == PN_OVERFLOW) {
-    pn_logf("%s: %s (truncated)", msg, buf);
-  } else {
-    pn_logf("%s: cannot log data: %s", msg, pn_code(n));
-  }
+void pn_log_data(const char *msg, const char *bytes, size_t size) {
+    char buf[256];
+    ssize_t n = pn_quote_data(buf, 256, bytes, size);
+    if (n >= 0) {
+        pn_logf("%s: %s", msg, buf);
+    } else if (n == PN_OVERFLOW) {
+        pn_logf("%s: %s (truncated)", msg, buf);
+    } else {
+        pn_logf("%s: cannot log data: %s", msg, pn_code(n));
+    }
 }

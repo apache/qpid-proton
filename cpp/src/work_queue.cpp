@@ -25,17 +25,22 @@
 #include "proactor_container_impl.hpp"
 #include "proactor_work_queue_impl.hpp"
 
-#include <proton/session.h>
 #include <proton/link.h>
+#include <proton/session.h>
 
 namespace proton {
 
 work_queue::work_queue() {}
-work_queue::work_queue(container& c) { *this = container::impl::make_work_queue(c); }
+work_queue::work_queue(container &c) {
+    *this = container::impl::make_work_queue(c);
+}
 
 work_queue::~work_queue() {}
 
-work_queue& work_queue::operator=(impl* i) { impl_.reset(i); return *this; }
+work_queue &work_queue::operator=(impl *i) {
+    impl_.reset(i);
+    return *this;
+}
 
 bool work_queue::add(internal::v03::work f) {
     // If we have no actual work queue, then can't defer
@@ -51,7 +56,7 @@ bool work_queue::add(internal::v11::work f) {
 }
 #endif
 
-bool work_queue::add(void_function0& f) {
+bool work_queue::add(void_function0 &f) {
     return add(make_work(&void_function0::operator(), &f));
 }
 
@@ -69,20 +74,18 @@ void work_queue::schedule(duration d, internal::v11::work f) {
 }
 #endif
 
-void work_queue::schedule(duration d, void_function0& f) {
+void work_queue::schedule(duration d, void_function0 &f) {
     schedule(d, make_work(&void_function0::operator(), &f));
 }
 
-work_queue& work_queue::get(pn_connection_t* c) {
+work_queue &work_queue::get(pn_connection_t *c) {
     return connection_context::get(c).work_queue_;
 }
 
-work_queue& work_queue::get(pn_session_t* s) {
+work_queue &work_queue::get(pn_session_t *s) {
     return get(pn_session_connection(s));
 }
 
-work_queue& work_queue::get(pn_link_t* l) {
-    return get(pn_link_session(l));
-}
+work_queue &work_queue::get(pn_link_t *l) { return get(pn_link_session(l)); }
 
-}
+} // namespace proton

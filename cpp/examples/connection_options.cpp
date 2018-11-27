@@ -34,8 +34,8 @@ using proton::connection_options;
 class handler_2 : public proton::messaging_handler {
     void on_connection_open(proton::connection &c) OVERRIDE {
         std::cout << "connection events going to handler_2" << std::endl;
-        std::cout << "connection max_frame_size: " << c.max_frame_size() <<
-            ", idle timeout: " << c.idle_timeout() << std::endl;
+        std::cout << "connection max_frame_size: " << c.max_frame_size()
+                  << ", idle timeout: " << c.idle_timeout() << std::endl;
         c.close();
     }
 };
@@ -46,12 +46,14 @@ class main_handler : public proton::messaging_handler {
     handler_2 conn_handler;
 
   public:
-    main_handler(const std::string& u) : url(u) {}
+    main_handler(const std::string &u) : url(u) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        // Connection options for this connection.  Merged with and overriding the container's
-        // client_connection_options() settings.
-        c.connect(url, connection_options().handler(conn_handler).max_frame_size(2468));
+        // Connection options for this connection.  Merged with and overriding
+        // the container's client_connection_options() settings.
+        c.connect(
+            url,
+            connection_options().handler(conn_handler).max_frame_size(2468));
     }
 
     void on_connection_open(proton::connection &c) OVERRIDE {
@@ -66,10 +68,12 @@ int main(int argc, char **argv) {
         main_handler handler(url);
         proton::container container(handler);
         // Global connection options for future connections on container.
-        container.client_connection_options(connection_options().max_frame_size(12345).idle_timeout(proton::duration(15000)));
+        container.client_connection_options(
+            connection_options().max_frame_size(12345).idle_timeout(
+                proton::duration(15000)));
         container.run();
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
     return 1;

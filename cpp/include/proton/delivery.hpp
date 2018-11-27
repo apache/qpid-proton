@@ -33,12 +33,12 @@
 namespace proton {
 
 /// A received message.
-/// 
+///
 /// A delivery attempt can fail. As a result, a particular message may
 /// correspond to multiple deliveries.
 class delivery : public transfer {
     /// @cond INTERNAL
-    delivery(pn_delivery_t* d);
+    delivery(pn_delivery_t *d);
     /// @endcond
 
   public:
@@ -65,10 +65,10 @@ class delivery : public transfer {
     PN_CPP_EXTERN void modify();
 
     /// @cond INTERNAL
-  friend class internal::factory<delivery>;
+    friend class internal::factory<delivery>;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_DELIVERY_HPP

@@ -22,10 +22,10 @@
  *
  */
 
+#include "./delivery_mode.hpp"
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
-#include "./delivery_mode.hpp"
 #include <string>
 
 /// @file
@@ -38,7 +38,8 @@ namespace proton {
 /// Options can be "chained" like this:
 ///
 /// @code
-/// l = container.create_sender(url, sender_options().handler(h).auto_settle(false));
+/// l = container.create_sender(url,
+/// sender_options().handler(h).auto_settle(false));
 /// @endcode
 ///
 /// You can also create an options object with common settings and use
@@ -60,50 +61,52 @@ class sender_options {
     PN_CPP_EXTERN sender_options();
 
     /// Copy options.
-    PN_CPP_EXTERN sender_options(const sender_options&);
+    PN_CPP_EXTERN sender_options(const sender_options &);
 
     PN_CPP_EXTERN ~sender_options();
 
     /// Copy options.
-    PN_CPP_EXTERN sender_options& operator=(const sender_options&);
+    PN_CPP_EXTERN sender_options &operator=(const sender_options &);
 
     /// Merge with another option set
-    PN_CPP_EXTERN void update(const sender_options& other);
+    PN_CPP_EXTERN void update(const sender_options &other);
 
     /// Set a messaging_handler for sender events only.
-    /// The handler is no longer in use when messaging_handler::on_sender_close() is called.
-    /// messaging_handler::on_sender_close() may not be called if a connection is aborted,
-    /// in that case it should be cleaned up in its connection's messaging_handler::on_transport_close()
-    PN_CPP_EXTERN sender_options& handler(class messaging_handler&);
+    /// The handler is no longer in use when
+    /// messaging_handler::on_sender_close() is called.
+    /// messaging_handler::on_sender_close() may not be called if a connection
+    /// is aborted, in that case it should be cleaned up in its connection's
+    /// messaging_handler::on_transport_close()
+    PN_CPP_EXTERN sender_options &handler(class messaging_handler &);
 
     /// Set the delivery mode on the sender.
-    PN_CPP_EXTERN sender_options& delivery_mode(delivery_mode);
+    PN_CPP_EXTERN sender_options &delivery_mode(delivery_mode);
 
     /// Automatically settle messages (default is true).
-    PN_CPP_EXTERN sender_options& auto_settle(bool);
+    PN_CPP_EXTERN sender_options &auto_settle(bool);
 
     /// Options for the source node of the sender.
-    PN_CPP_EXTERN sender_options& source(const source_options&);
+    PN_CPP_EXTERN sender_options &source(const source_options &);
 
     /// Options for the receiver node of the receiver.
-    PN_CPP_EXTERN sender_options& target(const target_options&);
+    PN_CPP_EXTERN sender_options &target(const target_options &);
 
     /// Set the link name. If not set a unique name is generated.
-    PN_CPP_EXTERN sender_options& name(const std::string& name);
+    PN_CPP_EXTERN sender_options &name(const std::string &name);
 
   private:
-    void apply(sender&) const;
-    const std::string* get_name() const; // Pointer to name if set, else 0
+    void apply(sender &) const;
+    const std::string *get_name() const; // Pointer to name if set, else 0
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
-  friend class sender;
-  friend class session;
+    friend class sender;
+    friend class session;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_SENDER_OPTIONS_HPP

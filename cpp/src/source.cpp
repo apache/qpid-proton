@@ -21,30 +21,28 @@
 
 #include "proton_bits.hpp"
 
-#include "proton/source.hpp"
-#include "proton/sender.hpp"
 #include "proton/receiver.hpp"
+#include "proton/sender.hpp"
+#include "proton/source.hpp"
 
 #include "proton_bits.hpp"
 
 namespace proton {
 
-// Set parent_ non-null when the local terminus is authoritative and may need to be looked up.
-source::source(pn_terminus_t *t) : terminus(make_wrapper(t)),
-                                   filters_(pn_terminus_filter(object_))
-{}
+// Set parent_ non-null when the local terminus is authoritative and may need to
+// be looked up.
+source::source(pn_terminus_t *t)
+    : terminus(make_wrapper(t)), filters_(pn_terminus_filter(object_)) {}
 
-source::source(const sender& snd) :
-    terminus(make_wrapper(pn_link_remote_source(unwrap(snd)))),
-    filters_(pn_terminus_filter(object_))
-{
+source::source(const sender &snd)
+    : terminus(make_wrapper(pn_link_remote_source(unwrap(snd)))),
+      filters_(pn_terminus_filter(object_)) {
     parent_ = unwrap(snd);
 }
 
-source::source(const receiver& rcv) :
-    terminus(make_wrapper(pn_link_remote_source(unwrap(rcv)))),
-    filters_(pn_terminus_filter(object_))
-{}
+source::source(const receiver &rcv)
+    : terminus(make_wrapper(pn_link_remote_source(unwrap(rcv)))),
+      filters_(pn_terminus_filter(object_)) {}
 
 std::string source::address() const {
     pn_terminus_t *authoritative = object_;
@@ -54,11 +52,9 @@ std::string source::address() const {
 }
 
 enum source::distribution_mode source::distribution_mode() const {
-  return (enum distribution_mode)pn_terminus_get_distribution_mode(object_);
+    return (enum distribution_mode)pn_terminus_get_distribution_mode(object_);
 }
 
-const source::filter_map& source::filters() const {
-    return filters_;
-}
+const source::filter_map &source::filters() const { return filters_; }
 
-}
+} // namespace proton

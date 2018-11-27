@@ -19,28 +19,26 @@
  *
  */
 
+#include <assert.h>
 #include <proton/object.h>
 #include <stdlib.h>
-#include <assert.h>
 
 struct pn_iterator_t {
-  pn_iterator_next_t next;
-  size_t size;
-  void *state;
+    pn_iterator_next_t next;
+    size_t size;
+    void *state;
 };
 
-static void pn_iterator_initialize(void *object)
-{
-  pn_iterator_t *it = (pn_iterator_t *) object;
-  it->next = NULL;
-  it->size = 0;
-  it->state = NULL;
+static void pn_iterator_initialize(void *object) {
+    pn_iterator_t *it = (pn_iterator_t *)object;
+    it->next = NULL;
+    it->size = 0;
+    it->state = NULL;
 }
 
-static void pn_iterator_finalize(void *object)
-{
-  pn_iterator_t *it = (pn_iterator_t *) object;
-  free(it->state);
+static void pn_iterator_finalize(void *object) {
+    pn_iterator_t *it = (pn_iterator_t *)object;
+    free(it->state);
 }
 
 #define CID_pn_iterator CID_pn_object
@@ -48,31 +46,31 @@ static void pn_iterator_finalize(void *object)
 #define pn_iterator_compare NULL
 #define pn_iterator_inspect NULL
 
-pn_iterator_t *pn_iterator()
-{
-  static const pn_class_t clazz = PN_CLASS(pn_iterator);
-  pn_iterator_t *it = (pn_iterator_t *) pn_class_new(&clazz, sizeof(pn_iterator_t));
-  return it;
+pn_iterator_t *pn_iterator() {
+    static const pn_class_t clazz = PN_CLASS(pn_iterator);
+    pn_iterator_t *it =
+        (pn_iterator_t *)pn_class_new(&clazz, sizeof(pn_iterator_t));
+    return it;
 }
 
-void  *pn_iterator_start(pn_iterator_t *iterator, pn_iterator_next_t next,
-                         size_t size) {
-  assert(iterator);
-  assert(next);
-  iterator->next = next;
-  if (iterator->size < size) {
-    iterator->state = realloc(iterator->state, size);
-  }
-  return iterator->state;
+void *pn_iterator_start(pn_iterator_t *iterator, pn_iterator_next_t next,
+                        size_t size) {
+    assert(iterator);
+    assert(next);
+    iterator->next = next;
+    if (iterator->size < size) {
+        iterator->state = realloc(iterator->state, size);
+    }
+    return iterator->state;
 }
 
 void *pn_iterator_next(pn_iterator_t *iterator) {
-  assert(iterator);
-  if (iterator->next) {
-    void *result = iterator->next(iterator->state);
-    if (!result) iterator->next = NULL;
-    return result;
-  } else {
-    return NULL;
-  }
+    assert(iterator);
+    if (iterator->next) {
+        void *result = iterator->next(iterator->state);
+        if (!result) iterator->next = NULL;
+        return result;
+    } else {
+        return NULL;
+    }
 }

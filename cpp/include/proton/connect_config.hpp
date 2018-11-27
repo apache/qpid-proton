@@ -40,13 +40,14 @@ PN_CPP_EXTERN std::string default_file();
 /// @param is input stream for configuration file/string
 /// @param opts [out] connection options to update
 /// @return address suitable for container::connect() from configuration
-PN_CPP_EXTERN std::string parse(std::istream& is, connection_options& opts);
+PN_CPP_EXTERN std::string parse(std::istream &is, connection_options &opts);
 
 /// Parse @ref connect-config from default_file() and update @p opts
 /// @param opts [out] connection options to update
 /// @return address suitable for container::connect() from configuration
-PN_CPP_EXTERN std::string parse_default(connection_options& opts);
+PN_CPP_EXTERN std::string parse_default(connection_options &opts);
 
-}} // namespace proton::connect_config
+} // namespace connect_config
+} // namespace proton
 
 #endif // CONNECT_CONFIG_HPP

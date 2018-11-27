@@ -19,15 +19,15 @@
 
 #include "test_bits.hpp"
 
-#include "proton/internal/data.hpp"
 #include "proton/internal/config.hpp"
+#include "proton/internal/data.hpp"
 #include "proton/types.hpp"
 
 namespace {
 
 using namespace proton;
 
-template <class T> void  simple_type_test(const T& x) {
+template <class T> void simple_type_test(const T &x) {
     ASSERT(codec::is_encodable<T>::value);
     value v;
     codec::encoder e(v);
@@ -39,17 +39,18 @@ template <class T> void  simple_type_test(const T& x) {
 }
 
 template <class T> T make_fill(const char c) {
-    T x; std::fill(x.begin(), x.end(), c);
+    T x;
+    std::fill(x.begin(), x.end(), c);
     return x;
 }
 
-template <class T> void  uncodable_type_test() {
+template <class T> void uncodable_type_test() {
     ASSERT(!codec::is_encodable<T>::value);
 }
 
-}
+} // namespace
 
-int main(int, char**) {
+int main(int, char **) {
     int failed = 0;
 
     // Basic AMQP types
@@ -70,7 +71,9 @@ int main(int, char**) {
     RUN_TEST(failed, simple_type_test(make_fill<decimal32>(0)));
     RUN_TEST(failed, simple_type_test(make_fill<decimal64>(0)));
     RUN_TEST(failed, simple_type_test(make_fill<decimal128>(0)));
-    RUN_TEST(failed, simple_type_test(uuid::copy("\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff")));
+    RUN_TEST(failed,
+             simple_type_test(uuid::copy("\x00\x11\x22\x33\x44\x55\x66\x77\x88"
+                                         "\x99\xaa\xbb\xcc\xdd\xee\xff")));
     RUN_TEST(failed, simple_type_test(std::string("xxx")));
     RUN_TEST(failed, simple_type_test(symbol("aaa")));
     RUN_TEST(failed, simple_type_test(binary("aaa")));
@@ -105,12 +108,11 @@ int main(int, char**) {
     RUN_TEST(failed, simple_type_test(message_id(42)));
 
     // Make sure we reject uncodable types
-    RUN_TEST(failed, (uncodable_type_test<std::pair<int, float> >()));
-    RUN_TEST(failed, (uncodable_type_test<std::pair<scalar, value> >()));
-    RUN_TEST(failed, (uncodable_type_test<std::basic_string<wchar_t> >()));
+    RUN_TEST(failed, (uncodable_type_test<std::pair<int, float>>()));
+    RUN_TEST(failed, (uncodable_type_test<std::pair<scalar, value>>()));
+    RUN_TEST(failed, (uncodable_type_test<std::basic_string<wchar_t>>()));
     RUN_TEST(failed, (uncodable_type_test<internal::data>()));
-    RUN_TEST(failed, (uncodable_type_test<pn_data_t*>()));
+    RUN_TEST(failed, (uncodable_type_test<pn_data_t *>()));
 
     return failed;
 }
-

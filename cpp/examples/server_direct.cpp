@@ -32,18 +32,18 @@
 #include <proton/source_options.hpp>
 #include <proton/tracker.hpp>
 
+#include <cctype>
 #include <iostream>
 #include <map>
-#include <string>
 #include <sstream>
-#include <cctype>
+#include <string>
 
 #include "fake_cpp11.hpp"
 
 class server : public proton::messaging_handler {
   private:
     class listener_ready_handler : public proton::listen_handler {
-        void on_open(proton::listener& l) OVERRIDE {
+        void on_open(proton::listener &l) OVERRIDE {
             std::cout << "listening on " << l.port() << std::endl;
         }
     };
@@ -65,7 +65,7 @@ class server : public proton::messaging_handler {
         std::string uc(s);
         size_t l = uc.size();
 
-        for (size_t i=0; i<l; i++)
+        for (size_t i = 0; i < l; i++)
             uc[i] = static_cast<char>(std::toupper(uc[i]));
 
         return uc;
@@ -81,7 +81,8 @@ class server : public proton::messaging_handler {
     void on_sender_open(proton::sender &sender) OVERRIDE {
         if (sender.source().dynamic()) {
             std::string addr = generate_address();
-            sender.open(proton::sender_options().source(proton::source_options().address(addr)));
+            sender.open(proton::sender_options().source(
+                proton::source_options().address(addr)));
             senders[addr] = sender;
         }
     }
@@ -120,9 +121,9 @@ int main(int argc, char **argv) {
         proton::container(srv).run();
 
         return 0;
-    } catch (const example::bad_option& e) {
+    } catch (const example::bad_option &e) {
         std::cout << opts << std::endl << e.what() << std::endl;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

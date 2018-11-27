@@ -23,10 +23,11 @@
  */
 
 /// @file
-/// **Unsettled API** - Enable conversions between `proton::value` and `std::map`.
+/// **Unsettled API** - Enable conversions between `proton::value` and
+/// `std::map`.
 
-#include "./encoder.hpp"
 #include "./decoder.hpp"
+#include "./encoder.hpp"
 
 #include <map>
 
@@ -35,13 +36,17 @@ namespace codec {
 
 /// Encode std::map<K, T> as amqp::MAP.
 template <class K, class T, class C, class A>
-encoder& operator<<(encoder& e, const std::map<K, T, C, A>& m) { return e << encoder::map(m); }
+encoder &operator<<(encoder &e, const std::map<K, T, C, A> &m) {
+    return e << encoder::map(m);
+}
 
 /// Decode to std::map<K, T> from amqp::MAP.
 template <class K, class T, class C, class A>
-decoder& operator>>(decoder& d, std::map<K, T, C, A>& m) { return d >> decoder::associative(m); }
+decoder &operator>>(decoder &d, std::map<K, T, C, A> &m) {
+    return d >> decoder::associative(m);
+}
 
-} // codec
-} // proton
+} // namespace codec
+} // namespace proton
 
 #endif // PROTON_CODEC_MAP_HPP

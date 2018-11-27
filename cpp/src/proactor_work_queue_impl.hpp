@@ -28,7 +28,7 @@ namespace proton {
 
 class work_queue::impl {
   public:
-    virtual ~impl() {};
+    virtual ~impl(){};
     virtual bool add(work f) = 0;
     void add_void(work f) { add(f); }
     virtual void schedule(duration, work) = 0;
@@ -36,6 +36,6 @@ class work_queue::impl {
     virtual void finished() = 0;
 };
 
-}
+} // namespace proton
 
 #endif // PROTON_CPP_EVENT_LOOP_IMPL_HPP

@@ -34,7 +34,7 @@ template <class T> class comparable {
     friend bool operator!=(const T &a, const T &b) { return !(a == b); }
 };
 
-} // internal
-} // proton
+} // namespace internal
+} // namespace proton
 
 #endif // PROTON_INTERNAL_COMPARABLE_HPP

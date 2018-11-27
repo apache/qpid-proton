@@ -32,8 +32,8 @@
 
 #include <proton/type_compat.h>
 
-#include <vector>
 #include <string>
+#include <vector>
 
 /// @file
 /// @copybrief proton::connection_options
@@ -48,7 +48,8 @@ namespace proton {
 /// Options can be "chained" like this:
 ///
 /// @code
-/// c = container.connect(url, connection_options().handler(h).max_frame_size(1234));
+/// c = container.connect(url,
+/// connection_options().handler(h).max_frame_size(1234));
 /// @endcode
 ///
 /// You can also create an options object with common settings and use
@@ -70,29 +71,30 @@ class connection_options {
     PN_CPP_EXTERN connection_options();
 
     /// Shorthand for `connection_options().handler(h)`.
-    PN_CPP_EXTERN connection_options(class messaging_handler& h);
+    PN_CPP_EXTERN connection_options(class messaging_handler &h);
 
     /// Copy options.
-    PN_CPP_EXTERN connection_options(const connection_options&);
+    PN_CPP_EXTERN connection_options(const connection_options &);
 
     PN_CPP_EXTERN ~connection_options();
 
     /// Copy options.
-    PN_CPP_EXTERN connection_options& operator=(const connection_options&);
+    PN_CPP_EXTERN connection_options &operator=(const connection_options &);
 
-    // XXX add C++11 move operations - Still relevant, and applies to all options
+    // XXX add C++11 move operations - Still relevant, and applies to all
+    // options
 
     /// Set a connection handler.
     ///
     /// The handler must not be deleted until
     /// messaging_handler::on_transport_close() is called.
-    PN_CPP_EXTERN connection_options& handler(class messaging_handler&);
+    PN_CPP_EXTERN connection_options &handler(class messaging_handler &);
 
     /// Set the maximum frame size.  It is unlimited by default.
-    PN_CPP_EXTERN connection_options& max_frame_size(uint32_t max);
+    PN_CPP_EXTERN connection_options &max_frame_size(uint32_t max);
 
     /// Set the maximum number of open sessions.  The default is 32767.
-    PN_CPP_EXTERN connection_options& max_sessions(uint16_t max);
+    PN_CPP_EXTERN connection_options &max_sessions(uint16_t max);
 
     /// Set the idle timeout.  The default is no timeout.
     ///
@@ -100,10 +102,10 @@ class connection_options {
     /// frames for an interval longer than `duration`.  Also known as
     /// "heartbeating", this is a way to detect dead peers even in the
     /// presence of a live TCP connection.
-    PN_CPP_EXTERN connection_options& idle_timeout(duration);
+    PN_CPP_EXTERN connection_options &idle_timeout(duration);
 
     /// Set the container ID.
-    PN_CPP_EXTERN connection_options& container_id(const std::string& id);
+    PN_CPP_EXTERN connection_options &container_id(const std::string &id);
 
     /// Set the virtual host name for the connection. For client
     /// connections, it defaults to the host name used to set up the
@@ -111,7 +113,7 @@ class connection_options {
     ///
     /// If making a client connection by SSL/TLS, this name is also
     /// used for certificate verification and Server Name Indication.
-    PN_CPP_EXTERN connection_options& virtual_host(const std::string& name);
+    PN_CPP_EXTERN connection_options &virtual_host(const std::string &name);
 
     /// Set the user name used to authenticate the connection.  It is
     /// unset by default.
@@ -121,27 +123,29 @@ class connection_options {
     /// connection is created by `container::listen` because a
     /// listening connection's identity is provided by the remote
     /// client.
-    PN_CPP_EXTERN connection_options& user(const std::string&);
+    PN_CPP_EXTERN connection_options &user(const std::string &);
 
     /// Set the password used to authenticate the connection.
     ///
     /// This value is ignored if the connection is created by
     /// `container::listen`.
-    PN_CPP_EXTERN connection_options& password(const std::string&);
+    PN_CPP_EXTERN connection_options &password(const std::string &);
 
     /// Set SSL client options.
-    PN_CPP_EXTERN connection_options& ssl_client_options(const class ssl_client_options&);
+    PN_CPP_EXTERN connection_options &
+    ssl_client_options(const class ssl_client_options &);
 
     /// Set SSL server options.
-    PN_CPP_EXTERN connection_options& ssl_server_options(const class ssl_server_options&);
+    PN_CPP_EXTERN connection_options &
+    ssl_server_options(const class ssl_server_options &);
 
     /// Enable or disable SASL.
-    PN_CPP_EXTERN connection_options& sasl_enabled(bool);
+    PN_CPP_EXTERN connection_options &sasl_enabled(bool);
 
     /// Force the enabling of SASL mechanisms that disclose cleartext
     /// passwords over the connection.  By default, such mechanisms
     /// are disabled.
-    PN_CPP_EXTERN connection_options& sasl_allow_insecure_mechs(bool);
+    PN_CPP_EXTERN connection_options &sasl_allow_insecure_mechs(bool);
 
     /// Specify the SASL mechanisms allowed for this connection.
     /// The value is a space-separated list of mechanism names.
@@ -154,42 +158,44 @@ class connection_options {
     /// Clients must set the allowed mechanisms before the the
     /// outgoing connection is attempted.  Servers must set them
     /// before the listening connection is setup.
-    PN_CPP_EXTERN connection_options& sasl_allowed_mechs(const std::string&);
+    PN_CPP_EXTERN connection_options &sasl_allowed_mechs(const std::string &);
 
     /// **Unsettled API** - Extension capabilities offered to the remote peer.
-    PN_CPP_EXTERN connection_options& offered_capabilities(const std::vector<symbol>&);
+    PN_CPP_EXTERN connection_options &
+    offered_capabilities(const std::vector<symbol> &);
 
     /// **Unsettled API** - Extension capabilities desired from the remote peer.
-    PN_CPP_EXTERN connection_options& desired_capabilities(const std::vector<symbol>&);
+    PN_CPP_EXTERN connection_options &
+    desired_capabilities(const std::vector<symbol> &);
 
     /// **Unsettled API** - Set the SASL configuration name.
-    PN_CPP_EXTERN connection_options& sasl_config_name(const std::string&);
+    PN_CPP_EXTERN connection_options &sasl_config_name(const std::string &);
 
     /// **Unsettled API** - Set the SASL configuration path.
-    PN_CPP_EXTERN connection_options& sasl_config_path(const std::string&);
+    PN_CPP_EXTERN connection_options &sasl_config_path(const std::string &);
 
     /// **Unsettled API** - Set reconnect and failover options.
-    PN_CPP_EXTERN connection_options& reconnect(const reconnect_options &);
+    PN_CPP_EXTERN connection_options &reconnect(const reconnect_options &);
 
     /// Update option values from values set in other.
-    PN_CPP_EXTERN connection_options& update(const connection_options& other);
+    PN_CPP_EXTERN connection_options &update(const connection_options &other);
 
   private:
-    void apply_unbound(connection&) const;
-    void apply_unbound_client(pn_transport_t*) const;
-    void apply_unbound_server(pn_transport_t*) const;
-    messaging_handler* handler() const;
+    void apply_unbound(connection &) const;
+    void apply_unbound_client(pn_transport_t *) const;
+    void apply_unbound_server(pn_transport_t *) const;
+    messaging_handler *handler() const;
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
-  friend class container;
-  friend class io::connection_driver;
-  friend class connection;
+    friend class container;
+    friend class io::connection_driver;
+    friend class connection;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_CONNECTION_OPTIONS_H

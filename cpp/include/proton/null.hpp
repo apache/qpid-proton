@@ -25,8 +25,8 @@
 /// @file
 /// @copybrief proton::null
 
-#include "./internal/config.hpp"
 #include "./internal/comparable.hpp"
+#include "./internal/config.hpp"
 #include "./internal/export.hpp"
 
 #include <iosfwd>
@@ -44,14 +44,14 @@ class null : private internal::comparable<null> {
     null(decltype(nullptr)) {}
 #endif
     /// null instances are always equal
-  friend bool operator==(const null&, const null&) { return true; }
+    friend bool operator==(const null &, const null &) { return true; }
     /// null instances are never unequal
-  friend bool operator<(const null&, const null&) { return false; }
+    friend bool operator<(const null &, const null &) { return false; }
 };
 
 /// Print a null value
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const null&);
+PN_CPP_EXTERN std::ostream &operator<<(std::ostream &, const null &);
 
-}
+} // namespace proton
 
 #endif // PROTON_NULL_HPP

@@ -22,9 +22,9 @@
  *
  */
 
+#include "./duration.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
-#include "./duration.hpp"
 #include "./source.hpp"
 
 #include <string>
@@ -52,42 +52,43 @@ class reconnect_options {
     PN_CPP_EXTERN reconnect_options();
 
     /// Copy options.
-    PN_CPP_EXTERN reconnect_options(const reconnect_options&);
+    PN_CPP_EXTERN reconnect_options(const reconnect_options &);
 
     PN_CPP_EXTERN ~reconnect_options();
 
     /// Copy options.
-    PN_CPP_EXTERN reconnect_options& operator=(const reconnect_options&);
+    PN_CPP_EXTERN reconnect_options &operator=(const reconnect_options &);
 
     /// The base value for recurring delays.  The default is 10
     /// milliseconds.
-    PN_CPP_EXTERN reconnect_options& delay(duration);
+    PN_CPP_EXTERN reconnect_options &delay(duration);
 
     /// The scaling multiplier for successive reconnect delays.  The
     /// default is 2.0.
-    PN_CPP_EXTERN reconnect_options& delay_multiplier(float);
+    PN_CPP_EXTERN reconnect_options &delay_multiplier(float);
 
     /// The maximum delay between successive connect attempts.  The
     /// default duration::FOREVER, meaning no limit.
-    PN_CPP_EXTERN reconnect_options& max_delay(duration);
+    PN_CPP_EXTERN reconnect_options &max_delay(duration);
 
     /// The maximum number of reconnect attempts.  The default is 0,
     /// meaning no limit.
-    PN_CPP_EXTERN reconnect_options& max_attempts(int);
+    PN_CPP_EXTERN reconnect_options &max_attempts(int);
 
     /// Alternative connection URLs used for failover.  There are none
     /// by default.
-    PN_CPP_EXTERN reconnect_options& failover_urls(const std::vector<std::string>& conn_urls);
+    PN_CPP_EXTERN reconnect_options &
+    failover_urls(const std::vector<std::string> &conn_urls);
 
   private:
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
-  friend class container;
+    friend class container;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_RECONNECT_OPTIONS_HPP

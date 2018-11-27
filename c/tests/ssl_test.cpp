@@ -22,39 +22,42 @@
 #include "./pn_test.hpp"
 
 TEST_CASE("ssl_protocols") {
-  if (!pn_ssl_present()) {
-    WARN("SSL not available, skipping");
-    return;
-  }
-  pn_test::auto_free<pn_ssl_domain_t, pn_ssl_domain_free> sd(
-      pn_ssl_domain(PN_SSL_MODE_CLIENT));
+    if (!pn_ssl_present()) {
+        WARN("SSL not available, skipping");
+        return;
+    }
+    pn_test::auto_free<pn_ssl_domain_t, pn_ssl_domain_free> sd(
+        pn_ssl_domain(PN_SSL_MODE_CLIENT));
 
-  // Error no protocol set
-  CHECK(pn_ssl_domain_set_protocols(sd, "") == PN_ARG_ERR);
-  // Unknown protocol
-  CHECK(pn_ssl_domain_set_protocols(sd, "blah") == PN_ARG_ERR);
-  // Unknown protocol with known protocl prefix
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.x") == PN_ARG_ERR);
+    // Error no protocol set
+    CHECK(pn_ssl_domain_set_protocols(sd, "") == PN_ARG_ERR);
+    // Unknown protocol
+    CHECK(pn_ssl_domain_set_protocols(sd, "blah") == PN_ARG_ERR);
+    // Unknown protocol with known protocl prefix
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.x") == PN_ARG_ERR);
 
-  // known protocols
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1") == 0);
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.1") == 0);
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.2") == 0);
+    // known protocols
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1") == 0);
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.1") == 0);
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.2") == 0);
 
-  // Multiple protocols
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.1 TLSv1.2") == 0);
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.1") == 0);
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.1 TLSv1.2") == 0);
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.2") == 0);
+    // Multiple protocols
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.1 TLSv1.2") == 0);
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.1") == 0);
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.1 TLSv1.2") == 0);
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.2") == 0);
 
-  // Illegal separators
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1/TLSv1.1 TLSv1.2") == PN_ARG_ERR);
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1-TLSv1.1 TLSv1.2") == PN_ARG_ERR);
+    // Illegal separators
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1/TLSv1.1 TLSv1.2") ==
+          PN_ARG_ERR);
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1-TLSv1.1 TLSv1.2") ==
+          PN_ARG_ERR);
 
-  // Legal separators
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1,TLSv1.1;TLSv1.2  ; ") == 0);
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1;TLSv1.1 TLSv1.2,,,,") == 0);
+    // Legal separators
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1,TLSv1.1;TLSv1.2  ; ") == 0);
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1;TLSv1.1 TLSv1.2,,,,") == 0);
 
-  // Known followed by unknown protocols
-  CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.x;TLSv1_2") == PN_ARG_ERR);
+    // Known followed by unknown protocols
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.x;TLSv1_2") ==
+          PN_ARG_ERR);
 }

@@ -22,19 +22,19 @@
 #include "proton/error.hpp"
 #include "proton/value.hpp"
 #include "test_bits.hpp"
-#include <string>
-#include <sstream>
 #include <fstream>
-#include <streambuf>
 #include <iosfwd>
+#include <sstream>
+#include <streambuf>
+#include <string>
 
 namespace {
 
 using namespace std;
 using namespace proton;
 
-using proton::codec::encoder;
 using proton::codec::decoder;
+using proton::codec::encoder;
 
 using proton::internal::data;
 
@@ -43,7 +43,7 @@ using test::str;
 std::string tests_dir;
 
 string read(string filename) {
-    filename = tests_dir+string("/interop/")+filename+string(".amqp");
+    filename = tests_dir + string("/interop/") + filename + string(".amqp");
     ifstream ifs(filename.c_str());
     if (!ifs.good()) FAIL("Can't open " << filename);
     return string(istreambuf_iterator<char>(ifs), istreambuf_iterator<char>());
@@ -54,31 +54,58 @@ void test_data_ostream() {
     data dt(data::create());
     decoder d(dt);
     d.decode(read("primitives"));
-    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(dt));
+    ASSERT_EQUAL(
+        "true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125",
+        str(dt));
 }
 
-// Test extracting to exact AMQP types works correctly, extracting to invalid types fails.
+// Test extracting to exact AMQP types works correctly, extracting to invalid
+// types fails.
 void test_decoder_primitives_exact() {
     value dv;
     decoder d(dv);
     d.decode(read("primitives"));
     ASSERT(d.more());
-    try { get< ::int8_t>(d); FAIL("got bool as byte"); } catch(const conversion_error&){}
+    try {
+        get<::int8_t>(d);
+        FAIL("got bool as byte");
+    } catch (const conversion_error &) {
+    }
     ASSERT_EQUAL(true, get<bool>(d));
     ASSERT_EQUAL(false, get<bool>(d));
-    try { get< ::int8_t>(d); FAIL("got ubyte as byte"); } catch(const conversion_error&){}
-    ASSERT_EQUAL(42, get< ::uint8_t>(d));
-    try { get< ::int32_t>(d); FAIL("got uint as ushort"); } catch(const conversion_error&){}
-    ASSERT_EQUAL(42, get< ::uint16_t>(d));
-    try { get< ::uint16_t>(d); FAIL("got short as ushort"); } catch(const conversion_error&){}
-    ASSERT_EQUAL(-42, get< ::int16_t>(d));
-    ASSERT_EQUAL(12345u, get< ::uint32_t>(d));
-    ASSERT_EQUAL(-12345, get< ::int32_t>(d));
-    ASSERT_EQUAL(12345u, get< ::uint64_t>(d));
-    ASSERT_EQUAL(-12345, get< ::int64_t>(d));
-    try { get<double>(d); FAIL("got float as double"); } catch(const conversion_error&){}
+    try {
+        get<::int8_t>(d);
+        FAIL("got ubyte as byte");
+    } catch (const conversion_error &) {
+    }
+    ASSERT_EQUAL(42, get<::uint8_t>(d));
+    try {
+        get<::int32_t>(d);
+        FAIL("got uint as ushort");
+    } catch (const conversion_error &) {
+    }
+    ASSERT_EQUAL(42, get<::uint16_t>(d));
+    try {
+        get<::uint16_t>(d);
+        FAIL("got short as ushort");
+    } catch (const conversion_error &) {
+    }
+    ASSERT_EQUAL(-42, get<::int16_t>(d));
+    ASSERT_EQUAL(12345u, get<::uint32_t>(d));
+    ASSERT_EQUAL(-12345, get<::int32_t>(d));
+    ASSERT_EQUAL(12345u, get<::uint64_t>(d));
+    ASSERT_EQUAL(-12345, get<::int64_t>(d));
+    try {
+        get<double>(d);
+        FAIL("got float as double");
+    } catch (const conversion_error &) {
+    }
     ASSERT_EQUAL(0.125f, get<float>(d));
-    try { get<float>(d); FAIL("got double as float"); } catch(const conversion_error&){}
+    try {
+        get<float>(d);
+        FAIL("got double as float");
+    } catch (const conversion_error &) {
+    }
     ASSERT_EQUAL(0.125, get<double>(d));
     ASSERT(!d.more());
 }
@@ -93,14 +120,16 @@ void test_encoder_primitives() {
     e << ::uint32_t(12345) << ::int32_t(-12345);
     e << ::uint64_t(12345) << ::int64_t(-12345);
     e << float(0.125) << double(0.125);
-    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(e));
+    ASSERT_EQUAL(
+        "true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125",
+        str(e));
     std::string data = e.encode();
     ASSERT_EQUAL(read("primitives"), data);
 }
 
-}
+} // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     int failed = 0;
     if (argc != 2) {
         cerr << "Usage: " << argv[0] << " tests-dir" << endl;

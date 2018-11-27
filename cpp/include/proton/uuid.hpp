@@ -22,11 +22,11 @@
  *
  */
 
-#include "./internal/export.hpp"
 #include "./byte_array.hpp"
+#include "./internal/export.hpp"
 
-#include <string>
 #include <iosfwd>
+#include <string>
 
 /// @file
 /// @copybrief proton::uuid
@@ -41,7 +41,7 @@ class uuid : public byte_array<16> {
 
     /// Return a uuid copied from bytes.  Bytes must point to at least
     /// 16 bytes.  If `bytes == 0` the UUID is zero-initialized.
-    PN_CPP_EXTERN static uuid copy(const char* bytes);
+    PN_CPP_EXTERN static uuid copy(const char *bytes);
 
     /// Return a simple randomly-generated UUID.  This is used by the
     /// Proton library to generate default UUIDs.
@@ -53,17 +53,17 @@ class uuid : public byte_array<16> {
 
     /// UUID standard string format: 8-4-4-4-12 (36 chars, 32
     /// alphanumeric chars and 4 hyphens).
-    PN_CPP_EXTERN std::string str()  const;
+    PN_CPP_EXTERN std::string str() const;
 };
 
 /// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric chars
 /// and 4 hyphens).
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const uuid&);
+PN_CPP_EXTERN std::ostream &operator<<(std::ostream &, const uuid &);
 
 /// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric chars
 /// and 4 hyphens).
-inline std::string to_string(const uuid& u) { return u.str(); }
+inline std::string to_string(const uuid &u) { return u.str(); }
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_UUID_HPP

@@ -36,34 +36,43 @@ template <class T> struct option {
     bool set;
 
     option() : value(), set(false) {}
-    option& operator=(const T& x) { value = x;  set = true; return *this; }
-    void update(const option<T>& x) { if (x.set) *this = x.value; }
+    option &operator=(const T &x) {
+        value = x;
+        set = true;
+        return *this;
+    }
+    void update(const option<T> &x) {
+        if (x.set) *this = x.value;
+    }
 };
 
 namespace {
 
-    void timeout(terminus &t, duration d) {
-      uint32_t seconds = 0;
-      if (d == duration::FOREVER)
+void timeout(terminus &t, duration d) {
+    uint32_t seconds = 0;
+    if (d == duration::FOREVER)
         seconds = std::numeric_limits<uint32_t>::max();
-      else if (d != duration::IMMEDIATE) {
+    else if (d != duration::IMMEDIATE) {
         uint64_t x = d.milliseconds();
         if ((std::numeric_limits<uint64_t>::max() - x) <= 500)
-          seconds = std::numeric_limits<uint32_t>::max();
+            seconds = std::numeric_limits<uint32_t>::max();
         else {
-          x = (x + 500) / 1000;
-          seconds = x < std::numeric_limits<uint32_t>::max() ? x : std::numeric_limits<uint32_t>::max();
+            x = (x + 500) / 1000;
+            seconds = x < std::numeric_limits<uint32_t>::max()
+                          ? x
+                          : std::numeric_limits<uint32_t>::max();
         }
-      }
-      pn_terminus_set_timeout(unwrap(t), seconds);
     }
+    pn_terminus_set_timeout(unwrap(t), seconds);
 }
+} // namespace
 
 namespace {
 
 // Options common to sources and targets
 
-void node_address(terminus &t, option<std::string> &addr, option<bool> &dynamic, option<bool> &anonymous) {
+void node_address(terminus &t, option<std::string> &addr, option<bool> &dynamic,
+                  option<bool> &anonymous) {
     if (dynamic.set && dynamic.value) {
         pn_terminus_set_dynamic(unwrap(t), true);
         pn_terminus_set_address(unwrap(t), NULL);
@@ -74,17 +83,21 @@ void node_address(terminus &t, option<std::string> &addr, option<bool> &dynamic,
     }
 }
 
-void node_durability(terminus &t, option<enum terminus::durability_mode> &mode) {
-    if (mode.set) pn_terminus_set_durability(unwrap(t), pn_durability_t(mode.value));
+void node_durability(terminus &t,
+                     option<enum terminus::durability_mode> &mode) {
+    if (mode.set)
+        pn_terminus_set_durability(unwrap(t), pn_durability_t(mode.value));
 }
 
-void node_expiry(terminus &t, option<enum terminus::expiry_policy> &policy, option<duration> &d) {
-    if (policy.set) pn_terminus_set_expiry_policy(unwrap(t), pn_expiry_policy_t(policy.value));
+void node_expiry(terminus &t, option<enum terminus::expiry_policy> &policy,
+                 option<duration> &d) {
+    if (policy.set)
+        pn_terminus_set_expiry_policy(unwrap(t),
+                                      pn_expiry_policy_t(policy.value));
     if (d.set) timeout(t, d.value);
 }
 
-}
-
+} // namespace
 
 class source_options::impl {
   public:
@@ -96,14 +109,15 @@ class source_options::impl {
     option<enum source::expiry_policy> expiry_policy;
     option<enum source::distribution_mode> distribution_mode;
     option<source::filter_map> filters;
-    option<std::vector<symbol> > capabilities;
+    option<std::vector<symbol>> capabilities;
 
-    void apply(source& s) {
+    void apply(source &s) {
         node_address(s, address, dynamic, anonymous);
         node_durability(s, durability_mode);
         node_expiry(s, expiry_policy, timeout);
         if (distribution_mode.set)
-          pn_terminus_set_distribution_mode(unwrap(s), pn_distribution_mode_t(distribution_mode.value));
+            pn_terminus_set_distribution_mode(
+                unwrap(s), pn_distribution_mode_t(distribution_mode.value));
         if (filters.set && !filters.value.empty()) {
             // Applied at most once via source_option.  No need to clear.
             value(pn_terminus_filter(unwrap(s))) = filters.value;
@@ -115,27 +129,56 @@ class source_options::impl {
 };
 
 source_options::source_options() : impl_(new impl()) {}
-source_options::source_options(const source_options& x) : impl_(new impl()) {
+source_options::source_options(const source_options &x) : impl_(new impl()) {
     *this = x;
 }
 source_options::~source_options() {}
 
-source_options& source_options::operator=(const source_options& x) {
+source_options &source_options::operator=(const source_options &x) {
     *impl_ = *x.impl_;
     return *this;
 }
 
-source_options& source_options::address(const std::string &addr) { impl_->address = addr; return *this; }
-source_options& source_options::dynamic(bool b) { impl_->dynamic = b; return *this; }
-source_options& source_options::anonymous(bool b) { impl_->anonymous = b; return *this; }
-source_options& source_options::durability_mode(enum source::durability_mode m) { impl_->durability_mode = m; return *this; }
-source_options& source_options::timeout(duration d) { impl_->timeout = d; return *this; }
-source_options& source_options::expiry_policy(enum source::expiry_policy m) { impl_->expiry_policy = m; return *this; }
-source_options& source_options::distribution_mode(enum source::distribution_mode m) { impl_->distribution_mode = m; return *this; }
-source_options& source_options::filters(const source::filter_map &map) { impl_->filters = map; return *this; }
-source_options& source_options::capabilities(const std::vector<symbol>& c) { impl_->capabilities = c; return *this; }
+source_options &source_options::address(const std::string &addr) {
+    impl_->address = addr;
+    return *this;
+}
+source_options &source_options::dynamic(bool b) {
+    impl_->dynamic = b;
+    return *this;
+}
+source_options &source_options::anonymous(bool b) {
+    impl_->anonymous = b;
+    return *this;
+}
+source_options &
+source_options::durability_mode(enum source::durability_mode m) {
+    impl_->durability_mode = m;
+    return *this;
+}
+source_options &source_options::timeout(duration d) {
+    impl_->timeout = d;
+    return *this;
+}
+source_options &source_options::expiry_policy(enum source::expiry_policy m) {
+    impl_->expiry_policy = m;
+    return *this;
+}
+source_options &
+source_options::distribution_mode(enum source::distribution_mode m) {
+    impl_->distribution_mode = m;
+    return *this;
+}
+source_options &source_options::filters(const source::filter_map &map) {
+    impl_->filters = map;
+    return *this;
+}
+source_options &source_options::capabilities(const std::vector<symbol> &c) {
+    impl_->capabilities = c;
+    return *this;
+}
 
-void source_options::apply(source& s) const { impl_->apply(s); }
+void source_options::apply(source &s) const { impl_->apply(s); }
 
 // TARGET
 
@@ -147,9 +190,9 @@ class target_options::impl {
     option<enum target::durability_mode> durability_mode;
     option<duration> timeout;
     option<enum target::expiry_policy> expiry_policy;
-    option<std::vector<symbol> > capabilities;
+    option<std::vector<symbol>> capabilities;
 
-    void apply(target& t) {
+    void apply(target &t) {
         node_address(t, address, dynamic, anonymous);
         node_durability(t, durability_mode);
         node_expiry(t, expiry_policy, timeout);
@@ -160,26 +203,46 @@ class target_options::impl {
 };
 
 target_options::target_options() : impl_(new impl()) {}
-target_options::target_options(const target_options& x) : impl_(new impl()) {
+target_options::target_options(const target_options &x) : impl_(new impl()) {
     *this = x;
 }
 target_options::~target_options() {}
 
-target_options& target_options::operator=(const target_options& x) {
+target_options &target_options::operator=(const target_options &x) {
     *impl_ = *x.impl_;
     return *this;
 }
 
-target_options& target_options::address(const std::string &addr) { impl_->address = addr; return *this; }
-target_options& target_options::dynamic(bool b) { impl_->dynamic = b; return *this; }
-target_options& target_options::anonymous(bool b) { impl_->anonymous = b; return *this; }
-target_options& target_options::durability_mode(enum target::durability_mode m) { impl_->durability_mode = m; return *this; }
-target_options& target_options::timeout(duration d) { impl_->timeout = d; return *this; }
-target_options& target_options::expiry_policy(enum target::expiry_policy m) { impl_->expiry_policy = m; return *this; }
-target_options& target_options::capabilities(const std::vector<symbol>& c) { impl_->capabilities = c; return *this; }
+target_options &target_options::address(const std::string &addr) {
+    impl_->address = addr;
+    return *this;
+}
+target_options &target_options::dynamic(bool b) {
+    impl_->dynamic = b;
+    return *this;
+}
+target_options &target_options::anonymous(bool b) {
+    impl_->anonymous = b;
+    return *this;
+}
+target_options &
+target_options::durability_mode(enum target::durability_mode m) {
+    impl_->durability_mode = m;
+    return *this;
+}
+target_options &target_options::timeout(duration d) {
+    impl_->timeout = d;
+    return *this;
+}
+target_options &target_options::expiry_policy(enum target::expiry_policy m) {
+    impl_->expiry_policy = m;
+    return *this;
+}
+target_options &target_options::capabilities(const std::vector<symbol> &c) {
+    impl_->capabilities = c;
+    return *this;
+}
 
-void target_options::apply(target& s) const { impl_->apply(s); }
-
-
+void target_options::apply(target &s) const { impl_->apply(s); }
 
 } // namespace proton

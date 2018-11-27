@@ -19,22 +19,14 @@
  *
  */
 
-#include "proton/sasl.h"
 #include "proton/sasl-plugin.h"
+#include "proton/sasl.h"
 
-extern const pnx_sasl_implementation * const cyrus_sasl_impl;
-const pnx_sasl_implementation * const cyrus_sasl_impl = NULL;
+extern const pnx_sasl_implementation *const cyrus_sasl_impl;
+const pnx_sasl_implementation *const cyrus_sasl_impl = NULL;
 
-bool pn_sasl_extended(void)
-{
-  return false;
-}
+bool pn_sasl_extended(void) { return false; }
 
-void pn_sasl_config_name(pn_sasl_t *sasl0, const char *name)
-{
-}
+void pn_sasl_config_name(pn_sasl_t *sasl0, const char *name) {}
 
-void pn_sasl_config_path(pn_sasl_t *sasl0, const char *dir)
-{
-}
-
+void pn_sasl_config_path(pn_sasl_t *sasl0, const char *dir) {}

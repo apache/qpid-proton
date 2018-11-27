@@ -27,8 +27,9 @@
 namespace proton {
 namespace io {
 
-void set_link_namer(connection& c, link_namer& l) {
+void set_link_namer(connection &c, link_namer &l) {
     connection_context::get(unwrap(c)).link_gen = &l;
 }
 
-}}
+} // namespace io
+} // namespace proton

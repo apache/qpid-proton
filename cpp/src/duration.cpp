@@ -21,17 +21,20 @@
 #include "proton/duration.hpp"
 #include "proton/timestamp.hpp"
 
-#include <limits>
 #include <iostream>
+#include <limits>
 
 namespace proton {
 
-const duration duration::FOREVER(std::numeric_limits<duration::numeric_type>::max());
+const duration
+    duration::FOREVER(std::numeric_limits<duration::numeric_type>::max());
 const duration duration::IMMEDIATE(0);
 const duration duration::MILLISECOND(1);
 const duration duration::SECOND(1000);
 const duration duration::MINUTE(SECOND * 60);
 
-std::ostream& operator<<(std::ostream& o, duration d) { return o << d.milliseconds(); }
-
+std::ostream &operator<<(std::ostream &o, duration d) {
+    return o << d.milliseconds();
 }
+
+} // namespace proton

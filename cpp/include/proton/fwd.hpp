@@ -61,10 +61,18 @@ class url;
 class void_function0;
 class work_queue;
 
-namespace internal { namespace v03 { class work; } }
+namespace internal {
+namespace v03 {
+class work;
+}
+} // namespace internal
 
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
-namespace internal { namespace v11 { class work; } }
+namespace internal {
+namespace v11 {
+class work;
+}
+} // namespace internal
 using internal::v11::work;
 #else
 using internal::v03::work;
@@ -77,6 +85,6 @@ class connection_driver;
 }
 
 template <class T> class returned;
-}
+} // namespace proton
 
 #endif // PROTON_FWD_HPP

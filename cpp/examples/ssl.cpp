@@ -21,8 +21,8 @@
 
 #include "options.hpp"
 
-#include <proton/connection_options.hpp>
 #include <proton/connection.hpp>
+#include <proton/connection_options.hpp>
 #include <proton/container.hpp>
 #include <proton/error_condition.hpp>
 #include <proton/listen_handler.hpp>
@@ -38,53 +38,52 @@
 #include "fake_cpp11.hpp"
 
 using proton::connection_options;
+using proton::ssl_certificate;
 using proton::ssl_client_options;
 using proton::ssl_server_options;
-using proton::ssl_certificate;
 
 // Helper functions defined below.
 bool using_OpenSSL();
 std::string platform_CA(const std::string &base_name);
-ssl_certificate platform_certificate(const std::string &base_name, const std::string &passwd);
+ssl_certificate platform_certificate(const std::string &base_name,
+                                     const std::string &passwd);
 std::string find_CN(const std::string &);
 
 namespace {
-    const std::string verify_full("full");  // Normal verification
-    const std::string verify_noname("noname"); // Skip matching host name against the certificate
-    const std::string verify_fail("fail");  // Force name mismatch failure
-    std::string verify(verify_full);  // Default for example
-    std::string cert_directory;
-}
-
+const std::string verify_full("full"); // Normal verification
+const std::string
+    verify_noname("noname"); // Skip matching host name against the certificate
+const std::string verify_fail("fail"); // Force name mismatch failure
+std::string verify(verify_full);       // Default for example
+std::string cert_directory;
+} // namespace
 
 struct server_handler : public proton::messaging_handler {
     proton::listener listener;
 
     void on_connection_open(proton::connection &c) OVERRIDE {
-        std::cout << "Inbound server connection connected via SSL.  Protocol: " <<
-            c.transport().ssl().protocol() << std::endl;
-        listener.stop();  // Just expecting the one connection.
+        std::cout << "Inbound server connection connected via SSL.  Protocol: "
+                  << c.transport().ssl().protocol() << std::endl;
+        listener.stop(); // Just expecting the one connection.
 
         // Go and do default inbound open stuff too
         messaging_handler::on_connection_open(c);
     }
 
-    void on_transport_error(proton::transport &t) OVERRIDE {
-        listener.stop();
-    }
+    void on_transport_error(proton::transport &t) OVERRIDE { listener.stop(); }
 
     void on_message(proton::delivery &, proton::message &m) OVERRIDE {
         std::cout << m.body() << std::endl;
     }
 };
 
-
 class hello_world_direct : public proton::messaging_handler {
   private:
     class listener_open_handler : public proton::listen_handler {
-        void on_open(proton::listener& l) OVERRIDE {
+        void on_open(proton::listener &l) OVERRIDE {
             std::ostringstream url;
-            url << "//:" << l.port() << "/example"; // Connect to the actual port
+            url << "//:" << l.port()
+                << "/example"; // Connect to the actual port
             l.container().open_sender(url.str());
         }
     };
@@ -95,7 +94,8 @@ class hello_world_direct : public proton::messaging_handler {
   public:
     void on_container_start(proton::container &c) OVERRIDE {
         // Configure listener.  Details vary by platform.
-        ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
+        ssl_certificate server_cert =
+            platform_certificate("tserver", "tserverpw");
         ssl_server_options ssl_srv(server_cert);
         connection_options server_opts;
         server_opts.ssl_server_options(ssl_srv).handler(s_handler);
@@ -114,29 +114,35 @@ class hello_world_direct : public proton::messaging_handler {
             client_opts.virtual_host("test_server");
         } else if (verify == verify_noname) {
             // Downgrade the verification from VERIFY_PEER_NAME to VERIFY_PEER.
-            ssl_client_options ssl_cli(platform_CA("tserver"), proton::ssl::VERIFY_PEER);
+            ssl_client_options ssl_cli(platform_CA("tserver"),
+                                       proton::ssl::VERIFY_PEER);
             client_opts.ssl_client_options(ssl_cli);
         } else if (verify == verify_fail) {
             ssl_client_options ssl_cli(platform_CA("tserver"));
             client_opts.ssl_client_options(ssl_cli);
-            client_opts.virtual_host("wrong_name_for_server"); // Pick any name that doesn't match.
-        } else throw std::logic_error("bad verify mode: " + verify);
+            client_opts.virtual_host(
+                "wrong_name_for_server"); // Pick any name that doesn't match.
+        } else
+            throw std::logic_error("bad verify mode: " + verify);
 
         c.client_connection_options(client_opts);
-        s_handler.listener = c.listen("//:0", listen_handler); // Listen on port 0 for a dynamic port
+        s_handler.listener = c.listen(
+            "//:0", listen_handler); // Listen on port 0 for a dynamic port
     }
 
     void on_connection_open(proton::connection &c) OVERRIDE {
         std::string subject = c.transport().ssl().remote_subject();
-        std::cout << "Outgoing client connection connected via SSL.  Server certificate identity " <<
-            find_CN(subject) << std::endl;
+        std::cout << "Outgoing client connection connected via SSL.  Server "
+                     "certificate identity "
+                  << find_CN(subject) << std::endl;
     }
 
     void on_transport_error(proton::transport &t) OVERRIDE {
         std::string err = t.error().what();
-        if (verify == verify_fail && err.find("certificate") != std::string::npos) {
-            std::cout << "Expected failure of connection with wrong peer name: " << err
-                      << std::endl;
+        if (verify == verify_fail &&
+            err.find("certificate") != std::string::npos) {
+            std::cout << "Expected failure of connection with wrong peer name: "
+                      << err << std::endl;
         } else {
             std::cout << "Unexpected transport error: " << err << std::endl;
         }
@@ -157,30 +163,34 @@ class hello_world_direct : public proton::messaging_handler {
 
 int main(int argc, char **argv) {
     example::options opts(argc, argv);
-    opts.add_value(cert_directory, 'c', "cert_directory",
-                   "directory containing SSL certificates and private key information", "CERTDIR");
-    opts.add_value(verify, 'v', "verify", "verify type: \"minimum\", \"full\", \"fail\"", "VERIFY");
+    opts.add_value(
+        cert_directory, 'c', "cert_directory",
+        "directory containing SSL certificates and private key information",
+        "CERTDIR");
+    opts.add_value(verify, 'v', "verify",
+                   "verify type: \"minimum\", \"full\", \"fail\"", "VERIFY");
 
     try {
         opts.parse();
 
         size_t sz = cert_directory.size();
-        if (sz && cert_directory[sz -1] != '/')
+        if (sz && cert_directory[sz - 1] != '/')
             cert_directory.append("/");
-        else cert_directory = "ssl-certs/";
+        else
+            cert_directory = "ssl-certs/";
 
-        if (verify != verify_noname && verify != verify_full && verify != verify_fail)
+        if (verify != verify_noname && verify != verify_full &&
+            verify != verify_fail)
             throw std::runtime_error("bad verify argument: " + verify);
 
         hello_world_direct hwd;
         proton::container(hwd).run();
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
     return 1;
 }
-
 
 bool using_OpenSSL() {
     // Current defaults.
@@ -191,39 +201,46 @@ bool using_OpenSSL() {
 #endif
 }
 
-ssl_certificate platform_certificate(const std::string &base_name, const std::string &passwd) {
+ssl_certificate platform_certificate(const std::string &base_name,
+                                     const std::string &passwd) {
     if (using_OpenSSL()) {
-        // The first argument will be the name of the file containing the public certificate, the
-        // second argument will be the name of the file containing the private key.
+        // The first argument will be the name of the file containing the public
+        // certificate, the second argument will be the name of the file
+        // containing the private key.
         return ssl_certificate(cert_directory + base_name + "-certificate.pem",
-                               cert_directory + base_name + "-private-key.pem", passwd);
-    }
-    else {
+                               cert_directory + base_name + "-private-key.pem",
+                               passwd);
+    } else {
         // Windows SChannel
-        // The first argument will be the database or store that contains one or more complete certificates
-        // (public and private data).  The second will be an optional name of the certificate in the store
-        // (not used in this example with one certificate per store).
-        return ssl_certificate(cert_directory + base_name + "-full.p12", "", passwd);
+        // The first argument will be the database or store that contains one or
+        // more complete certificates (public and private data).  The second
+        // will be an optional name of the certificate in the store (not used in
+        // this example with one certificate per store).
+        return ssl_certificate(cert_directory + base_name + "-full.p12", "",
+                               passwd);
     }
 }
 
 std::string platform_CA(const std::string &base_name) {
     if (using_OpenSSL()) {
-        // In this simple example with self-signed certificates, the peer's certificate is the CA database.
+        // In this simple example with self-signed certificates, the peer's
+        // certificate is the CA database.
         return cert_directory + base_name + "-certificate.pem";
-    }
-    else {
-        // Windows SChannel.  Use a pkcs#12 file with just the peer's public certificate information.
+    } else {
+        // Windows SChannel.  Use a pkcs#12 file with just the peer's public
+        // certificate information.
         return cert_directory + base_name + "-certificate.p12";
     }
 }
 
 std::string find_CN(const std::string &subject) {
-    // The subject string is returned with different whitespace and component ordering between platforms.
-    // Here we just return the common name by searching for "CN=...." in the subject, knowing that
-    // the test certificates do not contain any escaped characters.
+    // The subject string is returned with different whitespace and component
+    // ordering between platforms. Here we just return the common name by
+    // searching for "CN=...." in the subject, knowing that the test
+    // certificates do not contain any escaped characters.
     size_t pos = subject.find("CN=");
-    if (pos == std::string::npos) throw std::runtime_error("No common name in certificate subject");
+    if (pos == std::string::npos)
+        throw std::runtime_error("No common name in certificate subject");
     std::string cn = subject.substr(pos);
     pos = cn.find(',');
     return pos == std::string::npos ? cn : cn.substr(0, pos);

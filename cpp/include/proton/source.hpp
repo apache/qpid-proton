@@ -72,22 +72,22 @@ class source : public terminus {
     PN_CPP_EXTERN enum distribution_mode distribution_mode() const;
 
     /// **Unsettled API** - Obtain the set of message filters.
-    PN_CPP_EXTERN const filter_map& filters() const;
+    PN_CPP_EXTERN const filter_map &filters() const;
 
   private:
-    source(pn_terminus_t* t);
-    source(const sender&);
-    source(const receiver&);
+    source(pn_terminus_t *t);
+    source(const sender &);
+    source(const receiver &);
 
     filter_map filters_;
 
     /// @cond INTERNAL
-  friend class proton::internal::factory<source>;
-  friend class sender;
-  friend class receiver;
+    friend class proton::internal::factory<source>;
+    friend class sender;
+    friend class receiver;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_SOURCE_HPP

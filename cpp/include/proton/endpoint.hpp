@@ -22,8 +22,8 @@
  *
  */
 
-#include "./fwd.hpp"
 #include "./error_condition.hpp"
+#include "./fwd.hpp"
 #include "./internal/config.hpp"
 #include "./internal/export.hpp"
 
@@ -33,8 +33,7 @@
 namespace proton {
 
 /// The base class for session, connection, and link.
-class
-PN_CPP_CLASS_EXTERN endpoint {
+class PN_CPP_CLASS_EXTERN endpoint {
   public:
     PN_CPP_EXTERN virtual ~endpoint();
 
@@ -58,17 +57,17 @@ PN_CPP_CLASS_EXTERN endpoint {
     virtual void close() = 0;
 
     /// Close the endpoint with an error condition.
-    virtual void close(const error_condition&) = 0;
+    virtual void close(const error_condition &) = 0;
 
 #if PN_CPP_HAS_DEFAULTED_FUNCTIONS && PN_CPP_HAS_DEFAULTED_MOVE_INITIALIZERS
     // Make everything explicit for C++11 compilers
 
     /// @cond INTERNAL
     endpoint() = default;
-    endpoint& operator=(const endpoint&) = default;
-    endpoint(const endpoint&) = default;
-    endpoint& operator=(endpoint&&) = default;
-    endpoint(endpoint&&) = default;
+    endpoint &operator=(const endpoint &) = default;
+    endpoint(const endpoint &) = default;
+    endpoint &operator=(endpoint &&) = default;
+    endpoint(endpoint &&) = default;
     /// @endcond
 #endif
 };
@@ -80,21 +79,26 @@ template <class T, class D> class iter_base {
     typedef T value_type;
 
     T operator*() const { return obj_; }
-    T* operator->() const { return const_cast<T*>(&obj_); }
-    D operator++(int) { D x(*this); ++(*this); return x; }
-    bool operator==(const iter_base<T, D>& x) const { return obj_ == x.obj_; }
-    bool operator!=(const iter_base<T, D>& x) const { return obj_ != x.obj_; }
+    T *operator->() const { return const_cast<T *>(&obj_); }
+    D operator++(int) {
+        D x(*this);
+        ++(*this);
+        return x;
+    }
+    bool operator==(const iter_base<T, D> &x) const { return obj_ == x.obj_; }
+    bool operator!=(const iter_base<T, D> &x) const { return obj_ != x.obj_; }
 
   protected:
     explicit iter_base(T p = 0) : obj_(p) {}
     T obj_;
 };
 
-template<class I> class iter_range {
+template <class I> class iter_range {
   public:
     typedef I iterator;
 
-    explicit iter_range(I begin = I(), I end = I()) : begin_(begin), end_(end) {}
+    explicit iter_range(I begin = I(), I end = I())
+        : begin_(begin), end_(end) {}
     I begin() const { return begin_; }
     I end() const { return end_; }
     bool empty() const { return begin_ == end_; }
@@ -103,7 +107,7 @@ template<class I> class iter_range {
     I begin_, end_;
 };
 
-} // internal
-} // proton
+} // namespace internal
+} // namespace proton
 
 #endif // PROTON_ENDPOINT_HPP

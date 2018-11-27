@@ -51,7 +51,8 @@ PNX_EXTERN pn_url_t *pn_url(void);
  *
  * URL syntax:
  *
- *     [ <scheme> :// ] [ <user> [ : <password> ] @ ] <host> [ : <port> ] [ / <path> ]
+ *     [ <scheme> :// ] [ <user> [ : <password> ] @ ] <host> [ : <port> ] [ /
+ * <path> ]
  *
  * `scheme`, `user`, `password`, `port` cannot contain any of '@', ':', '/'
  *

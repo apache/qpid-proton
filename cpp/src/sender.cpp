@@ -31,20 +31,18 @@
 #include <proton/link.h>
 #include <proton/types.h>
 
-#include "proton_bits.hpp"
 #include "contexts.hpp"
+#include "proton_bits.hpp"
 
 #include <assert.h>
 
 namespace proton {
 
-sender::sender(pn_link_t *l): link(make_wrapper(l)) {}
+sender::sender(pn_link_t *l) : link(make_wrapper(l)) {}
 
 sender::~sender() {}
 
-void sender::open() {
-    attach();
-}
+void sender::open() { attach(); }
 
 void sender::open(const sender_options &opts) {
     opts.apply(*this);
@@ -62,12 +60,12 @@ class target sender::target() const {
 namespace {
 // TODO: revisit if thread safety required
 uint64_t tag_counter = 0;
-}
+} // namespace
 
 tracker sender::send(const message &message) {
     uint64_t id = ++tag_counter;
-    pn_delivery_t *dlv =
-        pn_delivery(pn_object(), pn_dtag(reinterpret_cast<const char*>(&id), sizeof(id)));
+    pn_delivery_t *dlv = pn_delivery(
+        pn_object(), pn_dtag(reinterpret_cast<const char *>(&id), sizeof(id)));
     std::vector<char> buf;
     message.encode(buf);
     assert(!buf.empty());
@@ -99,4 +97,4 @@ sender_iterator sender_iterator::operator++() {
     return *this;
 }
 
-}
+} // namespace proton

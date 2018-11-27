@@ -22,117 +22,119 @@
 #include "platform/platform.h"
 #include "util.h"
 
+#include <assert.h>
 #include <proton/error.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 struct pn_error_t {
-  char *text;
-  pn_error_t *root;
-  int code;
+    char *text;
+    pn_error_t *root;
+    int code;
 };
 
-pn_error_t *pn_error()
-{
-  pn_error_t *error = (pn_error_t *) malloc(sizeof(pn_error_t));
-  if (error != NULL) {
-    error->code = 0;
-    error->text = NULL;
-    error->root = NULL;
-  }
-  return error;
+pn_error_t *pn_error() {
+    pn_error_t *error = (pn_error_t *)malloc(sizeof(pn_error_t));
+    if (error != NULL) {
+        error->code = 0;
+        error->text = NULL;
+        error->root = NULL;
+    }
+    return error;
 }
 
-void pn_error_free(pn_error_t *error)
-{
-  if (error) {
-    free(error->text);
-    free(error);
-  }
+void pn_error_free(pn_error_t *error) {
+    if (error) {
+        free(error->text);
+        free(error);
+    }
 }
 
-void pn_error_clear(pn_error_t *error)
-{
-  if (error) {
-    error->code = 0;
-    free(error->text);
-    error->text = NULL;
-    error->root = NULL;
-  }
+void pn_error_clear(pn_error_t *error) {
+    if (error) {
+        error->code = 0;
+        free(error->text);
+        error->text = NULL;
+        error->root = NULL;
+    }
 }
 
-int pn_error_set(pn_error_t *error, int code, const char *text)
-{
-  assert(error);
-  pn_error_clear(error);
-  if (code) {
-    error->code = code;
-    error->text = pn_strdup(text);
-  }
-  return code;
-}
-
-int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap)
-{
-  assert(error);
-  char text[1024];
-  int n = pni_vsnprintf(text, 1024, fmt, ap);
-  if (n >= 1024) {
-    text[1023] = '\0';
-  }
-  return pn_error_set(error, code, text);
-}
-
-int pn_error_format(pn_error_t *error, int code, const char *fmt, ...)
-{
-  assert(error);
-  va_list ap;
-  va_start(ap, fmt);
-  int rcode = pn_error_vformat(error, code, fmt, ap);
-  va_end(ap);
-  return rcode;
-}
-
-int pn_error_code(pn_error_t *error)
-{
-  assert(error);
-  return error->code;
-}
-
-const char *pn_error_text(pn_error_t *error)
-{
-  assert(error);
-  return error->text;
-}
-
-int pn_error_copy(pn_error_t *error, pn_error_t *src)
-{
-  assert(error);
-  if (src) {
-    return pn_error_set(error, pn_error_code(src), pn_error_text(src));
-  } else {
+int pn_error_set(pn_error_t *error, int code, const char *text) {
+    assert(error);
     pn_error_clear(error);
-    return 0;
-  }
+    if (code) {
+        error->code = code;
+        error->text = pn_strdup(text);
+    }
+    return code;
 }
 
-const char *pn_code(int code)
-{
-  switch (code)
-  {
-  case 0: return "<ok>";
-  case PN_EOS: return "PN_EOS";
-  case PN_ERR: return "PN_ERR";
-  case PN_OVERFLOW: return "PN_OVERFLOW";
-  case PN_UNDERFLOW: return "PN_UNDERFLOW";
-  case PN_STATE_ERR: return "PN_STATE_ERR";
-  case PN_ARG_ERR: return "PN_ARG_ERR";
-  case PN_TIMEOUT: return "PN_TIMEOUT";
-  case PN_INTR: return "PN_INTR";
-  case PN_INPROGRESS: return "PN_INPROGRESS";
-  case PN_OUT_OF_MEMORY: return "PN_OUT_OF_MEMORY";
-  case PN_ABORTED: return "PN_ABORTED";
-  default: return "<unknown>";
-  }
+int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap) {
+    assert(error);
+    char text[1024];
+    int n = pni_vsnprintf(text, 1024, fmt, ap);
+    if (n >= 1024) {
+        text[1023] = '\0';
+    }
+    return pn_error_set(error, code, text);
+}
+
+int pn_error_format(pn_error_t *error, int code, const char *fmt, ...) {
+    assert(error);
+    va_list ap;
+    va_start(ap, fmt);
+    int rcode = pn_error_vformat(error, code, fmt, ap);
+    va_end(ap);
+    return rcode;
+}
+
+int pn_error_code(pn_error_t *error) {
+    assert(error);
+    return error->code;
+}
+
+const char *pn_error_text(pn_error_t *error) {
+    assert(error);
+    return error->text;
+}
+
+int pn_error_copy(pn_error_t *error, pn_error_t *src) {
+    assert(error);
+    if (src) {
+        return pn_error_set(error, pn_error_code(src), pn_error_text(src));
+    } else {
+        pn_error_clear(error);
+        return 0;
+    }
+}
+
+const char *pn_code(int code) {
+    switch (code) {
+    case 0:
+        return "<ok>";
+    case PN_EOS:
+        return "PN_EOS";
+    case PN_ERR:
+        return "PN_ERR";
+    case PN_OVERFLOW:
+        return "PN_OVERFLOW";
+    case PN_UNDERFLOW:
+        return "PN_UNDERFLOW";
+    case PN_STATE_ERR:
+        return "PN_STATE_ERR";
+    case PN_ARG_ERR:
+        return "PN_ARG_ERR";
+    case PN_TIMEOUT:
+        return "PN_TIMEOUT";
+    case PN_INTR:
+        return "PN_INTR";
+    case PN_INPROGRESS:
+        return "PN_INPROGRESS";
+    case PN_OUT_OF_MEMORY:
+        return "PN_OUT_OF_MEMORY";
+    case PN_ABORTED:
+        return "PN_ABORTED";
+    default:
+        return "<unknown>";
+    }
 }

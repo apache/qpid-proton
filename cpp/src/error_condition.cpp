@@ -28,75 +28,55 @@
 
 namespace proton {
 
-error_condition::error_condition(pn_condition_t* c) :
-    name_(str(pn_condition_get_name(c))),
-    description_(str(pn_condition_get_description(c))),
-    properties_(value(pn_condition_info(c)))
-{}
+error_condition::error_condition(pn_condition_t *c)
+    : name_(str(pn_condition_get_name(c))),
+      description_(str(pn_condition_get_description(c))),
+      properties_(value(pn_condition_info(c))) {}
 
+error_condition::error_condition(std::string description)
+    : name_("proton:io:error"), description_(description) {}
 
-error_condition::error_condition(std::string description) :
-    name_("proton:io:error"),
-    description_(description)
-{}
+error_condition::error_condition(std::string name, std::string description)
+    : name_(name), description_(description) {}
 
-error_condition::error_condition(std::string name, std::string description) :
-    name_(name),
-    description_(description)
-{}
-
-error_condition::error_condition(std::string name, std::string description, value properties) :
-    name_(name),
-    description_(description),
-    properties_(properties)
-{}
+error_condition::error_condition(std::string name, std::string description,
+                                 value properties)
+    : name_(name), description_(description), properties_(properties) {}
 
 #if PN_CPP_HAS_EXPLICIT_CONVERSIONS
-error_condition::operator bool() const {
-  return !name_.empty();
-}
+error_condition::operator bool() const { return !name_.empty(); }
 #endif
 
-bool error_condition::operator!() const {
-    return name_.empty();
-}
+bool error_condition::operator!() const { return name_.empty(); }
 
-bool error_condition::empty() const {
-    return name_.empty();
-}
+bool error_condition::empty() const { return name_.empty(); }
 
-std::string error_condition::name() const {
-    return name_;
-}
+std::string error_condition::name() const { return name_; }
 
-std::string error_condition::description() const {
-    return description_;
-}
+std::string error_condition::description() const { return description_; }
 
-value error_condition::properties() const {
-    return properties_;
-}
+value error_condition::properties() const { return properties_; }
 
 std::string error_condition::what() const {
     if (!*this) {
         return "No error condition";
     } else {
-      std::string s(name_);
-      if (!description_.empty()) {
-          s += ": ";
-          s += description_;
-      }
-      return s;
+        std::string s(name_);
+        if (!description_.empty()) {
+            s += ": ";
+            s += description_;
+        }
+        return s;
     }
 }
 
-bool operator==(const error_condition& x, const error_condition& y) {
-    return x.name() == y.name() && x.description() == y.description()
-        && x.properties() == y.properties();
+bool operator==(const error_condition &x, const error_condition &y) {
+    return x.name() == y.name() && x.description() == y.description() &&
+           x.properties() == y.properties();
 }
 
-std::ostream& operator<<(std::ostream& o, const error_condition& err) {
+std::ostream &operator<<(std::ostream &o, const error_condition &err) {
     return o << err.what();
 }
 
-}
+} // namespace proton

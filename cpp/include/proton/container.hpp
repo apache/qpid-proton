@@ -59,7 +59,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// managed by the container.
     ///
     /// @param id sets the container's unique identity.
-    PN_CPP_EXTERN container(messaging_handler& handler, const std::string& id);
+    PN_CPP_EXTERN container(messaging_handler &handler, const std::string &id);
 
     /// Create a container with a global handler for messaging events.
     ///
@@ -69,11 +69,11 @@ class PN_CPP_CLASS_EXTERN container {
     ///
     /// @param handler global handler, called for events on all connections
     /// managed by the container.
-    PN_CPP_EXTERN container(messaging_handler& handler);
+    PN_CPP_EXTERN container(messaging_handler &handler);
 
     /// Create a container.
     /// @param id sets the container's unique identity.
-    PN_CPP_EXTERN container(const std::string& id);
+    PN_CPP_EXTERN container(const std::string &id);
 
     /// Create a container.
     ///
@@ -105,13 +105,13 @@ class PN_CPP_CLASS_EXTERN container {
     /// response is received from the remote peer.
     ///
     /// @copydetails returned
-    PN_CPP_EXTERN returned<connection> connect(const std::string& conn_url,
-                                               const connection_options& conn_opts);
+    PN_CPP_EXTERN returned<connection>
+    connect(const std::string &conn_url, const connection_options &conn_opts);
 
     /// @copybrief connect()
     ///
     /// @copydetails returned
-    PN_CPP_EXTERN returned<connection> connect(const std::string& conn_url);
+    PN_CPP_EXTERN returned<connection> connect(const std::string &conn_url);
 
     /// Connect using the default @ref connect-config file.
     ///
@@ -121,17 +121,18 @@ class PN_CPP_CLASS_EXTERN container {
     /// Listen for new connections on `listen_url`.
     ///
     /// If the listener opens successfully, listen_handler::on_open() is called.
-    /// If it fails to open, listen_handler::on_error() then listen_handler::close()
-    /// are called.
+    /// If it fails to open, listen_handler::on_error() then
+    /// listen_handler::close() are called.
     ///
-    /// listen_handler::on_accept() is called for each incoming connection to determine
-    /// the @ref connection_options to use, including the @ref messaging_handler.
+    /// listen_handler::on_accept() is called for each incoming connection to
+    /// determine the @ref connection_options to use, including the @ref
+    /// messaging_handler.
     ///
     /// **Thread safety** - Calls to `listen_handler` methods are serialized for
     /// this listener, but handlers attached to separate listeners may be called
     /// concurrently.
-    PN_CPP_EXTERN listener listen(const std::string& listen_url,
-                                  listen_handler& handler);
+    PN_CPP_EXTERN listener listen(const std::string &listen_url,
+                                  listen_handler &handler);
 
     /// @copybrief listen
     ///
@@ -139,17 +140,18 @@ class PN_CPP_CLASS_EXTERN container {
     /// listen(const std::string&, listen_handler&).
     ///
     /// **Thread safety** - for multi-threaded applications we recommend using a
-    /// @ref listen_handler to create a new @ref messaging_handler for each connection.
-    /// See listen(const std::string&, listen_handler&) and @ref mt_page
-    PN_CPP_EXTERN listener listen(const std::string& listen_url,
-                                  const connection_options& conn_opts);
+    /// @ref listen_handler to create a new @ref messaging_handler for each
+    /// connection. See listen(const std::string&, listen_handler&) and @ref
+    /// mt_page
+    PN_CPP_EXTERN listener listen(const std::string &listen_url,
+                                  const connection_options &conn_opts);
 
     /// @copybrief listen
     ///
     /// New connections will use the handler from
     /// `server_connection_options()`. See listen(const std::string&, const
     /// connection_options&);
-    PN_CPP_EXTERN listener listen(const std::string& listen_url);
+    PN_CPP_EXTERN listener listen(const std::string &listen_url);
 
     /// Run the container in the current thread.
     ///
@@ -162,7 +164,8 @@ class PN_CPP_CLASS_EXTERN container {
     PN_CPP_EXTERN void run();
 
 #if PN_CPP_SUPPORTS_THREADS
-    /// Run the container with a pool of `count` threads, including the current thread.
+    /// Run the container with a pool of `count` threads, including the current
+    /// thread.
     ///
     /// **C++ versions** - Available with C++11 or later.
     ///
@@ -182,7 +185,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// Stop the container with error condition `err`.
     ///
     /// @copydetails stop()
-    PN_CPP_EXTERN void stop(const error_condition& err);
+    PN_CPP_EXTERN void stop(const error_condition &err);
 
     /// Stop the container with an empty error condition.
     ///
@@ -201,7 +204,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// Open a connection and sender for `addr_url`.
     ///
     /// @copydetails returned
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string& addr_url);
+    PN_CPP_EXTERN returned<sender> open_sender(const std::string &addr_url);
 
     /// Open a connection and sender for `addr_url`.
     ///
@@ -209,8 +212,9 @@ class PN_CPP_CLASS_EXTERN container {
     /// template options.
     ///
     /// @copydetails returned
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string& addr_url,
-                                               const proton::sender_options& snd_opts);
+    PN_CPP_EXTERN returned<sender>
+    open_sender(const std::string &addr_url,
+                const proton::sender_options &snd_opts);
 
     /// Open a connection and sender for `addr_url`.
     ///
@@ -218,8 +222,9 @@ class PN_CPP_CLASS_EXTERN container {
     /// container's template options.
     ///
     /// @copydetails returned
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string& addr_url,
-                                               const connection_options& conn_opts);
+    PN_CPP_EXTERN returned<sender>
+    open_sender(const std::string &addr_url,
+                const connection_options &conn_opts);
 
     /// Open a connection and sender for `addr_url`.
     ///
@@ -227,15 +232,15 @@ class PN_CPP_CLASS_EXTERN container {
     /// container's template options.
     ///
     /// @copydetails returned
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string& addr_url,
-                                               const proton::sender_options& snd_opts,
-                                               const connection_options& conn_opts);
+    PN_CPP_EXTERN returned<sender>
+    open_sender(const std::string &addr_url,
+                const proton::sender_options &snd_opts,
+                const connection_options &conn_opts);
 
     /// Open a connection and receiver for `addr_url`.
     ///
     /// @copydetails returned
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string& addr_url);
-
+    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string &addr_url);
 
     /// Open a connection and receiver for `addr_url`.
     ///
@@ -243,8 +248,9 @@ class PN_CPP_CLASS_EXTERN container {
     /// template options.
     ///
     /// @copydetails returned
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string& addr_url,
-                                                   const proton::receiver_options& rcv_opts);
+    PN_CPP_EXTERN returned<receiver>
+    open_receiver(const std::string &addr_url,
+                  const proton::receiver_options &rcv_opts);
 
     /// Open a connection and receiver for `addr_url`.
     ///
@@ -252,8 +258,9 @@ class PN_CPP_CLASS_EXTERN container {
     /// container's template options.
     ///
     /// @copydetails returned
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string& addr_url,
-                                                   const connection_options& conn_opts);
+    PN_CPP_EXTERN returned<receiver>
+    open_receiver(const std::string &addr_url,
+                  const connection_options &conn_opts);
 
     /// Open a connection and receiver for `addr_url`.
     ///
@@ -261,9 +268,10 @@ class PN_CPP_CLASS_EXTERN container {
     /// container's template options.
     ///
     /// @copydetails returned
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string& addr_url,
-                                                   const proton::receiver_options& rcv_opts,
-                                                   const connection_options& conn_opts);
+    PN_CPP_EXTERN returned<receiver>
+    open_receiver(const std::string &addr_url,
+                  const proton::receiver_options &rcv_opts,
+                  const connection_options &conn_opts);
 
     /// A unique identifier for the container.
     PN_CPP_EXTERN std::string id() const;
@@ -271,7 +279,8 @@ class PN_CPP_CLASS_EXTERN container {
     /// Connection options applied to outgoing connections. These are
     /// applied first and then overridden by any options provided in
     /// `connect()` or `messaging_handler::on_connection_open()`.
-    PN_CPP_EXTERN void client_connection_options(const connection_options& conn_opts);
+    PN_CPP_EXTERN void
+    client_connection_options(const connection_options &conn_opts);
 
     /// @copydoc client_connection_options
     PN_CPP_EXTERN connection_options client_connection_options() const;
@@ -280,7 +289,8 @@ class PN_CPP_CLASS_EXTERN container {
     /// applied first and then overridden by any options provided in
     /// `listen()`, `listen_handler::on_accept()`, or
     /// `messaging_handler::on_connection_open()`.
-    PN_CPP_EXTERN void server_connection_options(const connection_options& conn_opts);
+    PN_CPP_EXTERN void
+    server_connection_options(const connection_options &conn_opts);
 
     /// @copydoc server_connection_options
     PN_CPP_EXTERN connection_options server_connection_options() const;
@@ -288,7 +298,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// Sender options applied to senders created by this
     /// container. They are applied before
     /// `messaging_handler::on_sender_open()` and can be overridden.
-    PN_CPP_EXTERN void sender_options(const class sender_options& snd_opts);
+    PN_CPP_EXTERN void sender_options(const class sender_options &snd_opts);
 
     /// @copydoc sender_options
     PN_CPP_EXTERN class sender_options sender_options() const;
@@ -296,7 +306,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// Receiver options applied to receivers created by this
     /// container. They are applied before
     /// `messaging_handler::on_receiver_open()` and can be overridden.
-    PN_CPP_EXTERN void receiver_options(const class receiver_options& rcv_opts);
+    PN_CPP_EXTERN void receiver_options(const class receiver_options &rcv_opts);
 
     /// @copydoc receiver_options
     PN_CPP_EXTERN class receiver_options receiver_options() const;
@@ -309,11 +319,14 @@ class PN_CPP_CLASS_EXTERN container {
     PN_CPP_EXTERN void schedule(duration dur, work fn);
 
     /// **Deprecated** - Use `container::schedule(duration, work)`.
-    PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'container::schedule(duration, work)'") void schedule(duration dur, void_function0& fn);
+    PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'container::schedule(duration, "
+                                    "work)'") void schedule(duration dur,
+                                                            void_function0 &fn);
 
   private:
-    /// Declare both v03 and v11 if compiling with c++11 as the library contains both.
-    /// A C++11 user should never call the v03 overload so it is private in this case
+    /// Declare both v03 and v11 if compiling with c++11 as the library contains
+    /// both. A C++11 user should never call the v03 overload so it is private
+    /// in this case
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
     PN_CPP_EXTERN void schedule(duration dur, internal::v03::work fn);
 #endif
@@ -321,14 +334,14 @@ class PN_CPP_CLASS_EXTERN container {
     internal::pn_unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
-  friend class connection_options;
-  friend class session_options;
-  friend class receiver_options;
-  friend class sender_options;
-  friend class work_queue;
+    friend class connection_options;
+    friend class session_options;
+    friend class receiver_options;
+    friend class sender_options;
+    friend class work_queue;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_CONTAINER_HPP

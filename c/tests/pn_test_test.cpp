@@ -28,40 +28,40 @@
 using namespace pn_test;
 
 TEST_CASE("test_stringify") {
-  std::ostringstream o;
-  SECTION("event_type") {
-    o << PN_CONNECTION_INIT;
-    CHECK(o.str() == "PN_CONNECTION_INIT");
-    CHECK(Catch::toString(PN_CONNECTION_INIT) == "PN_CONNECTION_INIT");
-  }
-  SECTION("condition") {
-    pn_condition_t *c = pn_condition();
-    SECTION("empty") {
-      o << *c;
-      CHECK(o.str() == "pn_condition{}");
-      CHECK_THAT(*c, cond_empty());
+    std::ostringstream o;
+    SECTION("event_type") {
+        o << PN_CONNECTION_INIT;
+        CHECK(o.str() == "PN_CONNECTION_INIT");
+        CHECK(Catch::toString(PN_CONNECTION_INIT) == "PN_CONNECTION_INIT");
     }
-    SECTION("name-desc") {
-      pn_condition_set_name(c, "foo");
-      pn_condition_set_description(c, "bar");
-      o << *c;
-      CHECK(o.str() == "pn_condition{\"foo\", \"bar\"}");
-      CHECK_THAT(*c, cond_matches("foo", "bar"));
-      CHECK_THAT(*c, !cond_empty());
+    SECTION("condition") {
+        pn_condition_t *c = pn_condition();
+        SECTION("empty") {
+            o << *c;
+            CHECK(o.str() == "pn_condition{}");
+            CHECK_THAT(*c, cond_empty());
+        }
+        SECTION("name-desc") {
+            pn_condition_set_name(c, "foo");
+            pn_condition_set_description(c, "bar");
+            o << *c;
+            CHECK(o.str() == "pn_condition{\"foo\", \"bar\"}");
+            CHECK_THAT(*c, cond_matches("foo", "bar"));
+            CHECK_THAT(*c, !cond_empty());
+        }
+        SECTION("desc-only") {
+            pn_condition_set_name(c, "foo");
+            o << *c;
+            CHECK(o.str() == "pn_condition{\"foo\", null}");
+            CHECK_THAT(*c, cond_matches("foo"));
+        }
+        pn_condition_free(c);
     }
-    SECTION("desc-only") {
-      pn_condition_set_name(c, "foo");
-      o << *c;
-      CHECK(o.str() == "pn_condition{\"foo\", null}");
-      CHECK_THAT(*c, cond_matches("foo"));
+    SECTION("error") {
+        pn_error_t *err = pn_error();
+        pn_error_format(err, PN_EOS, "foo");
+        o << *err;
+        pn_error_free(err);
+        CHECK(o.str() == "pn_error{PN_EOS, \"foo\"}");
     }
-    pn_condition_free(c);
-  }
-  SECTION("error") {
-    pn_error_t *err = pn_error();
-    pn_error_format(err, PN_EOS, "foo");
-    o << *err;
-    pn_error_free(err);
-    CHECK(o.str() == "pn_error{PN_EOS, \"foo\"}");
-  }
 }

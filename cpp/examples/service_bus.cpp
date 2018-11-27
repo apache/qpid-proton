@@ -41,7 +41,8 @@
  * between queue types and fee tier ranging from 64KB to 1MB.  Due to the
  * distributed nature of Service Bus, queues do not automatically preserve FIFO
  * order of messages unless the user takes steps to force the message stream to
- * a single partition of the queue or creates the queue with partitioning disabled.
+ * a single partition of the queue or creates the queue with partitioning
+disabled.
  *
  * This example shows use of the simpler SAS (Shared Access Signature)
  * authentication scheme where the credentials are supplied on the connection.
@@ -100,10 +101,10 @@ Done. No more messages.
 
 #include "fake_cpp11.hpp"
 
-using proton::source_options;
 using proton::connection_options;
-using proton::sender_options;
 using proton::receiver_options;
+using proton::sender_options;
+using proton::source_options;
 
 void do_next_sequence();
 
@@ -112,14 +113,15 @@ void check_arg(const std::string &value, const std::string &name) {
     if (value.empty())
         throw std::runtime_error("missing argument for \"" + name + "\"");
 }
-}
+} // namespace
 
 /// Connect to Service Bus queue and retrieve messages in a particular session.
 class session_receiver : public proton::messaging_handler {
   private:
     const std::string &connection_url;
     const std::string &entity;
-    proton::value session_identifier; // AMQP null type by default, matches any Service Bus sequence identifier
+    proton::value session_identifier; // AMQP null type by default, matches any
+                                      // Service Bus sequence identifier
     int message_count;
     bool closed;
     proton::duration read_timeout;
@@ -129,18 +131,18 @@ class session_receiver : public proton::messaging_handler {
 
   public:
     session_receiver(const std::string &c, const std::string &e,
-                     const char *sid) : connection_url(c), entity(e), message_count(0), closed(false), read_timeout(5000), last_read(0), container(0) {
-        if (sid)
-            session_identifier = std::string(sid);
+                     const char *sid)
+        : connection_url(c), entity(e), message_count(0), closed(false),
+          read_timeout(5000), last_read(0), container(0) {
+        if (sid) session_identifier = std::string(sid);
         // session_identifier is now either empty/null or an AMQP string type.
         // If null, Service Bus will pick the first available message and create
         // a filter at its end with that message's session identifier.
         // Technically, an AMQP string is not a valid filter-set value unless it
         // is annotated as an AMQP described type, so this may change.
-
     }
 
-    void run (proton::container &c) {
+    void run(proton::container &c) {
         message_count = 0;
         closed = false;
         c.connect(connection_url, connection_options().handler(*this));
@@ -151,7 +153,9 @@ class session_receiver : public proton::messaging_handler {
         proton::source::filter_map sb_filter_map;
         proton::symbol key("com.microsoft:session-filter");
         sb_filter_map.put(key, session_identifier);
-        receiver = connection.open_receiver(entity, receiver_options().source(source_options().filters(sb_filter_map)));
+        receiver = connection.open_receiver(
+            entity,
+            receiver_options().source(source_options().filters(sb_filter_map)));
 
         // Start timeout processing here.  If Service Bus has no pending
         // messages, it may defer completing the receiver open until a message
@@ -159,14 +163,17 @@ class session_receiver : public proton::messaging_handler {
         // identifier if none was specified).
         last_read = proton::timestamp::now();
         // Call this->process_timeout after read_timeout.
-        container->schedule(read_timeout, [this]() { this->process_timeout(); });
+        container->schedule(read_timeout,
+                            [this]() { this->process_timeout(); });
     }
 
     void on_receiver_open(proton::receiver &r) OVERRIDE {
         if (closed) return; // PROTON-1264
-        proton::value actual_session_id = r.source().filters().get("com.microsoft:session-filter");
-        std::cout << "receiving messages with session identifier \"" << actual_session_id
-                  << "\" from queue " << entity << std::endl;
+        proton::value actual_session_id =
+            r.source().filters().get("com.microsoft:session-filter");
+        std::cout << "receiving messages with session identifier \""
+                  << actual_session_id << "\" from queue " << entity
+                  << std::endl;
         last_read = proton::timestamp::now();
     }
 
@@ -194,8 +201,8 @@ class session_receiver : public proton::messaging_handler {
     }
 };
 
-
-/// Connect to Service Bus queue and send messages divided into different sessions.
+/// Connect to Service Bus queue and send messages divided into different
+/// sessions.
 class session_sender : public proton::messaging_handler {
   private:
     const std::string &connection_url;
@@ -205,38 +212,53 @@ class session_sender : public proton::messaging_handler {
     int accepts;
 
   public:
-    session_sender(const std::string &c, const std::string &e) : connection_url(c), entity(e),
-                                                                 msg_count(0), total(7), accepts(0) {}
+    session_sender(const std::string &c, const std::string &e)
+        : connection_url(c), entity(e), msg_count(0), total(7), accepts(0) {}
 
     void run(proton::container &c) {
-        c.open_sender(connection_url + "/" + entity, sender_options(), connection_options().handler(*this));
+        c.open_sender(connection_url + "/" + entity, sender_options(),
+                      connection_options().handler(*this));
     }
 
     void send_remaining_messages(proton::sender &s) {
         std::string gid;
         for (; msg_count < total && s.credit() > 0; msg_count++) {
             switch (msg_count) {
-            case 0: gid = "red"; break;
-            case 1: gid = "green"; break;
-            case 2: gid = "blue"; break;
-            case 3: gid = "red"; break;
-            case 4: gid = "black"; break;
-            case 5: gid = "blue"; break;
-            case 6: gid = "yellow"; break;
+            case 0:
+                gid = "red";
+                break;
+            case 1:
+                gid = "green";
+                break;
+            case 2:
+                gid = "blue";
+                break;
+            case 3:
+                gid = "red";
+                break;
+            case 4:
+                gid = "black";
+                break;
+            case 5:
+                gid = "blue";
+                break;
+            case 6:
+                gid = "yellow";
+                break;
             }
 
             std::ostringstream mbody;
-            mbody << "message " << msg_count << " in service bus session \"" << gid << "\"";
+            mbody << "message " << msg_count << " in service bus session \""
+                  << gid << "\"";
             proton::message m(mbody.str());
-            m.group_id(gid);  // Service Bus uses the group_id property to as the session identifier.
+            m.group_id(gid); // Service Bus uses the group_id property to as the
+                             // session identifier.
             s.send(m);
             std::cout << "   sent message: " << m.body() << std::endl;
         }
     }
 
-    void on_sendable(proton::sender &s) OVERRIDE {
-        send_remaining_messages(s);
-    }
+    void on_sendable(proton::sender &s) OVERRIDE { send_remaining_messages(s); }
 
     void on_tracker_accept(proton::tracker &t) OVERRIDE {
         accepts++;
@@ -249,8 +271,8 @@ class session_sender : public proton::messaging_handler {
     }
 };
 
-
-/// Orchestrate the sequential actions of sending and receiving session-based messages.
+/// Orchestrate the sequential actions of sending and receiving session-based
+/// messages.
 class sequence : public proton::messaging_handler {
   private:
     proton::container *container;
@@ -261,9 +283,9 @@ class sequence : public proton::messaging_handler {
   public:
     static sequence *the_sequence;
 
-    sequence (const std::string &c, const std::string &e) :
-        container(0), sequence_no(0),
-        snd(c, e), rcv_red(c, e, "red"), rcv_green(c, e, "green"), rcv_null(c, e, NULL) {
+    sequence(const std::string &c, const std::string &e)
+        : container(0), sequence_no(0), snd(c, e), rcv_red(c, e, "red"),
+          rcv_green(c, e, "green"), rcv_null(c, e, NULL) {
         the_sequence = this;
     }
 
@@ -275,11 +297,20 @@ class sequence : public proton::messaging_handler {
     void next_sequence() {
         switch (sequence_no++) {
         // run these in order exactly once
-        case 0: snd.run(*container); break;
-        case 1: rcv_green.run(*container); break;
-        case 2: rcv_red.run(*container); break;
-        // Run this until the receiver decides there is no messages left to sequence through
-        default: rcv_null.run(*container); break;
+        case 0:
+            snd.run(*container);
+            break;
+        case 1:
+            rcv_green.run(*container);
+            break;
+        case 2:
+            rcv_red.run(*container);
+            break;
+        // Run this until the receiver decides there is no messages left to
+        // sequence through
+        default:
+            rcv_null.run(*container);
+            break;
         }
     }
 };
@@ -288,20 +319,24 @@ sequence *sequence::the_sequence = NULL;
 
 void do_next_sequence() { sequence::the_sequence->next_sequence(); }
 
-
 int main(int argc, char **argv) {
     std::string sb_namespace; // i.e. "foo.servicebus.windows.net"
     // Make sure the next two are urlencoded for Proton
-    std::string sb_key_name;  // shared access key name for entity (AKA "Policy Name")
-    std::string sb_key;       // shared access key
-    std::string sb_entity;    // AKA the service bus queue.  Must enable
-                              // sessions on it for this example.
+    std::string
+        sb_key_name;    // shared access key name for entity (AKA "Policy Name")
+    std::string sb_key; // shared access key
+    std::string sb_entity; // AKA the service bus queue.  Must enable
+                           // sessions on it for this example.
 
     example::options opts(argc, argv);
-    opts.add_value(sb_namespace, 'n', "namespace", "Service Bus full namespace", "NAMESPACE");
-    opts.add_value(sb_key_name, 'p', "policy", "policy name that specifies access rights (key name)", "POLICY");
+    opts.add_value(sb_namespace, 'n', "namespace", "Service Bus full namespace",
+                   "NAMESPACE");
+    opts.add_value(sb_key_name, 'p', "policy",
+                   "policy name that specifies access rights (key name)",
+                   "POLICY");
     opts.add_value(sb_key, 'k', "key", "secret key for the policy", "key");
-    opts.add_value(sb_entity, 'e', "entity", "entity path (queue name)", "ENTITY");
+    opts.add_value(sb_entity, 'e', "entity", "entity path (queue name)",
+                   "ENTITY");
 
     try {
         opts.parse();
@@ -309,12 +344,13 @@ int main(int argc, char **argv) {
         check_arg(sb_key_name, "policy");
         check_arg(sb_key, "key");
         check_arg(sb_entity, "entity");
-        std::string connection_string("amqps://" + sb_key_name + ":" + sb_key + "@" + sb_namespace);
+        std::string connection_string("amqps://" + sb_key_name + ":" + sb_key +
+                                      "@" + sb_namespace);
 
         sequence seq(connection_string, sb_entity);
         proton::container(seq).run();
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

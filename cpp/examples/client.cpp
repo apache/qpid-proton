@@ -45,13 +45,15 @@ class client : public proton::messaging_handler {
     proton::receiver receiver;
 
   public:
-    client(const std::string &u, const std::vector<std::string>& r) : url(u), requests(r) {}
+    client(const std::string &u, const std::vector<std::string> &r)
+        : url(u), requests(r) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         sender = c.open_sender(url);
         // Create a receiver requesting a dynamically created queue
         // for the message source.
-        receiver_options opts = receiver_options().source(source_options().dynamic(true));
+        receiver_options opts =
+            receiver_options().source(source_options().dynamic(true));
         receiver = sender.connection().open_receiver("", opts);
     }
 
@@ -62,9 +64,7 @@ class client : public proton::messaging_handler {
         sender.send(req);
     }
 
-    void on_receiver_open(proton::receiver &) OVERRIDE {
-        send_request();
-    }
+    void on_receiver_open(proton::receiver &) OVERRIDE { send_request(); }
 
     void on_message(proton::delivery &d, proton::message &response) OVERRIDE {
         if (requests.empty()) return; // Spurious extra message!
@@ -99,9 +99,9 @@ int main(int argc, char **argv) {
         proton::container(c).run();
 
         return 0;
-    } catch (const example::bad_option& e) {
+    } catch (const example::bad_option &e) {
         std::cout << opts << std::endl << e.what() << std::endl;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

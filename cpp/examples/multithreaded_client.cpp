@@ -20,13 +20,13 @@
 //
 // C++11 or greater
 //
-// A multi-threaded client that calls proton::container::run() in one thread, sends
-// messages in another and receives messages in a third.
+// A multi-threaded client that calls proton::container::run() in one thread,
+// sends messages in another and receives messages in a third.
 //
 // Note this client does not deal with flow-control. If the sender is faster
 // than the receiver, messages will build up in memory on the sending side.
-// See @ref multithreaded_client_flow_control.cpp for a more complex example with
-// flow control.
+// See @ref multithreaded_client_flow_control.cpp for a more complex example
+// with flow control.
 //
 // NOTE: no proper error handling
 
@@ -49,7 +49,11 @@
 
 // Lock output from threads to avoid scrambling
 std::mutex out_lock;
-#define OUT(x) do { std::lock_guard<std::mutex> l(out_lock); x; } while (false)
+#define OUT(x)                                                                 \
+    do {                                                                       \
+        std::lock_guard<std::mutex> l(out_lock);                               \
+        x;                                                                     \
+    } while (false)
 
 // Handler for a single thread-safe sending and receiving connection.
 class client : public proton::messaging_handler {
@@ -68,10 +72,11 @@ class client : public proton::messaging_handler {
     std::condition_variable messages_ready_;
 
   public:
-    client(const std::string& url, const std::string& address) : url_(url), address_(address), work_queue_(0) {}
+    client(const std::string &url, const std::string &address)
+        : url_(url), address_(address), work_queue_(0) {}
 
     // Thread safe
-    void send(const proton::message& msg) {
+    void send(const proton::message &msg) {
         // Use [=] to copy the message, we cannot pass it by reference since it
         // will be used in another thread.
         work_queue()->add([=]() { sender_.send(msg); });
@@ -92,8 +97,7 @@ class client : public proton::messaging_handler {
     }
 
   private:
-
-    proton::work_queue* work_queue() {
+    proton::work_queue *work_queue() {
         // Wait till work_queue_ and sender_ are initialized.
         std::unique_lock<std::mutex> l(lock_);
         while (!work_queue_) sender_ready_.wait(l);
@@ -106,16 +110,16 @@ class client : public proton::messaging_handler {
     // To create connections after the container has started, use
     // container::connect().
     // See @ref multithreaded_client_flow_control.cpp for an example.
-    void on_container_start(proton::container& cont) override {
+    void on_container_start(proton::container &cont) override {
         cont.connect(url_);
     }
 
-    void on_connection_open(proton::connection& conn) override {
+    void on_connection_open(proton::connection &conn) override {
         conn.open_sender(address_);
         conn.open_receiver(address_);
     }
 
-    void on_sender_open(proton::sender& s) override {
+    void on_sender_open(proton::sender &s) override {
         // sender_ and work_queue_ must be set atomically
         std::lock_guard<std::mutex> l(lock_);
         sender_ = s;
@@ -123,26 +127,27 @@ class client : public proton::messaging_handler {
         sender_ready_.notify_all();
     }
 
-    void on_message(proton::delivery& dlv, proton::message& msg) override {
+    void on_message(proton::delivery &dlv, proton::message &msg) override {
         std::lock_guard<std::mutex> l(lock_);
         messages_.push(msg);
         messages_ready_.notify_all();
     }
 
-    void on_error(const proton::error_condition& e) override {
+    void on_error(const proton::error_condition &e) override {
         OUT(std::cerr << "unexpected error: " << e << std::endl);
         exit(1);
     }
 };
 
-int main(int argc, const char** argv) {
+int main(int argc, const char **argv) {
     try {
         if (argc != 4) {
-            std ::cerr <<
-                "Usage: " << argv[0] << " CONNECTION-URL AMQP-ADDRESS MESSAGE-COUNT\n"
-                "CONNECTION-URL: connection address, e.g.'amqp://127.0.0.1'\n"
-                "AMQP-ADDRESS: AMQP node address, e.g. 'examples'\n"
-                "MESSAGE-COUNT: number of messages to send\n";
+            std ::cerr << "Usage: " << argv[0]
+                       << " CONNECTION-URL AMQP-ADDRESS MESSAGE-COUNT\n"
+                          "CONNECTION-URL: connection address, "
+                          "e.g.'amqp://127.0.0.1'\n"
+                          "AMQP-ADDRESS: AMQP node address, e.g. 'examples'\n"
+                          "MESSAGE-COUNT: number of messages to send\n";
             return 1;
         }
         const char *url = argv[1];
@@ -154,21 +159,22 @@ int main(int argc, const char** argv) {
         std::thread container_thread([&]() { container.run(); });
 
         std::thread sender([&]() {
-                for (int i = 0; i < n_messages; ++i) {
-                    proton::message msg(std::to_string(i + 1));
-                    cl.send(msg);
-                    OUT(std::cout << "sent \"" << msg.body() << '"' << std::endl);
-                }
-            });
+            for (int i = 0; i < n_messages; ++i) {
+                proton::message msg(std::to_string(i + 1));
+                cl.send(msg);
+                OUT(std::cout << "sent \"" << msg.body() << '"' << std::endl);
+            }
+        });
 
         int received = 0;
         std::thread receiver([&]() {
-                for (int i = 0; i < n_messages; ++i) {
-                    auto msg = cl.receive();
-                    OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
-                    ++received;
-                }
-            });
+            for (int i = 0; i < n_messages; ++i) {
+                auto msg = cl.receive();
+                OUT(std::cout << "received \"" << msg.body() << '"'
+                              << std::endl);
+                ++received;
+            }
+        });
 
         sender.join();
         receiver.join();
@@ -177,7 +183,7 @@ int main(int argc, const char** argv) {
         std::cout << received << " messages sent and received" << std::endl;
 
         return 0;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

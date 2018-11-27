@@ -23,8 +23,8 @@
  */
 
 #include "./byte_array.hpp"
-#include "./internal/export.hpp"
 #include "./internal/comparable.hpp"
+#include "./internal/export.hpp"
 
 #include <iosfwd>
 
@@ -51,15 +51,15 @@ class decimal64 : public byte_array<8> {};
 /// A 128-bit decimal floating-point value.
 class decimal128 : public byte_array<16> {};
 
-/// Print a 32-bit decimal value.    
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal32&);
+/// Print a 32-bit decimal value.
+PN_CPP_EXTERN std::ostream &operator<<(std::ostream &, const decimal32 &);
 
-/// Print a 64-bit decimal value.    
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal64&);
+/// Print a 64-bit decimal value.
+PN_CPP_EXTERN std::ostream &operator<<(std::ostream &, const decimal64 &);
 
-/// Print a 128-bit decimal value.    
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal128&);
+/// Print a 128-bit decimal value.
+PN_CPP_EXTERN std::ostream &operator<<(std::ostream &, const decimal128 &);
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_DECIMAL_HPP

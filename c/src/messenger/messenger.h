@@ -24,7 +24,8 @@
 
 #include <proton/messenger.h>
 
-int pni_messenger_add_subscription(pn_messenger_t *messenger, pn_subscription_t *subscription);
+int pni_messenger_add_subscription(pn_messenger_t *messenger,
+                                   pn_subscription_t *subscription);
 int pni_messenger_work(pn_messenger_t *messenger);
 
 #endif /* messenger.h */

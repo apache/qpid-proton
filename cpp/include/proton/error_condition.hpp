@@ -22,12 +22,12 @@
  *
  */
 
-#include "./internal/export.hpp"
 #include "./internal/config.hpp"
+#include "./internal/export.hpp"
 #include "./value.hpp"
 
-#include <string>
 #include <iosfwd>
+#include <string>
 
 /// @file
 /// @copybrief proton::error_condition
@@ -39,7 +39,7 @@ namespace proton {
 /// Describes an endpoint error state.
 class error_condition {
     /// @cond INTERNAL
-    error_condition(pn_condition_t* c);
+    error_condition(pn_condition_t *c);
     /// @endcond
 
   public:
@@ -55,14 +55,15 @@ class error_condition {
 
     /// **Unsettled API** - Create an error condition with name,
     /// description, and informational properties.
-    PN_CPP_EXTERN error_condition(std::string name, std::string description, proton::value properties);
+    PN_CPP_EXTERN error_condition(std::string name, std::string description,
+                                  proton::value properties);
 
 #if PN_CPP_HAS_DEFAULTED_FUNCTIONS && PN_CPP_HAS_DEFAULTED_MOVE_INITIALIZERS
     /// @cond INTERNAL
-    error_condition(const error_condition&) = default;
-    error_condition& operator=(const error_condition&) = default;
-    error_condition(error_condition&&) = default;
-    error_condition& operator=(error_condition&&) = default;
+    error_condition(const error_condition &) = default;
+    error_condition &operator=(const error_condition &) = default;
+    error_condition(error_condition &&) = default;
+    error_condition &operator=(error_condition &&) = default;
     /// @endcond
 #endif
 
@@ -97,16 +98,18 @@ class error_condition {
     proton::value properties_;
 
     /// @cond INTERNAL
-  friend class internal::factory<error_condition>;
+    friend class internal::factory<error_condition>;
     /// @endcond
 };
 
 /// @return true if name, description and properties are all equal
-PN_CPP_EXTERN bool operator==(const error_condition& x, const error_condition& y);
+PN_CPP_EXTERN bool operator==(const error_condition &x,
+                              const error_condition &y);
 
 /// Human readable string
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const error_condition& err);
+PN_CPP_EXTERN std::ostream &operator<<(std::ostream &o,
+                                       const error_condition &err);
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_ERROR_CONDITION_H

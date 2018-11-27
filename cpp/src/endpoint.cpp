@@ -27,45 +27,57 @@
 #include "proton/session.hpp"
 
 #include <proton/connection.h>
-#include <proton/session.h>
 #include <proton/link.h>
+#include <proton/session.h>
 
 namespace {
 
 inline bool uninitialized(int state) { return state & PN_LOCAL_UNINIT; }
 inline bool active(int state) { return state & PN_LOCAL_ACTIVE; }
-inline bool closed(int state) { return (state & PN_LOCAL_CLOSED) && (state & PN_REMOTE_CLOSED); }
+inline bool closed(int state) {
+    return (state & PN_LOCAL_CLOSED) && (state & PN_REMOTE_CLOSED);
 }
+} // namespace
 
 namespace proton {
 
-bool connection::uninitialized() const { return ::uninitialized(pn_connection_state(pn_object())); }
-bool connection::active() const { return ::active(pn_connection_state(pn_object())); }
-bool connection::closed() const { return ::closed(pn_connection_state(pn_object())); }
+bool connection::uninitialized() const {
+    return ::uninitialized(pn_connection_state(pn_object()));
+}
+bool connection::active() const {
+    return ::active(pn_connection_state(pn_object()));
+}
+bool connection::closed() const {
+    return ::closed(pn_connection_state(pn_object()));
+}
 
-void connection::close(const error_condition& condition) {
+void connection::close(const error_condition &condition) {
     set_error_condition(condition, pn_connection_condition(pn_object()));
     close();
 }
 
-bool session::uninitialized() const { return ::uninitialized(pn_session_state(pn_object())); }
+bool session::uninitialized() const {
+    return ::uninitialized(pn_session_state(pn_object()));
+}
 bool session::active() const { return ::active(pn_session_state(pn_object())); }
 bool session::closed() const { return ::closed(pn_session_state(pn_object())); }
 
-void session::close(const error_condition& condition) {
+void session::close(const error_condition &condition) {
     set_error_condition(condition, pn_session_condition(pn_object()));
     close();
 }
 
-bool link::uninitialized() const { return ::uninitialized(pn_link_state(pn_object())); }
+bool link::uninitialized() const {
+    return ::uninitialized(pn_link_state(pn_object()));
+}
 bool link::active() const { return ::active(pn_link_state(pn_object())); }
 bool link::closed() const { return ::closed(pn_link_state(pn_object())); }
 
-void link::close(const error_condition& condition) {
+void link::close(const error_condition &condition) {
     set_error_condition(condition, pn_link_condition(pn_object()));
     close();
 }
 
 endpoint::~endpoint() {}
 
-}
+} // namespace proton

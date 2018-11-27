@@ -22,8 +22,8 @@
  *
  */
 
-#include "./internal/pn_unique_ptr.hpp"
 #include "./error.hpp"
+#include "./internal/pn_unique_ptr.hpp"
 
 #include <proton/type_compat.h>
 
@@ -39,12 +39,11 @@ namespace proton {
 ///
 /// An error encountered during URL parsing.
 
-struct
-PN_CPP_DEPRECATED("Use a third-party URL library")
-PN_CPP_CLASS_EXTERN url_error : public error {
+struct PN_CPP_DEPRECATED("Use a third-party URL library")
+    PN_CPP_CLASS_EXTERN url_error : public error {
     /// @cond INTERNAL
     /// Construct a URL error with a message.
-    PN_CPP_EXTERN explicit url_error(const std::string&);
+    PN_CPP_EXTERN explicit url_error(const std::string &);
     /// @endcond
 };
 
@@ -64,8 +63,8 @@ PN_CPP_CLASS_EXTERN url_error : public error {
 ///   broker it typically corresponds to a queue or topic name.
 class PN_CPP_DEPRECATED("Use a third-party URL library") url {
   public:
-    static const std::string AMQP;     ///< "amqp" prefix
-    static const std::string AMQPS;    ///< "amqps" prefix
+    static const std::string AMQP;  ///< "amqp" prefix
+    static const std::string AMQPS; ///< "amqps" prefix
 
     // XXX No constructor for an empty URL?
     // XXX What is the default 'defaults' behavior?
@@ -74,7 +73,7 @@ class PN_CPP_DEPRECATED("Use a third-party URL library") url {
     ///
     /// @note Converts automatically from string.
     /// @throw url_error if URL is invalid.
-    PN_CPP_EXTERN url(const std::string& url_str);
+    PN_CPP_EXTERN url(const std::string &url_str);
 
     /// @cond INTERNAL
     /// XXX I want to understand why this is important to keep.
@@ -85,16 +84,16 @@ class PN_CPP_DEPRECATED("Use a third-party URL library") url {
     ///
     /// @note Converts automatically from string.
     /// @throw url_error if URL is invalid.
-    PN_CPP_EXTERN url(const std::string& url_str, bool defaults);
+    PN_CPP_EXTERN url(const std::string &url_str, bool defaults);
     /// @endcond
 
     /// Copy a URL.
-    PN_CPP_EXTERN url(const url&);
+    PN_CPP_EXTERN url(const url &);
 
     PN_CPP_EXTERN ~url();
 
     /// Copy a URL.
-    PN_CPP_EXTERN url& operator=(const url&);
+    PN_CPP_EXTERN url &operator=(const url &);
 
     /// True if the URL is empty.
     PN_CPP_EXTERN bool empty() const;
@@ -130,7 +129,7 @@ class PN_CPP_DEPRECATED("Use a third-party URL library") url {
     /// @}
 
     /// Return URL as a string.
-    friend PN_CPP_EXTERN std::string to_string(const url&);
+    friend PN_CPP_EXTERN std::string to_string(const url &);
 
   private:
     struct impl;
@@ -138,7 +137,7 @@ class PN_CPP_DEPRECATED("Use a third-party URL library") url {
 
     /// @cond INTERNAL
 
-  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const url&);
+    friend PN_CPP_EXTERN std::ostream &operator<<(std::ostream &, const url &);
 
     // XXX Why is it important to have this?
     /// Parse `url` from istream.  This automatically fills in
@@ -146,11 +145,11 @@ class PN_CPP_DEPRECATED("Use a third-party URL library") url {
     ///
     /// @note An invalid url is indicated by setting
     /// std::stream::fail(), NOT by throwing url_error.
-  friend PN_CPP_EXTERN std::istream& operator>>(std::istream&, url&);
+    friend PN_CPP_EXTERN std::istream &operator>>(std::istream &, url &);
 
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_URL_HPP

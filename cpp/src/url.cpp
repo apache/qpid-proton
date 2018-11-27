@@ -42,8 +42,8 @@ static std::string pni_urlencode(const std::string &src) {
 
     std::size_t i = 0;
     std::size_t j = src.find_first_of(bad);
-    while (j!=std::string::npos) {
-        dst << src.substr(i, j-i);
+    while (j != std::string::npos) {
+        dst << src.substr(i, j - i);
         dst << "%" << std::setw(2) << src[j];
         i = j + 1;
         j = src.find_first_of(bad);
@@ -53,99 +53,92 @@ static std::string pni_urlencode(const std::string &src) {
 }
 
 // Low level url parser
-static void pni_urldecode(const char *src, char *dst)
-{
-  const char *in = src;
-  char *out = dst;
-  while (*in != '\0')
-  {
-    if ('%' == *in)
-    {
-      if ((in[1] != '\0') && (in[2] != '\0'))
-      {
-        char esc[3];
-        esc[0] = in[1];
-        esc[1] = in[2];
-        esc[2] = '\0';
-        unsigned long d = std::strtoul(esc, NULL, 16);
-        *out = (char)d;
-        in += 3;
-        out++;
-      }
-      else
-      {
-        *out = *in;
-        in++;
-        out++;
-      }
+static void pni_urldecode(const char *src, char *dst) {
+    const char *in = src;
+    char *out = dst;
+    while (*in != '\0') {
+        if ('%' == *in) {
+            if ((in[1] != '\0') && (in[2] != '\0')) {
+                char esc[3];
+                esc[0] = in[1];
+                esc[1] = in[2];
+                esc[2] = '\0';
+                unsigned long d = std::strtoul(esc, NULL, 16);
+                *out = (char)d;
+                in += 3;
+                out++;
+            } else {
+                *out = *in;
+                in++;
+                out++;
+            }
+        } else {
+            *out = *in;
+            in++;
+            out++;
+        }
     }
-    else
-    {
-      *out = *in;
-      in++;
-      out++;
-    }
-  }
-  *out = '\0';
+    *out = '\0';
 }
 
-void parse_url(char *url, const char **scheme, const char **user, const char **pass, const char **host, const char **port, const char **path)
-{
-  if (!url) return;
+void parse_url(char *url, const char **scheme, const char **user,
+               const char **pass, const char **host, const char **port,
+               const char **path) {
+    if (!url) return;
 
-  char *slash = std::strchr(url, '/');
+    char *slash = std::strchr(url, '/');
 
-  if (slash && slash>url) {
-    char *scheme_end = std::strstr(slash-1, "://");
+    if (slash && slash > url) {
+        char *scheme_end = std::strstr(slash - 1, "://");
 
-    if (scheme_end && scheme_end<slash) {
-      *scheme_end = '\0';
-      *scheme = url;
-      url = scheme_end + 3;
-      slash = std::strchr(url, '/');
+        if (scheme_end && scheme_end < slash) {
+            *scheme_end = '\0';
+            *scheme = url;
+            url = scheme_end + 3;
+            slash = std::strchr(url, '/');
+        }
+    } else if (0 == strncmp(url, "//", 2)) {
+        url += 2;
+        slash = std::strchr(url, '/');
     }
-  } else if (0 == strncmp(url, "//", 2)) {
-      url += 2;
-      slash = std::strchr(url, '/');
-  }
 
-  if (slash) {
-    *slash = '\0';
-    *path = slash + 1;
-  }
+    if (slash) {
+        *slash = '\0';
+        *path = slash + 1;
+    }
 
-  char *at = std::strchr(url, '@');
-  if (at) {
-    *at = '\0';
-    char *up = url;
-    url = at + 1;
-    char *colon = std::strchr(up, ':');
+    char *at = std::strchr(url, '@');
+    if (at) {
+        *at = '\0';
+        char *up = url;
+        url = at + 1;
+        char *colon = std::strchr(up, ':');
+        if (colon) {
+            *colon = '\0';
+            char *p = colon + 1;
+            pni_urldecode(p, p);
+            *pass = p;
+        }
+        pni_urldecode(up, up);
+        *user = up;
+    }
+
+    *host = url;
+    char *open = (*url == '[') ? url : 0;
+    if (open) {
+        char *close = std::strchr(open, ']');
+        if (close) {
+            *host = open + 1;
+            *close = '\0';
+            url = close + 1;
+        }
+    }
+
+    char *colon = std::strchr(url, ':');
     if (colon) {
-      *colon = '\0';
-      char *p = colon + 1;
-      pni_urldecode(p, p);
-      *pass = p;
+        *colon = '\0';
+        *port = colon + 1;
     }
-    pni_urldecode(up, up);
-    *user = up;
-  }
-
-  *host = url;
-  char *open = (*url == '[') ? url : 0;
-  if (open) {
-    char *close = std::strchr(open, ']');
-    if (close) {
-        *host = open + 1;
-        *close = '\0';
-        url = close + 1;
-    }
-  }
-
-  char *colon = std::strchr(url, ':');
-  if (colon) {
-    *colon = '\0';
-    *port = colon + 1;
-  }
 }
 
 } // namespace
@@ -153,32 +146,31 @@ void parse_url(char *url, const char **scheme, const char **user, const char **p
 namespace proton {
 
 struct url::impl {
-    static const char* const default_host;
-    const char* scheme;
-    const char* username;
-    const char* password;
-    const char* host;
-    const char* port;
-    const char* path;
+    static const char *const default_host;
+    const char *scheme;
+    const char *username;
+    const char *password;
+    const char *host;
+    const char *port;
+    const char *path;
     std::vector<char> cstr;
     mutable std::string str;
 
-    impl(const std::string& s) :
-        scheme(0), username(0), password(0), host(0), port(0), path(0),
-        cstr(s.size()+1, '\0')
-    {
+    impl(const std::string &s)
+        : scheme(0), username(0), password(0), host(0), port(0), path(0),
+          cstr(s.size() + 1, '\0') {
         std::copy(s.begin(), s.end(), cstr.begin());
         parse_url(&cstr[0], &scheme, &username, &password, &host, &port, &path);
     }
 
     void defaults() {
-        if (!scheme || *scheme=='\0' ) scheme = proton::url::AMQP.c_str();
-        if (!host || *host=='\0' ) host = default_host;
-        if (!port || *port=='\0' ) port = scheme;
+        if (!scheme || *scheme == '\0') scheme = proton::url::AMQP.c_str();
+        if (!host || *host == '\0') host = default_host;
+        if (!port || *port == '\0') port = scheme;
     }
 
     operator std::string() const {
-        if ( str.empty() ) {
+        if (str.empty()) {
             if (scheme) {
                 str += scheme;
                 str += "://";
@@ -213,23 +205,23 @@ struct url::impl {
         }
         return str;
     }
-
 };
 
-const char* const url::impl::default_host = "localhost";
+const char *const url::impl::default_host = "localhost";
 
-
-url_error::url_error(const std::string& s) : error(s) {}
+url_error::url_error(const std::string &s) : error(s) {}
 
 url::url(const std::string &s) : impl_(new impl(s)) { impl_->defaults(); }
 
-url::url(const std::string &s, bool d) : impl_(new impl(s)) { if (d) impl_->defaults(); }
+url::url(const std::string &s, bool d) : impl_(new impl(s)) {
+    if (d) impl_->defaults();
+}
 
-url::url(const url& u) : impl_(new impl(u)) {}
+url::url(const url &u) : impl_(new impl(u)) {}
 
 url::~url() {}
 
-url& url::operator=(const url& u) {
+url &url::operator=(const url &u) {
     if (this != &u) {
         impl_.reset(new impl(*u.impl_));
     }
@@ -258,25 +250,22 @@ uint16_t url::port_int() const {
     std::istringstream is(port());
     uint16_t result;
     is >> result;
-    if (is.fail())
-        throw url_error("invalid port '" + port() + "'");
+    if (is.fail()) throw url_error("invalid port '" + port() + "'");
     return result;
 }
 
-std::ostream& operator<<(std::ostream& o, const url& u) {
+std::ostream &operator<<(std::ostream &o, const url &u) {
     return o << std::string(u);
 }
 
-std::string to_string(const url& u) {
-    return u;
-}
+std::string to_string(const url &u) { return u; }
 
-std::istream& operator>>(std::istream& i, url& u) {
+std::istream &operator>>(std::istream &i, url &u) {
     std::string s;
     i >> s;
     if (!i.fail() && !i.bad()) {
         if (!s.empty()) {
-            url::impl* p = new url::impl(s);
+            url::impl *p = new url::impl(s);
             p->defaults();
             u.impl_.reset(p);
         } else {

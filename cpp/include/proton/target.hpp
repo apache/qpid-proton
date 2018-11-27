@@ -54,17 +54,17 @@ class target : public terminus {
     PN_CPP_EXTERN std::string address() const;
 
   private:
-    target(pn_terminus_t* t);
-    target(const sender&);
-    target(const receiver&);
+    target(pn_terminus_t *t);
+    target(const sender &);
+    target(const receiver &);
 
     /// @cond INTERNAL
-  friend class internal::factory<target>;
-  friend class sender;
-  friend class receiver;
+    friend class internal::factory<target>;
+    friend class sender;
+    friend class receiver;
     /// @endcond
 };
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_TARGET_HPP

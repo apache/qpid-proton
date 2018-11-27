@@ -24,8 +24,8 @@
 
 #include "selector.h"
 
-#include <proton/import_export.h>
 #include <proton/error.h>
+#include <proton/import_export.h>
 #include <proton/type_compat.h>
 #include <stddef.h>
 

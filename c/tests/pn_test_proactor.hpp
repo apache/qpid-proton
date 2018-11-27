@@ -36,55 +36,57 @@ std::string listening_port(pn_listener_t *l);
 // For connection and listener events, if pn_*_get_context() is non-NULL
 // then it is cast to a handler and used instead of the global one.
 struct proactor : auto_free<pn_proactor_t, pn_proactor_free> {
-  struct handler *handler;
+    struct handler *handler;
 
-  proactor(struct handler *h = 0);
+    proactor(struct handler *h = 0);
 
-  // Listen on addr using optional listener handler lh
-  pn_listener_t *listen(const std::string &addr = ":0", struct handler *lh = 0);
+    // Listen on addr using optional listener handler lh
+    pn_listener_t *listen(const std::string &addr = ":0",
+                          struct handler *lh = 0);
 
-  // Connect to addr use optional handler, and optionally providing the
-  // connection object.
-  pn_connection_t *connect(const std::string &addr, struct handler *h = 0,
-                           pn_connection_t *c = 0);
+    // Connect to addr use optional handler, and optionally providing the
+    // connection object.
+    pn_connection_t *connect(const std::string &addr, struct handler *h = 0,
+                             pn_connection_t *c = 0);
 
-  // Connect to listenr's address useing optional handler.
-  pn_connection_t *connect(pn_listener_t *l, struct handler *h = 0,
-                           pn_connection_t *c = 0) {
-    return connect(":" + pn_test::listening_port(l), h, c);
-  }
+    // Connect to listenr's address useing optional handler.
+    pn_connection_t *connect(pn_listener_t *l, struct handler *h = 0,
+                             pn_connection_t *c = 0) {
+        return connect(":" + pn_test::listening_port(l), h, c);
+    }
 
-  // Accept a connection, associate with optional connection handler.
-  pn_connection_t *accept(pn_listener_t *l, struct handler *h = 0);
+    // Accept a connection, associate with optional connection handler.
+    pn_connection_t *accept(pn_listener_t *l, struct handler *h = 0);
 
-  // Wait for events and dispatch them until:
-  // * A handler returns true.
-  // * The `stop` event type is handled.
-  // Return the event-type of the last event handled or PN_EVENT_NONE
-  // if something went wrong.
-  pn_event_type_t run(pn_event_type_t stop = PN_EVENT_NONE);
+    // Wait for events and dispatch them until:
+    // * A handler returns true.
+    // * The `stop` event type is handled.
+    // Return the event-type of the last event handled or PN_EVENT_NONE
+    // if something went wrong.
+    pn_event_type_t run(pn_event_type_t stop = PN_EVENT_NONE);
 
-  // Dispatch immediately-available events until:
-  // * A handler returns true.
-  // * The `stop` event type is handled.
-  // * All available events are flushed.
-  //
-  // Return PN_EVENT_NONE if all events were flushed, the event-type of the last
-  // event handled otherwise.
-  pn_event_type_t flush(pn_event_type_t stop = PN_EVENT_NONE);
+    // Dispatch immediately-available events until:
+    // * A handler returns true.
+    // * The `stop` event type is handled.
+    // * All available events are flushed.
+    //
+    // Return PN_EVENT_NONE if all events were flushed, the event-type of the
+    // last event handled otherwise.
+    pn_event_type_t flush(pn_event_type_t stop = PN_EVENT_NONE);
 
-  // Alternate flushing this proactor and `other` until
-  // * A handler on this proactor returns true.
-  // * The `stop` event type is handled by this proactor.
-  // Return the event-type of the last event handled or PN_EVENT_NONE
-  // if something went wrong.
-  pn_event_type_t corun(proactor &other, pn_event_type_t stop = PN_EVENT_NONE);
+    // Alternate flushing this proactor and `other` until
+    // * A handler on this proactor returns true.
+    // * The `stop` event type is handled by this proactor.
+    // Return the event-type of the last event handled or PN_EVENT_NONE
+    // if something went wrong.
+    pn_event_type_t corun(proactor &other,
+                          pn_event_type_t stop = PN_EVENT_NONE);
 
-  // Wait for and handle a single event, return it's type.
-  pn_event_type_t wait_next();
+    // Wait for and handle a single event, return it's type.
+    pn_event_type_t wait_next();
 
-private:
-  bool dispatch(pn_event_t *e);
+  private:
+    bool dispatch(pn_event_t *e);
 };
 
 // CHECK/REQUIRE macros to run a proactor up to an expected event and
@@ -92,28 +94,28 @@ private:
 // returned.
 
 #define CHECK_RUN(P, E)                                                        \
-  CHECKED_IF((E) == (P).run(E)) {}                                             \
-  else if ((P).handler) {                                                      \
-    FAIL_CHECK(*(P).handler->last_condition);                                  \
-  }
+    CHECKED_IF((E) == (P).run(E)) {}                                           \
+    else if ((P).handler) {                                                    \
+        FAIL_CHECK(*(P).handler->last_condition);                              \
+    }
 
 #define REQUIRE_RUN(P, E)                                                      \
-  CHECKED_IF((E) == (P).run(E)) {}                                             \
-  else if ((P).handler) {                                                      \
-    FAIL(*(P).handler->last_condition);                                        \
-  }
+    CHECKED_IF((E) == (P).run(E)) {}                                           \
+    else if ((P).handler) {                                                    \
+        FAIL(*(P).handler->last_condition);                                    \
+    }
 
 #define CHECK_CORUN(P, O, E)                                                   \
-  CHECKED_IF((E) == (P).corun(O, E)) {}                                        \
-  else if ((P).handler) {                                                      \
-    FAIL_CHECK(*(P).handler->last_condition);                                  \
-  }
+    CHECKED_IF((E) == (P).corun(O, E)) {}                                      \
+    else if ((P).handler) {                                                    \
+        FAIL_CHECK(*(P).handler->last_condition);                              \
+    }
 
 #define REQUIRE_CORUN(P, E)                                                    \
-  CHECKED_IF((E) == (P).corun(O, E)) {}                                        \
-  else if ((P).handler_) {                                                     \
-    FAIL(*(P).handler_->last_condition);                                       \
-  }
+    CHECKED_IF((E) == (P).corun(O, E)) {}                                      \
+    else if ((P).handler_) {                                                   \
+        FAIL(*(P).handler_->last_condition);                                   \
+    }
 
 } // namespace pn_test
 

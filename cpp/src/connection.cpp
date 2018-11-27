@@ -38,10 +38,10 @@
 #include "proton_bits.hpp"
 
 #include <proton/connection.h>
-#include <proton/session.h>
-#include <proton/transport.h>
 #include <proton/object.h>
 #include <proton/proactor.h>
+#include <proton/session.h>
+#include <proton/transport.h>
 
 namespace proton {
 
@@ -51,9 +51,7 @@ transport connection::transport() const {
     return make_wrapper(pn_connection_transport(pn_object()));
 }
 
-void connection::open() {
-    open(connection_options());
-}
+void connection::open() { open(connection_options()); }
 
 void connection::open(const connection_options &opts) {
     opts.apply_unbound(*this);
@@ -74,43 +72,40 @@ std::string connection::user() const {
     return str(pn_transport_get_user(pn_connection_transport(pn_object())));
 }
 
-container& connection::container() const {
-    class container* c = connection_context::get(pn_object()).container;
+container &connection::container() const {
+    class container *c = connection_context::get(pn_object()).container;
     if (!c) throw proton::error("No container");
     return *c;
 }
 
-work_queue& connection::work_queue() const {
+work_queue &connection::work_queue() const {
     return connection_context::get(pn_object()).work_queue_;
 }
 
 session_range connection::sessions() const {
-    return session_range(session_iterator(make_wrapper(pn_session_head(pn_object(), 0))));
+    return session_range(
+        session_iterator(make_wrapper(pn_session_head(pn_object(), 0))));
 }
 
 receiver_range connection::receivers() const {
-  pn_link_t *lnk = pn_link_head(pn_object(), 0);
-  while (lnk) {
-    if (pn_link_is_receiver(lnk))
-      break;
-    lnk = pn_link_next(lnk, 0);
-  }
-  return receiver_range(receiver_iterator(make_wrapper<receiver>(lnk)));
+    pn_link_t *lnk = pn_link_head(pn_object(), 0);
+    while (lnk) {
+        if (pn_link_is_receiver(lnk)) break;
+        lnk = pn_link_next(lnk, 0);
+    }
+    return receiver_range(receiver_iterator(make_wrapper<receiver>(lnk)));
 }
 
 sender_range connection::senders() const {
-  pn_link_t *lnk = pn_link_head(pn_object(), 0);
-  while (lnk) {
-    if (pn_link_is_sender(lnk))
-      break;
-    lnk = pn_link_next(lnk, 0);
-  }
-  return sender_range(sender_iterator(make_wrapper<sender>(lnk)));
+    pn_link_t *lnk = pn_link_head(pn_object(), 0);
+    while (lnk) {
+        if (pn_link_is_sender(lnk)) break;
+        lnk = pn_link_next(lnk, 0);
+    }
+    return sender_range(sender_iterator(make_wrapper<sender>(lnk)));
 }
 
-session connection::open_session() {
-    return open_session(session_options());
-}
+session connection::open_session() { return open_session(session_options()); }
 
 session connection::open_session(const session_options &opts) {
     session s(make_wrapper<session>(pn_session(pn_object())));
@@ -120,11 +115,11 @@ session connection::open_session(const session_options &opts) {
 }
 
 session connection::default_session() {
-    connection_context& ctx = connection_context::get(pn_object());
+    connection_context &ctx = connection_context::get(pn_object());
     if (!ctx.default_session) {
         // Note we can't use a proton::session here because we don't want to own
-        // a session reference. The connection owns the session, owning it here as well
-        // would create a circular ownership.
+        // a session reference. The connection owns the session, owning it here
+        // as well would create a circular ownership.
         ctx.default_session = pn_session(pn_object());
         pn_session_open(ctx.default_session);
     }
@@ -135,7 +130,8 @@ sender connection::open_sender(const std::string &addr) {
     return open_sender(addr, sender_options());
 }
 
-sender connection::open_sender(const std::string &addr, const class sender_options &opts) {
+sender connection::open_sender(const std::string &addr,
+                               const class sender_options &opts) {
     return default_session().open_sender(addr, opts);
 }
 
@@ -143,23 +139,21 @@ receiver connection::open_receiver(const std::string &addr) {
     return open_receiver(addr, receiver_options());
 }
 
-receiver connection::open_receiver(const std::string &addr, const class receiver_options &opts)
-{
+receiver connection::open_receiver(const std::string &addr,
+                                   const class receiver_options &opts) {
     return default_session().open_receiver(addr, opts);
 }
 
 class sender_options connection::sender_options() const {
-    connection_context& ctx = connection_context::get(pn_object());
-    return ctx.container ?
-        ctx.container->sender_options() :
-        proton::sender_options();
+    connection_context &ctx = connection_context::get(pn_object());
+    return ctx.container ? ctx.container->sender_options()
+                         : proton::sender_options();
 }
 
 class receiver_options connection::receiver_options() const {
-    connection_context& ctx = connection_context::get(pn_object());
-    return ctx.container ?
-        ctx.container->receiver_options() :
-        proton::receiver_options();
+    connection_context &ctx = connection_context::get(pn_object());
+    return ctx.container ? ctx.container->receiver_options()
+                         : proton::receiver_options();
 }
 
 error_condition connection::error() const {
@@ -167,34 +161,35 @@ error_condition connection::error() const {
 }
 
 uint32_t connection::max_frame_size() const {
-    return pn_transport_get_remote_max_frame(pn_connection_transport(pn_object()));
+    return pn_transport_get_remote_max_frame(
+        pn_connection_transport(pn_object()));
 }
 
 uint16_t connection::max_sessions() const {
-    return pn_transport_remote_channel_max(pn_connection_transport(pn_object()));
+    return pn_transport_remote_channel_max(
+        pn_connection_transport(pn_object()));
 }
 
 uint32_t connection::idle_timeout() const {
-    return pn_transport_get_remote_idle_timeout(pn_connection_transport(pn_object()));
+    return pn_transport_get_remote_idle_timeout(
+        pn_connection_transport(pn_object()));
 }
 
-void connection::wake() const {
-    pn_connection_wake(pn_object());
-}
+void connection::wake() const { pn_connection_wake(pn_object()); }
 
 std::vector<symbol> connection::offered_capabilities() const {
     value caps(pn_connection_remote_offered_capabilities(pn_object()));
-    return get_multiple<std::vector<symbol> >(caps);
+    return get_multiple<std::vector<symbol>>(caps);
 }
 
 std::vector<symbol> connection::desired_capabilities() const {
     value caps(pn_connection_remote_desired_capabilities(pn_object()));
-    return get_multiple<std::vector<symbol> >(caps);
+    return get_multiple<std::vector<symbol>>(caps);
 }
 
 bool connection::reconnected() const {
-    connection_context& cc = connection_context::get(pn_object());
-    reconnect_context* rc = cc.reconnect_context_.get();
+    connection_context &cc = connection_context::get(pn_object());
+    reconnect_context *rc = cc.reconnect_context_.get();
     return (rc && rc->reconnected_);
 }
 

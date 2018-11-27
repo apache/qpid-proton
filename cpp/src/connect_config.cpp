@@ -1,5 +1,5 @@
 /*
-* Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -25,8 +25,8 @@
 
 #include <proton/version.h>
 
-#include <json/value.h>
 #include <json/reader.h>
+#include <json/value.h>
 #include <json/writer.h>
 
 #include <cstdlib>
@@ -39,48 +39,59 @@ using std::string;
 namespace {
 const char *type_name(ValueType t) {
     switch (t) {
-      case nullValue: return "null";
-      case intValue: return "int";
-      case uintValue: return "uint";
-      case realValue: return "real";
-      case stringValue: return "string";
-      case booleanValue: return "boolean";
-      case arrayValue: return "array";
-      case objectValue: return "object";
-      default: return "unknown";
+    case nullValue:
+        return "null";
+    case intValue:
+        return "int";
+    case uintValue:
+        return "uint";
+    case realValue:
+        return "real";
+    case stringValue:
+        return "string";
+    case booleanValue:
+        return "boolean";
+    case arrayValue:
+        return "array";
+    case objectValue:
+        return "object";
+    default:
+        return "unknown";
     }
 }
 } // namespace
 
 namespace std {
-ostream& operator<<(ostream& o, ValueType t) { return o << type_name(t); }
-}
+ostream &operator<<(ostream &o, ValueType t) { return o << type_name(t); }
+} // namespace std
 
 namespace proton {
 namespace connect_config {
 
 namespace {
 
-proton::error err(const string& message) {
+proton::error err(const string &message) {
     return proton::error("connection configuration: " + message);
 }
 
-Value validate(ValueType t, const Value& v, const string& name) {
+Value validate(ValueType t, const Value &v, const string &name) {
     if (v.type() != t)
-        throw err(msg() << " '" << name << "' expected " << t << ", found " << v.type());
+        throw err(msg() << " '" << name << "' expected " << t << ", found "
+                        << v.type());
     return v;
 }
 
-Value get(ValueType t, const Value& obj, const char *key, const Value& dflt=Value()) {
+Value get(ValueType t, const Value &obj, const char *key,
+          const Value &dflt = Value()) {
     Value v = obj.get(key, dflt);
     return v.isNull() ? dflt : validate(t, v, key);
 }
 
-bool get_bool(const Value& obj, const char *key, bool dflt) {
+bool get_bool(const Value &obj, const char *key, bool dflt) {
     return get(booleanValue, obj, key, dflt).asBool();
 }
 
-string get_string(const Value& obj, const char *key, const string& dflt) {
+string get_string(const Value &obj, const char *key, const string &dflt) {
     return get(stringValue, obj, key, dflt).asString();
 }
 
@@ -90,61 +101,65 @@ static const string FILE_NAME("connect.json");
 static const string HOME_FILE_NAME("/.config/messaging/" + FILE_NAME);
 static const string ETC_FILE_NAME("/etc/messaging/" + FILE_NAME);
 
-bool exists(const string& name) { return std::ifstream(name.c_str()).good(); }
+bool exists(const string &name) { return std::ifstream(name.c_str()).good(); }
 
-void parse_sasl(Value root, connection_options& opts) {
+void parse_sasl(Value root, connection_options &opts) {
     Value sasl = get(objectValue, root, "sasl");
     opts.sasl_enabled(get_bool(sasl, "enable", true));
     opts.sasl_allow_insecure_mechs(get_bool(sasl, "allow_insecure", false));
     if (!sasl.isNull()) {
         Value mechs = sasl.get("mechanisms", Value());
         switch (mechs.type()) {
-          case nullValue:
+        case nullValue:
             break;
-          case stringValue:
+        case stringValue:
             opts.sasl_allowed_mechs(mechs.asString());
             break;
-          case arrayValue: {
-              std::ostringstream s;
-              for (ArrayIndex i= 0; i < mechs.size(); ++i) {
-                  Value v = mechs.get(i, Value());
-                  validate(stringValue, v, "sasl/mechanisms");
-                  if (i > 0) s << " ";
-                  s << v.asString();
-              }
-              opts.sasl_allowed_mechs(s.str().c_str());
-              break;
-          }
-          default:
-            throw err(msg() << "'mechanisms' expected string or array, found " << mechs.type());
+        case arrayValue: {
+            std::ostringstream s;
+            for (ArrayIndex i = 0; i < mechs.size(); ++i) {
+                Value v = mechs.get(i, Value());
+                validate(stringValue, v, "sasl/mechanisms");
+                if (i > 0) s << " ";
+                s << v.asString();
+            }
+            opts.sasl_allowed_mechs(s.str().c_str());
+            break;
+        }
+        default:
+            throw err(msg() << "'mechanisms' expected string or array, found "
+                            << mechs.type());
         }
     }
 }
 
-void parse_tls(const string& scheme, Value root, connection_options& opts) {
+void parse_tls(const string &scheme, Value root, connection_options &opts) {
     Value tls = get(objectValue, root, "tls");
     if (scheme == "amqps") { // TLS is enabled
         bool verify = get_bool(tls, "verify", true);
-        ssl::verify_mode mode = verify ? ssl::VERIFY_PEER_NAME : ssl::ANONYMOUS_PEER;
+        ssl::verify_mode mode =
+            verify ? ssl::VERIFY_PEER_NAME : ssl::ANONYMOUS_PEER;
         string ca = get_string(tls, "ca", "");
         string cert = get_string(tls, "cert", "");
         string key = get_string(tls, "key", "");
         ssl_client_options ssl_opts;
         if (!cert.empty()) {
-            ssl_certificate sc = key.empty() ? ssl_certificate(cert) : ssl_certificate(cert, key);
+            ssl_certificate sc = key.empty() ? ssl_certificate(cert)
+                                             : ssl_certificate(cert, key);
             ssl_opts = ssl_client_options(sc, ca, mode);
         } else if (!ca.empty()) {
             ssl_opts = ssl_client_options(ca, mode);
         }
         opts.ssl_client_options(ssl_opts);
     } else if (!tls.isNull()) {
-        throw err(msg() << "'tls' object not allowed unless scheme is \"amqps\"");
+        throw err(
+            msg() << "'tls' object not allowed unless scheme is \"amqps\"");
     }
 }
 
 } // namespace
 
-std::string parse(std::istream& is, connection_options& opts) {
+std::string parse(std::istream &is, connection_options &opts) {
     try {
         std::ostringstream addr;
 
@@ -163,13 +178,16 @@ std::string parse(std::istream& is, connection_options& opts) {
 
         Value port = root.get("port", scheme);
         switch (port.type()) {
-          case stringValue:
-            addr << port.asString(); break;
-          case intValue:
-          case uintValue:
-            addr << port.asUInt(); break;
-          default:
-            throw err(msg() << "'port' expected string or uint, found " << port.type());
+        case stringValue:
+            addr << port.asString();
+            break;
+        case intValue:
+        case uintValue:
+            addr << port.asUInt();
+            break;
+        default:
+            throw err(msg() << "'port' expected string or uint, found "
+                            << port.type());
         }
 
         Value user = get(stringValue, root, "user");
@@ -181,7 +199,7 @@ std::string parse(std::istream& is, connection_options& opts) {
         parse_tls(scheme, root, opts);
 
         return addr.str();
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         throw err(e.what());
     } catch (...) {
         throw err("unknown error");
@@ -210,24 +228,25 @@ string default_file() {
     throw err("no default configuration");
 }
 
-string parse_default(connection_options& opts) {
+string parse_default(connection_options &opts) {
     string name = default_file();
     std::ifstream f;
     try {
-        f.exceptions(std::ifstream::badbit|std::ifstream::failbit);
+        f.exceptions(std::ifstream::badbit | std::ifstream::failbit);
         f.open(name.c_str());
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         throw err(msg() << "error opening '" << name << "': " << e.what());
     }
     try {
         return parse(f, opts);
-    } catch (const std::ifstream::failure& e) {
+    } catch (const std::ifstream::failure &e) {
         throw err(msg() << "io error parsing '" << name << "': " << e.what());
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         throw err(msg() << "error parsing '" << name << "': " << e.what());
     } catch (...) {
         throw err(msg() << "error parsing '" << name << "'");
     }
 }
 
-}} // namespace proton::connect_config
+} // namespace connect_config
+} // namespace proton

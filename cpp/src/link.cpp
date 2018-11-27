@@ -21,13 +21,13 @@
 
 #include "proton_bits.hpp"
 
-#include "proton/link.hpp"
-#include "proton/error.hpp"
 #include "proton/connection.hpp"
+#include "proton/error.hpp"
+#include "proton/link.hpp"
 
 #include <proton/connection.h>
-#include <proton/session.h>
 #include <proton/link.h>
+#include <proton/session.h>
 
 #include "contexts.hpp"
 #include "msg.hpp"
@@ -35,44 +35,33 @@
 
 namespace proton {
 
-void link::attach() {
-    pn_link_open(pn_object());
-}
+void link::attach() { pn_link_open(pn_object()); }
 
-void link::close() {
-    pn_link_close(pn_object());
-}
+void link::close() { pn_link_close(pn_object()); }
 
-void link::detach() {
-    pn_link_detach(pn_object());
-}
+void link::detach() { pn_link_detach(pn_object()); }
 
 int link::credit() const {
     pn_link_t *lnk = pn_object();
-    if (pn_link_is_sender(lnk))
-        return pn_link_credit(lnk);
-    link_context& lctx = link_context::get(lnk);
+    if (pn_link_is_sender(lnk)) return pn_link_credit(lnk);
+    link_context &lctx = link_context::get(lnk);
     return pn_link_credit(lnk) + lctx.pending_credit;
 }
 
 bool link::draining() {
     pn_link_t *lnk = pn_object();
-    link_context& lctx = link_context::get(lnk);
+    link_context &lctx = link_context::get(lnk);
     if (pn_link_is_sender(lnk))
         return pn_link_credit(lnk) > 0 && lctx.draining;
     else
         return lctx.draining;
 }
 
-std::string link::name() const { return str(pn_link_name(pn_object()));}
+std::string link::name() const { return str(pn_link_name(pn_object())); }
 
-container& link::container() const {
-    return connection().container();
-}
+container &link::container() const { return connection().container(); }
 
-work_queue& link::work_queue() const {
-    return connection().work_queue();
-}
+work_queue &link::work_queue() const { return connection().work_queue(); }
 
 class connection link::connection() const {
     return make_wrapper(pn_session_connection(pn_link_session(pn_object())));
@@ -85,4 +74,4 @@ class session link::session() const {
 error_condition link::error() const {
     return make_wrapper(pn_link_remote_condition(pn_object()));
 }
-}
+} // namespace proton

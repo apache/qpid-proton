@@ -28,9 +28,9 @@
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
-#include <proton/value.hpp>
 #include <proton/tracker.hpp>
 #include <proton/types.hpp>
+#include <proton/value.hpp>
 
 #include <iostream>
 #include <map>
@@ -40,7 +40,7 @@
 class simple_send : public proton::messaging_handler {
   private:
     class listener_ready_handler : public proton::listen_handler {
-        void on_open(proton::listener& l) OVERRIDE {
+        void on_open(proton::listener &l) OVERRIDE {
             std::cout << "listening on " << l.port() << std::endl;
         }
     };
@@ -53,7 +53,8 @@ class simple_send : public proton::messaging_handler {
     int total;
 
   public:
-    simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
+    simple_send(const std::string &s, int c)
+        : url(s), sent(0), confirmed(0), total(c) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         listener = c.listen(url, listen_handler);
@@ -83,9 +84,7 @@ class simple_send : public proton::messaging_handler {
         }
     }
 
-    void on_transport_close(proton::transport &) OVERRIDE {
-        sent = confirmed;
-    }
+    void on_transport_close(proton::transport &) OVERRIDE { sent = confirmed; }
 };
 
 int main(int argc, char **argv) {
@@ -94,7 +93,8 @@ int main(int argc, char **argv) {
     example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "listen and send on URL", "URL");
-    opts.add_value(message_count, 'm', "messages", "send COUNT messages", "COUNT");
+    opts.add_value(message_count, 'm', "messages", "send COUNT messages",
+                   "COUNT");
 
     try {
         opts.parse();
@@ -102,9 +102,9 @@ int main(int argc, char **argv) {
         simple_send send(address, message_count);
         proton::container(send).run();
         return 0;
-    } catch (const example::bad_option& e) {
+    } catch (const example::bad_option &e) {
         std::cout << opts << std::endl << e.what() << std::endl;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

@@ -22,54 +22,52 @@
  *
  */
 
-#include <proton/codec.h>
 #include "buffer.h"
 #include "decoder.h"
 #include "encoder.h"
+#include <proton/codec.h>
 
 typedef uint16_t pni_nid_t;
 #define PNI_NID_MAX ((pni_nid_t)-1)
 
 typedef struct {
-  char *start;
-  size_t data_offset;
-  size_t data_size;
-  pn_atom_t atom;
-  pn_type_t type;
-  pni_nid_t next;
-  pni_nid_t prev;
-  pni_nid_t down;
-  pni_nid_t parent;
-  pni_nid_t children;
-  // for arrays
-  bool described;
-  bool data;
-  bool small;
+    char *start;
+    size_t data_offset;
+    size_t data_size;
+    pn_atom_t atom;
+    pn_type_t type;
+    pni_nid_t next;
+    pni_nid_t prev;
+    pni_nid_t down;
+    pni_nid_t parent;
+    pni_nid_t children;
+    // for arrays
+    bool described;
+    bool data;
+    bool small;
 } pni_node_t;
 
 struct pn_data_t {
-  pni_node_t *nodes;
-  pn_buffer_t *buf;
-  pn_decoder_t *decoder;
-  pn_encoder_t *encoder;
-  pn_error_t *error;
-  pn_string_t *str;
-  pni_nid_t capacity;
-  pni_nid_t size;
-  pni_nid_t parent;
-  pni_nid_t current;
-  pni_nid_t base_parent;
-  pni_nid_t base_current;
+    pni_node_t *nodes;
+    pn_buffer_t *buf;
+    pn_decoder_t *decoder;
+    pn_encoder_t *encoder;
+    pn_error_t *error;
+    pn_string_t *str;
+    pni_nid_t capacity;
+    pni_nid_t size;
+    pni_nid_t parent;
+    pni_nid_t current;
+    pni_nid_t base_parent;
+    pni_nid_t base_current;
 };
 
-static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd) 
-{
-  return nd ? (data->nodes + nd - 1) : NULL;
+static inline pni_node_t *pn_data_node(pn_data_t *data, pni_nid_t nd) {
+    return nd ? (data->nodes + nd - 1) : NULL;
 }
 
-int pni_data_traverse(pn_data_t *data,
-                      int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
-                      int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
-                      void *ctx);
+int pni_data_traverse(
+    pn_data_t *data, int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
+    int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node), void *ctx);
 
 #endif /* data.h */

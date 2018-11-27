@@ -46,8 +46,9 @@ class simple_send : public proton::messaging_handler {
     int total;
 
   public:
-    simple_send(const std::string &s, const std::string &u, const std::string &p, int c) :
-        url(s), user(u), password(p), sent(0), confirmed(0), total(c) {}
+    simple_send(const std::string &s, const std::string &u,
+                const std::string &p, int c)
+        : url(s), user(u), password(p), sent(0), confirmed(0), total(c) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         proton::connection_options co;
@@ -56,9 +57,9 @@ class simple_send : public proton::messaging_handler {
         sender = c.open_sender(url, co);
     }
 
-    void on_connection_open(proton::connection& c) OVERRIDE {
+    void on_connection_open(proton::connection &c) OVERRIDE {
         if (c.reconnected()) {
-            sent = confirmed;   // Re-send unconfirmed messages after a reconnect
+            sent = confirmed; // Re-send unconfirmed messages after a reconnect
         }
     }
 
@@ -85,9 +86,7 @@ class simple_send : public proton::messaging_handler {
         }
     }
 
-    void on_transport_close(proton::transport &) OVERRIDE {
-        sent = confirmed;
-    }
+    void on_transport_close(proton::transport &) OVERRIDE { sent = confirmed; }
 };
 
 int main(int argc, char **argv) {
@@ -98,9 +97,11 @@ int main(int argc, char **argv) {
     example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
-    opts.add_value(message_count, 'm', "messages", "send COUNT messages", "COUNT");
+    opts.add_value(message_count, 'm', "messages", "send COUNT messages",
+                   "COUNT");
     opts.add_value(user, 'u', "user", "authenticate as USER", "USER");
-    opts.add_value(password, 'p', "password", "authenticate with PASSWORD", "PASSWORD");
+    opts.add_value(password, 'p', "password", "authenticate with PASSWORD",
+                   "PASSWORD");
 
     try {
         opts.parse();
@@ -109,9 +110,9 @@ int main(int argc, char **argv) {
         proton::container(send).run();
 
         return 0;
-    } catch (const example::bad_option& e) {
+    } catch (const example::bad_option &e) {
         std::cout << opts << std::endl << e.what() << std::endl;
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
 

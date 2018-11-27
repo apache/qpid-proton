@@ -40,10 +40,13 @@ class scalar : public scalar_base {
     PN_CPP_EXTERN scalar() {}
 
     /// Construct from any scalar type.
-    template <class T> scalar(const T& x) { *this = x; }
+    template <class T> scalar(const T &x) { *this = x; }
 
     /// Assign from any scalar type.
-    template <class T> scalar& operator=(const T& x) { put(x); return *this; }
+    template <class T> scalar &operator=(const T &x) {
+        put(x);
+        return *this;
+    }
 
     /// Clear the scalar, making it empty().
     void clear() { *this = null(); }
@@ -57,7 +60,7 @@ class scalar : public scalar_base {
 ///
 /// @throw conversion_error if contained value is not of type T.
 /// @relatedalso scalar
-template<class T> T get(const scalar& s) { return internal::get<T>(s); }
+template <class T> T get(const scalar &s) { return internal::get<T>(s); }
 
 /// Coerce the contained value to type T. For example:
 ///
@@ -69,8 +72,7 @@ template<class T> T get(const scalar& s) { return internal::get<T>(s); }
 /// @throw conversion_error if the value cannot be converted to T
 /// according to `std::is_convertible`
 /// @relatedalso scalar
-template<class T> T coerce(const scalar& x) { return internal::coerce<T>(x); }
-
+template <class T> T coerce(const scalar &x) { return internal::coerce<T>(x); }
 
 /// Coerce the contained value to type T. For example:
 ///
@@ -82,8 +84,8 @@ template<class T> T coerce(const scalar& x) { return internal::coerce<T>(x); }
 /// @throw conversion_error if the value cannot be converted to T
 /// according to `std::is_convertible`
 /// @relatedalso scalar
-template<class T> T coerce(scalar& x) { return internal::coerce<T>(x); }
+template <class T> T coerce(scalar &x) { return internal::coerce<T>(x); }
 
-} // proton
+} // namespace proton
 
 #endif // PROTON_SCALAR_HPP
