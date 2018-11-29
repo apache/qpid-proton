@@ -49,6 +49,7 @@ set(JsonCpp_VERSION ${PC_JsonCpp_VERSION})
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(JsonCpp
+  FOUND_VAR JsonCpp_FOUND
   REQUIRED_VARS JsonCpp_LIBRARY JsonCpp_INCLUDE_DIR
   VERSION_VAR JsonCpp_VERSION)
 

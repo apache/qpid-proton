@@ -49,6 +49,7 @@ set(Libuv_VERSION ${PC_Libuv_VERSION})
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Libuv
+  FOUND_VAR Libuv_FOUND
   REQUIRED_VARS Libuv_LIBRARY Libuv_INCLUDE_DIR
   VERSION_VAR Libuv_VERSION)
 

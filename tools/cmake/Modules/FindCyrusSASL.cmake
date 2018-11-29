@@ -47,6 +47,7 @@ set (CyrusSASL_VERSION ${PC_CyrusSASL_VERSION})
 
 include (FindPackageHandleStandardArgs)
 find_package_handle_standard_args (CyrusSASL
+  FOUND_VAR CyrusSASL_FOUND
   REQUIRED_VARS CyrusSASL_LIBRARY CyrusSASL_INCLUDE_DIR
   VERSION_VAR CyrusSASL_VERSION
 )
