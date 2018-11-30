@@ -56,8 +56,6 @@ void messaging_handler::on_connection_open(connection &c) {
         pn_connection_open(unwrap(c));
     }
 }
-void messaging_handler::on_connection_reconnecting(connection &) {}
-void messaging_handler::on_connection_start(connection &) {}
 void messaging_handler::on_connection_wake(connection&) {}
 
 void messaging_handler::on_session_close(session &) {}

@@ -670,8 +670,20 @@ container::impl::dispatch_result container::impl::dispatch(pn_event_t* event) {
         if (pn_condition_is_set(pn_transport_condition(t)) && can_reconnect(c)) {
             messaging_handler *mh = get_handler(event);
             if (mh) {           // Notify handler of pending reconnect
-                connection conn = make_wrapper(c);
-                mh->on_connection_reconnecting(conn);
+                transport trans = make_wrapper(t);
+                try {
+                    mh->on_transport_error(trans);
+                } catch (const proton::error& e) {
+                    // If this is the same error we are re-connecting for,
+                    // ignore it.  It was probably thrown by the default
+                    // messaging_handler::on_error(), and if not the user has
+                    // already seen it.
+                    //
+                    // If this isn't the same error, then something unexpected
+                    // has happened, so re-throw.
+                    if (std::string(e.what()) != trans.error().what())
+                        throw;
+                }
             }
             // on_connection_reconnecting() may have closed the connection, check again.
             if (!(pn_connection_state(c) & PN_LOCAL_CLOSED)) {
