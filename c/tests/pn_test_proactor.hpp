@@ -69,15 +69,19 @@ struct proactor : auto_free<pn_proactor_t, pn_proactor_free> {
   // * The `stop` event type is handled.
   // * All available events are flushed.
   //
-  // Return PN_EVENT_NONE if all events were flushed, the event-type of the last
-  // event handled otherwise.
-  pn_event_type_t flush(pn_event_type_t stop = PN_EVENT_NONE);
+  // Returns the number of events processed and
+  // - PN_EVENT_NONE if all events were handled without stopping
+  // - The type of the last event handled otherwise
+  //
+  std::pair<int, pn_event_type_t> flush(pn_event_type_t stop = PN_EVENT_NONE);
 
   // Alternate flushing this proactor and `other` until
   // * A handler on this proactor returns true.
   // * The `stop` event type is handled by this proactor.
+  // * Both proactors become idle.
+  //
   // Return the event-type of the last event handled or PN_EVENT_NONE
-  // if something went wrong.
+  // if the proactors are idle.
   pn_event_type_t corun(proactor &other, pn_event_type_t stop = PN_EVENT_NONE);
 
   // Wait for and handle a single event, return it's type.

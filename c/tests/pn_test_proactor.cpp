@@ -92,30 +92,36 @@ pn_event_type_t proactor::run(pn_event_type_t stop) {
   }
 }
 
-pn_event_type_t proactor::flush(pn_event_type_t stop) {
+std::pair<int, pn_event_type_t> proactor::flush(pn_event_type_t stop) {
   auto_batch b(*this, pn_proactor_get(*this));
+  int n = 0;
   if (b.get()) {
     pn_event_t *e;
     while ((e = b.next())) {
       pn_event_type_t et = pn_event_type(e);
-      if (dispatch(e) || et == stop) return et;
+      if (dispatch(e) || et == stop) return std::make_pair(n, et);
     }
   }
-  return PN_EVENT_NONE;
+  return std::make_pair(n, PN_EVENT_NONE);
 }
 
 pn_event_type_t proactor::corun(proactor &other, pn_event_type_t stop) {
-  // We can't wait() on either proactor as it might be idle until
+  // We can't wait() on either proactor as it might be idle.
+  // We can't give up immediately if both proactors are idle
   // something happens on the other, so spin between the two for a limited
   // number of attempts that should be large enough if the test is going to
-  // past.
+  // pass.
   int spin_limit = 1000;
-  while (spin_limit > 0) {
-    pn_event_type_t et = flush(stop);
-    if (et) return et;
-    other.flush();
-    --spin_limit;
-  }
+  do {
+    std::pair<int, pn_event_type_t> n_et = flush(stop);
+    if (n_et.second) return n_et.second;
+    if (n_et.first + other.flush().first == 0) {
+      // Both idle, sleep and retry in case network traffic is in flight.
+      millisleep(1);
+      --spin_limit;
+    }
+  } while (spin_limit);
+
   return PN_EVENT_NONE;
 }
 

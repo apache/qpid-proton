@@ -166,7 +166,7 @@ TEST_CASE("proactor_connection_wake") {
   common_handler h;
   proactor p(&h);
   close_on_wake_handler wh;
-  pn_listener_t *l = p.listen(":0");
+  pn_listener_t *l = p.listen();
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   pn_connection_t *c = p.connect(l, &wh);
   pn_incref(c); /* Keep a reference for wake() after free */
@@ -330,7 +330,7 @@ TEST_CASE("proactor_errors") {
   REQUIRE_RUN(p, PN_PROACTOR_INACTIVE);
 
   /* Listen on a port already in use */
-  l = p.listen(":0");
+  l = p.listen();
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   std::string laddr = ":" + listening_port(l);
   p.listen(laddr);
@@ -388,10 +388,10 @@ TEST_CASE("proactor_ipv4_ipv6") {
   proactor p(&h);
 
   /* Listen on all interfaces for IPv4 only. */
-  pn_listener_t *l4 = p.listen("0.0.0.0");
+  pn_listener_t *l4 = p.listen("0.0.0.0:0");
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   /* Empty address listens on both IPv4 and IPv6 on all interfaces */
-  pn_listener_t *l = p.listen(":0");
+  pn_listener_t *l = p.listen();
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
 
 #define EXPECT_CONNECT(LISTENER, HOST)                                         \
@@ -435,7 +435,7 @@ TEST_CASE("proactor_release_free") {
   common_handler h;
   proactor p(&h);
 
-  pn_listener_t *l = p.listen(":0");
+  pn_listener_t *l = p.listen();
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   /* leave one connection to the proactor  */
   pn_connection_t *c = p.connect(l);
@@ -592,7 +592,7 @@ TEST_CASE("proactor_netaddr") {
   common_handler h;
   proactor p(&h);
   /* Use IPv4 to get consistent results all platforms */
-  pn_listener_t *l = p.listen("127.0.0.1");
+  pn_listener_t *l = p.listen("127.0.0.1:0");
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   pn_connection_t *c = p.connect(l);
   REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
@@ -674,9 +674,9 @@ TEST_CASE("proactor_disconnect") {
   proactor client(&ch), server(&sh);
 
   // Start two listeners on the server
-  pn_listener_t *l = server.listen(":0");
+  pn_listener_t *l = server.listen();
   REQUIRE_RUN(server, PN_LISTENER_OPEN);
-  pn_listener_t *l2 = server.listen(":0");
+  pn_listener_t *l2 = server.listen();
   REQUIRE_RUN(server, PN_LISTENER_OPEN);
 
   // Two connections from client
@@ -714,7 +714,7 @@ TEST_CASE("proactor_disconnect") {
   REQUIRE_RUN(server, PN_PROACTOR_INACTIVE);
 
   /* Make sure the proactors are still functional */
-  pn_listener_t *l3 = server.listen(":0");
+  pn_listener_t *l3 = server.listen();
   REQUIRE_RUN(server, PN_LISTENER_OPEN);
   client.connect(l3);
   CHECK_CORUN(client, server, PN_CONNECTION_REMOTE_OPEN);
@@ -800,7 +800,7 @@ TEST_CASE("proactor_message_stream") {
   message_stream_handler h;
   proactor p(&h);
 
-  pn_listener_t *l = p.listen(":0");
+  pn_listener_t *l = p.listen();
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
 
   /* Encode a large (not very) message to send in chunks */
