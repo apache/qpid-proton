@@ -1631,6 +1631,69 @@ static inline bool sequence_lte(pn_sequence_t a, pn_sequence_t b) {
   return b-a <= INT32_MAX;
 }
 
+static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t *delivery, bool settled, bool remote_data, bool type_init, uint64_t type) {
+  pn_disposition_t *remote = &delivery->remote;
+
+  if (type_init) remote->type = type;
+
+  if (remote_data) {
+    switch (type) {
+    case PN_RECEIVED:
+      pn_data_rewind(transport->disp_data);
+      pn_data_next(transport->disp_data);
+      pn_data_enter(transport->disp_data);
+
+      if (pn_data_next(transport->disp_data)) {
+        remote->section_number = pn_data_get_uint(transport->disp_data);
+      }
+      if (pn_data_next(transport->disp_data)) {
+        remote->section_offset = pn_data_get_ulong(transport->disp_data);
+      }
+      break;
+
+    case PN_ACCEPTED:
+      break;
+
+    case PN_REJECTED: {
+      int err = pn_scan_error(transport->disp_data, &remote->condition, SCAN_ERROR_DISP);
+
+      if (err) return err;
+      break;
+    }
+    case PN_RELEASED:
+      break;
+
+    case PN_MODIFIED:
+      pn_data_rewind(transport->disp_data);
+      pn_data_next(transport->disp_data);
+      pn_data_enter(transport->disp_data);
+
+      if (pn_data_next(transport->disp_data)) {
+        remote->failed = pn_data_get_bool(transport->disp_data);
+      }
+      if (pn_data_next(transport->disp_data)) {
+        remote->undeliverable = pn_data_get_bool(transport->disp_data);
+      }
+      pn_data_narrow(transport->disp_data);
+      pn_data_clear(remote->data);
+      pn_data_appendn(remote->annotations, transport->disp_data, 1);
+      pn_data_widen(transport->disp_data);
+      break;
+
+    default:
+      pn_data_copy(remote->data, transport->disp_data);
+      break;
+    }
+  }
+
+  remote->settled = settled;
+  delivery->updated = true;
+  pn_work_update(transport->connection, delivery);
+
+  pn_collector_put(transport->connection->collector, PN_OBJECT, delivery, PN_DELIVERY);
+  return 0;
+}
+
 int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   bool role;
@@ -1649,6 +1712,10 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
     return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
   }
 
+  if (!sequence_lte(first, last)) {
+    return pn_do_error(transport, "amqp:not allowed", "illegal delivery range: %x-%x", first, last);
+  }
+
   pn_delivery_map_t *deliveries;
   if (role) {
     deliveries = &ssn->state.outgoing;
@@ -1664,54 +1731,26 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
   // TODO: We should really also clamp the first value here, but we're not keeping track of the earliest
   // unsettled delivery sequence no
   last = sequence_lte(last, deliveries->next) ? last : deliveries->next;
-  first = sequence_lte(first, last) ? first : last;
-  for (pn_sequence_t id = first; sequence_lte(id, last); ++id) {
-    pn_delivery_t *delivery = pni_delivery_map_get(deliveries, id);
-    if (delivery) {
-      pn_disposition_t *remote = &delivery->remote;
-      if (type_init) remote->type = type;
-      if (remote_data) {
-        switch (type) {
-        case PN_RECEIVED:
-          pn_data_rewind(transport->disp_data);
-          pn_data_next(transport->disp_data);
-          pn_data_enter(transport->disp_data);
-          if (pn_data_next(transport->disp_data))
-            remote->section_number = pn_data_get_uint(transport->disp_data);
-          if (pn_data_next(transport->disp_data))
-            remote->section_offset = pn_data_get_ulong(transport->disp_data);
-          break;
-        case PN_ACCEPTED:
-          break;
-        case PN_REJECTED:
-          err = pn_scan_error(transport->disp_data, &remote->condition, SCAN_ERROR_DISP);
-          if (err) return err;
-          break;
-        case PN_RELEASED:
-          break;
-        case PN_MODIFIED:
-          pn_data_rewind(transport->disp_data);
-          pn_data_next(transport->disp_data);
-          pn_data_enter(transport->disp_data);
-          if (pn_data_next(transport->disp_data))
-            remote->failed = pn_data_get_bool(transport->disp_data);
-          if (pn_data_next(transport->disp_data))
-            remote->undeliverable = pn_data_get_bool(transport->disp_data);
-          pn_data_narrow(transport->disp_data);
-          pn_data_clear(remote->data);
-          pn_data_appendn(remote->annotations, transport->disp_data, 1);
-          pn_data_widen(transport->disp_data);
-          break;
-        default:
-          pn_data_copy(remote->data, transport->disp_data);
-          break;
-        }
-      }
-      remote->settled = settled;
-      delivery->updated = true;
-      pn_work_update(transport->connection, delivery);
 
-      pn_collector_put(transport->connection->collector, PN_OBJECT, delivery, PN_DELIVERY);
+  // If there are fewer deliveries in the session than the range then look at every delivery in the session
+  // otherwise look at every delivery_id in the disposition performative
+  pn_hash_t *dh = deliveries->deliveries;
+  if (last-first+1 >= pn_hash_size(dh)) {
+    for (pn_handle_t entry = pn_hash_head(dh); entry!=0 ; entry = pn_hash_next(dh, entry)) {
+      pn_sequence_t key = pn_hash_key(dh, entry);
+      if (sequence_lte(first, key) && sequence_lte(key, last)) {
+        pn_delivery_t *delivery = (pn_delivery_t*) pn_hash_value(dh, entry);
+        err = pni_do_delivery_disposition(transport, delivery, settled, remote_data, type_init, type);
+        if (err) return err;
+      }
+    }
+  } else {
+    for (pn_sequence_t id = first; sequence_lte(id, last); ++id) {
+      pn_delivery_t *delivery = pni_delivery_map_get(deliveries, id);
+      if (delivery) {
+        err = pni_do_delivery_disposition(transport, delivery, settled, remote_data, type_init, type);
+        if (err) return err;
+      }
     }
   }
 
