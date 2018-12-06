@@ -485,6 +485,11 @@ static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8
 
 size_t pn_data_siblings(pn_data_t *data);
 
+static inline bool pni_allowed_descriptor_code(uint8_t code)
+{
+  return code != PNE_DESCRIPTOR && code != PNE_ARRAY8 && code != PNE_ARRAY32;
+}
+
 int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t *data)
 {
   if (!pn_decoder_remaining(decoder)) {
@@ -493,7 +498,7 @@ int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t *data)
 
   uint8_t code = *decoder->position++;;
 
-  if (code == PNE_DESCRIPTOR) {
+  if (!pni_allowed_descriptor_code(code)) {
     return PN_ARG_ERR;
   }
 
