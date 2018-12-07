@@ -34,7 +34,15 @@ typedef enum {
   PNI_PROTOCOL_AMQP_OTHER
 } pni_protocol_type_t;
 
+#if __cplusplus
+extern "C" {
+#endif
+
 pni_protocol_type_t pni_sniff_header(const char *data, size_t len);
 const char* pni_protocol_name(pni_protocol_type_t p);
+
+#if __cplusplus
+}
+#endif
 
 #endif

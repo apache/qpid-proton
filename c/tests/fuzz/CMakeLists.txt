@@ -33,15 +33,23 @@ add_library (StandaloneFuzzTargetMain STATIC StandaloneFuzzTargetMain.c Standalo
 macro (pn_add_fuzz_test test)
   add_executable (${test} ${ARGN})
   target_link_libraries (${test} qpid-proton-core ${FUZZING_LIBRARY})
+  list(APPEND fuzz_test_src ${ARGN})
 
   if (FUZZ_REGRESSION_TESTS)
     # StandaloneFuzzTargetMain cannot walk directory trees
     file(GLOB_RECURSE files ${CMAKE_CURRENT_SOURCE_DIR}/${test}/*)
-    add_test (NAME ${test} COMMAND ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}> ${files})
+    unset(file_lines)
+    foreach(f IN LISTS files)
+      set(file_lines "${file_lines}${f}\n")
+    endforeach()
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${test}-files" "${file_lines}")
+    add_test (NAME ${test} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}> "@${CMAKE_CURRENT_BINARY_DIR}/${test}-files")
   else ()
     add_test (NAME ${test} COMMAND $<TARGET_FILE:${test}> -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test}>)
   endif ()
 endmacro(pn_add_fuzz_test)
+
+unset(fuzz_test_src)
 
 # Fuzz tests at the User API level
 pn_add_fuzz_test (fuzz-connection-driver fuzz-connection-driver.c)
@@ -60,3 +68,12 @@ endif()
 
 # pni_sniff_header is internal so it has to be compiled specially
 pn_add_fuzz_test (fuzz-sniff-header fuzz-sniff-header.c ${PN_C_SOURCE_DIR}/core/autodetect.c)
+
+if (BUILD_WITH_CXX)
+  set_source_files_properties (
+    StandaloneFuzzTargetMain.c
+    StandaloneFuzzTargetInit.c
+    ${fuzz_test_src}
+    PROPERTIES LANGUAGE CXX
+  )
+endif (BUILD_WITH_CXX)

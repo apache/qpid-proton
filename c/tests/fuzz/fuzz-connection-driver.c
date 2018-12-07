@@ -62,7 +62,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (VERBOSE)
     printf("BEGIN LLVMFuzzerTestOneInput\n");
   app_data_t app = {{0}};
-  snprintf(app.container_id, sizeof(app.container_id), "%s:%06x",
+  sprintf(app.container_id, "%s:%06x",
            "fuzz_connection_driver", rand() & 0xffffff);
 
   pn_connection_driver_t driver;

@@ -114,15 +114,7 @@ endif()
 if (APPLE)
   set (NOENABLE_WARNING_ERROR ON)
   set (NOENABLE_UNDEFINED_ERROR ON)
-  # TODO: Currently segfaults on MacOS - fix bug and re-enable
-  set (NOENABLE_FUZZ_TESTING ON)
 endif (APPLE)
-
-# TODO: Can't build fuzz tests/or run regression tests on MSVC currently
-# (due to limit on command line length)
-if (MSVC)
-  set (NOENABLE_FUZZ_TESTING ON)
-endif (MSVC)
 
 # Make LTO default to off until we can figure out the valgrind issues
 set (NOENABLE_LINKTIME_OPTIMIZATION ON)
