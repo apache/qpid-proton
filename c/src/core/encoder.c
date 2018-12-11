@@ -254,9 +254,10 @@ typedef union {
   double d;
 } conv_t;
 
-static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
+static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_nid_t index)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
+  pni_node_t *node = pn_data_node(data, index);
   pni_node_t *parent = pn_data_node(data, node->parent);
   pn_atom_t *atom = &node->atom;
   uint8_t code;
@@ -344,9 +345,10 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 
 #include <stdio.h>
 
-static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
+static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_nid_t index)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
+  pni_node_t *node = pn_data_node(data, index);
   char *pos;
 
   // Special case 0 length list

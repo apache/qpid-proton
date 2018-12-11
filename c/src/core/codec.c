@@ -111,16 +111,6 @@ static const pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
   }
 }
 
-static int pni_node_index(pn_data_t *data, pni_node_t *node)
-{
-  int count = 0;
-  while (node) {
-    node = pn_data_node(data, node->prev);
-    count++;
-  }
-  return count - 1;
-}
-
 int pni_inspect_atom(pn_atom_t *atom, pn_string_t *str)
 {
   switch (atom->type) {
@@ -247,16 +237,16 @@ int pni_inspect_atom(pn_atom_t *atom, pn_string_t *str)
   }
 }
 
-int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
+int pni_inspect_enter(void *ctx, pn_data_t *data, pni_nid_t index)
 {
   pn_string_t *str = (pn_string_t *) ctx;
+  pni_node_t *node = pn_data_node(data, index);
   pn_atom_t *atom = (pn_atom_t *) &node->atom;
 
   pni_node_t *parent = pn_data_node(data, node->parent);
   const pn_fields_t *fields = pni_node_fields(data, parent);
   pni_node_t *grandparent = parent ? pn_data_node(data, parent->parent) : NULL;
   const pn_fields_t *grandfields = pni_node_fields(data, grandparent);
-  int index = pni_node_index(data, node);
 
   int err;
 
@@ -310,9 +300,10 @@ pni_node_t *pni_next_nonnull(pn_data_t *data, pni_node_t *node)
   return NULL;
 }
 
-int pni_inspect_exit(void *ctx, pn_data_t *data, pni_node_t *node)
+int pni_inspect_exit(void *ctx, pn_data_t *data, pni_nid_t index)
 {
   pn_string_t *str = (pn_string_t *) ctx;
+  pni_node_t *node = pn_data_node(data, index);
   pni_node_t *parent = pn_data_node(data, node->parent);
   pni_node_t *grandparent = parent ? pn_data_node(data, parent->parent) : NULL;
   const pn_fields_t *grandfields = pni_node_fields(data, grandparent);
@@ -335,7 +326,6 @@ int pni_inspect_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 
   if (!grandfields || node->atom.type != PN_NULL) {
     if (next) {
-      int index = pni_node_index(data, node);
       if (parent && parent->atom.type == PN_MAP && (index % 2) == 0) {
         err = pn_string_addf(str, "=");
       } else if (parent && parent->atom.type == PN_DESCRIBED && index == 0) {
@@ -1323,40 +1313,42 @@ bool pn_data_prev(pn_data_t *data)
 }
 
 int pni_data_traverse(pn_data_t *data,
-                      int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
-                      int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
+                      int (*enter)(void *ctx, pn_data_t *data, pni_nid_t index),
+                      int (*exit)(void *ctx, pn_data_t *data, pni_nid_t index),
                       void *ctx)
 {
-  pni_node_t *node = data->size ? pn_data_node(data, 1) : NULL;
-  while (node) {
-    pni_node_t *parent = pn_data_node(data, node->parent);
+  pni_nid_t index = data->size ? 1 : 0;
+  while (index!=0) {
+    pni_node_t *node = pn_data_node(data, index);
 
-    int err = enter(ctx, data, node);
+    int err = enter(ctx, data, index);
     if (err) return err;
 
     size_t next = 0;
     if (node->down) {
       next = node->down;
     } else if (node->next) {
-      err = exit(ctx, data, node);
+      err = exit(ctx, data, index);
       if (err) return err;
       next = node->next;
     } else {
-      err = exit(ctx, data, node);
+      err = exit(ctx, data, index);
       if (err) return err;
-      while (parent) {
-        err = exit(ctx, data, parent);
+      pni_nid_t parenti = node->parent;
+      while (parenti) {
+        err = exit(ctx, data, parenti);
         if (err) return err;
+        pni_node_t *parent = pn_data_node(data, parenti);
         if (parent->next) {
           next = parent->next;
           break;
         } else {
-          parent = pn_data_node(data, parent->parent);
+          parenti = parent->parent;
         }
       }
     }
 
-    node = pn_data_node(data, next);
+    index = next;
   }
 
   return 0;

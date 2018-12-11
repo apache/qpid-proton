@@ -68,8 +68,8 @@ static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd)
 }
 
 int pni_data_traverse(pn_data_t *data,
-                      int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
-                      int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
+                      int (*enter)(void *ctx, pn_data_t *data, pni_nid_t index),
+                      int (*exit)(void *ctx, pn_data_t *data, pni_nid_t index),
                       void *ctx);
 
 #endif /* data.h */
