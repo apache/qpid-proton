@@ -19,28 +19,22 @@
 
 from __future__ import absolute_import
 
-from cproton import PN_DEFAULT_PRIORITY, PN_OVERFLOW, \
-    pn_message_set_delivery_count, pn_message_set_address, pn_message_properties, \
-    pn_message_get_user_id, pn_message_set_content_encoding, pn_message_get_subject, pn_message_get_priority, \
-    pn_message_get_content_encoding, pn_message_body, \
-    pn_message_correlation_id, pn_message_get_address, pn_message_set_content_type, pn_message_get_group_id, \
-    pn_message_set_expiry_time, pn_message_set_creation_time, pn_message_error, \
-    pn_message_is_first_acquirer, pn_message_set_priority, \
-    pn_message_free, pn_message_get_creation_time, pn_message_is_inferred, pn_message_set_subject, \
-    pn_message_set_user_id, pn_message_set_group_id, \
-    pn_message_id, pn_message_clear, pn_message_set_durable, \
-    pn_message_set_first_acquirer, pn_message_get_delivery_count, \
-    pn_message_decode, pn_message_set_reply_to_group_id, \
-    pn_message_get_group_sequence, pn_message_set_reply_to, \
-    pn_message_set_ttl, pn_message_get_reply_to, pn_message, pn_message_annotations, pn_message_is_durable, \
-    pn_message_instructions, pn_message_get_content_type, \
-    pn_message_get_reply_to_group_id, pn_message_get_ttl, pn_message_encode, pn_message_get_expiry_time, \
-    pn_message_set_group_sequence, pn_message_set_inferred, \
-    pn_inspect, pn_string, pn_string_get, pn_free, pn_error_text
+from cproton import PN_DEFAULT_PRIORITY, PN_OVERFLOW, pn_error_text, pn_message, \
+    pn_message_annotations, pn_message_body, pn_message_clear, pn_message_correlation_id, pn_message_decode, \
+    pn_message_encode, pn_message_error, pn_message_free, pn_message_get_address, pn_message_get_content_encoding, \
+    pn_message_get_content_type, pn_message_get_creation_time, pn_message_get_delivery_count, \
+    pn_message_get_expiry_time, pn_message_get_group_id, pn_message_get_group_sequence, pn_message_get_priority, \
+    pn_message_get_reply_to, pn_message_get_reply_to_group_id, pn_message_get_subject, pn_message_get_ttl, \
+    pn_message_get_user_id, pn_message_id, pn_message_instructions, pn_message_is_durable, pn_message_is_first_acquirer, \
+    pn_message_is_inferred, pn_message_properties, pn_message_set_address, pn_message_set_content_encoding, \
+    pn_message_set_content_type, pn_message_set_creation_time, pn_message_set_delivery_count, pn_message_set_durable, \
+    pn_message_set_expiry_time, pn_message_set_first_acquirer, pn_message_set_group_id, pn_message_set_group_sequence, \
+    pn_message_set_inferred, pn_message_set_priority, pn_message_set_reply_to, pn_message_set_reply_to_group_id, \
+    pn_message_set_subject, pn_message_set_ttl, pn_message_set_user_id
 
 from . import _compat
-from ._common import isinteger, secs2millis, millis2secs, unicode2utf8, utf82unicode
-from ._data import Data, ulong, symbol
+from ._common import isinteger, millis2secs, secs2millis, unicode2utf8, utf82unicode
+from ._data import Data, symbol, ulong
 from ._endpoints import Link
 from ._exceptions import EXCEPTIONS, MessageException
 
