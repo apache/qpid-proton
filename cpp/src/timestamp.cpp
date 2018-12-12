@@ -20,16 +20,44 @@
 #include "proton/timestamp.hpp"
 
 #include "proton/internal/config.hpp"
+#include <proton/error.hpp>
 #include <proton/proactor.h>
 #include <proton/types.h>
 
 #include <iostream>
 
+// Can't use std::chrono since we still support C++03, sigh.
+
+#ifdef WIN32
+#include <windows.h>
+
+#else
+#include <sys/time.h>
+#endif
+
 namespace proton {
 
+#ifdef WIN32
+
 timestamp timestamp::now() {
-    return timestamp( pn_proactor_now() );
+  FILETIME now;
+  GetSystemTimeAsFileTime(&now);
+  ULARGE_INTEGER t;
+  t.u.HighPart = now.dwHighDateTime;
+  t.u.LowPart = now.dwLowDateTime;
+  // Convert to milliseconds and adjust base epoch
+  return timestamp(t.QuadPart / 10000 - 11644473600000);
 }
+
+#else
+
+timestamp timestamp::now() {
+  struct timeval now;
+  if (::gettimeofday(&now, NULL)) throw proton::error("gettimeofday failed");
+  return timestamp(int64_t(now.tv_sec) * 1000 + (now.tv_usec / 1000));
+}
+
+#endif
 
 std::ostream& operator<<(std::ostream& o, timestamp ts) { return o << ts.milliseconds(); }
 
