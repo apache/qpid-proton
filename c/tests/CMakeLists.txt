@@ -36,57 +36,61 @@ endif()
 #
 # Tests for each library are combined in a single executable.
 
-macro(add_c_test exe)
-  add_executable(${exe} test_main.cpp pn_test.cpp ${ARGN})
-  set_target_properties(${exe} PROPERTIES
-    COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
-  add_test(NAME ${exe} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${exe}>)
-endmacro()
+if (CMAKE_CXX_COMPILER)
+  macro(add_c_test exe)
+    add_executable(${exe} test_main.cpp pn_test.cpp ${ARGN})
+    set_target_properties(${exe} PROPERTIES
+      COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
+    add_test(NAME ${exe} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${exe}>)
+  endmacro()
 
-## Tests that depend only on qpid-proton-core
-add_c_test(c-core-test
-  pn_test_test.cpp
-  object_test.cpp
-  condition_test.cpp
-  connection_driver_test.cpp
-  data_test.cpp
-  engine_test.cpp
-  refcount_test.cpp
-  ${platform_test_src})
+  ## Tests that depend only on qpid-proton-core
+  add_c_test(c-core-test
+    pn_test_test.cpp
+    object_test.cpp
+    condition_test.cpp
+    connection_driver_test.cpp
+    data_test.cpp
+    engine_test.cpp
+    refcount_test.cpp
+    ${platform_test_src})
 
-target_link_libraries(c-core-test qpid-proton-core ${PLATFORM_LIBS})
+  target_link_libraries(c-core-test qpid-proton-core ${PLATFORM_LIBS})
 
-## Tests for the deprecated "extra" part of the qpid-proton library.
-add_c_test(c-extra-test url_test.cpp)
-target_link_libraries(c-extra-test qpid-proton ${PLATFORM_LIBS})
+  ## Tests for the deprecated "extra" part of the qpid-proton library.
+  add_c_test(c-extra-test url_test.cpp)
+  target_link_libraries(c-extra-test qpid-proton ${PLATFORM_LIBS})
 
-if(HAS_PROACTOR)
-  # Tests for qpid-proton-proactor
-  add_c_test(c-proactor-test pn_test_proactor.cpp proactor_test.cpp)
-  target_link_libraries(c-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
+  if(HAS_PROACTOR)
+    # Tests for qpid-proton-proactor
+    add_c_test(c-proactor-test pn_test_proactor.cpp proactor_test.cpp)
+    target_link_libraries(c-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
 
-  # Thread race test.
-  #
-  # TODO aconway 2018-11-14: enable by default when races and xcode
-  # problems are cleared up
-  option(THREADERCISER "Run the threaderciser concurrency tests" OFF)
-  if (THREADERCISER)
-    add_c_test(c-threaderciser threaderciser.c)
-    target_link_libraries (c-threaderciser qpid-proton-proactor)
-    find_library(Pthread_LIBRARY pthread)
-    if (Pthread_LIBRARY)
-      target_link_libraries (c-threaderciser ${Pthread_LIBRARY})
+    # Thread race test.
+    #
+    # TODO aconway 2018-11-14: enable by default when races and xcode
+    # problems are cleared up
+    option(THREADERCISER "Run the threaderciser concurrency tests" OFF)
+    if (THREADERCISER)
+      add_c_test(c-threaderciser threaderciser.c)
+      target_link_libraries (c-threaderciser qpid-proton-proactor)
+      find_library(Pthread_LIBRARY pthread)
+      if (Pthread_LIBRARY)
+        target_link_libraries (c-threaderciser ${Pthread_LIBRARY})
+      endif()
     endif()
-  endif()
 
-  if(WIN32)
-    set(path "$<TARGET_FILE_DIR:c-broker>\\;$<TARGET_FILE_DIR:qpid-proton>")
-  else(WIN32)
-    set(path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
-  endif(WIN32)
+    if(WIN32)
+      set(path "$<TARGET_FILE_DIR:c-broker>\\;$<TARGET_FILE_DIR:qpid-proton>")
+    else(WIN32)
+      set(path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
+    endif(WIN32)
 
-  add_test(NAME c-fdlimit-tests COMMAND ${PN_ENV_SCRIPT} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
-endif(HAS_PROACTOR)
+    add_test(NAME c-fdlimit-tests COMMAND ${PN_ENV_SCRIPT} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
+  endif(HAS_PROACTOR)
+else (CMAKE_CXX_COMPILER)
+  message(WARNING "No C++ compiler, some C library tests were not built")
+endif (CMAKE_CXX_COMPILER)
 
 # fuzz tests: tests/fuzz
 if (ENABLE_FUZZ_TESTING)
