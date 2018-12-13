@@ -33,6 +33,9 @@ add_library (StandaloneFuzzTargetMain STATIC StandaloneFuzzTargetMain.c Standalo
 macro (pn_add_fuzz_test test)
   add_executable (${test} ${ARGN})
   target_link_libraries (${test} ${FUZZING_LIBRARY})
+  # -lFuzzingEngine is a C++ library, which needs c++ std lib
+  set_target_properties(${test} PROPERTIES LINKER_LANGUAGE CXX)
+
   list(APPEND fuzz_test_src ${ARGN})
 
   if (FUZZ_REGRESSION_TESTS)
