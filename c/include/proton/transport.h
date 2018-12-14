@@ -680,7 +680,8 @@ PN_EXTERN bool pn_transport_closed(pn_transport_t *transport);
  *
  *
  * @param[in] transport the transport to process.
- * @param[in] now the current time
+ * @param[in] now A monotonically-increasing time value in milliseconds.
+ *   Does not need to be wall-clock time or a valid AMQP timestamp, but must increase montonically.
  *
  * @return if non-zero, then the expiration time of the next pending timer event for the
  * transport.  The caller must invoke pn_transport_tick again at least once at or before
@@ -688,7 +689,7 @@ PN_EXTERN bool pn_transport_closed(pn_transport_t *transport);
  *
  * @internal XXX Deprecate when tick is added to connection driver
  */
-PN_EXTERN pn_timestamp_t pn_transport_tick(pn_transport_t *transport, pn_timestamp_t now);
+PN_EXTERN pn_timestamp_t pn_transport_tick(pn_transport_t *transport, int64_t now);
 
 /**
  * **Deprecated** - No replacement.
