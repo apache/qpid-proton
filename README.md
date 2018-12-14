@@ -18,7 +18,7 @@ Features
   - Full control of AMQP 1.0 protocol semantics
   - Portable C implementation with bindings to popular languages
   - Peer-to-peer and brokered messaging
-  - Secure communication via SSL and SASL
+  - Secure communication via SSL/TLS and SASL
 
 Universal - Proton is designed to scale both up and down. Equally suitable for
 simple clients or high-powered servers, it can be deployed in simple
