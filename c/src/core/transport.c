@@ -2909,7 +2909,7 @@ pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport)
   return transport->remote_idle_timeout;
 }
 
-pn_timestamp_t pn_transport_tick(pn_transport_t *transport, int64_t now)
+int64_t pn_transport_tick(pn_transport_t *transport, int64_t now)
 {
   pn_timestamp_t r = 0;
   for (int i = 0; i<PN_IO_LAYER_CT; ++i) {
