@@ -262,12 +262,21 @@ func (eng *Engine) log(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, "[%p]: %v", eng.transport, fmt.Sprintf(format, args...))
 }
 
+var processStart = time.Now() // Process start time for elapsed()
+
+// Monotonic elapsed time since processStart
+func elapsed() time.Duration {
+	// Time.Sub() uses monotonic time.
+	return time.Now().Sub(processStart)
+}
+
 // Let proton run timed activity and set up the next tick
 func (eng *Engine) tick() {
-	now := time.Now()
+	// Proton wants millisecond monotonic time
+	now := int64(elapsed() / time.Millisecond)
 	next := eng.Transport().Tick(now)
-	if !next.IsZero() {
-		eng.timer.Reset(next.Sub(now))
+	if next != 0 {
+		eng.timer.Reset(time.Duration((next - now) * int64(time.Millisecond)))
 	}
 }
 

@@ -43,8 +43,13 @@ import (
 	"text/template"
 )
 
-var minVersion = "0.10" // The minimum version of proton-c that the Go binding can use
-var include = flag.String("include", "../../c/include", "Directory containing proton/*.h include files")
+// Note last code generation was from 0.27 source, but we should still
+// be binary compatible back to 0.10. Only change was the type name
+// for pn_proton_tick() from pn_timestamp_t to int64_t, identical type.
+
+var minVersion = "0.27" // The proton-c header version last used to generate code
+
+var include = flag.String("include", "../c/include", "Directory containing proton/*.h include files")
 
 var versionH = regexp.MustCompile("(?s:PN_VERSION_MAJOR ([0-9]+).*PN_VERSION_MINOR ([0-9]+))")
 var versionTxt = regexp.MustCompile("^[0-9]+\\.[0-9]+")
@@ -74,7 +79,7 @@ func getVersion() string {
 func genVersion() {
 	version := getVersion()
 	if minVersion != version {
-		panic(fmt.Errorf("Generating from wrong version %v, expected %v", version, minVersion))
+		panic(fmt.Errorf("Found proton-c version %v, expected %v. Update minVersion in genwrap.go if you want to increase the minimum required proton-c version.", version, minVersion))
 	}
 	out, err := os.Create("src/qpid.apache.org/amqp/version.go")
 	panicIf(err)
@@ -344,6 +349,12 @@ func mapType(ctype string) (g genType) {
 		g.Gotype = "bool"
 	case "C.ssize_t":
 		g.Gotype = "int"
+	case "C.int64_t":
+		g.Gotype = "int64"
+	case "C.int32_t":
+		g.Gotype = "int16"
+	case "C.int16_t":
+		g.Gotype = "int32"
 	case "C.uint64_t":
 		g.Gotype = "uint64"
 	case "C.uint32_t":
@@ -463,6 +474,11 @@ func goFnName(api, fname string) string {
 }
 
 func apiWrapFns(api, header string, out io.Writer) {
+	defer func() {
+		if err := recover(); err != nil {
+			panic(fmt.Sprintf("in %s.h: %s", api, err))
+		}
+	}()
 	fmt.Fprintf(out, "type %s struct{pn *C.pn_%s_t}\n", mixedCase(api), api)
 	fmt.Fprintf(out, "func (%c %s) IsNil() bool { return %c.pn == nil }\n", api[0], mixedCase(api), api[0])
 	fmt.Fprintf(out, "func (%c %s) CPtr() unsafe.Pointer { return unsafe.Pointer(%c.pn) }\n", api[0], mixedCase(api), api[0])

@@ -80,6 +80,13 @@ const (
 	ETransportHeadClosed    EventType = C.PN_TRANSPORT_HEAD_CLOSED
 	ETransportTailClosed    EventType = C.PN_TRANSPORT_TAIL_CLOSED
 	ETransportClosed        EventType = C.PN_TRANSPORT_CLOSED
+	EConnectionWake         EventType = C.PN_CONNECTION_WAKE
+	EListenerAccept         EventType = C.PN_LISTENER_ACCEPT
+	EListenerClose          EventType = C.PN_LISTENER_CLOSE
+	EProactorInterrupt      EventType = C.PN_PROACTOR_INTERRUPT
+	EProactorTimeout        EventType = C.PN_PROACTOR_TIMEOUT
+	EProactorInactive       EventType = C.PN_PROACTOR_INACTIVE
+	EListenerOpen           EventType = C.PN_LISTENER_OPEN
 )
 
 func (e EventType) String() string {
@@ -145,6 +152,20 @@ func (e EventType) String() string {
 		return "TransportTailClosed"
 	case C.PN_TRANSPORT_CLOSED:
 		return "TransportClosed"
+	case C.PN_CONNECTION_WAKE:
+		return "ConnectionWake"
+	case C.PN_LISTENER_ACCEPT:
+		return "ListenerAccept"
+	case C.PN_LISTENER_CLOSE:
+		return "ListenerClose"
+	case C.PN_PROACTOR_INTERRUPT:
+		return "ProactorInterrupt"
+	case C.PN_PROACTOR_TIMEOUT:
+		return "ProactorTimeout"
+	case C.PN_PROACTOR_INACTIVE:
+		return "ProactorInactive"
+	case C.PN_LISTENER_OPEN:
+		return "ListenerOpen"
 	}
 	return "Unknown"
 }
@@ -354,6 +375,15 @@ func (l Link) SetDrain(drain bool) {
 func (l Link) Draining() bool {
 	return bool(C.pn_link_draining(l.pn))
 }
+func (l Link) MaxMessageSize() uint64 {
+	return uint64(C.pn_link_max_message_size(l.pn))
+}
+func (l Link) SetMaxMessageSize(size uint64) {
+	C.pn_link_set_max_message_size(l.pn, C.uint64_t(size))
+}
+func (l Link) RemoteMaxMessageSize() uint64 {
+	return uint64(C.pn_link_remote_max_message_size(l.pn))
+}
 
 // Wrappers for declarations in delivery.h
 
@@ -388,6 +418,9 @@ func (d Delivery) Pending() uint {
 func (d Delivery) Partial() bool {
 	return bool(C.pn_delivery_partial(d.pn))
 }
+func (d Delivery) Aborted() bool {
+	return bool(C.pn_delivery_aborted(d.pn))
+}
 func (d Delivery) Writable() bool {
 	return bool(C.pn_delivery_writable(d.pn))
 }
@@ -405,6 +438,9 @@ func (d Delivery) Clear() {
 }
 func (d Delivery) Current() bool {
 	return bool(C.pn_delivery_current(d.pn))
+}
+func (d Delivery) Abort() {
+	C.pn_delivery_abort(d.pn)
 }
 func (d Delivery) Settle() {
 	C.pn_delivery_settle(d.pn)
@@ -500,6 +536,9 @@ func (c Condition) RedirectHost() string {
 }
 func (c Condition) RedirectPort() int {
 	return int(C.pn_condition_redirect_port(c.pn))
+}
+func (c Condition) Copy(src Condition) int {
+	return int(C.pn_condition_copy(c.pn, src.pn))
 }
 
 // Wrappers for declarations in terminus.h
@@ -858,8 +897,8 @@ func (t Transport) Quiesced() bool {
 func (t Transport) Closed() bool {
 	return bool(C.pn_transport_closed(t.pn))
 }
-func (t Transport) Tick(now time.Time) time.Time {
-	return goTime(C.pn_transport_tick(t.pn, pnTime(now)))
+func (t Transport) Tick(now int64) int64 {
+	return int64(C.pn_transport_tick(t.pn, C.int64_t(now)))
 }
 func (t Transport) Connection() Connection {
 	return Connection{C.pn_transport_connection(t.pn)}
