@@ -89,4 +89,19 @@ TEST_CASE("data_multiple") {
   pn_data_put_symbol(src, pn_bytes("baz"));
   pn_data_fill(data, "M", src.get());
   CHECK(":baz" == inspect(data));
+
+  /* Described list with open frame descriptor */
+  pn_data_clear(data);
+  pn_data_fill(data, "DL[]", 16);
+  CHECK("@open(16) []" == inspect(data));
+
+  /* open frame with some fields */
+  pn_data_clear(data);
+  pn_data_fill(data, "DL[SSnI]", 16, "container-1", 0, 965);
+  CHECK("@open(16) [container-id=\"container-1\", channel-max=965]" == inspect(data));
+
+  /* Map */
+  pn_data_clear(data);
+  pn_data_fill(data, "{S[iii]SI}", "foo", 1, 987, 3, "bar", 965);
+  CHECK("{\"foo\"=[1, 987, 3], \"bar\"=965}" == inspect(data));
 }
