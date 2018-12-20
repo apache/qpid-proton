@@ -19,24 +19,23 @@
 #
 
 from __future__ import print_function
-import time
 from proton.reactor import Handler
-from proton_tornado import TornadoLoop
+from proton_tornado import Container
 
 class Recurring(Handler):
     def __init__(self, period):
         self.period = period
 
-    def on_start(self, event):
+    def on_reactor_init(self, event):
         self.container = event.container
-        self.container.schedule(time.time() + self.period, subject=self)
+        self.container.schedule(self.period, self)
 
-    def on_timer(self, event):
+    def on_timer_task(self, event):
         print("Tick...")
-        self.container.schedule(time.time() + self.period, subject=self)
+        self.container.schedule(self.period, self)
 
 try:
-    container = TornadoLoop(Recurring(1.0))
+    container = Container(Recurring(1.0))
     container.run()
 except KeyboardInterrupt:
     container.stop()

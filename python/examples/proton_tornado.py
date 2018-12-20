@@ -22,6 +22,7 @@ import tornado.ioloop
 from proton.reactor import Container as BaseContainer
 from proton.handlers import IOHandler
 
+
 class TornadoLoopHandler:
 
     def __init__(self, loop=None, handler_base=None):
@@ -51,7 +52,9 @@ class TornadoLoopHandler:
             self.loop.add_timeout(sel.deadline, lambda: self._expired(sel))
 
     def _expired(self, sel):
+        self.reactor.mark()
         sel.expired()
+        self._process()
 
     def _process(self):
         self.reactor.process()
@@ -74,13 +77,13 @@ class TornadoLoopHandler:
 
     def on_selectable_updated(self, event):
         sel = event.context
-        if sel.fileno() > 0:
+        if sel.fileno() >= 0:
             self.loop.update_handler(sel.fileno(), self._events(sel))
         self._schedule(sel)
 
     def on_selectable_final(self, event):
         sel = event.context
-        if sel.fileno() > 0:
+        if sel.fileno() >= 0:
             self.loop.remove_handler(sel.fileno())
         sel.release()
         self.count -= 1
@@ -104,6 +107,9 @@ class Container(object):
     def run(self):
         self.initialise()
         self.tornado_loop.start()
+
+    def stop(self):
+        self.container.stop()
 
     def touch(self):
         self._process()
