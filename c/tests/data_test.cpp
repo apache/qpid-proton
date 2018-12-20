@@ -92,12 +92,12 @@ TEST_CASE("data_multiple") {
 
   /* Described list with open frame descriptor */
   pn_data_clear(data);
-  pn_data_fill(data, "DL[]", 16);
+  pn_data_fill(data, "DL[]", (uint64_t)16);
   CHECK("@open(16) []" == inspect(data));
 
   /* open frame with some fields */
   pn_data_clear(data);
-  pn_data_fill(data, "DL[SSnI]", 16, "container-1", 0, 965);
+  pn_data_fill(data, "DL[SSnI]", (uint64_t)16, "container-1", 0, 965);
   CHECK("@open(16) [container-id=\"container-1\", channel-max=965]" == inspect(data));
 
   /* Map */
