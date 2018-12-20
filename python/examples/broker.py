@@ -112,7 +112,10 @@ class Broker(MessagingHandler):
         self._queue(event.link.source.address).dispatch(event.link)
 
     def on_message(self, event):
-        self._queue(event.link.target.address).publish(event.message)
+        address = event.link.target.address
+        if address is None:
+            address = event.message.address
+        self._queue(address).publish(event.message)
 
 parser = optparse.OptionParser(usage="usage: %prog [options]")
 parser.add_option("-a", "--address", default="localhost:5672",
