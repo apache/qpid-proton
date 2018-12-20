@@ -55,7 +55,7 @@ class Recv(MessagingHandler):
     def on_message(self, event):
         id = int(event.message.id)
         if (not self.last_id) or id > self.last_id:
-            if self.received < self.expected:
+            if self.expected == 0 or self.received < self.expected:
                 self.received += 1
                 self.last_id = id
                 self.db.insert(id, event.message.body, ApplicationEvent("record_inserted", delivery=event.delivery))
