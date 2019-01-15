@@ -23,8 +23,6 @@ import collections
 import time
 import threading
 
-from cproton import pn_reactor_collector, pn_collector_release
-
 from ._exceptions import ProtonException, ConnectionException, LinkException, Timeout
 from ._delivery import Delivery
 from ._endpoints import Endpoint, Link
@@ -284,7 +282,7 @@ class BlockingConnection(Handler):
             self.run()
             self.conn = None
             self.container.global_handler = None  # break circular ref: container to cadapter.on_error
-            pn_collector_release(pn_reactor_collector(self.container._impl))  # straggling event may keep reactor alive
+            self.container.stop_events()
             self.container = None
 
     def _is_closed(self):

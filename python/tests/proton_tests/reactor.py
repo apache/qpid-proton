@@ -374,8 +374,8 @@ class ContainerTest(Test):
 
             def on_connection_opened(self, event):
                 event.connection.close()
-                assert event.container == event.reactor
-                assert event.container == container
+                assert event.container is event.reactor
+                assert event.container is container
         container.connect(test_handler.url, handler=ConnectionHandler())
         container.run()
 
@@ -418,7 +418,7 @@ class ContainerTest(Test):
             self.listener = event.container.listen("%s:%s" % (self.host, self.port))
 
         def on_connection_opened(self, event):
-            self.client_addr = event.reactor.get_connection_address(event.connection)
+            self.client_addr = event.connected_address
             self.peer_hostname = event.connection.remote_hostname
 
         def on_connection_closing(self, event):
@@ -431,7 +431,7 @@ class ContainerTest(Test):
             self.server_addr = None
 
         def on_connection_opened(self, event):
-            self.server_addr = event.reactor.get_connection_address(event.connection)
+            self.server_addr = event.connected_address
             event.connection.close()
 
     def test_numeric_hostname(self):

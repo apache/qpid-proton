@@ -19,21 +19,16 @@
 
 from __future__ import absolute_import
 
+from functools import total_ordering
+import heapq
 import json
-import os
 import logging
+import os
+import time
 import traceback
 import uuid
 
-from cproton import PN_MILLIS_MAX, PN_PYREF, PN_ACCEPTED, \
-    pn_reactor_stop, pn_selectable_attachments, pn_reactor_quiesced, pn_reactor_acceptor, \
-    pn_record_set_handler, pn_collector_put, pn_reactor_get_timeout, pn_task_cancel, pn_acceptor_set_ssl_domain, \
-    pn_record_get, pn_reactor_selectable, pn_task_attachments, pn_reactor_schedule, pn_acceptor_close, pn_py2void, \
-    pn_reactor_error, pn_reactor_attachments, pn_reactor_get_global_handler, pn_reactor_process, pn_reactor, \
-    pn_reactor_set_handler, pn_reactor_set_global_handler, pn_reactor_yield, pn_error_text, pn_reactor_connection, \
-    pn_cast_pn_reactor, pn_reactor_get_connection_address, pn_reactor_update, pn_reactor_collector, pn_void2py, \
-    pn_reactor_start, pn_reactor_set_connection_host, pn_cast_pn_task, pn_decref, pn_reactor_set_timeout, \
-    pn_reactor_mark, pn_reactor_get_handler, pn_reactor_wakeup
+from cproton import PN_PYREF, PN_ACCEPTED, PN_EVENT_NONE
 
 from ._delivery import  Delivery
 from ._endpoints import Connection, Endpoint, Link, Session, Terminus
@@ -42,159 +37,175 @@ from ._data import Described, symbol, ulong
 from ._message import  Message
 from ._transport import Transport, SSL, SSLDomain
 from ._url import Url
-from ._common import isstring, secs2millis, millis2secs, unicode2utf8, utf82unicode
-from ._events import EventType, EventBase, Handler
-from ._reactor_impl import Selectable, WrappedHandler, _chandler
-from ._wrapper import Wrapper, PYCTX
+from ._common import isstring, unicode2utf8, utf82unicode
+from ._events import Collector, EventType, EventBase, Handler, Event
+from ._selectable import Selectable
 
-from ._handlers import OutgoingMessageHandler
+from ._handlers import OutgoingMessageHandler, IOHandler
+
+from ._io import IO, PN_INVALID_SOCKET
 
 from . import _compat
 from ._compat import queue
 
-Logger = logging.getLogger("proton")
+
+_logger = logging.getLogger("proton")
 
 
 def _generate_uuid():
     return uuid.uuid4()
 
 
-def _timeout2millis(secs):
-    if secs is None: return PN_MILLIS_MAX
-    return secs2millis(secs)
+def _now():
+    return time.time()
 
+@total_ordering
+class Task(object):
 
-def _millis2timeout(millis):
-    if millis == PN_MILLIS_MAX: return None
-    return millis2secs(millis)
+    def __init__(self, reactor, deadline, handler):
+        self._deadline = deadline
+        self._handler = handler
+        self._reactor = reactor
+        self._cancelled = False
 
-
-class Task(Wrapper):
-
-    @staticmethod
-    def wrap(impl):
-        if impl is None:
-            return None
-        else:
-            return Task(impl)
-
-    def __init__(self, impl):
-        Wrapper.__init__(self, impl, pn_task_attachments)
-
-    def _init(self):
-        pass
+    def __lt__(self, rhs):
+        return self._deadline < rhs._deadline
 
     def cancel(self):
-        pn_task_cancel(self._impl)
+        self._cancelled = True
 
+    @property
+    def handler(self):
+        return self._handler
 
-class Acceptor(Wrapper):
+class TimerSelectable(Selectable):
 
-    def __init__(self, impl):
-        Wrapper.__init__(self, impl)
+    def __init__(self, reactor, collector):
+        super(TimerSelectable, self).__init__(None, reactor)
+        self.collect(collector)
+        collector.put(self, Event.SELECTABLE_INIT)
 
-    def set_ssl_domain(self, ssl_domain):
-        pn_acceptor_set_ssl_domain(self._impl, ssl_domain._domain)
+    def fileno(self):
+        return PN_INVALID_SOCKET
 
-    def close(self):
-        pn_acceptor_close(self._impl)
+    def readable(self):
+        pass
 
+    def writable(self):
+        pass
 
-class Reactor(Wrapper):
+    def expired(self):
+        self._reactor.timer_tick()
+        self.deadline = self._reactor.timer_deadline
+        self.update()
 
-    @staticmethod
-    def wrap(impl):
-        if impl is None:
-            return None
-        else:
-            record = pn_reactor_attachments(impl)
-            attrs = pn_void2py(pn_record_get(record, PYCTX))
-            if attrs and 'subclass' in attrs:
-                return attrs['subclass'](impl=impl)
-            else:
-                return Reactor(impl=impl)
+class Reactor(object):
 
     def __init__(self, *handlers, **kwargs):
-        Wrapper.__init__(self, kwargs.get("impl", pn_reactor), pn_reactor_attachments)
-        for h in handlers:
-            self.handler.add(h, on_error=self.on_error_delegate())
-
-    def _init(self):
+        self._previous = PN_EVENT_NONE
+        self._timeout = 0
+        self.mark()
+        self._yield = False
+        self._stop = False
+        self._collector = Collector()
+        self._selectable = None
+        self._selectables = 0
+        self._global_handler = IOHandler()
+        self._handler = Handler()
+        self._timerheap = []
+        self._timers = 0
         self.errors = []
-
-    # on_error relay handler tied to underlying C reactor.  Use when the
-    # error will always be generated from a callback from this reactor.
-    # Needed to prevent reference cycles and be compatible with wrappers.
-    class ErrorDelegate(object):
-        def __init__(self, reactor):
-            self.reactor_impl = reactor._impl
-
-        def on_error(self, info):
-            ractor = Reactor.wrap(self.reactor_impl)
-            ractor.on_error(info)
-
-    def on_error_delegate(self):
-        return Reactor.ErrorDelegate(self).on_error
+        for h in handlers:
+            self.handler.add(h, on_error=self.on_error)
 
     def on_error(self, info):
         self.errors.append(info)
         self.yield_()
 
+    # TODO: need to make this actually return a proxy which catches exceptions and calls
+    # on error.
+    # [Or arrange another way to deal with exceptions thrown by handlers]
+    def _make_handler(self, handler):
+        """
+        Return a proxy handler that dispatches to the provided handler.
+
+        If handler throws an exception then on_error is called with info
+        """
+        return handler
+
     def _get_global(self):
-        return WrappedHandler.wrap(pn_reactor_get_global_handler(self._impl), self.on_error_delegate())
+        return self._global_handler
 
     def _set_global(self, handler):
-        impl = _chandler(handler, self.on_error_delegate())
-        pn_reactor_set_global_handler(self._impl, impl)
-        pn_decref(impl)
+        self._global_handler = self._make_handler(handler)
 
     global_handler = property(_get_global, _set_global)
 
     def _get_timeout(self):
-        return _millis2timeout(pn_reactor_get_timeout(self._impl))
+        return self._timeout
 
     def _set_timeout(self, secs):
-        return pn_reactor_set_timeout(self._impl, _timeout2millis(secs))
+        self._timeout = secs
 
     timeout = property(_get_timeout, _set_timeout)
 
     def yield_(self):
-        pn_reactor_yield(self._impl)
+        self._yield = True
 
     def mark(self):
-        return pn_reactor_mark(self._impl)
+        """ This sets the reactor now instant to the current time """
+        self._now = _now()
+        return self._now
+
+    @property
+    def now(self):
+        return self._now
 
     def _get_handler(self):
-        return WrappedHandler.wrap(pn_reactor_get_handler(self._impl), self.on_error_delegate())
+        return self._handler
 
     def _set_handler(self, handler):
-        impl = _chandler(handler, self.on_error_delegate())
-        pn_reactor_set_handler(self._impl, impl)
-        pn_decref(impl)
+        self._handler = self._make_handler(handler)
 
     handler = property(_get_handler, _set_handler)
 
     def run(self):
+        # TODO: Why do we timeout like this?
         self.timeout = 3.14159265359
         self.start()
         while self.process(): pass
         self.stop()
         self.process()
-        self.global_handler = None
-        self.handler = None
+        # TODO: This isn't correct if we ever run again
+        self._global_handler = None
+        self._handler = None
 
+    # Cross thread reactor wakeup
     def wakeup(self):
-        n = pn_reactor_wakeup(self._impl)
-        if n: raise IOError(pn_error_text(pn_reactor_error(self._impl)))
+        # TODO: Do this with pipe and write?
+        #os.write(self._wakeup[1], "x", 1);
+        pass
 
     def start(self):
-        pn_reactor_start(self._impl)
+        self.push_event(self, Event.REACTOR_INIT)
+        self._selectable = TimerSelectable(self, self._collector)
+        self._selectable.deadline = self.timer_deadline
+        # TODO set up fd to read for wakeups - but problematic on windows
+        #self._selectable.fileno(self._wakeup[0])
+        #self._selectable.reading = True
+        self.update(self._selectable)
 
     @property
     def quiesced(self):
-        return pn_reactor_quiesced(self._impl)
+        event = self._collector.peek()
+        if not event:
+            return True
+        if self._collector.more():
+            return False
+        return event.type is Event.REACTOR_QUIESCED
 
     def _check_errors(self):
+        """ This """
         if self.errors:
             for exc, value, tb in self.errors[:-1]:
                 traceback.print_exception(exc, value, tb)
@@ -202,35 +213,104 @@ class Reactor(Wrapper):
             _compat.raise_(exc, value, tb)
 
     def process(self):
-        result = pn_reactor_process(self._impl)
-        self._check_errors()
-        return result
+        # result = pn_reactor_process(self._impl)
+        # self._check_errors()
+        # return result
+        self.mark()
+        previous = PN_EVENT_NONE
+        while True:
+            if self._yield:
+                self._yield = False
+                _logger.debug('%s Yielding', self)
+                return True
+            event = self._collector.peek()
+            if event:
+                _logger.debug('%s recvd Event: %r', self, event)
+                type = event.type
+
+                # regular handler
+                handler = event.handler or self._handler
+                event.dispatch(handler)
+
+                event.dispatch(self._global_handler)
+
+                previous = type
+                self._previous = type
+                self._collector.pop()
+            elif not self._stop and (self._timers > 0 or self._selectables > 1):
+                if previous is not Event.REACTOR_QUIESCED and self._previous is not Event.REACTOR_FINAL:
+                    self.push_event(self, Event.REACTOR_QUIESCED)
+                self.yield_()
+            else:
+                if self._selectable:
+                    self._selectable.terminate()
+                    self.update(self._selectable)
+                    self._selectable = None
+                else:
+                    if self._previous is not Event.REACTOR_FINAL:
+                        self.push_event(self, Event.REACTOR_FINAL)
+                    _logger.debug('%s Stopping', self)
+                    return False
 
     def stop(self):
-        pn_reactor_stop(self._impl)
+        self._stop = True
         self._check_errors()
 
-    def schedule(self, delay, task):
-        impl = _chandler(task, self.on_error_delegate())
-        task = Task.wrap(pn_reactor_schedule(self._impl, secs2millis(delay), impl))
-        pn_decref(impl)
+    def stop_events(self):
+        self._collector.release()
+
+    def schedule(self, delay, handler):
+        himpl = self._make_handler(handler)
+        task = Task(self, self._now+delay, himpl)
+        heapq.heappush(self._timerheap, task)
+        self._timers += 1
+        deadline = self._timerheap[0]._deadline
+        if self._selectable:
+            self._selectable.deadline = deadline
+            self.update(self._selectable)
         return task
 
+    def timer_tick(self):
+        while self._timers > 0:
+            t = self._timerheap[0]
+            if t._cancelled:
+                heapq.heappop(self._timerheap)
+                self._timers -= 1
+            elif t._deadline > self._now:
+                return
+            else:
+                heapq.heappop(self._timerheap)
+                self._timers -= 1
+                self.push_event(t, Event.TIMER_TASK)
+
+    @property
+    def timer_deadline(self):
+        while self._timers > 0:
+            t = self._timerheap[0]
+            if t._cancelled:
+                heapq.heappop(self._timerheap)
+                self._timers -= 1
+            else:
+                return t._deadline
+        return None
+
     def acceptor(self, host, port, handler=None):
-        impl = _chandler(handler, self.on_error_delegate())
-        aimpl = pn_reactor_acceptor(self._impl, unicode2utf8(host), str(port), impl)
-        pn_decref(impl)
-        if aimpl:
-            return Acceptor(aimpl)
+        impl = self._make_handler(handler)
+        a = Acceptor(self, unicode2utf8(host), int(port), impl)
+        if a:
+            return a
         else:
-            raise IOError("%s (%s:%s)" % (pn_error_text(pn_reactor_error(self._impl)), host, port))
+            raise IOError("%s (%s:%s)" % (str(self.errors), host, port))
 
     def connection(self, handler=None):
         """Deprecated: use connection_to_host() instead
         """
-        impl = _chandler(handler, self.on_error_delegate())
-        result = Connection.wrap(pn_reactor_connection(self._impl, impl))
-        if impl: pn_decref(impl)
+        impl = self._make_handler(handler)
+        result = Connection()
+        if impl:
+            result.handler = impl
+        result._reactor = self
+        result.collect(self._collector)
         return result
 
     def connection_to_host(self, host, port, handler=None):
@@ -247,10 +327,7 @@ class Reactor(Wrapper):
         used by the reactor's iohandler to create an outgoing socket
         connection.  This must be set prior to opening the connection.
         """
-        pn_reactor_set_connection_host(self._impl,
-                                       connection._impl,
-                                       unicode2utf8(str(host)),
-                                       unicode2utf8(str(port)))
+        connection.set_address(host, port)
 
     def get_connection_address(self, connection):
         """This may be used to retrieve the remote peer address.
@@ -258,29 +335,23 @@ class Reactor(Wrapper):
         address is available.  Use the proton.Url class to create a Url object
         from the returned value.
         """
-        _url = pn_reactor_get_connection_address(self._impl, connection._impl)
+        _url = connection.get_address()
         return utf82unicode(_url)
 
-    def selectable(self, handler=None):
-        impl = _chandler(handler, self.on_error_delegate())
-        result = Selectable.wrap(pn_reactor_selectable(self._impl))
-        if impl:
-            record = pn_selectable_attachments(result._impl)
-            pn_record_set_handler(record, impl)
-            pn_decref(impl)
+    def selectable(self, handler=None, delegate=None):
+        if delegate is None:
+            delegate = handler
+        result = Selectable(delegate, self)
+        result.collect(self._collector)
+        result.handler = handler
+        self.push_event(result, Event.SELECTABLE_INIT)
         return result
 
-    def update(self, sel):
-        pn_reactor_update(self._impl, sel._impl)
+    def update(self, selectable):
+        selectable.update()
 
     def push_event(self, obj, etype):
-        pn_collector_put(pn_reactor_collector(self._impl), PN_PYREF, pn_py2void(obj), etype.number)
-
-
-from ._events import wrappers as _wrappers
-
-_wrappers["pn_reactor"] = lambda x: Reactor.wrap(pn_cast_pn_reactor(x))
-_wrappers["pn_task"] = lambda x: Task.wrap(pn_cast_pn_task(x))
+        self._collector.put(obj, etype)
 
 
 class EventInjector(object):
@@ -296,6 +367,7 @@ class EventInjector(object):
     def __init__(self):
         self.queue = queue.Queue()
         self.pipe = os.pipe()
+        self._transport = None
         self._closed = False
 
     def trigger(self, event):
@@ -320,19 +392,19 @@ class EventInjector(object):
 
     def on_selectable_init(self, event):
         sel = event.context
-        sel.fileno(self.fileno())
+        #sel.fileno(self.fileno())
         sel.reading = True
-        event.reactor.update(sel)
+        sel.update()
 
     def on_selectable_readable(self, event):
+        s = event.context
         os.read(self.pipe[0], 512)
         while not self.queue.empty():
             requested = self.queue.get()
-            event.reactor.push_event(requested.context, requested.type)
+            s.push_event(requested.context, requested.type)
         if self._closed:
-            s = event.context
             s.terminate()
-            event.reactor.update(s)
+            s.update()
 
 
 class ApplicationEvent(EventBase):
@@ -342,7 +414,8 @@ class ApplicationEvent(EventBase):
     """
 
     def __init__(self, typename, connection=None, session=None, link=None, delivery=None, subject=None):
-        super(ApplicationEvent, self).__init__(PN_PYREF, self, EventType(typename))
+        super(ApplicationEvent, self).__init__(EventType(typename))
+        self.clazz = PN_PYREF
         self.connection = connection
         self.session = session
         self.link = link
@@ -354,6 +427,10 @@ class ApplicationEvent(EventBase):
         if self.session:
             self.connection = self.session.connection
         self.subject = subject
+
+    @property
+    def context(self):
+        return self
 
     def __repr__(self):
         objects = [self.connection, self.session, self.link, self.delivery, self.subject]
@@ -429,7 +506,7 @@ class Transaction(object):
             elif event.delivery.remote_state == Delivery.REJECTED:
                 self.handler.on_transaction_declare_failed(event)
             else:
-                Logger.warning("Unexpected outcome for declare: %s" % event.delivery.remote_state)
+                _logger.warning("Unexpected outcome for declare: %s" % event.delivery.remote_state)
                 self.handler.on_transaction_declare_failed(event)
         elif event.delivery == self._discharge:
             if event.delivery.remote_state == Delivery.REJECTED:
@@ -569,7 +646,7 @@ class SessionPerConnection(object):
         return self._default_session
 
 
-class GlobalOverrides(object):
+class GlobalOverrides(Handler):
     """
     Internal handler that triggers the necessary socket connect for an
     opened connection.
@@ -586,6 +663,49 @@ class GlobalOverrides(object):
         conn = event.connection
         return conn and hasattr(conn, '_overrides') and event.dispatch(conn._overrides)
 
+
+class Acceptor(Handler):
+
+    def __init__(self, reactor, host, port, handler=None):
+        self._ssl_domain = None
+        self._reactor = reactor
+        self._handler = handler
+        sock = IO.listen(host, port)
+        s = reactor.selectable(handler=self, delegate=sock)
+        s.reading = True
+        s._transport = None
+        self._selectable = s
+        reactor.update(s)
+
+    def set_ssl_domain(self, ssl_domain):
+        self._ssl_domain = ssl_domain
+
+    def close(self):
+        if not self._selectable.is_terminal:
+            IO.close(self._selectable)
+            self._selectable.terminate()
+            self._reactor.update(self._selectable)
+
+    def on_selectable_readable(self, event):
+        s = event.selectable
+
+        sock, name = IO.accept(self._selectable)
+        _logger.debug("Accepted connection from %s", name)
+
+        r = self._reactor
+        handler = self._handler or r.handler
+        c = r.connection(handler)
+        c._acceptor = self
+        c.url = Url(host=name[0], port=name[1])
+        t = Transport(Transport.SERVER)
+        if self._ssl_domain:
+            t.ssl(self._ssl_domain)
+        t.bind(c)
+
+        s = r.selectable(delegate=sock)
+        s._transport = t
+        t._selectable = s
+        IOHandler.update(t, s, r.now)
 
 class Connector(Handler):
     """
@@ -608,14 +728,13 @@ class Connector(Handler):
         self.ssl_sni = None
         self.max_frame_size = None
 
-    def _connect(self, connection, reactor):
-        assert (reactor is not None)
+    def _connect(self, connection):
         url = self.address.next()
-        reactor.set_connection_host(connection, url.host, str(url.port))
+        connection.url = url
         # if virtual-host not set, use host from address as default
         if self.virtual_host is None:
             connection.hostname = url.host
-        Logger.debug("connecting to %r..." % url)
+        _logger.debug("connecting to %r..." % url)
 
         transport = Transport()
         if self.sasl_enabled:
@@ -643,10 +762,10 @@ class Connector(Handler):
             transport.max_frame_size = self.max_frame_size
 
     def on_connection_local_open(self, event):
-        self._connect(event.connection, event.reactor)
+        self._connect(event.connection)
 
     def on_connection_remote_open(self, event):
-        Logger.debug("connected to %s" % event.connection.hostname)
+        _logger.debug("connected to %s" % event.connection.hostname)
         if self.reconnect:
             self.reconnect.reset()
             self.transport = None
@@ -661,20 +780,20 @@ class Connector(Handler):
                 event.transport.unbind()
                 delay = self.reconnect.next()
                 if delay == 0:
-                    Logger.info("Disconnected, reconnecting...")
-                    self._connect(self.connection, event.reactor)
+                    _logger.info("Disconnected, reconnecting...")
+                    self._connect(self.connection)
                     return
                 else:
-                    Logger.info("Disconnected will try to reconnect after %s seconds" % delay)
+                    _logger.info("Disconnected will try to reconnect after %s seconds" % delay)
                     event.reactor.schedule(delay, self)
                     return
             else:
-                Logger.debug("Disconnected")
+                _logger.debug("Disconnected")
         # See connector.cpp: conn.free()/pn_connection_release() here?
         self.connection = None
 
     def on_timer_task(self, event):
-        self._connect(self.connection, event.reactor)
+        self._connect(self.connection)
 
 
 class Backoff(object):
@@ -727,7 +846,7 @@ class SSLConfig(object):
         self.client.set_trusted_ca_db(certificate_db)
         self.server.set_trusted_ca_db(certificate_db)
 
-def find_config_file():
+def _find_config_file():
     confname = 'connect.json'
     confpath = ['.', '~/.config/messaging','/etc/messaging']
     for d in confpath:
@@ -736,15 +855,15 @@ def find_config_file():
             return f
     return None
 
-def get_default_config():
-    conf = os.environ.get('MESSAGING_CONNECT_FILE') or find_config_file()
+def _get_default_config():
+    conf = os.environ.get('MESSAGING_CONNECT_FILE') or _find_config_file()
     if conf and os.path.isfile(conf):
         with open(conf, 'r') as f:
             return json.load(f)
     else:
         return {}
 
-def get_default_port_for_scheme(scheme):
+def _get_default_port_for_scheme(scheme):
     if scheme == 'amqps':
         return 5671
     else:
@@ -773,7 +892,6 @@ class Container(Reactor):
             self.sasl_enabled = True
             self.user = None
             self.password = None
-            Wrapper.__setattr__(self, 'subclass', self.__class__)
 
     def connect(self, url=None, urls=None, address=None, handler=None, reconnect=None, heartbeat=None, ssl_domain=None,
                 **kwargs):
@@ -825,9 +943,9 @@ class Container(Reactor):
 
         """
         if not url and not urls and not address:
-            config = get_default_config()
+            config = _get_default_config()
             scheme = config.get('scheme', 'amqp')
-            _url = "%s://%s:%s" % (scheme, config.get('host', 'localhost'), config.get('port', get_default_port_for_scheme(scheme)))
+            _url = "%s://%s:%s" % (scheme, config.get('host', 'localhost'), config.get('port', _get_default_port_for_scheme(scheme)))
             _ssl_domain = None
             _kwargs = kwargs
             if config.get('user'):
@@ -952,7 +1070,7 @@ class Container(Reactor):
             snd.source.address = source
         if target:
             snd.target.address = target
-        if handler != None:
+        if handler is not None:
             snd.handler = handler
         if tags:
             snd.tag_generator = tags
@@ -995,7 +1113,7 @@ class Container(Reactor):
             rcv.source.dynamic = True
         if target:
             rcv.target.address = target
-        if handler != None:
+        if handler is not None:
             rcv.handler = handler
         _apply_link_options(options, rcv)
         rcv.open()

@@ -43,6 +43,21 @@ EMPTY_ATTRS = EmptyAttrs()
 
 
 class Wrapper(object):
+    """ Wrapper for python objects that need to be stored in event contexts and be retrived again from them
+        Quick note on how this works:
+        The actual *python* object has only 3 attributes which redirect into the wrapped C objects:
+        _impl   The wrapped C object itself
+        _attrs  This is a special pn_record_t holding a PYCTX which is a python dict
+                every attribute in the python object is actually looked up here
+        _record This is the C record itself (so actually identical to _attrs really but
+                a different python type
+
+        Because the objects actual attributes are stored away they must be initialised *after* the wrapping
+        is set up. This is the purpose of the _init method in the wrapped  object. Wrapper.__init__ will call
+        eht subclass _init to initialise attributes. So they *must not* be initialised in the subclass __init__
+        before calling the superclass (Wrapper) __init__ or they will not be accessible from the wrapper at all.
+
+    """
 
     def __init__(self, impl_or_constructor, get_context=None):
         init = False

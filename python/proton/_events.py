@@ -22,26 +22,23 @@ from __future__ import absolute_import
 import threading
 
 from cproton import PN_SESSION_REMOTE_CLOSE, PN_SESSION_FINAL, pn_event_context, pn_collector_put, \
-    PN_SELECTABLE_UPDATED, pn_collector, PN_CONNECTION_REMOTE_OPEN, pn_event_attachments, pn_event_type, \
-    pn_collector_free, pn_handler_dispatch, PN_SELECTABLE_WRITABLE, PN_SELECTABLE_INIT, PN_SESSION_REMOTE_OPEN, \
-    pn_collector_peek, PN_CONNECTION_BOUND, PN_LINK_FLOW, pn_event_connection, PN_LINK_LOCAL_CLOSE, \
+    pn_collector, PN_CONNECTION_REMOTE_OPEN, pn_event_type, \
+    pn_collector_free, pn_collector_release, PN_SESSION_REMOTE_OPEN, \
+    pn_collector_peek, pn_collector_more, PN_CONNECTION_BOUND, PN_LINK_FLOW, pn_event_connection, PN_LINK_LOCAL_CLOSE, \
     PN_TRANSPORT_ERROR, PN_CONNECTION_LOCAL_OPEN, PN_CONNECTION_LOCAL_CLOSE, pn_event_delivery, \
-    PN_LINK_REMOTE_OPEN, PN_TRANSPORT_CLOSED, PN_TRANSPORT_HEAD_CLOSED, PN_TRANSPORT, pn_event_reactor, \
+    PN_LINK_REMOTE_OPEN, PN_TRANSPORT_CLOSED, PN_TRANSPORT_HEAD_CLOSED, PN_TRANSPORT, \
     PN_CONNECTION_REMOTE_CLOSE, pn_collector_pop, PN_LINK_INIT, pn_event_link, PN_CONNECTION_UNBOUND, \
-    pn_event_type_name, pn_event_session, PN_LINK_FINAL, pn_py2void, PN_REACTOR_INIT, PN_REACTOR_QUIESCED, \
-    PN_LINK_LOCAL_DETACH, PN_SESSION_INIT, PN_CONNECTION_FINAL, PN_TIMER_TASK, pn_class_name, PN_SELECTABLE_READABLE, \
-    pn_event_transport, PN_TRANSPORT_TAIL_CLOSED, PN_SELECTABLE_FINAL, PN_SESSION_LOCAL_OPEN, PN_DELIVERY, \
-    PN_SESSION_LOCAL_CLOSE, pn_event_copy, PN_REACTOR_FINAL, PN_LINK_LOCAL_OPEN, PN_SELECTABLE_EXPIRED, \
-    PN_LINK_REMOTE_DETACH, PN_PYREF, PN_LINK_REMOTE_CLOSE, pn_event_root, PN_SELECTABLE_ERROR, \
+    pn_event_type_name, pn_event_session, PN_LINK_FINAL, pn_py2void, \
+    PN_LINK_LOCAL_DETACH, PN_SESSION_INIT, PN_CONNECTION_FINAL, PN_TIMER_TASK, pn_class_name,\
+    pn_event_transport, PN_TRANSPORT_TAIL_CLOSED,PN_SESSION_LOCAL_OPEN, PN_DELIVERY, \
+    PN_SESSION_LOCAL_CLOSE, PN_LINK_LOCAL_OPEN, \
+    PN_LINK_REMOTE_DETACH, PN_PYREF, PN_LINK_REMOTE_CLOSE, \
     PN_CONNECTION_INIT, pn_event_class, pn_void2py, pn_cast_pn_session, pn_cast_pn_link, pn_cast_pn_delivery, \
-    pn_cast_pn_transport, pn_cast_pn_connection, pn_cast_pn_selectable
+    pn_cast_pn_transport, pn_cast_pn_connection
 
-from ._common import Constant
 from ._delivery import Delivery
 from ._endpoints import Connection, Session, Link
-from ._reactor_impl import Selectable, WrappedHandler
 from ._transport import Transport
-from ._wrapper import Wrapper
 
 
 class Collector:
@@ -55,9 +52,15 @@ class Collector:
     def peek(self):
         return Event.wrap(pn_collector_peek(self._impl))
 
+    def more(self):
+        return pn_collector_more(self._impl)
+
     def pop(self):
         ev = self.peek()
         pn_collector_pop(self._impl)
+
+    def release(self):
+        pn_collector_release(self._impl)
 
     def __del__(self):
         pn_collector_free(self._impl)
@@ -104,36 +107,50 @@ class EventType(object):
             self._lock.release()
 
     def __repr__(self):
+        return "EventType(name=%s, number=%d)" % (self.name, self.number)
+
+    def __str__(self):
         return self.name
 
 
 def _dispatch(handler, method, *args):
     m = getattr(handler, method, None)
     if m:
-        return m(*args)
+        m(*args)
     elif hasattr(handler, "on_unhandled"):
-        return handler.on_unhandled(method, *args)
+        handler.on_unhandled(method, *args)
 
 
 class EventBase(object):
 
-    def __init__(self, clazz, context, type):
-        self.clazz = clazz
-        self.context = context
-        self.type = type
+    def __init__(self, type):
+        self._type = type
 
-    def dispatch(self, handler):
-        return _dispatch(handler, self.type.method, self)
+    @property
+    def type(self):
+        return self._type
 
+    @property
+    def handler(self):
+        return None
 
-def _none(x): return None
+    def dispatch(self, handler, type=None):
+        type = type or self._type
+        _dispatch(handler, type.method, self)
+        if hasattr(handler, "handlers"):
+            for h in handler.handlers:
+                self.dispatch(h, type)
 
-
-DELEGATED = Constant("DELEGATED")
+    def __repr__(self):
+        return "%s(%r)" % (self._type, self.context)
 
 
 def _core(number, method):
     return EventType(number=number, method=method)
+
+
+def _internal(name):
+    return EventType(name=name)
 
 
 wrappers = {
@@ -143,16 +160,11 @@ wrappers = {
     "pn_session": lambda x: Session.wrap(pn_cast_pn_session(x)),
     "pn_link": lambda x: Link.wrap(pn_cast_pn_link(x)),
     "pn_delivery": lambda x: Delivery.wrap(pn_cast_pn_delivery(x)),
-    "pn_transport": lambda x: Transport.wrap(pn_cast_pn_transport(x)),
-    "pn_selectable": lambda x: Selectable.wrap(pn_cast_pn_selectable(x))
+    "pn_transport": lambda x: Transport.wrap(pn_cast_pn_transport(x))
 }
 
 
-class Event(Wrapper, EventBase):
-    REACTOR_INIT = _core(PN_REACTOR_INIT, "on_reactor_init")
-    REACTOR_QUIESCED = _core(PN_REACTOR_QUIESCED, "on_reactor_quiesced")
-    REACTOR_FINAL = _core(PN_REACTOR_FINAL, "on_reactor_final")
-
+class Event(EventBase):
     TIMER_TASK = _core(PN_TIMER_TASK, "on_timer_task")
 
     CONNECTION_INIT = _core(PN_CONNECTION_INIT, "on_connection_init")
@@ -189,107 +201,159 @@ class Event(Wrapper, EventBase):
     TRANSPORT_TAIL_CLOSED = _core(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
     TRANSPORT_CLOSED = _core(PN_TRANSPORT_CLOSED, "on_transport_closed")
 
-    SELECTABLE_INIT = _core(PN_SELECTABLE_INIT, "on_selectable_init")
-    SELECTABLE_UPDATED = _core(PN_SELECTABLE_UPDATED, "on_selectable_updated")
-    SELECTABLE_READABLE = _core(PN_SELECTABLE_READABLE, "on_selectable_readable")
-    SELECTABLE_WRITABLE = _core(PN_SELECTABLE_WRITABLE, "on_selectable_writable")
-    SELECTABLE_EXPIRED = _core(PN_SELECTABLE_EXPIRED, "on_selectable_expired")
-    SELECTABLE_ERROR = _core(PN_SELECTABLE_ERROR, "on_selectable_error")
-    SELECTABLE_FINAL = _core(PN_SELECTABLE_FINAL, "on_selectable_final")
+    # These events are now internal events in the python code
+    REACTOR_INIT = _internal("reactor_init")
+    REACTOR_QUIESCED = _internal("reactor_quiesced")
+    REACTOR_FINAL = _internal("reactor_final")
+
+    SELECTABLE_INIT = _internal("selectable_init")
+    SELECTABLE_UPDATED = _internal("selectable_updated")
+    SELECTABLE_READABLE = _internal("selectable_readable")
+    SELECTABLE_WRITABLE = _internal("selectable_writable")
+    SELECTABLE_EXPIRED = _internal("selectable_expired")
+    SELECTABLE_ERROR = _internal("selectable_error")
+    SELECTABLE_FINAL = _internal("selectable_final")
 
     @staticmethod
-    def wrap(impl, number=None):
+    def wrap(impl):
         if impl is None:
             return None
 
-        if number is None:
-            number = pn_event_type(impl)
+        number = pn_event_type(impl)
+        cls = pn_event_class(impl)
 
-        event = Event(impl, number)
+        if cls:
+            clsname = pn_class_name(cls)
+            context = wrappers[clsname](pn_event_context(impl))
 
-        # check for an application defined ApplicationEvent and return that.  This
-        # avoids an expensive wrap operation invoked by event.context
-        if pn_event_class(impl) == PN_PYREF and \
-                isinstance(event.context, EventBase):
-            return event.context
+            # check for an application defined ApplicationEvent and return that.  This
+            # avoids an expensive wrap operation invoked by event.context
+            if cls == PN_PYREF and isinstance(context, EventBase):
+                return context
         else:
-            return event
+            clsname = None
 
-    def __init__(self, impl, number):
-        Wrapper.__init__(self, impl, pn_event_attachments)
-        self.__dict__["type"] = EventType.TYPES[number]
+        event = Event(impl, number, clsname, context)
+        return event
 
-    def _init(self):
-        pass
+    def __init__(self, impl, number, clsname, context):
+        self._type = EventType.TYPES[number]
+        self._clsname = clsname
+        self._context = context
 
-    def copy(self):
-        copy = pn_event_copy(self._impl)
-        return Event.wrap(copy)
+        # Do all this messing around to avoid duplicate wrappers
+        if issubclass(type(context), Delivery):
+            self._delivery = context
+        else:
+            self._delivery = Delivery.wrap(pn_event_delivery(impl))
+        if self._delivery:
+            self._link = self._delivery.link
+        elif issubclass(type(context), Link):
+            self._link = context
+        else:
+            self._link = Link.wrap(pn_event_link(impl))
+        if self._link:
+            self._session = self._link.session
+        elif issubclass(type(context), Session):
+            self._session = context
+        else:
+            self._session = Session.wrap(pn_event_session(impl))
+        if self._session:
+            self._connection = self._session.connection
+        elif issubclass(type(context), Connection):
+            self._connection = context
+        else:
+            self._connection = Connection.wrap(pn_event_connection(impl))
+
+        if issubclass(type(context), Transport):
+            self._transport = context
+        else:
+            self._transport = Transport.wrap(pn_event_transport(impl))
 
     @property
     def clazz(self):
-        cls = pn_event_class(self._impl)
-        if cls:
-            return pn_class_name(cls)
-        else:
-            return None
-
-    @property
-    def root(self):
-        return WrappedHandler.wrap(pn_event_root(self._impl))
+        return self._clsname
 
     @property
     def context(self):
-        """Returns the context object associated with the event. The type of this depend on the type of event."""
-        return wrappers[self.clazz](pn_event_context(self._impl))
+        """Returns the context object associated with the event. The type of this depends on the type of event."""
+        return self._context
 
-    def dispatch(self, handler, type=None):
-        type = type or self.type
-        if isinstance(handler, WrappedHandler):
-            pn_handler_dispatch(handler._impl, self._impl, type.number)
-        else:
-            result = _dispatch(handler, type.method, self)
-            if result != DELEGATED and hasattr(handler, "handlers"):
-                for h in handler.handlers:
-                    self.dispatch(h, type)
+    @property
+    def handler(self):
+        l = self.link
+        if l:
+            h = l.handler
+            if h:
+                return h
+        s = self.session
+        if s:
+            h = s.handler
+            if h:
+                return h
+        c = self.connection
+        if c:
+            h = c.handler
+            if h:
+                return h
+        c = self.context
+        if not c or not hasattr(c, 'handler'):
+            return None
+        h = c.handler
+        return h
 
     @property
     def reactor(self):
-        """Returns the reactor associated with the event."""
-        return wrappers.get("pn_reactor", _none)(pn_event_reactor(self._impl))
+        """
+        Deprecated: Returns the container (was reactor) associated with the event.
+        """
+        return self.container
+
+    @property
+    def container(self):
+        """
+        Returns the container associated with the event.
+        """
+        return self._transport._reactor
 
     def __getattr__(self, name):
-        r = self.reactor
-        if r and hasattr(r, 'subclass') and r.subclass.__name__.lower() == name:
-            return r
-        else:
-            return super(Event, self).__getattr__(name)
+        """
+        This will look for a property of the event as an attached context object of the same
+        type as the property (but lowercase)
+        """
+        c = self.context
+        # Direct type or subclass of type
+        if type(c).__name__.lower() == name or name in [x.__name__.lower() for x in type(c).__bases__]:
+            return c
+
+        # If the attached object is the wrong type then see if *it* has a property of that name
+        return getattr(c, name, None)
 
     @property
     def transport(self):
         """Returns the transport associated with the event, or null if none is associated with it."""
-        return Transport.wrap(pn_event_transport(self._impl))
+        return self._transport
 
     @property
     def connection(self):
         """Returns the connection associated with the event, or null if none is associated with it."""
-        return Connection.wrap(pn_event_connection(self._impl))
+        return self._connection
 
     @property
     def session(self):
         """Returns the session associated with the event, or null if none is associated with it."""
-        return Session.wrap(pn_event_session(self._impl))
+        return self._session
 
     @property
     def link(self):
         """Returns the link associated with the event, or null if none is associated with it."""
-        return Link.wrap(pn_event_link(self._impl))
+        return self._link
 
     @property
     def sender(self):
         """Returns the sender link associated with the event, or null if
            none is associated with it. This is essentially an alias for
-           link(), that does an additional checkon the type of the
+           link(), that does an additional check on the type of the
            link."""
         l = self.link
         if l and l.is_sender:
@@ -301,7 +365,7 @@ class Event(Wrapper, EventBase):
     def receiver(self):
         """Returns the receiver link associated with the event, or null if
            none is associated with it. This is essentially an alias for
-           link(), that does an additional checkon the type of the link."""
+           link(), that does an additional check on the type of the link."""
         l = self.link
         if l and l.is_receiver:
             return l
@@ -311,10 +375,7 @@ class Event(Wrapper, EventBase):
     @property
     def delivery(self):
         """Returns the delivery associated with the event, or null if none is associated with it."""
-        return Delivery.wrap(pn_event_delivery(self._impl))
-
-    def __repr__(self):
-        return "%s(%s)" % (self.type, self.context)
+        return self._delivery
 
 
 class LazyHandlers(object):
@@ -328,6 +389,11 @@ class LazyHandlers(object):
 
 class Handler(object):
     handlers = LazyHandlers()
+
+    # TODO What to do with on_error?
+    def add(self, handler, on_error=None):
+        """Add a child handler"""
+        self.handlers.append(handler)
 
     def on_unhandled(self, method, *args):
         pass

@@ -88,6 +88,7 @@ class Transport(Wrapper):
     def _init(self):
         self._sasl = None
         self._ssl = None
+        self._reactor = None
 
     def _check(self, err):
         if err < 0:
@@ -135,6 +136,10 @@ A callback for trace logging. The callback is passed the transport and log messa
     def bind(self, connection):
         """Assign a connection to the transport"""
         self._check(pn_transport_bind(self._impl, connection._impl))
+
+    def bind_nothrow(self, connection):
+        """Assign a connection to the transport"""
+        pn_transport_bind(self._impl, connection._impl)
 
     def unbind(self):
         """Release the connection"""

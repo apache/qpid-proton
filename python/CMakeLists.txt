@@ -72,6 +72,7 @@ set (pysrc
     proton/_endpoints.py
     proton/_events.py
     proton/_exceptions.py
+    proton/_io.py
     proton/_message.py
     proton/_transport.py
     proton/_url.py
@@ -83,7 +84,7 @@ set (pysrc
 
     proton/_handlers.py
     proton/_reactor.py
-    proton/_reactor_impl.py
+    proton/_selectable.py
     proton/_utils.py
     )
 # extra files included in the source distribution

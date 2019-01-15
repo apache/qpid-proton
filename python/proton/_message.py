@@ -39,7 +39,7 @@ from cproton import PN_DEFAULT_PRIORITY, PN_OVERFLOW, \
     pn_inspect, pn_string, pn_string_get, pn_free, pn_error_text
 
 from . import _compat
-from ._common import Constant, isinteger, secs2millis, millis2secs, unicode2utf8, utf82unicode
+from ._common import isinteger, secs2millis, millis2secs, unicode2utf8, utf82unicode
 from ._data import Data, ulong, symbol
 from ._endpoints import Link
 from ._exceptions import EXCEPTIONS, MessageException
@@ -50,7 +50,6 @@ try:
     unicode()
 except NameError:
     unicode = str
-
 
 
 class Message(object):
@@ -432,7 +431,7 @@ The group-id for any replies.
         self.decode(dlv.encoded)
         return dlv
 
-    def __repr2__(self):
+    def __repr__(self):
         props = []
         for attr in ("inferred", "address", "reply_to", "durable", "ttl",
                      "priority", "first_acquirer", "delivery_count", "id",
@@ -442,11 +441,3 @@ The group-id for any replies.
             value = getattr(self, attr)
             if value: props.append("%s=%r" % (attr, value))
         return "Message(%s)" % ", ".join(props)
-
-    def __repr__(self):
-        tmp = pn_string(None)
-        err = pn_inspect(self._msg, tmp)
-        result = pn_string_get(tmp)
-        pn_free(tmp)
-        self._check(err)
-        return result

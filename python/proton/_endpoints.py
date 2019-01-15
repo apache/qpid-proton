@@ -27,7 +27,6 @@ import weakref
 
 from cproton import PN_LOCAL_UNINIT, PN_REMOTE_UNINIT, PN_LOCAL_ACTIVE, PN_REMOTE_ACTIVE, PN_LOCAL_CLOSED, \
     PN_REMOTE_CLOSED, \
-    pn_object_reactor, pn_record_get_handler, pn_record_set_handler, pn_decref, \
     pn_connection, pn_connection_attachments, pn_connection_transport, pn_connection_error, pn_connection_condition, \
     pn_connection_remote_condition, pn_connection_collect, pn_connection_set_container, pn_connection_get_container, \
     pn_connection_get_hostname, pn_connection_set_hostname, pn_connection_get_user, pn_connection_set_user, \
@@ -81,6 +80,7 @@ class Endpoint(object):
 
     def _init(self):
         self.condition = None
+        self._handler = None
 
     def _update_cond(self):
         obj2cond(self.condition, self._get_cond_impl())
@@ -97,34 +97,20 @@ class Endpoint(object):
         assert False, "Subclass must override this!"
 
     def _get_handler(self):
-        from . import _reactor
-        from . import _reactor_impl
-        ractor = _reactor.Reactor.wrap(pn_object_reactor(self._impl))
-        if ractor:
-            on_error = ractor.on_error_delegate()
-        else:
-            on_error = None
-        record = self._get_attachments()
-        return _reactor_impl.WrappedHandler.wrap(pn_record_get_handler(record), on_error)
+        return self._handler
 
     def _set_handler(self, handler):
-        from . import _reactor
-        from . import _reactor_impl
-        ractor = _reactor.Reactor.wrap(pn_object_reactor(self._impl))
-        if ractor:
-            on_error = ractor.on_error_delegate()
+        # TODO Hack This is here for some very odd (IMO) backwards compat behaviour
+        from ._events import Handler
+        if handler is None:
+          self._handler = None
+        elif issubclass(type(handler), Handler):
+            self._handler = handler
         else:
-            on_error = None
-        impl = _reactor_impl._chandler(handler, on_error)
-        record = self._get_attachments()
-        pn_record_set_handler(record, impl)
-        pn_decref(impl)
+            self._handler = Handler()
+            self._handler.add(handler)
 
     handler = property(_get_handler, _set_handler)
-
-    @property
-    def transport(self):
-        return self.connection.transport
 
 
 class Connection(Wrapper, Endpoint):
@@ -147,6 +133,8 @@ class Connection(Wrapper, Endpoint):
         self.offered_capabilities = None
         self.desired_capabilities = None
         self.properties = None
+        self.url = None
+        self._acceptor = None
 
     def _get_attachments(self):
         return pn_connection_attachments(self._impl)
@@ -183,7 +171,7 @@ class Connection(Wrapper, Endpoint):
         return utf82unicode(pn_connection_get_container(self._impl))
 
     def _set_container(self, name):
-        return pn_connection_set_container(self._impl, unicode2utf8(name))
+        pn_connection_set_container(self._impl, unicode2utf8(name))
 
     container = property(_get_container, _set_container)
 
@@ -191,7 +179,7 @@ class Connection(Wrapper, Endpoint):
         return utf82unicode(pn_connection_get_hostname(self._impl))
 
     def _set_hostname(self, name):
-        return pn_connection_set_hostname(self._impl, unicode2utf8(name))
+        pn_connection_set_hostname(self._impl, unicode2utf8(name))
 
     hostname = property(_get_hostname, _set_hostname,
                         doc="""
@@ -206,7 +194,7 @@ and SASL layers to identify the peer.
         return utf82unicode(pn_connection_get_user(self._impl))
 
     def _set_user(self, name):
-        return pn_connection_set_user(self._impl, unicode2utf8(name))
+        pn_connection_set_user(self._impl, unicode2utf8(name))
 
     user = property(_get_user, _set_user)
 
@@ -214,7 +202,7 @@ and SASL layers to identify the peer.
         return None
 
     def _set_password(self, name):
-        return pn_connection_set_password(self._impl, unicode2utf8(name))
+        pn_connection_set_password(self._impl, unicode2utf8(name))
 
     password = property(_get_password, _set_password)
 
@@ -242,6 +230,10 @@ and SASL layers to identify the peer.
     def remote_properties(self):
         """The properties specified by the remote peer for this connection."""
         return dat2obj(pn_connection_remote_properties(self._impl))
+
+    @property
+    def connected_address(self):
+        return self.url and str(self.url)
 
     def open(self):
         """
@@ -374,6 +366,10 @@ class Session(Wrapper, Endpoint):
     def connection(self):
         return Connection.wrap(pn_session_connection(self._impl))
 
+    @property
+    def transport(self):
+        return self.connection.transport
+
     def sender(self, name):
         return Sender(pn_sender(self._impl, unicode2utf8(name)))
 
@@ -485,6 +481,10 @@ class Link(Wrapper, Endpoint):
     def connection(self):
         """The connection on which this link was attached."""
         return self.session.connection
+
+    @property
+    def transport(self):
+        return self.session.transport
 
     def delivery(self, tag):
         return Delivery(pn_delivery(self._impl, tag))
