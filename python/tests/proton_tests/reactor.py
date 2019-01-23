@@ -191,6 +191,20 @@ class ExceptionTest(Test):
         except Barf:
             pass
 
+    def test_schedule_event(self):
+        class Nothing:
+            def __init__(self, p):
+                self.parent = p
+
+            results = []
+            def on_timer_task(self, event):
+                self.parent.triggered = True
+                assert event.context == self.parent.task
+                assert event.container == self.parent.container
+        self.task = self.container.schedule(0, Nothing(self))
+        self.container.run()
+        assert self.triggered == True
+
     def test_schedule_many_nothings(self):
         class Nothing:
             results = []

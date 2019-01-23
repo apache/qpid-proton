@@ -19,7 +19,7 @@
 
 from __future__ import absolute_import
 
-from functools import total_ordering
+#from functools import total_ordering
 import heapq
 import json
 import logging
@@ -59,7 +59,7 @@ def _generate_uuid():
 def _now():
     return time.time()
 
-@total_ordering
+#@total_ordering
 class Task(object):
 
     def __init__(self, reactor, deadline, handler):
@@ -77,6 +77,10 @@ class Task(object):
     @property
     def handler(self):
         return self._handler
+
+    @property
+    def container(self):
+        return self._reactor
 
 class TimerSelectable(Selectable):
 
