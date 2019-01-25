@@ -19,6 +19,7 @@
 
 from __future__ import absolute_import
 
+import errno
 import socket
 import select
 import time
@@ -128,7 +129,15 @@ class IO(object):
 
                 return IO.select(r, w, [], t)
 
-            r, w, _ = select_inner(timeout)
+            # Need to allow for signals interrupting us on Python 2
+            # In this case the signal handler could have messed up our internal state
+            # so don't retry just return with no handles.
+            try:
+                r, w, _ = select_inner(timeout)
+            except select.error as e:
+                if e[0] != errno.EINTR:
+                    raise
+                r, w = ([], [])
 
             # Calculate timed out selectables
             now = time.time()
