@@ -656,7 +656,7 @@ static void leader_listen_lh(pn_listener_t *l) {
     for (struct addrinfo *ai = l->addr.getaddrinfo.addrinfo; ai; ai = ai->ai_next) {
       ++len;
     }
-    l->addrs = (pn_netaddr_t*)calloc(len, sizeof(lsocket_t));
+    l->addrs = (pn_netaddr_t*)calloc(len, sizeof(pn_netaddr_t));
 
     /* Find the working addresses */
     for (struct addrinfo *ai = l->addr.getaddrinfo.addrinfo; ai; ai = ai->ai_next) {
