@@ -84,6 +84,7 @@ void on_link_flow(messaging_handler& handler, pn_event_t* event) {
             // receiver
             if (!pn_link_credit(lnk) && lctx.draining) {
                 lctx.draining = false;
+                pn_link_set_drain(lnk, false);
                 receiver r(make_wrapper<receiver>(lnk));
                 handler.on_receiver_drain_finish(r);
             }
@@ -132,6 +133,7 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
                     d.accept();
                 if (lctx.draining && !pn_link_credit(lnk)) {
                     lctx.draining = false;
+                    pn_link_set_drain(lnk, false);
                     receiver r(make_wrapper<receiver>(lnk));
                     handler.on_receiver_drain_finish(r);
                 }
