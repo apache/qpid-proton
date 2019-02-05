@@ -184,7 +184,7 @@ class tester : public proton::messaging_handler, public waiter {
     }
 
     void run() {
-        container_.run(1); // Single threaded to avoid locks and barriers.
+        container_.run(); // Single threaded to avoid locks and barriers.
     }
 
     void server_available(int available) {
