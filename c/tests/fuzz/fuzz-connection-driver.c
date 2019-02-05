@@ -100,8 +100,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   } while (size > 0);
 
   pn_connection_driver_close(&driver);
-  pn_connection_driver_destroy(
-      &driver); // TODO: documentation says pn_connection_driver_free
+  pn_connection_driver_destroy(&driver);
   if (VERBOSE)
     printf("END LLVMFuzzerTestOneInput\n");
   return 0;

@@ -213,7 +213,7 @@ PN_EXTERN bool pn_connection_driver_has_event(pn_connection_driver_t *);
  * Return true if the the driver is closed for reading and writing and there are
  * no more events.
  *
- * Call pn_connection_driver_free() to free all related memory.
+ * Call pn_connection_driver_destroy() to free all related memory.
  */
 PN_EXTERN bool pn_connection_driver_finished(pn_connection_driver_t *);
 
