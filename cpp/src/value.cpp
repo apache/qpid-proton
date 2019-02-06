@@ -146,12 +146,12 @@ int compare_next(decoder& a, decoder& b) {
 #if defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunreachable-code"
-#endif    
+#endif
     // Invalid but equal type_id, treat as equal.
     return 0;
 #if defined(__clang__)
 #pragma GCC diagnostic pop
-#endif    
+#endif
 }
 
 int compare(const value& x, const value& y) {
