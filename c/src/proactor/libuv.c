@@ -968,8 +968,8 @@ static void on_proactor_disconnect(uv_handle_t* h, void* v) {
          if (cond) {
            pn_condition_copy(pn_listener_condition(l), cond);
          }
+         pn_listener_close(l);
        }
-       pn_listener_close(l);
        break;
      }
      default:
