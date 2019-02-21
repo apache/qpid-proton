@@ -337,6 +337,7 @@ int pni_inspect_exit(void *ctx, pn_data_t *data, pni_node_t *node)
     if (node->next) {
       if (parent && parent->atom.type == PN_MAP && (pni_node_lindex(data, node) % 2) == 0) {
         err = pn_string_addf(str, "=");
+        if (err) return err;
       } else if (parent && parent->atom.type == PN_DESCRIBED && node->prev == 0) {
         err = pn_string_addf(str, " ");
         if (err) return err;
