@@ -134,6 +134,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
        printf("secure connection: %s\n", name);
        fflush(stdout);
      }
+     break;
    }
 
    case PN_LINK_FLOW: {
