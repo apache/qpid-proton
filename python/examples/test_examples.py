@@ -17,16 +17,14 @@
 # under the License.
 #
 
+import re
 import sys
 import subprocess
 import time
 import unittest
 
-if sys.version_info[0] == 2:
-    _unicode_prefix = 'u'
-else:
-    _unicode_prefix = ''
-
+def remove_unicode_prefix(line):
+    return re.sub(r"u(['\"])", r"\1", line)
 
 class ExamplesTest(unittest.TestCase):
     def test_helloworld(self, example="helloworld.py"):
@@ -55,8 +53,8 @@ class ExamplesTest(unittest.TestCase):
                              universal_newlines=True)
         s.wait()
         r.wait()
-        actual = [l.strip() for l in r.stdout]
-        expected = ["{%s'sequence': int32(%i)}" % (_unicode_prefix, (i+1)) for i in range(100)]
+        actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
+        expected = ["{'sequence': int32(%i)}" % (i+1,) for i in range(100)]
         self.assertEqual(actual, expected)
 
     def test_client_server(self, client=['client.py'], server=['server.py'], sleep=0):
@@ -118,8 +116,8 @@ class ExamplesTest(unittest.TestCase):
         v = subprocess.Popen(['db_ctrl.py', 'list', './dst_db'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
                              universal_newlines=True)
         v.wait()
-        expected = ["(%i, %s'Message-%i')" % ((i+1), _unicode_prefix, (i+1)) for i in range(100)]
-        actual = [l.strip() for l in v.stdout]
+        expected = ["(%i, 'Message-%i')" % (i+1, i+1) for i in range(100)]
+        actual = [remove_unicode_prefix(l.strip()) for l in v.stdout]
         self.assertEqual(actual, expected)
 
     def test_tx_send_tx_recv(self):
@@ -134,8 +132,8 @@ class ExamplesTest(unittest.TestCase):
                              universal_newlines=True)
         s.wait()
         r.wait()
-        actual = [l.strip() for l in r.stdout]
-        expected = ["{%s'sequence': int32(%i)}" % (_unicode_prefix, (i+1)) for i in range(100)]
+        actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
+        expected = ["{'sequence': int32(%i)}" % (i+1,) for i in range(100)]
         self.assertEqual(actual, expected)
 
     def test_direct_send_simple_recv(self):
@@ -146,8 +144,8 @@ class ExamplesTest(unittest.TestCase):
                              universal_newlines=True)
         r.wait()
         s.wait()
-        actual = [l.strip() for l in r.stdout]
-        expected = ["{%s'sequence': int32(%i)}" % (_unicode_prefix, (i+1)) for i in range(100)]
+        actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
+        expected = ["{'sequence': int32(%i)}" % (i+1,) for i in range(100)]
         self.assertEqual(actual, expected)
 
     def test_selected_recv(self):
