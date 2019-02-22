@@ -624,10 +624,20 @@ int pn_ssl_domain_set_protocols(pn_ssl_domain_t *domain, const char *protocols)
   {
     {"TLSv1",   SSL_OP_NO_TLSv1},
     {"TLSv1.1", SSL_OP_NO_TLSv1_1},
-    {"TLSv1.2", SSL_OP_NO_TLSv1_2}
+    {"TLSv1.2", SSL_OP_NO_TLSv1_2},
+#ifdef SSL_OP_NO_TLSv1_3
+    {"TLSv1.3", SSL_OP_NO_TLSv1_3},
+#endif
   };
   static const char seps[]    = " ,;";
-  static const long all_prots = SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
+  static const long all_prots =
+    SSL_OP_NO_TLSv1
+    | SSL_OP_NO_TLSv1_1
+    | SSL_OP_NO_TLSv1_2
+#ifdef SSL_OP_NO_TLSv1_3
+    | SSL_OP_NO_TLSv1_3
+#endif
+    ;
 
   // Start with all protocols turned off
   long options = all_prots;
@@ -643,7 +653,7 @@ int pn_ssl_domain_set_protocols(pn_ssl_domain_t *domain, const char *protocols)
     }
     if (tsize==0) break; // No more tokens
 
-    // Linear search the posibilities for the option to set
+    // Linear search the possibilities for the option to set
     for (size_t i = 0; i<sizeof(protocol_options)/sizeof(*protocol_options); ++i) {
       if (strncmp(token, protocol_options[i].name, tsize)==0) {
         options &= ~protocol_options[i].option;
