@@ -307,6 +307,8 @@ class SASL(Wrapper):
             return outcome
 
     def allowed_mechs(self, mechs):
+        if isinstance(mechs, list):
+            mechs = " ".join(mechs)
         pn_sasl_allowed_mechs(self._sasl, unicode2utf8(mechs))
 
     def _get_allow_insecure_mechs(self):

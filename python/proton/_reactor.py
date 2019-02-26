@@ -20,6 +20,7 @@
 from __future__ import absolute_import
 
 import json
+import re
 import os
 import logging
 import traceback
@@ -740,9 +741,23 @@ def get_default_config():
     conf = os.environ.get('MESSAGING_CONNECT_FILE') or find_config_file()
     if conf and os.path.isfile(conf):
         with open(conf, 'r') as f:
-            return json.load(f)
+            json_text = f.read()
+            json_text = _strip_json_comments(json_text)
+            return json.loads(json_text)
     else:
         return {}
+
+def _strip_json_comments(json_text):
+    """This strips c-style comments from text, taking into account '/*comments*/' and '//comments'
+    nested inside a string etc."""
+    def replacer(match):
+        s = match.group(0)
+        if s.startswith('/'):
+            return " " # note: a space and not an empty string
+        else:
+            return s
+    pattern = re.compile(r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"', re.DOTALL | re.MULTILINE)
+    return re.sub(pattern, replacer, json_text)
 
 def get_default_port_for_scheme(scheme):
     if scheme == 'amqps':
