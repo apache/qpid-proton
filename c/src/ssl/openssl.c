@@ -74,7 +74,7 @@ struct pn_ssl_domain_t {
   char *ciphers;
 
   int   ref_count;
-#if OPENSSL_VERSION_NUMBER >= 0x10100000
+#ifdef SSL_SECOP_PEER
   int default_seclevel;
 #endif
   pn_ssl_mode_t mode;
@@ -522,7 +522,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   // Mitigate the CRIME vulnerability
   SSL_CTX_set_options(domain->ctx, SSL_OP_NO_COMPRESSION);
 #endif
-#if OPENSSL_VERSION_NUMBER >= 0x10100000
+#ifdef SSL_SECOP_PEER
   domain->default_seclevel = SSL_CTX_get_security_level(domain->ctx);
 #endif
 
@@ -719,7 +719,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
    case PN_SSL_VERIFY_PEER:
    case PN_SSL_VERIFY_PEER_NAME:
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000
+#ifdef SSL_SECOP_PEER
     SSL_CTX_set_security_level(domain->ctx, domain->default_seclevel);
 #endif
 
@@ -759,7 +759,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
     break;
 
    case PN_SSL_ANONYMOUS_PEER:   // hippie free love mode... :)
-#if OPENSSL_VERSION_NUMBER >= 0x10100000
+#ifdef SSL_SECOP_PEER
     // Must use lowest OpenSSL security level to enable anonymous ciphers.
     SSL_CTX_set_security_level(domain->ctx, 0);
 #endif
