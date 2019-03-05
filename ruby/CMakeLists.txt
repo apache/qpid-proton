@@ -141,20 +141,11 @@ if (result EQUAL 0)  # Have minitest
     COMMAND ${test_env} ${RUBY_EXECUTABLE} testme -v
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples)
 
-  add_test(
-    NAME ruby-old-example-test
-    COMMAND ${test_env} ${RUBY_EXECUTABLE} old_example_test.rb -v
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/old-examples)
-
   file(GLOB TESTS tests/test_*.rb)
   file(GLOB SPECS spec/*_spec.rb)
   foreach(t ${TESTS} ${SPECS})
     add_ruby_test(${t})
   endforeach()
-  # Suppress deprecation warnings from backward-compatibility tests
-  set_tests_properties(
-    ruby-old-example-test ruby-test-old-adapter
-    PROPERTIES ENVIRONMENT "RUBYOPT=-W0")
 else()
   # No minitest
   message(STATUS "Ruby tests will not run, minitest is not installed")
