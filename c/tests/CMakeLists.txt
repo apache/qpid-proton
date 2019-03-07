@@ -42,6 +42,8 @@ if (CMAKE_CXX_COMPILER)
     set_target_properties(${exe} PROPERTIES
       COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
     add_test(NAME ${exe} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${exe}>)
+    set_tests_properties(${exe} PROPERTIES
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   endmacro()
 
   ## Tests that depend only on qpid-proton-core
@@ -65,6 +67,9 @@ if (CMAKE_CXX_COMPILER)
     # Tests for qpid-proton-proactor
     add_c_test(c-proactor-test pn_test_proactor.cpp proactor_test.cpp)
     target_link_libraries(c-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
+
+    add_c_test(c-ssl-proactor-test pn_test_proactor.cpp ssl_proactor_test.cpp)
+    target_link_libraries(c-ssl-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
 
     # Thread race test.
     #
