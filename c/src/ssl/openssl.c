@@ -756,6 +756,14 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 #if (OPENSSL_VERSION_NUMBER < 0x00905100L)
     SSL_CTX_set_verify_depth(domain->ctx, 1);
 #endif
+
+    // A bit of a hack - If we asked for peer verification then disallow anonymous ciphers
+    // A much more robust thing would be to ensure that we actually have a peer certificate
+    // when we've finished the SSL handshake
+    if (!domain->ciphers && !SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_AUTHENTICATE )) {
+      ssl_log_error("Failed to set cipher list to %s", CIPHERS_AUTHENTICATE);
+      return -1;
+    }
     break;
 
    case PN_SSL_ANONYMOUS_PEER:   // hippie free love mode... :)

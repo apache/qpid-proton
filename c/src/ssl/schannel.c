@@ -1354,6 +1354,11 @@ static void server_handshake(pn_transport_t* transport)
     ssl_log(transport, "server handshake successful %d max record size", max);
     break;
 
+  case SEC_E_ALGORITHM_MISMATCH:
+    ssl_log(transport, "server handshake failed: no common algorithm");
+    ssl_failed(transport, "server handshake failed: no common algorithm");
+    break;
+
   case SEC_I_CONTEXT_EXPIRED:
     // ended before we got going
   default:
