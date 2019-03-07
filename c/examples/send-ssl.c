@@ -46,22 +46,6 @@ typedef struct app_data_t {
 } app_data_t;
 
 static int exit_code = 0;
-
-/* Note must be run in the current directory to find certificate files */
-#define SSL_FILE(NAME) CMAKE_CURRENT_SOURCE_DIR "/ssl-certs/" NAME
-#define SSL_PW "tclientpw"
-/* Windows vs. OpenSSL certificates */
-#if defined(_WIN32)
-#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
-#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, SSL_FILE(NAME "-full.p12"), "", SSL_PW)
-#else
-#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem")
-#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME), SSL_FILE(NAME "-private-key.pem"), SSL_PW)
-#endif
-
-
 static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   if (pn_condition_is_set(cond)) {
     fprintf(stderr, "%s: %s: %s\n", pn_event_type_name(pn_event_type(e)),
