@@ -487,7 +487,7 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 
 	case *time.Time:
 		panicUnless(pnType == C.PN_TIMESTAMP, data, v)
-		*v = time.Unix(0, int64(C.pn_data_get_timestamp(data))*1000)
+		*v = goTime(C.pn_data_get_timestamp(data))
 
 	case *UUID:
 		panicUnless(pnType == C.PN_UUID, data, v)
@@ -566,7 +566,7 @@ func getInterface(data *C.pn_data_t, vp *interface{}) {
 	case C.PN_SYMBOL:
 		*vp = Symbol(goString(C.pn_data_get_symbol(data)))
 	case C.PN_TIMESTAMP:
-		*vp = time.Unix(0, int64(C.pn_data_get_timestamp(data))*1000)
+		*vp = goTime(C.pn_data_get_timestamp(data))
 	case C.PN_UUID:
 		var u UUID
 		unmarshal(&u, data)

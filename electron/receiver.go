@@ -21,9 +21,10 @@ package electron
 
 import (
 	"fmt"
+	"time"
+
 	"qpid.apache.org/amqp"
 	"qpid.apache.org/proton"
-	"time"
 )
 
 // Receiver is a Link that receives messages.
@@ -126,7 +127,9 @@ func (r *receiver) Receive() (rm ReceivedMessage, err error) {
 }
 
 func (r *receiver) ReceiveTimeout(timeout time.Duration) (rm ReceivedMessage, err error) {
-	assert(r.buffer != nil, "Receiver is not open: %s", r)
+	if r.buffer == nil {
+		panic(fmt.Errorf("Receiver is not open: %s", r))
+	}
 	if !r.prefetch { // Per-caller flow control
 		select { // Check for immediate availability, avoid caller() inject
 		case rm2, ok := <-r.buffer:
@@ -159,12 +162,16 @@ func (r *receiver) message(delivery proton.Delivery) {
 		return
 	}
 	if delivery.HasMessage() {
-		m, err := delivery.Message()
+		bytes, err := delivery.MessageBytes()
+		var m amqp.Message
+		if err == nil {
+			m = amqp.NewMessage()
+			err = r.session.connection.mc.Decode(m, bytes)
+		}
 		if err != nil {
 			localClose(r.pLink, err)
 			return
 		}
-		assert(m != nil)
 		r.pLink.Advance()
 		if r.pLink.Credit() < 0 {
 			localClose(r.pLink, fmt.Errorf("received message in excess of credit limit"))

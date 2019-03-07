@@ -146,7 +146,7 @@ const (
 	// Messages are sent already settled
 	SndSettled = SndSettleMode(proton.SndSettled)
 	// Sender can send either unsettled or settled messages.
-	SendMixed = SndSettleMode(proton.SndMixed)
+	SndMixed = SndSettleMode(proton.SndMixed)
 )
 
 // RcvSettleMode defines when the receiving end of the link settles message delivery.

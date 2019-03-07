@@ -26,9 +26,10 @@ import "C"
 
 import (
 	"fmt"
-	"qpid.apache.org/amqp"
 	"strconv"
 	"sync/atomic"
+
+	"qpid.apache.org/amqp"
 )
 
 // HasMessage is true if all message data is available.
@@ -41,7 +42,24 @@ func (d Delivery) HasMessage() bool { return !d.IsNil() && d.Readable() && !d.Pa
 // handling an MMessage event is always a safe context to call this function.
 //
 // Will return an error if message is incomplete or not current.
-func (delivery Delivery) Message() (m amqp.Message, err error) {
+func (delivery Delivery) Message() (amqp.Message, error) {
+	var err error
+	bytes, err := delivery.MessageBytes()
+	if err == nil {
+		m := amqp.NewMessage()
+		err = m.Decode(bytes)
+		return m, err
+	}
+	return nil, err
+}
+
+// MessageBytes extracts the raw message bytes contained in a delivery.
+//
+// Must be called in the correct link context with this delivery as the current message,
+// handling an MMessage event is always a safe context to call this function.
+//
+// Will return an error if message is incomplete or not current.
+func (delivery Delivery) MessageBytes() ([]byte, error) {
 	if !delivery.Readable() {
 		return nil, fmt.Errorf("delivery is not readable")
 	}
@@ -53,9 +71,7 @@ func (delivery Delivery) Message() (m amqp.Message, err error) {
 	if result != len(data) {
 		return nil, fmt.Errorf("cannot receive message: %s", PnErrorCode(result))
 	}
-	m = amqp.NewMessage()
-	err = m.Decode(data)
-	return
+	return data, nil
 }
 
 // Process-wide atomic counter for generating tag names
@@ -68,15 +84,21 @@ func nextTag() string {
 // Send sends a amqp.Message over a Link.
 // Returns a Delivery that can be use to determine the outcome of the message.
 func (link Link) Send(m amqp.Message) (Delivery, error) {
+	bytes, err := m.Encode(nil)
+	if err != nil {
+		return Delivery{}, err
+	}
+	d, err := link.SendMessageBytes(bytes)
+	return d, err
+}
+
+// SendMessageBytes sends encoded bytes of an amqp.Message over a Link.
+// Returns a Delivery that can be use to determine the outcome of the message.
+func (link Link) SendMessageBytes(bytes []byte) (Delivery, error) {
 	if !link.IsSender() {
 		return Delivery{}, fmt.Errorf("attempt to send message on receiving link")
 	}
-
 	delivery := link.Delivery(nextTag())
-	bytes, err := m.Encode(nil)
-	if err != nil {
-		return Delivery{}, fmt.Errorf("cannot send message %s", err)
-	}
 	result := link.SendBytes(bytes)
 	link.Advance()
 	if result != len(bytes) {

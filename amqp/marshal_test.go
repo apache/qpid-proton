@@ -22,50 +22,35 @@ package amqp
 import (
 	"strings"
 	"testing"
+
+	"qpid.apache.org/internal/test"
 )
 
 func TestSymbolKey(t *testing.T) {
 	bytes, err := Marshal(AnnotationKeySymbol("foo"), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.FatalIf(t, err)
 	var k AnnotationKey
-	if _, err := Unmarshal(bytes, &k); err != nil {
-		t.Error(err)
-	}
-	if err := checkEqual("foo", string(k.Get().(Symbol))); err != nil {
-		t.Error(err)
-	}
+	_, err = Unmarshal(bytes, &k)
+	test.ErrorIf(t, err)
+	test.ErrorIf(t, test.Differ("foo", string(k.Get().(Symbol))))
 	var sym Symbol
-	if _, err := Unmarshal(bytes, &sym); err != nil {
-		t.Error(err)
-	}
-	if err := checkEqual("foo", sym.String()); err != nil {
-		t.Error(err)
-	}
-
+	_, err = Unmarshal(bytes, &sym)
+	test.ErrorIf(t, err)
+	test.ErrorIf(t, test.Differ("foo", sym.String()))
 }
 
 func TestStringKey(t *testing.T) {
 	bytes, err := Marshal(AnnotationKeyString("foo"), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.FatalIf(t, err)
 	var k AnnotationKey
-	if _, err := Unmarshal(bytes, &k); err != nil {
-		t.Error(err)
-	}
-	if err := checkEqual("foo", string(k.Get().(Symbol))); err != nil {
-		t.Error(err)
-	}
-	var s string
-	if _, err := Unmarshal(bytes, &s); err != nil {
-		t.Error(err)
-	}
-	if err := checkEqual("foo", s); err != nil {
-		t.Error(err)
-	}
 
+	_, err = Unmarshal(bytes, &k)
+	test.ErrorIf(t, err)
+	test.ErrorIf(t, test.Differ("foo", string(k.Get().(Symbol))))
+	var s string
+	_, err = Unmarshal(bytes, &s)
+	test.ErrorIf(t, err)
+	test.ErrorIf(t, test.Differ("foo", s))
 }
 
 func TestIntKey(t *testing.T) {
@@ -95,7 +80,7 @@ func TestMapToMap(t *testing.T) {
 	if bytes, err := Marshal(in, nil); err == nil {
 		var out Map
 		if _, err := Unmarshal(bytes, &out); err == nil {
-			if err = checkEqual(in, out); err != nil {
+			if err = test.Differ(in, out); err != nil {
 				t.Error(err)
 			}
 		} else {
@@ -109,7 +94,7 @@ func TestMapToInterface(t *testing.T) {
 	if bytes, err := Marshal(in, nil); err == nil {
 		var out interface{}
 		if _, err := Unmarshal(bytes, &out); err == nil {
-			if err = checkEqual(in, out); err != nil {
+			if err = test.Differ(in, out); err != nil {
 				t.Error(err)
 			}
 		} else {
@@ -125,10 +110,10 @@ func TestAnyMap(t *testing.T) {
 		t.Error(err)
 	}
 	var out AnyMap
-	if _, err := Unmarshal(bytes, &out); err != nil {
+	if _, err = Unmarshal(bytes, &out); err != nil {
 		t.Error(err)
 	}
-	if err = checkEqual(AnyMap(nil), out); err != nil {
+	if err = test.Differ(AnyMap(nil), out); err != nil {
 		t.Error(err)
 	}
 
@@ -137,10 +122,10 @@ func TestAnyMap(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if _, err := Unmarshal(bytes, &out); err != nil {
+	if _, err = Unmarshal(bytes, &out); err != nil {
 		t.Error(err)
 	}
-	if err = checkEqual(AnyMap(nil), out); err != nil {
+	if err = test.Differ(AnyMap(nil), out); err != nil {
 		t.Error(err)
 	}
 
@@ -150,10 +135,10 @@ func TestAnyMap(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if _, err := Unmarshal(bytes, &out); err != nil {
+	if _, err = Unmarshal(bytes, &out); err != nil {
 		t.Error(err)
 	}
-	if err = checkEqual(in, out); err != nil {
+	if err = test.Differ(in, out); err != nil {
 		t.Error(err)
 	}
 }
@@ -167,7 +152,7 @@ func TestBadMap(t *testing.T) {
 	}
 	m := Map{}
 	//  Should fail to unmarshal to a map
-	if _, err := Unmarshal(bytes, &m); err != nil {
+	if _, err = Unmarshal(bytes, &m); err != nil {
 		if !strings.Contains(err.Error(), "key []string{\"x\", \"y\"} is not comparable") {
 			t.Error(err)
 		}
@@ -176,16 +161,16 @@ func TestBadMap(t *testing.T) {
 	}
 	// Should unmarshal to an AnyMap
 	var out AnyMap
-	if _, err := Unmarshal(bytes, &out); err != nil {
+	if _, err = Unmarshal(bytes, &out); err != nil {
 		t.Error(err)
-	} else if err = checkEqual(in, out); err != nil {
+	} else if err = test.Differ(in, out); err != nil {
 		t.Error(err)
 	}
 	// Should unmarshal to interface{} as AnyMap
 	var v interface{}
-	if _, err := Unmarshal(bytes, &v); err != nil {
+	if _, err = Unmarshal(bytes, &v); err != nil {
 		t.Error(err)
-	} else if err = checkEqual(in, v); err != nil {
+	} else if err = test.Differ(in, v); err != nil {
 		t.Error(err)
 	}
 	// Round trip from interface to interface
@@ -195,9 +180,9 @@ func TestBadMap(t *testing.T) {
 		t.Error(err)
 	}
 	v = nil
-	if _, err := Unmarshal(bytes, &v); err != nil {
+	if _, err = Unmarshal(bytes, &v); err != nil {
 		t.Error(err)
-	} else if err = checkEqual(in, v); err != nil {
+	} else if err = test.Differ(in, v); err != nil {
 		t.Error(err)
 	}
 }

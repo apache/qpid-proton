@@ -20,59 +20,67 @@ under the License.
 package amqp
 
 import (
+	"reflect"
 	"testing"
 	"time"
+
+	"qpid.apache.org/internal/test"
 )
 
 func roundTrip(m Message) error {
-	var err error
-	if buffer, err := m.Encode(nil); err == nil {
-		if m2, err := DecodeMessage(buffer); err == nil {
-			if err = checkEqual(m, m2); err == nil {
-				err = checkEqual(m.String(), m2.String())
-			}
-		}
+	buffer, err := m.Encode(nil)
+	if err != nil {
+		return err
 	}
-	return err
+	m2, err := DecodeMessage(buffer)
+	if err != nil {
+		return err
+	}
+	return test.Differ(m, m2)
 }
 
 func TestDefaultMessage(t *testing.T) {
 	m := NewMessage()
-	// Check defaults
-	for _, data := range [][]interface{}{
-		{m.Inferred(), false},
-		{m.Durable(), false},
-		{m.Priority(), uint8(4)},
-		{m.TTL(), time.Duration(0)},
-		{m.UserId(), ""},
-		{m.Address(), ""},
-		{m.Subject(), ""},
-		{m.ReplyTo(), ""},
-		{m.ContentType(), ""},
-		{m.ContentEncoding(), ""},
-		{m.GroupId(), ""},
-		{m.GroupSequence(), int32(0)},
-		{m.ReplyToGroupId(), ""},
-		{m.MessageId(), nil},
-		{m.CorrelationId(), nil},
-		{m.DeliveryAnnotations(), map[AnnotationKey]interface{}(nil)},
-		{m.MessageAnnotations(), map[AnnotationKey]interface{}(nil)},
-		{m.ApplicationProperties(), map[string]interface{}(nil)},
-
-		// Deprecated
-		{m.Instructions(), map[string]interface{}(nil)},
-		{m.Annotations(), map[string]interface{}(nil)},
-		{m.Properties(), map[string]interface{}(nil)},
-		{m.Body(), nil},
-	} {
-		if err := checkEqual(data[0], data[1]); err != nil {
-			t.Error(err)
-		}
-	}
 	if err := roundTrip(m); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual("Message{}", m.String()); err != nil {
+	mv := reflect.ValueOf(m)
+	// Check defaults
+	for _, x := range []struct {
+		method string
+		want   interface{}
+	}{
+		{"Inferred", false},
+		{"Durable", false},
+		{"Priority", uint8(4)},
+		{"TTL", time.Duration(0)},
+		{"UserId", ""},
+		{"Address", ""},
+		{"Subject", ""},
+		{"ReplyTo", ""},
+		{"ContentType", ""},
+		{"ContentEncoding", ""},
+		{"GroupId", ""},
+		{"GroupSequence", int32(0)},
+		{"ReplyToGroupId", ""},
+		{"MessageId", nil},
+		{"CorrelationId", nil},
+		{"DeliveryAnnotations", map[AnnotationKey]interface{}{}},
+		{"MessageAnnotations", map[AnnotationKey]interface{}{}},
+		{"ApplicationProperties", map[string]interface{}{}},
+
+		// Deprecated
+		{"Instructions", map[string]interface{}(nil)},
+		{"Annotations", map[string]interface{}(nil)},
+		{"Properties", map[string]interface{}{}},
+		{"Body", nil},
+	} {
+		ret := mv.MethodByName(x.method).Call(nil)
+		if err := test.Differ(x.want, ret[0].Interface()); err != nil {
+			t.Errorf("%s: %s", x.method, err)
+		}
+	}
+	if err := test.Differ("Message{}", m.String()); err != nil {
 		t.Error(err)
 	}
 }
@@ -84,14 +92,17 @@ func TestMessageString(t *testing.T) {
 	m.SetDeliveryAnnotations(map[AnnotationKey]interface{}{AnnotationKeySymbol("instructions"): "foo"})
 	m.SetMessageAnnotations(map[AnnotationKey]interface{}{AnnotationKeySymbol("annotations"): "bar"})
 	m.SetApplicationProperties(map[string]interface{}{"int": int32(32)})
-	msgstr := `Message{user_id="user", instructions={:instructions="foo"}, annotations={:annotations="bar"}, properties={"int"=32}, body="hello"}`
-	if err := checkEqual(msgstr, m.String()); err != nil {
+	if err := roundTrip(m); err != nil {
+		t.Error(err)
+	}
+	msgstr := "Message{user-id: user, delivery-annotations: map[instructions:foo], message-annotations: map[annotations:bar], application-properties: map[int:32], body: hello}"
+	if err := test.Differ(msgstr, m.String()); err != nil {
 		t.Error(err)
 	}
 }
 
-func TestMessageRoundTrip(t *testing.T) {
-	m := NewMessage()
+// Set all message properties
+func setMessageProperties(m Message) Message {
 	m.SetInferred(false)
 	m.SetDurable(true)
 	m.SetPriority(42)
@@ -110,7 +121,25 @@ func TestMessageRoundTrip(t *testing.T) {
 	m.SetDeliveryAnnotations(map[AnnotationKey]interface{}{AnnotationKeySymbol("instructions"): "foo"})
 	m.SetMessageAnnotations(map[AnnotationKey]interface{}{AnnotationKeySymbol("annotations"): "bar"})
 	m.SetApplicationProperties(map[string]interface{}{"int": int32(32), "bool": true})
-	m.Marshal("hello")
+	return m
+}
+
+func TestMessageRoundTrip(t *testing.T) {
+	m1 := NewMessage()
+	setMessageProperties(m1)
+	m1.Marshal("hello")
+
+	buffer, err := m1.Encode(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m, err := DecodeMessage(buffer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = test.Differ(m1, m); err != nil {
+		t.Error(err)
+	}
 
 	for _, data := range [][]interface{}{
 		{m.Inferred(), false},
@@ -138,7 +167,7 @@ func TestMessageRoundTrip(t *testing.T) {
 		{m.Instructions(), map[string]interface{}{"instructions": "foo"}},
 		{m.Annotations(), map[string]interface{}{"annotations": "bar"}},
 	} {
-		if err := checkEqual(data[0], data[1]); err != nil {
+		if err := test.Differ(data[0], data[1]); err != nil {
 			t.Error(err)
 		}
 	}
@@ -163,7 +192,7 @@ func TestDeprecated(t *testing.T) {
 		{m.Annotations(), map[string]interface{}{"annotations": "bar"}},
 		{m.Properties(), map[string]interface{}{"int": int32(32), "bool": true}},
 	} {
-		if err := checkEqual(data[0], data[1]); err != nil {
+		if err := test.Differ(data[0], data[1]); err != nil {
 			t.Error(err)
 		}
 	}
@@ -180,20 +209,20 @@ func TestMessageBodyTypes(t *testing.T) {
 	m := NewMessageWith(int64(42))
 	m.Unmarshal(&body)
 	m.Unmarshal(&i)
-	if err := checkEqual(body.(int64), int64(42)); err != nil {
+	if err := test.Differ(body.(int64), int64(42)); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual(i, int64(42)); err != nil {
+	if err := test.Differ(i, int64(42)); err != nil {
 		t.Error(err)
 	}
 
 	m = NewMessageWith("hello")
 	m.Unmarshal(&s)
 	m.Unmarshal(&body)
-	if err := checkEqual(s, "hello"); err != nil {
+	if err := test.Differ(s, "hello"); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual(body.(string), "hello"); err != nil {
+	if err := test.Differ(body.(string), "hello"); err != nil {
 		t.Error(err)
 	}
 	if err := roundTrip(m); err != nil {
@@ -203,10 +232,10 @@ func TestMessageBodyTypes(t *testing.T) {
 	m = NewMessageWith(Binary("bin"))
 	m.Unmarshal(&s)
 	m.Unmarshal(&body)
-	if err := checkEqual(body.(Binary), Binary("bin")); err != nil {
+	if err := test.Differ(body.(Binary), Binary("bin")); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual(s, "bin"); err != nil {
+	if err := test.Differ(s, "bin"); err != nil {
 		t.Error(err)
 	}
 	if err := roundTrip(m); err != nil {
@@ -214,4 +243,54 @@ func TestMessageBodyTypes(t *testing.T) {
 	}
 
 	// TODO aconway 2015-09-08: array etc.
+}
+
+// Benchmarks assign to package-scope variables to prevent being optimized out.
+var bmM Message
+var bmBuf []byte
+
+func BenchmarkNewMessageEmpty(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		bmM = NewMessage()
+	}
+}
+
+func BenchmarkNewMessageString(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		bmM = NewMessageWith("hello")
+	}
+}
+
+func BenchmarkNewMessageAll(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		bmM = setMessageProperties(NewMessageWith("hello"))
+	}
+}
+
+func BenchmarkEncode(b *testing.B) {
+	m := setMessageProperties(NewMessageWith("hello"))
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		buf, err := m.Encode(nil)
+		if err != nil {
+			b.Fatal(err)
+		}
+		bmBuf = buf
+	}
+}
+
+func BenchmarkDecode(b *testing.B) {
+	var buf []byte
+	buf, err := setMessageProperties(NewMessageWith("hello")).Encode(buf)
+	if err != nil {
+		b.Fatal(err)
+	}
+	m := NewMessage()
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		if err := m.Decode(buf); err != nil {
+			b.Fatal(err)
+		}
+		bmM = m
+	}
 }

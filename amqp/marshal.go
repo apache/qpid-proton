@@ -224,7 +224,7 @@ func marshal(i interface{}, data *C.pn_data_t) {
 
 		// Other simple types
 	case time.Time:
-		C.pn_data_put_timestamp(data, C.pn_timestamp_t(v.UnixNano()/1000))
+		C.pn_data_put_timestamp(data, pnTime(v))
 	case UUID:
 		C.pn_data_put_uuid(data, *(*C.pn_uuid_t)(unsafe.Pointer(&v[0])))
 	case Char:

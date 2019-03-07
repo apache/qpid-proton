@@ -24,9 +24,10 @@ import "C"
 
 import (
 	"fmt"
+	"time"
+
 	"qpid.apache.org/amqp"
 	"qpid.apache.org/proton"
-	"time"
 )
 
 // Sender is a Link that sends messages.
@@ -148,54 +149,89 @@ func sentStatus(d uint64) SentStatus {
 	}
 }
 
-// Sender implementation, held by handler.
+type sendable struct {
+	m    amqp.Message
+	ack  chan<- Outcome // Channel for acknowledgement of m
+	v    interface{}    // Correlation value
+	sent chan struct{}  // Closed when m is encoded and will be sent
+}
+
+func (sm *sendable) unsent(err error) {
+	Outcome{Unsent, err, sm.v}.send(sm.ack)
+}
+
 type sender struct {
 	link
-	credit chan struct{} // Signal available credit.
+	sending []*sendable
+}
+
+func newSender(ls linkSettings) *sender {
+	s := &sender{link: link{linkSettings: ls}}
+	s.endpoint.init(s.link.pLink.String())
+	s.handler().addLink(s.pLink, s)
+	s.link.pLink.Open()
+	return s
+}
+
+// Called in handler goroutine
+func (s *sender) startSend(sm *sendable) {
+	s.sending = append(s.sending, sm)
+	s.trySend()
+}
+
+// Called in handler goroutine
+func (s *sender) trySend() {
+	for s.pLink.Credit() > 0 && len(s.sending) > 0 {
+		sm := s.sending[0]
+		s.sending = s.sending[1:]
+		s.send(sm)
+	}
+}
+
+// Called in handler goroutine with credit > 0
+func (s *sender) send(sm *sendable) {
+	if err := s.Error(); err != nil {
+		sm.unsent(err)
+		return
+	}
+	bytes, err := s.session.connection.mc.Encode(sm.m, nil)
+	close(sm.sent) // Safe to re-use sm.m now
+	if err != nil {
+		sm.unsent(err)
+		return
+	}
+	d, err := s.pLink.SendMessageBytes(bytes)
+	if err != nil {
+		sm.unsent(err)
+		return
+	}
+	if s.SndSettle() == SndSettled || (s.SndSettle() == SndMixed && sm.ack == nil) {
+		d.Settle()                                // Pre-settled
+		Outcome{Accepted, nil, sm.v}.send(sm.ack) // Assume accepted
+	} else {
+		// Register with handler to receive the remote outcome
+		s.handler().sent[d] = sm
+	}
+}
+
+func (s *sender) timeoutSend(sm *sendable) {
+	for i, sm2 := range s.sending {
+		if sm2 == sm {
+			n := copy(s.sending[i:], s.sending[i+1:])
+			s.sending = s.sending[:i+n] // delete
+			close(sm.sent)
+			return
+		}
+	}
 }
 
 func (s *sender) SendAsyncTimeout(m amqp.Message, ack chan<- Outcome, v interface{}, t time.Duration) {
-	// wait for credit
-	if _, err := timedReceive(s.credit, t); err != nil {
-		if err == Closed && s.Error() != nil {
-			err = s.Error()
-		}
-		Outcome{Unsent, err, v}.send(ack)
-		return
-	}
-	// Send a message in handler goroutine
-	err := s.engine().Inject(func() {
-		if s.Error() != nil {
-			Outcome{Unsent, s.Error(), v}.send(ack)
-			return
-		}
-
-		delivery, err2 := s.pLink.Send(m)
-		switch {
-		case err2 != nil:
-			Outcome{Unsent, err2, v}.send(ack)
-		case ack == nil || s.SndSettle() == SndSettled: // Pre-settled
-			if s.SndSettle() != SndUnsettled { // Not forced to send unsettled by link policy
-				delivery.Settle()
-			}
-			Outcome{Accepted, nil, v}.send(ack) // Assume accepted
-		default:
-			s.handler().sentMessages[delivery] = sentMessage{ack, v} // Register with handler
-		}
-		if s.pLink.Credit() > 0 { // Signal there is still credit
-			s.sendable()
-		}
-	})
-	if err != nil {
-		Outcome{Unsent, err, v}.send(ack)
-	}
-}
-
-// Set credit flag if not already set. Non-blocking, any goroutine
-func (s *sender) sendable() {
-	select { // Non-blocking
-	case s.credit <- struct{}{}:
-	default:
+	sm := &sendable{m, ack, v, make(chan struct{})}
+	s.engine().Inject(func() { s.startSend(sm) })
+	select {
+	case <-sm.sent: // OK
+	case <-After(t): // Try to timeout sm
+		s.engine().Inject(func() { s.timeoutSend(sm) })
 	}
 }
 
@@ -244,22 +280,11 @@ func (s *sender) SendSync(m amqp.Message) Outcome {
 
 // handler goroutine
 func (s *sender) closed(err error) error {
-	close(s.credit)
+	for _, sm := range s.sending {
+		close(sm.sent)
+	}
+	s.sending = nil
 	return s.link.closed(err)
-}
-
-func newSender(ls linkSettings) *sender {
-	s := &sender{link: link{linkSettings: ls}, credit: make(chan struct{}, 1)}
-	s.endpoint.init(s.link.pLink.String())
-	s.handler().addLink(s.pLink, s)
-	s.link.pLink.Open()
-	return s
-}
-
-// sentMessage records a sent message on the handler.
-type sentMessage struct {
-	ack   chan<- Outcome
-	value interface{}
 }
 
 // IncomingSender is sent on the Connection.Incoming() channel when there is

@@ -22,31 +22,11 @@ package proton
 import (
 	"fmt"
 	"net"
-	"path"
-	"runtime"
 	"testing"
 	"time"
+
+	"qpid.apache.org/internal/test"
 )
-
-func errorIf(t *testing.T, err error) {
-	if err != nil {
-		_, file, line, ok := runtime.Caller(1) // annotate with location of caller.
-		if ok {
-			_, file = path.Split(file)
-		}
-		t.Errorf("(from %s:%d) %v", file, line, err)
-	}
-}
-
-func fatalIf(t *testing.T, err error) {
-	if err != nil {
-		_, file, line, ok := runtime.Caller(1) // annotate with location of caller.
-		if ok {
-			_, file = path.Split(file)
-		}
-		t.Fatalf("(from %s:%d) %v", file, line, err)
-	}
-}
 
 type events []EventType
 
@@ -82,15 +62,15 @@ func (eng *testEngine) expect(events []EventType) error {
 func Test(t *testing.T) {
 	cConn, sConn := net.Pipe()
 	client, err := newTestEngine(cConn)
-	fatalIf(t, err)
+	test.FatalIf(t, err)
 	server, err := newTestEngine(sConn)
-	fatalIf(t, err)
+	test.FatalIf(t, err)
 	server.Server()
 	go client.Run()
 	go server.Run()
-	fatalIf(t, server.expect(events{EConnectionInit, EConnectionBound}))
-	fatalIf(t, client.expect(events{EConnectionInit, EConnectionBound}))
-	fatalIf(t, client.InjectWait(func() error { client.Connection().Open(); return nil }))
-	fatalIf(t, client.expect(events{EConnectionLocalOpen}))
-	fatalIf(t, server.expect(events{EConnectionRemoteOpen}))
+	test.FatalIf(t, server.expect(events{EConnectionInit, EConnectionBound}))
+	test.FatalIf(t, client.expect(events{EConnectionInit, EConnectionBound}))
+	test.FatalIf(t, client.InjectWait(func() error { client.Connection().Open(); return nil }))
+	test.FatalIf(t, client.expect(events{EConnectionLocalOpen}))
+	test.FatalIf(t, server.expect(events{EConnectionRemoteOpen}))
 }

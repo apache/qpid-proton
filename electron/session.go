@@ -89,11 +89,11 @@ func (s *session) Sender(setting ...LinkOption) (snd Sender, err error) {
 		if s.Error() != nil {
 			return s.Error()
 		}
-		l, err := makeLocalLink(s, true, setting...)
-		if err == nil {
+		l, err2 := makeLocalLink(s, true, setting...)
+		if err2 == nil {
 			snd = newSender(l)
 		}
-		return err
+		return err2
 	})
 	return
 }
@@ -103,11 +103,11 @@ func (s *session) Receiver(setting ...LinkOption) (rcv Receiver, err error) {
 		if s.Error() != nil {
 			return s.Error()
 		}
-		l, err := makeLocalLink(s, false, setting...)
-		if err == nil {
+		l, err2 := makeLocalLink(s, false, setting...)
+		if err2 == nil {
 			rcv = newReceiver(l)
 		}
-		return err
+		return err2
 	})
 	return
 }
