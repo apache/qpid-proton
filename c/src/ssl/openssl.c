@@ -80,14 +80,14 @@ struct pn_ssl_domain_t {
   pn_ssl_mode_t mode;
   pn_ssl_verify_mode_t verify_mode;
 
-  bool has_ca_db;       // true when CA database configured
   bool has_certificate; // true when certificate configured
   bool allow_unsecured;
 };
 
 
 struct pni_ssl_t {
-  pn_ssl_domain_t  *domain;
+  pn_ssl_mode_t mode;
+  pn_ssl_verify_mode_t verify_mode;
   const char    *session_id;
   const char *peer_hostname;
   SSL *ssl;
@@ -141,7 +141,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer,
 static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer, char *input_data, size_t len);
 static ssize_t process_input_done(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len);
 static ssize_t process_output_done(pn_transport_t *transport, unsigned int layer, char *input_data, size_t len);
-static int init_ssl_socket(pn_transport_t *, pni_ssl_t *);
+static int init_ssl_socket(pn_transport_t *, pni_ssl_t *, pn_ssl_domain_t *);
 static void release_ssl_socket( pni_ssl_t * );
 static size_t buffered_output( pn_transport_t *transport );
 static X509 *get_peer_certificate(pni_ssl_t *ssl);
@@ -293,7 +293,7 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
   }
 
   pni_ssl_t *ssl = transport->ssl;
-  if (ssl->domain->verify_mode != PN_SSL_VERIFY_PEER_NAME) return preverify_ok;
+  if (ssl->verify_mode != PN_SSL_VERIFY_PEER_NAME) return preverify_ok;
   if (!ssl->peer_hostname) {
     pn_transport_logf(transport, "Error: configuration error: PN_SSL_VERIFY_PEER_NAME configured, but no peer hostname set!");
     return 0;  // fail connection
@@ -476,14 +476,12 @@ bool pn_ssl_present(void)
 
 static bool ensure_initialized(void);
 
-pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
+static bool pni_init_ssl_domain( pn_ssl_domain_t * domain, pn_ssl_mode_t mode )
 {
   if (!ensure_initialized()) {
       ssl_log_error("Unable to initialize OpenSSL library");
-      return NULL;
+      return false;
   }
-  pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
-  if (!domain) return NULL;
 
   domain->ref_count = 1;
   domain->mode = mode;
@@ -494,11 +492,16 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   switch(mode) {
    case PN_SSL_MODE_CLIENT:
     domain->ctx = SSL_CTX_new(SSLv23_client_method()); // and TLSv1+
-    SSL_CTX_set_session_cache_mode(domain->ctx, SSL_SESS_CACHE_CLIENT);
     if (!domain->ctx) {
       ssl_log_error("Unable to initialize OpenSSL context.");
-      free(domain);
-      return NULL;
+      return false;
+    }
+    SSL_CTX_set_session_cache_mode(domain->ctx, SSL_SESS_CACHE_CLIENT);
+
+    // By default, require peer name verification - this is a safe default
+    if (pn_ssl_domain_set_peer_authentication( domain, PN_SSL_VERIFY_PEER_NAME, NULL )) {
+      SSL_CTX_free(domain->ctx);
+      return false;
     }
     break;
 
@@ -506,38 +509,41 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     domain->ctx = SSL_CTX_new(SSLv23_server_method()); // and TLSv1+
     if (!domain->ctx) {
       ssl_log_error("Unable to initialize OpenSSL context.");
-      free(domain);
-      return NULL;
+      return false;
+    }
+    // By default, allow anonymous ciphers and do no authentication so certificates are
+    // not required 'out of the box'; authenticating the client can be done by SASL.
+    if (pn_ssl_domain_set_peer_authentication( domain, PN_SSL_ANONYMOUS_PEER, NULL )) {
+      SSL_CTX_free(domain->ctx);
+      return false;
     }
     break;
 
    default:
     pn_transport_logf(NULL, "Invalid value for pn_ssl_mode_t: %d", mode);
-    free(domain);
-    return NULL;
+    return false;
   }
-  const long reject_insecure = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
+
+  // By default set up system default certificates
+  if (!SSL_CTX_set_default_verify_paths(domain->ctx)){
+    ssl_log_error("Failed to set default certificate paths");
+    SSL_CTX_free(domain->ctx);
+    return false;
+  };
+
+  const long reject_insecure =
+      SSL_OP_NO_SSLv2
+    | SSL_OP_NO_SSLv3
+    // Mitigate the CRIME vulnerability
+#   ifdef SSL_OP_NO_COMPRESSION
+    | SSL_OP_NO_COMPRESSION
+#   endif
+    ;
   SSL_CTX_set_options(domain->ctx, reject_insecure);
-#ifdef SSL_OP_NO_COMPRESSION
-  // Mitigate the CRIME vulnerability
-  SSL_CTX_set_options(domain->ctx, SSL_OP_NO_COMPRESSION);
-#endif
-#ifdef SSL_SECOP_PEER
+
+# ifdef SSL_SECOP_PEER
   domain->default_seclevel = SSL_CTX_get_security_level(domain->ctx);
-#endif
-
-  // by default, allow anonymous ciphers so certificates are not required 'out of the box'
-  if (!SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_ANONYMOUS )) {
-    ssl_log_error("Failed to set cipher list to %s", CIPHERS_ANONYMOUS);
-    pn_ssl_domain_free(domain);
-    return NULL;
-  }
-
-  // ditto: by default do not authenticate the peer (can be done by SASL).
-  if (pn_ssl_domain_set_peer_authentication( domain, PN_SSL_ANONYMOUS_PEER, NULL )) {
-    pn_ssl_domain_free(domain);
-    return NULL;
-  }
+# endif
 
   DH *dh = get_dh2048();
   if (dh) {
@@ -546,6 +552,25 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     SSL_CTX_set_options(domain->ctx, SSL_OP_SINGLE_DH_USE);
   }
 
+  return true;
+}
+
+pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
+{
+  pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
+  if (!domain) return NULL;
+
+  if (!pni_init_ssl_domain(domain, mode)) {
+    free(domain);
+    return NULL;
+  }
+
+  // Insecure, but backward compatible client default
+  if (mode==PN_SSL_MODE_CLIENT &&
+      pn_ssl_domain_set_peer_authentication(domain, PN_SSL_ANONYMOUS_PEER, NULL)) {
+    free(domain);
+    return NULL;
+  }
   return domain;
 }
 
@@ -553,10 +578,10 @@ void pn_ssl_domain_free( pn_ssl_domain_t *domain )
 {
   if (--domain->ref_count == 0) {
 
-    if (domain->ctx) SSL_CTX_free(domain->ctx);
-    if (domain->keyfile_pw) free(domain->keyfile_pw);
-    if (domain->trusted_CAs) free(domain->trusted_CAs);
-    if (domain->ciphers) free(domain->ciphers);
+    SSL_CTX_free(domain->ctx);
+    free(domain->keyfile_pw);
+    free(domain->trusted_CAs);
+    free(domain->ciphers);
     free(domain);
   }
 }
@@ -703,8 +728,6 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
     return -1;
   }
 
-  domain->has_ca_db = true;
-
   return 0;
 }
 
@@ -723,11 +746,6 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
     SSL_CTX_set_security_level(domain->ctx, domain->default_seclevel);
 #endif
 
-    if (!domain->has_ca_db) {
-      pn_transport_logf(NULL, "Error: cannot verify peer without a trusted CA configured, use pn_ssl_domain_set_trusted_ca_db()");
-      return -1;
-    }
-
     if (domain->mode == PN_SSL_MODE_SERVER) {
       // openssl requires that server connections supply a list of trusted CAs which is
       // sent to the client
@@ -737,6 +755,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
       }
       if (!domain->has_certificate) {
         pn_transport_logf(NULL, "Error: Server cannot verify peer without configuring a certificate, use pn_ssl_domain_set_credentials()");
+        return -1;
       }
 
       if (domain->trusted_CAs) free(domain->trusted_CAs);
@@ -772,6 +791,11 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
     SSL_CTX_set_security_level(domain->ctx, 0);
 #endif
     SSL_CTX_set_verify( domain->ctx, SSL_VERIFY_NONE, NULL );
+    // Only allow anonymous ciphers if we allow anonymous peers
+    if (!domain->ciphers && !SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_ANONYMOUS )) {
+      ssl_log_error("Failed to set cipher list to %s", CIPHERS_ANONYMOUS);
+      return -1;
+    }
     break;
 
    default:
@@ -815,14 +839,32 @@ const pn_io_layer_t ssl_closed_layer = {
   buffered_output
 };
 
+static pn_ssl_domain_t default_client_domain = {0};
+static pn_ssl_domain_t default_server_domain = {0};
+
 int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
 {
   pn_transport_t *transport = get_transport_internal(ssl0);
   pni_ssl_t *ssl = transport->ssl;
-  if (!ssl || !domain || ssl->domain) return -1;
+  if (!ssl) return -1;
 
-  ssl->domain = domain;
-  domain->ref_count++;
+  if (!domain) {
+    if (transport->server) {
+      domain = &default_server_domain;
+      if (domain->ref_count==0) {
+        pni_init_ssl_domain(domain, PN_SSL_MODE_SERVER);
+      }
+    } else {
+      domain = &default_client_domain;
+      if (domain->ref_count==0) {
+        pni_init_ssl_domain(domain, PN_SSL_MODE_CLIENT);
+      }
+    }
+  }
+
+  ssl->mode = domain->mode;
+  ssl->verify_mode = domain->verify_mode;
+
   if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
     ssl->session_id = pn_strdup(session_id);
 
@@ -830,7 +872,7 @@ int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
   // TODO: This is a probably a stop-gap until allow_unsecured is removed
   if (!domain->allow_unsecured) transport->encryption_required = true;
 
-  return init_ssl_socket(transport, ssl);
+  return init_ssl_socket(transport, ssl, domain);
 }
 
 
@@ -895,7 +937,6 @@ void pn_ssl_free(pn_transport_t *transport)
   if (!ssl) return;
   ssl_log(transport, "SSL socket freed." );
   release_ssl_socket( ssl );
-  if (ssl->domain) pn_ssl_domain_free(ssl->domain);
   if (ssl->session_id) free((void *)ssl->session_id);
   if (ssl->peer_hostname) free((void *)ssl->peer_hostname);
   if (ssl->inbuf) free((void *)ssl->inbuf);
@@ -971,7 +1012,7 @@ static int start_ssl_shutdown(pn_transport_t *transport)
 static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer, const char *input_data, size_t available)
 {
   pni_ssl_t *ssl = transport->ssl;
-  if (ssl->ssl == NULL && init_ssl_socket(transport, ssl)) return PN_EOS;
+  if (ssl->ssl == NULL && init_ssl_socket(transport, ssl, NULL)) return PN_EOS;
 
   ssl_log( transport, "process_input_ssl( data size=%d )",available );
 
@@ -1124,7 +1165,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
 {
   pni_ssl_t *ssl = transport->ssl;
   if (!ssl) return PN_EOS;
-  if (ssl->ssl == NULL && init_ssl_socket(transport, ssl)) return PN_EOS;
+  if (ssl->ssl == NULL && init_ssl_socket(transport, ssl, NULL)) return PN_EOS;
 
   ssize_t written = 0;
   bool work_pending;
@@ -1238,12 +1279,12 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
   return written;
 }
 
-static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl)
+static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl, pn_ssl_domain_t *domain)
 {
   if (ssl->ssl) return 0;
-  if (!ssl->domain) return -1;
+  if (!domain) return -1;
 
-  ssl->ssl = SSL_new(ssl->domain->ctx);
+  ssl->ssl = SSL_new(domain->ctx);
   if (!ssl->ssl) {
     pn_transport_logf(transport, "SSL socket setup failure." );
     ssl_log_flush(transport);
@@ -1254,7 +1295,7 @@ static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl)
   SSL_set_ex_data(ssl->ssl, ssl_ex_data_index, transport);
 
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
-  if (ssl->peer_hostname && ssl->domain->mode == PN_SSL_MODE_CLIENT) {
+  if (ssl->peer_hostname && ssl->mode == PN_SSL_MODE_CLIENT) {
     SSL_set_tlsext_host_name(ssl->ssl, ssl->peer_hostname);
   }
 #endif
@@ -1277,7 +1318,7 @@ static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl)
   }
   SSL_set_bio(ssl->ssl, ssl->bio_ssl_io, ssl->bio_ssl_io);
 
-  if (ssl->domain->mode == PN_SSL_MODE_SERVER) {
+  if (ssl->mode == PN_SSL_MODE_SERVER) {
     SSL_set_accept_state(ssl->ssl);
     BIO_set_ssl_mode(ssl->bio_ssl, 0);  // server mode
     ssl_log( transport, "Server SSL socket created." );
@@ -1332,7 +1373,7 @@ int pn_ssl_set_peer_hostname(pn_ssl_t *ssl0, const char *hostname)
     ssl->peer_hostname = pn_strdup(hostname);
     if (!ssl->peer_hostname) return -2;
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
-    if (ssl->ssl && ssl->domain && ssl->domain->mode == PN_SSL_MODE_CLIENT) {
+    if (ssl->ssl && ssl->mode == PN_SSL_MODE_CLIENT) {
       SSL_set_tlsext_host_name(ssl->ssl, ssl->peer_hostname);
     }
 #endif

@@ -182,6 +182,17 @@ TEST_CASE("ssl") {
   pn_test::auto_free<pn_ssl_domain_t, pn_ssl_domain_free>
     cd(pn_ssl_domain(PN_SSL_MODE_CLIENT));
 
+  SECTION("Default connections don't verify") {
+    REQUIRE(pn_ssl_init(pn_ssl(t), NULL, NULL) == 0);
+
+    pn_proactor_listen(proactor, pn_listener(), "", 16);
+    pn_proactor_connect2(proactor, NULL, t, "");
+
+    run(proactor, &app, server_handler, client_handler);
+    CHECK(app.connection_succeeded==false);
+    CHECK(app.transport_error==true);
+  }
+
   SECTION("Anonymous connections don't verify") {
     REQUIRE(pn_ssl_domain_set_trusted_ca_db(cd, CERTIFICATE("tclient")) == 0);
     REQUIRE(pn_ssl_domain_set_peer_authentication(cd, PN_SSL_VERIFY_PEER_NAME, NULL) == 0);

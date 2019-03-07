@@ -219,8 +219,7 @@ static int win_credential_load_cert(win_credential_t *cred, const char *store_na
 
 
 // call with win_credential lock held
-static CredHandle win_credential_cred_handle(win_credential_t *cred, pn_ssl_verify_mode_t verify_mode,
-                                             const char *session_id, SECURITY_STATUS *status)
+static CredHandle win_credential_cred_handle(win_credential_t *cred, const char *session_id, SECURITY_STATUS *status)
 {
   if (cred->mode == PN_SSL_MODE_SERVER && SecIsValidHandle(&cred->cred_handle)) {
     *status = SEC_E_OK;
@@ -275,7 +274,6 @@ struct pn_ssl_domain_t {
   CRITICAL_SECTION cslock;
   int ref_count;
   pn_ssl_mode_t mode;
-  bool has_ca_db;       // true when CA database configured
   pn_ssl_verify_mode_t verify_mode;
   bool allow_unsecured;
   win_credential_t *cred;
@@ -285,7 +283,6 @@ typedef enum { CREATED, CLIENT_HELLO, NEGOTIATING,
                RUNNING, SHUTTING_DOWN, SSL_CLOSED } ssl_state_t;
 
 struct pni_ssl_t {
-  pn_ssl_domain_t  *domain;
   const char    *session_id;
   const char *peer_hostname;
   ssl_state_t state;
@@ -327,6 +324,7 @@ struct pni_ssl_t {
   CredHandle cred_handle;
   CtxtHandle ctxt_handle;
   SecPkgContext_StreamSizes sc_sizes;
+  pn_ssl_mode_t mode;
   pn_ssl_verify_mode_t verify_mode;
   win_credential_t *cred;
   char *subject;
@@ -457,24 +455,31 @@ bool pn_ssl_present(void)
 
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
-  pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
-  if (!domain) return NULL;
-
-  InitializeCriticalSectionAndSpinCount(&domain->cslock, 4000);
-  csguard(&domain->cslock);
-  domain->ref_count = 1;
-  domain->mode = mode;
-  switch(mode) {
+  switch (mode) {
   case PN_SSL_MODE_CLIENT:
   case PN_SSL_MODE_SERVER:
     break;
 
   default:
     ssl_log_error("Invalid mode for pn_ssl_mode_t: %d", mode);
-    free(domain);
     return NULL;
   }
+
+  pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
+  if (!domain) return NULL;
+
+  InitializeCriticalSectionAndSpinCount(&domain->cslock, 4000);
+  {
+  csguard(&domain->cslock);
+  domain->ref_count = 1;
+  domain->mode = mode;
   domain->cred = win_credential(mode);
+  }
+
+  if (pn_ssl_domain_set_trusted_ca_db(domain, "ss:root") != 0) {
+    pn_ssl_domain_free(domain);
+    return NULL;
+  }
   return domain;
 }
 
@@ -533,8 +538,8 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
   if (!store)
     return ec;
 
-  if (domain->has_ca_db) {
-    csguard g2(&domain->cred->cslock);
+  csguard g2(&domain->cred->cslock);
+  if (domain->cred->trust_store) {
     win_credential_t *new_cred = win_credential(domain->mode);
     if (!new_cred) {
       CertCloseStore(store, 0);
@@ -548,10 +553,8 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
     domain->cred = new_cred;
   }
 
-  csguard g3(&domain->cred->cslock);
   domain->cred->trust_store = store;
   domain->cred->trust_store_name = pn_strdup(certificate_db);
-  domain->has_ca_db = true;
   return 0;
 }
 
@@ -563,11 +566,6 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
   if (!domain) return -1;
   csguard g(&domain->cslock);
   csguard g2(&domain->cred->cslock);
-
-  if (!domain->has_ca_db && (mode == PN_SSL_VERIFY_PEER || mode == PN_SSL_VERIFY_PEER_NAME)) {
-    ssl_log_error("Error: cannot verify peer without a trusted CA configured, use pn_ssl_domain_set_trusted_ca_db()");
-    return -1;
-  }
 
   HCERTSTORE store = 0;
   bool changed = domain->verify_mode && mode != domain->verify_mode;
@@ -667,17 +665,34 @@ const pn_io_layer_t ssl_closed_layer = {
     buffered_output
 };
 
+static pn_ssl_domain_t *default_client_domain = 0;
+static pn_ssl_domain_t *default_server_domain = 0;
+
 int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
 {
   pn_transport_t *transport = get_transport_internal(ssl0);
   pni_ssl_t *ssl = transport->ssl;
-  if (!ssl || !domain || ssl->domain) return -1;
+  if (!ssl) return -1;
   if (ssl->state != CREATED) return -1;
+
+  if (!domain) {
+    if (transport->server) {
+        if (!default_server_domain) {
+            default_server_domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
+        }
+        domain = default_server_domain;
+    }
+    else {
+      if (!default_client_domain) {
+        default_client_domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
+        pn_ssl_domain_set_peer_authentication(default_client_domain, PN_SSL_VERIFY_PEER_NAME, NULL);
+      }
+      domain = default_client_domain;
+    }
+  }
 
   csguard g(&domain->cslock);
   csguard g2(&domain->cred->cslock);
-  ssl->domain = domain;
-  domain->ref_count++;
   if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
     ssl->session_id = pn_strdup(session_id);
 
@@ -689,8 +704,7 @@ int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
   pn_incref(domain->cred);
 
   SECURITY_STATUS status = SEC_E_OK;
-  ssl->cred_handle = win_credential_cred_handle(ssl->cred, ssl->verify_mode,
-                                                ssl->session_id, &status);
+  ssl->cred_handle = win_credential_cred_handle(ssl->cred, ssl->session_id, &status);
   if (status != SEC_E_OK) {
     ssl_log_error_status(status, "Credentials handle failure");
     return -1;
@@ -698,6 +712,7 @@ int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
 
   ssl->state = (domain->mode == PN_SSL_MODE_CLIENT) ? CLIENT_HELLO : NEGOTIATING;
   ssl->verify_mode = domain->verify_mode;
+  ssl->mode = domain->mode;
   return 0;
 }
 
@@ -778,25 +793,22 @@ void pn_ssl_free( pn_transport_t *transport)
   if (!ssl) return;
   ssl_log( transport, "SSL socket freed." );
   // clean up Windows per TLS session data before releasing the domain count
-  csguard g(&ssl->domain->cslock);
-  csguard g2(&ssl->cred->cslock);
+  csguard g(&ssl->cred->cslock);
   if (SecIsValidHandle(&ssl->ctxt_handle))
     DeleteSecurityContext(&ssl->ctxt_handle);
   if (ssl->cred) {
-    if (ssl->domain->mode == PN_SSL_MODE_CLIENT && ssl->session_id == NULL) {
+    if (ssl->mode == PN_SSL_MODE_CLIENT && ssl->session_id == NULL) {
       // Responsible for unshared handle
       if (SecIsValidHandle(&ssl->cred_handle))
         FreeCredentialsHandle(&ssl->cred_handle);
     }
     if (win_credential_decref(ssl->cred)) {
-      g2.release();
+      g.release();
       win_credential_delete(ssl->cred);
     }
   }
 
-  g2.release();
   g.release();
-  pn_ssl_domain_free(ssl->domain);
 
   if (ssl->session_id) free((void *)ssl->session_id);
   if (ssl->peer_hostname) free((void *)ssl->peer_hostname);
@@ -1389,7 +1401,7 @@ static void server_handshake(pn_transport_t* transport)
 }
 
 static void ssl_handshake(pn_transport_t* transport) {
-  if (transport->ssl->domain->mode == PN_SSL_MODE_CLIENT)
+  if (transport->ssl->mode == PN_SSL_MODE_CLIENT)
     client_handshake(transport);
   else {
     server_handshake(transport);
