@@ -116,6 +116,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      pn_connection_t* c = pn_event_connection(event);
      pn_session_t* s = pn_session(pn_event_connection(event));
      pn_connection_set_container(c, app->container_id);
+     pn_connection_set_hostname(c, app->host);
      pn_connection_open(c);
      pn_session_open(s);
      {
@@ -131,8 +132,15 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      if (ssl) {
        char name[1024];
        pn_ssl_get_protocol_name(ssl, name, sizeof(name));
-       printf("secure connection: %s\n", name);
+       {
+       const char *subject = pn_ssl_get_remote_subject(ssl);
+       if (subject) {
+         printf("secure connection: to %s using %s\n", subject, name);
+       } else {
+         printf("anonymous connection: using %s\n", name);
+       }
        fflush(stdout);
+       }
      }
      break;
    }
