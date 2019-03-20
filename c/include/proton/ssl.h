@@ -254,6 +254,8 @@ PN_EXTERN int pn_ssl_domain_set_protocols(pn_ssl_domain_t *domain, const char *p
 PN_EXTERN int pn_ssl_domain_set_ciphers(pn_ssl_domain_t *domain, const char *ciphers);
 
 /**
+ * **Deprecated** - Use ::pn_transport_require_encrytion()
+ *
  * Permit a server to accept connection requests from non-SSL clients.
  *
  * This configures the server to "sniff" the incoming client data stream, and dynamically
