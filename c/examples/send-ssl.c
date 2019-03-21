@@ -26,6 +26,7 @@
 #include <proton/message.h>
 #include <proton/proactor.h>
 #include <proton/session.h>
+#include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/transport.h>
 
@@ -36,13 +37,14 @@ typedef struct app_data_t {
   const char *host, *port;
   const char *amqp_address;
   const char *container_id;
+  const char *user;
+  const char *pass;
   int message_count;
 
   pn_proactor_t *proactor;
   pn_rwbytes_t message_buffer;
   int sent;
   int acknowledged;
-  pn_ssl_domain_t *ssl_domain;
 } app_data_t;
 
 static int exit_code = 0;
@@ -60,7 +62,7 @@ static pn_bytes_t encode_message(app_data_t* app) {
   /* Construct a message with the map { "sequence": app.sent } */
   pn_message_t* message = pn_message();
   pn_data_t* body = pn_message_body(message);
-  pn_data_put_int(pn_message_id(message), app->sent); /* Set the message_id also */
+  pn_data_put_ulong(pn_message_id(message), app->sent); /* Set the message_id also */
   pn_data_put_map(body);
   pn_data_enter(body);
   pn_data_put_string(body, pn_bytes(sizeof("sequence")-1, "sequence"));
@@ -101,6 +103,8 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      pn_session_t* s = pn_session(pn_event_connection(event));
      pn_connection_set_container(c, app->container_id);
      pn_connection_set_hostname(c, app->host);
+     pn_connection_set_user(c, app->user);
+     pn_connection_set_password(c, app->pass);
      pn_connection_open(c);
      pn_session_open(s);
      {
@@ -216,14 +220,26 @@ int main(int argc, char **argv) {
   app.port = (argc > 2) ? argv[2] : "amqp";
   app.amqp_address = (argc > 3) ? argv[3] : "examples";
   app.message_count = (argc > 4) ? atoi(argv[4]) : 10;
-  app.ssl_domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
+  app.user = (argc > 5) ? argv[5] : 0 ;
+  app.pass = (argc > 6) ? argv[6] : 0 ;
 
   app.proactor = pn_proactor();
   pn_proactor_addr(addr, sizeof(addr), app.host, app.port);
 
   /* Configure a transport for SSL. The transport will be freed by the proactor. */
   t = pn_transport();
-  err =  pn_ssl_init(pn_ssl(t), app.ssl_domain, NULL);
+  /* If we got a username/password on the command line set up for authentication, else allow anonymous ssl */
+  if (app.user && app.pass) {
+    err =  pn_ssl_init(pn_ssl(t), NULL, NULL);
+    pn_sasl_allowed_mechs(pn_sasl(t), "PLAIN");
+  } else {
+    pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
+    err = pn_ssl_domain_set_peer_authentication(domain, PN_SSL_ANONYMOUS_PEER, NULL);
+    if (!err) {
+      err = pn_ssl_init(pn_ssl(t), domain, NULL);
+    }
+    pn_ssl_domain_free(domain);
+  }
   if (err) {
     fprintf(stderr, "error initializing SSL: %s\n", pn_code(err));
     return 1;
@@ -232,7 +248,6 @@ int main(int argc, char **argv) {
 
   run(&app);
 
-  pn_ssl_domain_free(app.ssl_domain);
   pn_proactor_free(app.proactor);
   free(app.message_buffer.start);
   return exit_code;
