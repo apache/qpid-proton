@@ -49,16 +49,16 @@ typedef struct app_data_t {
 
 /* Note must be run in the current directory to find certificate files */
 #define SSL_FILE(NAME) "ssl-certs/" NAME
-#define SSL_PW "tclientpw"
+#define SSL_PW(NAME) NAME "pw"
 /* Windows vs. OpenSSL certificates */
 #if defined(_WIN32)
 #  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
 #  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, SSL_FILE(NAME "-full.p12"), "", SSL_PW)
+  pn_ssl_domain_set_credentials(DOMAIN, SSL_FILE(NAME "-full.p12"), "", SSL_PW(NAME))
 #else
 #  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem")
 #  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME), SSL_FILE(NAME "-private-key.pem"), SSL_PW)
+  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME), SSL_FILE(NAME "-private-key.pem"), SSL_PW(NAME))
 #endif
 
 
@@ -73,9 +73,7 @@ static bool server_handler(app_data_t* app, pn_event_t* event) {
      pn_transport_t *t = pn_transport();
      pn_transport_set_server(t); /* Must call before pn_sasl() */
      pn_sasl_allowed_mechs(pn_sasl(t), "ANONYMOUS");
-     if (app->server_ssl_domain) {
-       pn_ssl_init(pn_ssl(t), app->server_ssl_domain, NULL);
-     }
+     pn_ssl_init(pn_ssl(t), app->server_ssl_domain, NULL);
      pn_listener_accept2(l, NULL, t);
 
      /* Accept only one connection */
@@ -164,7 +162,7 @@ void run(pn_proactor_t *p, app_data_t *app, handler_t *shandler, handler_t *chan
   } while(true);
 }
 
-TEST_CASE("ssl") {
+TEST_CASE("ssl certificate verification tests") {
   struct app_data_t app = {0};
 
   app.container_id = "ssl-test";
@@ -182,8 +180,10 @@ TEST_CASE("ssl") {
   pn_test::auto_free<pn_ssl_domain_t, pn_ssl_domain_free>
     cd(pn_ssl_domain(PN_SSL_MODE_CLIENT));
 
-  SECTION("Default connections don't verify") {
+  SECTION("Default connections don't verify to self signed server (even with correct name)") {
+    REQUIRE(SET_CREDENTIALS(sd, "tserver") == 0);
     REQUIRE(pn_ssl_init(pn_ssl(t), NULL, NULL) == 0);
+    REQUIRE(pn_ssl_set_peer_hostname(pn_ssl(t), "test_server") == 0);
 
     pn_proactor_listen(proactor, pn_listener(), "", 16);
     pn_proactor_connect2(proactor, NULL, t, "");
@@ -193,8 +193,50 @@ TEST_CASE("ssl") {
     CHECK(app.transport_error==true);
   }
 
-  SECTION("Anonymous connections don't verify") {
-    REQUIRE(pn_ssl_domain_set_trusted_ca_db(cd, CERTIFICATE("tclient")) == 0);
+  SECTION("Connections noname verify to self signed cert if cert allowed (even with no name)") {
+    REQUIRE(SET_CREDENTIALS(sd, "tserver") == 0);
+    REQUIRE(pn_ssl_domain_set_trusted_ca_db(cd, CERTIFICATE("tserver")) == 0);
+    REQUIRE(pn_ssl_domain_set_peer_authentication(cd, PN_SSL_VERIFY_PEER, NULL) == 0);
+    REQUIRE(pn_ssl_init(pn_ssl(t), cd, NULL) == 0);
+
+    pn_proactor_listen(proactor, pn_listener(), "", 16);
+    pn_proactor_connect2(proactor, NULL, t, "");
+
+    run(proactor, &app, server_handler, client_handler);
+    CHECK(app.connection_succeeded==true);
+    CHECK(app.transport_error==false);
+  }
+
+  SECTION("Connections don't noname verify to self signed cert without cert allowed") {
+    REQUIRE(SET_CREDENTIALS(sd, "tserver") == 0);
+    REQUIRE(pn_ssl_domain_set_peer_authentication(cd, PN_SSL_VERIFY_PEER, NULL) == 0);
+    REQUIRE(pn_ssl_init(pn_ssl(t), cd, NULL) == 0);
+
+    pn_proactor_listen(proactor, pn_listener(), "", 16);
+    pn_proactor_connect2(proactor, NULL, t, "");
+
+    run(proactor, &app, server_handler, client_handler);
+    CHECK(app.connection_succeeded==false);
+    CHECK(app.transport_error==true);
+  }
+
+  SECTION("Connections verify with self signed server if cert allowed") {
+    REQUIRE(SET_CREDENTIALS(sd, "tserver") == 0);
+    REQUIRE(pn_ssl_domain_set_trusted_ca_db(cd, CERTIFICATE("tserver")) == 0);
+    REQUIRE(pn_ssl_domain_set_peer_authentication(cd, PN_SSL_VERIFY_PEER_NAME, NULL) == 0);
+    REQUIRE(pn_ssl_init(pn_ssl(t), cd, NULL) == 0);
+    REQUIRE(pn_ssl_set_peer_hostname(pn_ssl(t), "test_server") == 0);
+
+    pn_proactor_listen(proactor, pn_listener(), "", 16);
+    pn_proactor_connect2(proactor, NULL, t, "");
+
+    run(proactor, &app, server_handler, client_handler);
+    CHECK(app.connection_succeeded==true);
+    CHECK(app.transport_error==false);
+  }
+
+  SECTION("Anonymous server connections don't verify") {
+    REQUIRE(pn_ssl_domain_set_trusted_ca_db(cd, CERTIFICATE("tserver")) == 0);
     REQUIRE(pn_ssl_domain_set_peer_authentication(cd, PN_SSL_VERIFY_PEER_NAME, NULL) == 0);
     REQUIRE(pn_ssl_init(pn_ssl(t), cd, NULL) == 0);
 
@@ -208,6 +250,35 @@ TEST_CASE("ssl") {
 
   SECTION("Anonymous connections connect if anonymous allowed") {
 #ifndef _WIN32
+    REQUIRE(pn_ssl_domain_set_peer_authentication(cd, PN_SSL_ANONYMOUS_PEER, NULL) == 0);
+    REQUIRE(pn_ssl_init(pn_ssl(t), cd, NULL) == 0);
+
+    pn_proactor_listen(proactor, pn_listener(), "", 16);
+    pn_proactor_connect2(proactor, NULL, t, "");
+
+    run(proactor, &app, server_handler, client_handler);
+    CHECK(app.connection_succeeded==true);
+    CHECK(app.transport_error==false);
+#else
+    SUCCEED("Skipped: Windows schannel does not support anonymous connections");
+#endif
+  }
+
+  SECTION("Default server (anonymous) doesn't verify against default client (verify peername)") {
+    app.server_ssl_domain = 0;
+    REQUIRE(pn_ssl_init(pn_ssl(t), NULL, NULL) == 0);
+
+    pn_proactor_listen(proactor, pn_listener(), "", 16);
+    pn_proactor_connect2(proactor, NULL, t, "");
+
+    run(proactor, &app, server_handler, client_handler);
+    CHECK(app.connection_succeeded==false);
+    CHECK(app.transport_error==true);
+  }
+
+  SECTION("Default server (anonymous) connects if anonymous allowed") {
+#ifndef _WIN32
+    app.server_ssl_domain = 0;
     REQUIRE(pn_ssl_domain_set_peer_authentication(cd, PN_SSL_ANONYMOUS_PEER, NULL) == 0);
     REQUIRE(pn_ssl_init(pn_ssl(t), cd, NULL) == 0);
 
