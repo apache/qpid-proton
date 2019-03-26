@@ -49,10 +49,11 @@ if PY3:
         else:
             raise v.with_traceback(tb)
 
-
     def iteritems(d, **kw):
         return iter(d.items(**kw))
 
+    def select_errno(e):
+        return e.errno
 
     unichr = chr
 else:
@@ -62,9 +63,10 @@ else:
     raise t, v, tb
 """)
 
-
     def iteritems(d, **kw):
         return d.iteritems(**kw)
 
+    def select_errno(e):
+        return e[0]
 
     unichr = unichr
