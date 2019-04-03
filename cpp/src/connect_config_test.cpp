@@ -37,7 +37,34 @@
 #include <sstream>
 #include <fstream>
 #include <cstdio>
+#include <cstdlib>
 
+// Windows has a different set of APIs for setting the environment
+#ifdef _WIN32
+#include <string.h>
+namespace {
+    void setenv(const char* var, const char* value, int) {
+        int vlen = strlen(var);
+        int len = vlen+strlen(value)+1;
+        char* buff = new char[len+1];
+        strcpy(buff, var);
+        strcpy(buff+vlen, "=");
+        strcpy(buff+vlen+1, value);
+        _putenv(buff);
+        delete [] buff;
+    }
+
+    void unsetenv(const char* var) {
+        int len = strlen(var);
+        char* buff = new char[len+1];
+        strcpy(buff, var);
+        strcpy(buff+len, "=");
+        _putenv(buff);
+        delete [] buff;
+    }
+}
+
+#endif
 namespace {
 
 using namespace std;
