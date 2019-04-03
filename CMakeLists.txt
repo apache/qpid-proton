@@ -39,7 +39,7 @@ find_package (CyrusSASL)
 enable_testing ()
 
 # Set up runtime checks (valgrind, sanitizers etc.)
-include(tests/RuntimeCheck.cmake)  
+include(tests/RuntimeCheck.cmake)
 
 ## Variables used across components
 
@@ -334,6 +334,8 @@ if(SWIG_FOUND)
   # Add any new swig bindings here - the directory name must be the same as the binding name
   list(APPEND BINDINGS python ruby)
 
+  cmake_policy(SET CMP0078 OLD)
+  cmake_policy(SET CMP0086 OLD)
   include(UseSWIG)
 
   # All swig modules should include ${PROTON_HEADERS} in SWIG_MODULE_<name>_EXTRA_DEPS

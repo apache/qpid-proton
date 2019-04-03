@@ -63,7 +63,7 @@ deprecated_enable_check(ENABLE_VALGRIND memcheck "Use valgrind to detect run-tim
 deprecated_enable_check(ENABLE_SANITIZERS asan "Compile with memory sanitizers (asan, ubsan)")
 deprecated_enable_check(ENABLE_TSAN tsan "Compile with thread sanitizer (tsan)")
 
-set(RUNTIME_CHECK ${RUNTIME_CHECK_DEFAULT} CACHE string "Enable runtime checks. Valid values: ${runtime_checks}")
+set(RUNTIME_CHECK ${RUNTIME_CHECK_DEFAULT} CACHE STRING "Enable runtime checks. Valid values: ${runtime_checks}")
 
 if(CMAKE_BUILD_TYPE MATCHES "Coverage" AND RUNTIME_CHECK)
   message(FATAL_ERROR "Cannot set RUNTIME_CHECK with CMAKE_BUILD_TYPE=Coverage")
