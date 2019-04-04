@@ -334,8 +334,12 @@ if(SWIG_FOUND)
   # Add any new swig bindings here - the directory name must be the same as the binding name
   list(APPEND BINDINGS python ruby)
 
-  cmake_policy(SET CMP0078 OLD)
-  cmake_policy(SET CMP0086 OLD)
+  if (POLICY CMP0078)
+    cmake_policy(SET CMP0078 OLD)
+  endif()
+  if (POLICY CMP0086)
+    cmake_policy(SET CMP0086 OLD)
+  endif()
   include(UseSWIG)
 
   # All swig modules should include ${PROTON_HEADERS} in SWIG_MODULE_<name>_EXTRA_DEPS
