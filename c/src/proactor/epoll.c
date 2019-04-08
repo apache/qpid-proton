@@ -2051,11 +2051,11 @@ static bool proactor_remove(pcontext_t *ctx) {
   bool can_free = true;
   if (ctx->disconnecting) {
     // No longer on contexts list
-    if (--ctx->disconnect_ops == 0) {
-      --p->disconnects_pending;
+    --p->disconnects_pending;
+    if (--ctx->disconnect_ops != 0) {
+      // procator_disconnect() does the free
+      can_free = false;
     }
-    else                  // procator_disconnect() still processing
-      can_free = false;   // this psocket
   }
   else {
     // normal case
@@ -2262,13 +2262,14 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
     ctx = next;
     next = ctx->next;           /* Save next pointer in case we free ctx */
     bool do_free = false;
-    bool ctx_notify = true;
+    bool ctx_notify = false;
     pmutex *ctx_mutex = NULL;
     pconnection_t *pc = pcontext_pconnection(ctx);
     if (pc) {
       ctx_mutex = &pc->context.mutex;
       lock(ctx_mutex);
       if (!ctx->closing) {
+        ctx_notify = true;
         if (ctx->working) {
           // Must defer
           pc->queued_disconnect = true;
@@ -2292,6 +2293,7 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
       ctx_mutex = &l->context.mutex;
       lock(ctx_mutex);
       if (!ctx->closing) {
+        ctx_notify = true;
         if (cond) {
           pn_condition_copy(pn_listener_condition(l), cond);
         }
@@ -2308,16 +2310,16 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
       // If initiating the close, wake the pcontext to do the free.
       if (ctx_notify)
         ctx_notify = wake(ctx);
+      if (ctx_notify)
+        wake_notify(ctx);
     }
     unlock(&p->context.mutex);
     unlock(ctx_mutex);
 
+    // Unsafe to touch ctx after lock release, except if we are the designated final_free
     if (do_free) {
       if (pc) pconnection_final_free(pc);
       else listener_final_free(pcontext_listener(ctx));
-    } else {
-      if (ctx_notify)
-        wake_notify(ctx);
     }
   }
   if (notify)
