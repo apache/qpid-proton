@@ -3263,11 +3263,11 @@ static bool proactor_remove(pcontext_t *ctx) {
   bool can_free = true;
   if (ctx->disconnecting) {
     // No longer on contexts list
-    if (--ctx->disconnect_ops == 0) {
-      --p->disconnects_pending;
+    --p->disconnects_pending;
+    if (--ctx->disconnect_ops != 0) {
+      // proactor_disconnect() does the free
+      can_free = false;
     }
-    else                  // proactor_disconnect() still processing
-      can_free = false;   // this psocket
   }
   else {
     // normal case
