@@ -409,6 +409,7 @@ void test_container_mt_stop() {
 class test_mt_handler_wq : public test_mt_handler {
 public:
     proton::work_queue *wq_;
+    proton::work call_do_close_;
     proton::connection connection_;
     std::mutex wqlock_;
 
@@ -421,6 +422,7 @@ public:
             if (!connection_) {
                 connection_ = c;
                 wq_ = &c.work_queue();
+                call_do_close_ = make_work(&test_mt_handler_wq::do_close, this);
             }
             else
                 return;
@@ -429,7 +431,7 @@ public:
     }
     void initiate_close() {
         std::unique_lock<std::mutex> l(wqlock_);
-        wq_->add( [this]() { this->do_close(); });
+        wq_->add(call_do_close_);
     }
     void do_close() { connection_.close(); }
     void on_connection_close(proton::connection &) PN_CPP_OVERRIDE { set("closed"); }
@@ -488,4 +490,3 @@ int main(int argc, char** argv) {
 #endif
     return failed;
 }
-
