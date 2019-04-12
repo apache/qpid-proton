@@ -48,6 +48,6 @@ jobs:
   - script: |
       brew update
       brew install libuv swig pkgconfig openssl@1.1 jsoncpp
-      brew upgrade python@3 python@2
+      brew upgrade python@3 python@2 || true
     name: InstallExtraStuff
   - template: steps.yml
