@@ -164,6 +164,36 @@ void run(pn_proactor_t *p, app_data_t *app, handler_t *shandler, handler_t *chan
   } while(true);
 }
 
+static void run_until_listener_open(pn_proactor_t* p) {
+  do {
+    pn_event_batch_t *events = pn_proactor_wait(p);
+    pn_event_t *e;
+    for (e = pn_event_batch_next(events); e; e = pn_event_batch_next(events)) {
+      if (pn_event_type(e)==PN_LISTENER_OPEN) {
+        pn_proactor_done(p, events);
+        return;
+      }
+    }
+    pn_proactor_done(p, events);
+  } while (true);
+}
+
+static void setup_connection(pn_proactor_t* proactor, pn_transport_t* t) {
+  pn_listener_t* l = pn_listener();
+  pn_proactor_listen(proactor, l, ":0", 16);
+  // Don't know port until the listener is open
+  run_until_listener_open(proactor);
+
+  // Construct connect address (from listener port)
+  const pn_netaddr_t* a = pn_listener_addr(l);
+  char port[32];
+  port[0] = ':';
+  pn_netaddr_host_port(a, NULL, 0, port+1, 31);
+
+  INFO("Connecting to " << port);
+  pn_proactor_connect2(proactor, NULL, t, port);
+}
+
 TEST_CASE("ssl") {
   struct app_data_t app = {0};
 
@@ -187,8 +217,7 @@ TEST_CASE("ssl") {
     REQUIRE(pn_ssl_domain_set_peer_authentication(cd, PN_SSL_VERIFY_PEER_NAME, NULL) == 0);
     REQUIRE(pn_ssl_init(pn_ssl(t), cd, NULL) == 0);
 
-    pn_proactor_listen(proactor, pn_listener(), "", 16);
-    pn_proactor_connect2(proactor, NULL, t, "");
+    setup_connection(proactor, t);
 
     run(proactor, &app, server_handler, client_handler);
     CHECK(app.connection_succeeded==false);
@@ -200,8 +229,7 @@ TEST_CASE("ssl") {
     REQUIRE(pn_ssl_domain_set_peer_authentication(cd, PN_SSL_ANONYMOUS_PEER, NULL) == 0);
     REQUIRE(pn_ssl_init(pn_ssl(t), cd, NULL) == 0);
 
-    pn_proactor_listen(proactor, pn_listener(), "", 16);
-    pn_proactor_connect2(proactor, NULL, t, "");
+    setup_connection(proactor, t);
 
     run(proactor, &app, server_handler, client_handler);
     CHECK(app.connection_succeeded==true);
