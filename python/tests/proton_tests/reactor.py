@@ -23,9 +23,7 @@ import time
 
 from proton.reactor import Container, ApplicationEvent, EventInjector, Selector
 from proton.handlers import Handshaker, MessagingHandler
-from proton import Handler, Url
-from proton._data import symbol
-from proton._common import isutf8
+from proton import Handler, Url, symbol
 
 from .common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
 
@@ -506,7 +504,7 @@ class SelectorTest(Test):
     """Test the Selector"""
 
     def test_unicode_selector(self):
-        assert(isutf8(Selector(u"Hello").filter_set[symbol('selector')].value))
+        assert Selector(u"Hello").filter_set[symbol('selector')].value == u"Hello"
 
     def test_non_unicode_selector(self):
-        assert(isutf8(Selector(b"Hello").filter_set[symbol('selector')].value))
+        assert Selector(b"Hello").filter_set[symbol('selector')].value == u"Hello"

@@ -88,7 +88,3 @@ def utf82unicode(string):
         # py2 str (via hack definition), py3 bytes
         return string.decode('utf8')
     raise TypeError("Unrecognized string type")
-
-def isutf8(string):
-    """Test if a string is unicode"""
-    return isinstance(string, unicode) # py2 unicode, py3 str (via hack definition)
