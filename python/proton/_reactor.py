@@ -600,7 +600,7 @@ class Selector(Filter):
     """
 
     def __init__(self, value, name='selector'):
-        super(Selector, self).__init__({symbol(name): Described(symbol('apache.org:selector-filter:string'), value)})
+        super(Selector, self).__init__({symbol(name): Described(symbol('apache.org:selector-filter:string'), utf82unicode(value))})
 
 
 class DurableSubscription(ReceiverOption):

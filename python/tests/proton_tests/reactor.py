@@ -21,9 +21,11 @@ from __future__ import absolute_import
 
 import time
 
-from proton.reactor import Container, ApplicationEvent, EventInjector
+from proton.reactor import Container, ApplicationEvent, EventInjector, Selector
 from proton.handlers import Handshaker, MessagingHandler
 from proton import Handler, Url
+from proton._data import symbol
+from proton._common import isutf8
 
 from .common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
 
@@ -305,11 +307,11 @@ class ApplicationEventTest(Test):
     def setUp(self):
         import os
         if not hasattr(os, 'pipe'):
-          # KAG: seems like Jython doesn't have an os.pipe() method
-          raise SkipTest()
+            # KAG: seems like Jython doesn't have an os.pipe() method
+            raise SkipTest()
         if os.name=="nt":
-          # Correct implementation on Windows is complicated
-          raise SkipTest("PROTON-1071")
+            # Correct implementation on Windows is complicated
+            raise SkipTest("PROTON-1071")
         self.server = ApplicationEventTest.MyTestServer()
         self.server.reactor.handler.add(ApplicationEventTest.MyHandler(self))
         self.event_injector = EventInjector()
@@ -499,3 +501,12 @@ class ContainerTest(Test):
                                  virtual_host="")
         container.run()
         assert server_handler.peer_hostname is None, server_handler.peer_hostname
+
+class SelectorTest(Test):
+    """Test the Selector"""
+
+    def test_unicode_selector(self):
+        assert(isutf8(Selector(u"Hello").filter_set[symbol('selector')].value))
+
+    def test_non_unicode_selector(self):
+        assert(isutf8(Selector(b"Hello").filter_set[symbol('selector')].value))
