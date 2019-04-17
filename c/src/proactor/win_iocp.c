@@ -219,8 +219,6 @@ void pni_zombie_check(iocp_t *, pn_timestamp_t);
 pn_timestamp_t pni_zombie_deadline(iocp_t *);
 
 int pni_win32_error(pn_error_t *error, const char *msg, HRESULT code);
-
-pn_timestamp_t pn_i_now2(void);
 }
 
 // ======================================================================
@@ -530,17 +528,6 @@ size_t pni_write_pipeline_size(write_pipeline_t *pl)
  */
 
 namespace pn_experimental {
-
-pn_timestamp_t pn_i_now2(void)
-{
-  FILETIME now;
-  GetSystemTimeAsFileTime(&now);
-  ULARGE_INTEGER t;
-  t.u.HighPart = now.dwHighDateTime;
-  t.u.LowPart = now.dwLowDateTime;
-  // Convert to milliseconds and adjust base epoch
-  return t.QuadPart / 10000 - 11644473600000;
-}
 
 static void iocp_log(const char *fmt, ...)
 {
@@ -1355,7 +1342,7 @@ static void zombie_list_add(iocpdesc_t *iocpd)
     return;
   }
   // Allow 2 seconds for graceful shutdown before releasing socket resource.
-  iocpd->reap_time = pn_i_now2() + 2000;
+  iocpd->reap_time = pn_proactor_now_64() + 2000;
   pn_list_add(iocpd->iocp->zombie_list, iocpd);
 }
 
@@ -1428,7 +1415,7 @@ static void drain_zombie_completions(iocp_t *iocp)
     if (grace > 0 && grace < 60000)
       shutdown_grace = (unsigned) grace;
   }
-  pn_timestamp_t now = pn_i_now2();
+  pn_timestamp_t now = pn_proactor_now_64();
   pn_timestamp_t deadline = now + shutdown_grace;
 
   while (pn_list_size(iocp->zombie_list)) {
@@ -1439,7 +1426,7 @@ static void drain_zombie_completions(iocp_t *iocp)
       iocp_log("unexpected IOCP failure on Proton IO shutdown %d\n", GetLastError());
       break;
     }
-    now = pn_i_now2();
+    now = pn_proactor_now_64();
   }
   if (now >= deadline && pn_list_size(iocp->zombie_list) && iocp->iocp_trace)
     // Should only happen if really slow TCP handshakes, i.e. total network failure
@@ -1968,9 +1955,9 @@ class reaper {
         // Call with lock
         if (timer_ || !running)
             return;
-        pn_timestamp_t now = pn_i_now2();
+        int64_t now = pn_proactor_now_64();
         pni_zombie_check(iocp_, now);
-        pn_timestamp_t zd = pni_zombie_deadline(iocp_);
+        int64_t zd = pni_zombie_deadline(iocp_);
         if (zd) {
             DWORD tm = (zd > now) ? zd - now : 1;
             if (!CreateTimerQueueTimer(&timer_, timer_queue_, reap_check_cb, this, tm,
@@ -2145,8 +2132,8 @@ static void pconnection_tick(pconnection_t *pc) {
     if(!stop_timer(pc->context.proactor->timer_queue, &pc->tick_timer)) {
       // TODO: handle error
     }
-    uint64_t now = pn_i_now2();
-    uint64_t next = pn_transport_tick(t, now);
+    int64_t now = pn_proactor_now_64();
+    int64_t next = pn_transport_tick(t, now);
     if (next) {
       if (!start_timer(pc->context.proactor->timer_queue, &pc->tick_timer, tick_timer_cb, pc, next - now)) {
         // TODO: handle error
@@ -3431,11 +3418,9 @@ const pn_netaddr_t *pn_listener_addr(pn_listener_t *l) {
 }
 
 pn_millis_t pn_proactor_now(void) {
-  FILETIME now;
-  GetSystemTimeAsFileTime(&now);
-  ULARGE_INTEGER t;
-  t.u.HighPart = now.dwHighDateTime;
-  t.u.LowPart = now.dwLowDateTime;
-  // Convert to milliseconds and adjust base epoch
-  return t.QuadPart / 10000 - 11644473600000;
+    return (pn_millis_t) pn_proactor_now_64();
+}
+
+int64_t pn_proactor_now_64(void) {
+  return GetTickCount64();
 }

@@ -152,7 +152,7 @@ static ssize_t pn_input_read_amqp(pn_transport_t *transport, unsigned int layer,
 static ssize_t pn_output_write_amqp_header(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
 static ssize_t pn_output_write_amqp(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
 static void pn_error_amqp(pn_transport_t *transport, unsigned int layer);
-static pn_timestamp_t pn_tick_amqp(pn_transport_t *transport, unsigned int layer, pn_timestamp_t now);
+static int64_t pn_tick_amqp(pn_transport_t *transport, unsigned int layer, int64_t now);
 
 static ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available);
 static ssize_t pn_io_layer_output_null(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
@@ -2632,7 +2632,7 @@ static ssize_t pn_input_read_amqp(pn_transport_t* transport, unsigned int layer,
 }
 
 /* process AMQP related timer events */
-static pn_timestamp_t pn_tick_amqp(pn_transport_t* transport, unsigned int layer, pn_timestamp_t now)
+static int64_t pn_tick_amqp(pn_transport_t* transport, unsigned int layer, int64_t now)
 {
   pn_timestamp_t timeout = 0;
 
@@ -2917,7 +2917,7 @@ pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport)
 
 int64_t pn_transport_tick(pn_transport_t *transport, int64_t now)
 {
-  pn_timestamp_t r = 0;
+  int64_t r = 0;
   for (int i = 0; i<PN_IO_LAYER_CT; ++i) {
     if (transport->io_layers[i] && transport->io_layers[i]->process_tick)
       r = pn_timestamp_min(r, transport->io_layers[i]->process_tick(transport, i, now));

@@ -199,7 +199,7 @@ static void ptimer_set_lh(ptimer_t *pt, uint64_t t_millis) {
     // EPOLLIN is possible but not assured
     pt->in_doubt = true;
   }
-  pt->timer_active = t_millis;
+  pt->timer_active = t_millis != 0;
 }
 
 static void ptimer_set(ptimer_t *pt, uint64_t t_millis) {
@@ -260,13 +260,6 @@ static bool ptimer_shutdown(ptimer_t *pt, bool currently_armed) {
 static void ptimer_finalize(ptimer_t *pt) {
   if (pt->timerfd >= 0) close(pt->timerfd);
   pmutex_finalize(&pt->mutex);
-}
-
-pn_timestamp_t pn_i_now2(void)
-{
-  struct timespec now;
-  clock_gettime(CLOCK_REALTIME, &now);
-  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_nsec / 1000000);
 }
 
 // ========================================================================
@@ -562,7 +555,7 @@ typedef struct pconnection_t {
   epoll_extended_t *rearm_target;    /* main or secondary epollfd */
 } pconnection_t;
 
-/* Protects read/update of pn_connnection_t pointer to it's pconnection_t
+/* Protects read/update of pn_connection_t pointer to it's pconnection_t
  *
  * Global because pn_connection_wake()/pn_connection_proactor() navigate from
  * the pn_connection_t before we know the proactor or driver. Critical sections
@@ -588,7 +581,7 @@ static void set_pconnection(pn_connection_t* c, pconnection_t *pc) {
 }
 
 /*
- * A listener can have mutiple sockets (as specified in the addrinfo).  They
+ * A listener can have multiple sockets (as specified in the addrinfo).  They
  * are armed separately.  The individual psockets can be part of at most one
  * list: the global proactor overflow retry list or the per-listener list of
  * pending accepts (valid inbound socket obtained, but pn_listener_accept not
@@ -1426,10 +1419,10 @@ static void pconnection_tick(pconnection_t *pc) {
   pn_transport_t *t = pc->driver.transport;
   if (pn_transport_get_idle_timeout(t) || pn_transport_get_remote_idle_timeout(t)) {
     ptimer_set(&pc->timer, 0);
-    uint64_t now = pn_i_now2();
-    uint64_t next = pn_transport_tick(t, now);
+    int64_t now = pn_proactor_now_64();
+    int64_t next = pn_transport_tick(t, now);
     if (next) {
-      ptimer_set(&pc->timer, next - now);
+      ptimer_set(&pc->timer, (uint64_t) next - now);
     }
   }
 }
@@ -2341,7 +2334,11 @@ const pn_netaddr_t *pn_listener_addr(pn_listener_t *l) {
 }
 
 pn_millis_t pn_proactor_now(void) {
+  return (pn_millis_t) pn_proactor_now_64();
+}
+
+int64_t pn_proactor_now_64(void) {
   struct timespec t;
   clock_gettime(CLOCK_MONOTONIC, &t);
-  return t.tv_sec*1000 + t.tv_nsec/1000000;
+  return t.tv_sec * 1000 + t.tv_nsec / 1000000;
 }
