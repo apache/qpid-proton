@@ -105,7 +105,7 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 				}
 			}
 			if ep, ok := h.links[l]; ok {
-				ep.wakeSync()
+				ep.(endpointInternal).wakeSync()
 			} else {
 				h.linkError(l, "no link")
 			}
@@ -161,7 +161,7 @@ func (h *handler) addLink(pl proton.Link, el Endpoint) {
 
 func (h *handler) linkClosed(l proton.Link, err error) {
 	if link, ok := h.links[l]; ok {
-		_ = link.closed(err)
+		_ = link.(endpointInternal).closed(err)
 		delete(h.links, l)
 		l.Free()
 	}
@@ -195,7 +195,7 @@ func (h *handler) shutdown(err error) {
 	}
 	h.sent = nil
 	for _, l := range h.links {
-		_ = l.closed(err)
+		_ = l.(endpointInternal).closed(err)
 	}
 	h.links = nil
 	for _, s := range h.sessions {

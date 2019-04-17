@@ -71,7 +71,9 @@ type Endpoint interface {
 	// endpoint and its children will be closed with an error. The error will only
 	// be detected when you try to use one of these endpoints or call Sync()
 	Sync() error
+}
 
+type endpointInternal interface {
 	// Called in handler goroutine when endpoint is remotely closed.
 	closed(err error) error
 	wakeSync()
