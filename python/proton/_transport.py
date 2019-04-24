@@ -43,7 +43,7 @@ from cproton import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SA
     pn_transport_tick, pn_transport_trace, pn_transport_unbind
 
 from ._common import millis2secs, secs2millis, unicode2utf8, utf82unicode
-from ._condition import cond2obj
+from ._condition import cond2obj, obj2cond
 from ._exceptions import EXCEPTIONS, SSLException, SSLUnavailable, SessionException, TransportException
 from ._wrapper import Wrapper
 
@@ -256,9 +256,17 @@ The idle timeout of the connection (float, in seconds).
             self._ssl = SSL(self, domain, session_details)
         return self._ssl
 
-    @property
-    def condition(self):
+    def _get_condition(self):
         return cond2obj(pn_transport_condition(self._impl))
+
+    def _set_condition(self, cond):
+        pn_cond = pn_transport_condition(self._impl)
+        obj2cond(cond, pn_cond)
+
+    condition = property(_get_condition, _set_condition,
+                         doc="""
+The error condition (if any) of the transport.
+""")
 
     @property
     def connection(self):

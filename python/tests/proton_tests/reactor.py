@@ -423,7 +423,6 @@ class ContainerTest(Test):
         def __init__(self, host):
             super(ContainerTest._ServerHandler, self).__init__()
             self.host = host
-            port = free_tcp_port()
             self.port = free_tcp_port()
             self.client_addr = None
             self.peer_hostname = None
@@ -499,6 +498,66 @@ class ContainerTest(Test):
                                  virtual_host="")
         container.run()
         assert server_handler.peer_hostname is None, server_handler.peer_hostname
+
+    class _ReconnectServerHandler(MessagingHandler):
+        def __init__(self, host, listen_on_error=True):
+            super(ContainerTest._ReconnectServerHandler, self).__init__()
+            self.host = host
+            self.port = free_tcp_port()
+            self.client_addr = None
+            self.peer_hostname = None
+            self.listen_on_error = listen_on_error
+
+        def on_connection_opened(self, event):
+            self.client_addr = event.connected_address
+            self.peer_hostname = event.connection.remote_hostname
+            self.listener.close()
+
+        def on_connection_closing(self, event):
+            event.connection.close()
+
+        def listen(self, container):
+            if self.listen_on_error:
+                self.listener = container.listen("%s:%s" % (self.host, self.port))
+
+    class _ReconnectClientHandler(MessagingHandler):
+        def __init__(self, server_handler):
+            super(ContainerTest._ReconnectClientHandler, self).__init__()
+            self.connect_failed = False
+            self.server_addr = None
+            self.server_handler = server_handler
+
+        def on_connection_opened(self, event):
+            self.server_addr = event.connected_address
+            event.connection.close()
+
+        def on_transport_error(self, event):
+            assert self.connect_failed == False
+            self.connect_failed = True
+            self.server_handler.listen(event.container)
+
+    def test_reconnect(self):
+        server_handler = ContainerTest._ReconnectServerHandler("localhost", listen_on_error=True)
+        client_handler = ContainerTest._ReconnectClientHandler(server_handler)
+        container = Container(server_handler)
+        container.connect(url=Url(host="localhost", port=server_handler.port),
+                          handler=client_handler)
+        container.run()
+        assert server_handler.peer_hostname == 'localhost', server_handler.peer_hostname
+        assert client_handler.connect_failed
+        assert client_handler.server_addr == Url(host='localhost', port=server_handler.port), client_handler.server_addr
+
+    def test_not_reconnecting(self):
+        server_handler = ContainerTest._ReconnectServerHandler("localhost", listen_on_error=False)
+        client_handler = ContainerTest._ReconnectClientHandler(server_handler)
+        container = Container(server_handler)
+        container.connect(url=Url(host="localhost", port=server_handler.port),
+                          handler=client_handler, reconnect=False)
+        container.run()
+        assert server_handler.peer_hostname == None, server_handler.peer_hostname
+        assert client_handler.connect_failed
+        assert client_handler.server_addr == None, client_handler.server_addr
+
 
 class SelectorTest(Test):
     """Test the Selector"""

@@ -349,7 +349,7 @@ class Reactor(object):
         result = Selectable(delegate, self)
         result.collect(self._collector)
         result.handler = handler
-        self.push_event(result, Event.SELECTABLE_INIT)
+        result.push_event(result, Event.SELECTABLE_INIT)
         return result
 
     def update(self, selectable):
@@ -773,10 +773,9 @@ class Connector(Handler):
         _logger.debug("connected to %s" % event.connection.hostname)
         if self.reconnect:
             self.reconnect.reset()
-            self.transport = None
 
     def on_transport_tail_closed(self, event):
-        self.on_transport_closed(event)
+        event.transport.close_head()
 
     def on_transport_closed(self, event):
         if self.connection is None: return

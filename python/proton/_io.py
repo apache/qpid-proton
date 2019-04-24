@@ -23,11 +23,17 @@ import errno
 import socket
 import select
 import time
-from ._compat import select_errno
+
+from ._compat import socket_errno
 
 PN_INVALID_SOCKET = -1
 
 class IO(object):
+
+    @staticmethod
+    def _setupsocket(s):
+        s.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, True)
+        s.setblocking(False)
 
     @staticmethod
     def close(s):
@@ -36,17 +42,27 @@ class IO(object):
     @staticmethod
     def listen(host, port):
         s = socket.socket()
+        IO._setupsocket(s)
         s.bind((host, port))
         s.listen(10)
         return s
 
     @staticmethod
     def accept(s):
-        return s.accept()
+        n = s.accept()
+        IO._setupsocket(n[0])
+        return n
 
     @staticmethod
-    def connect(host, port):
-        return socket.create_connection((host, port))
+    def connect(addr):
+        s = socket.socket(addr[0], addr[1], addr[2])
+        IO._setupsocket(s)
+        try:
+            s.connect(addr[4])
+        except socket.error as e:
+            if socket_errno(e) not in (errno.EINPROGRESS, errno.EWOULDBLOCK, errno.EAGAIN):
+                raise
+        return s
 
     @staticmethod
     def select(*args, **kwargs):
@@ -107,6 +123,9 @@ class IO(object):
         def select(self, timeout):
 
             def select_inner(timeout):
+                # This inner select adds the writing fds to the exception fd set
+                # because Windows returns connected fds in the exception set not the
+                # writable set
                 r = self._reading
                 w = self._writing
 
@@ -114,31 +133,34 @@ class IO(object):
 
                 # No timeout or deadline
                 if timeout is None and self._deadline is None:
-                    return IO.select(r, w, [])
+                    return IO.select(r, w, w)
 
                 if timeout is None:
                     t = max(0, self._deadline - now)
-                    return IO.select(r, w, [], t)
+                    return IO.select(r, w, w, t)
 
                 if self._deadline is None:
-                    return IO.select(r, w, [], timeout)
+                    return IO.select(r, w, w, timeout)
 
                 t = max(0, min(timeout, self._deadline - now))
                 if len(r)==0 and len(w)==0:
                     if t > 0: IO.sleep(t)
                     return ([],[],[])
 
-                return IO.select(r, w, [], t)
+                return IO.select(r, w, w, t)
 
             # Need to allow for signals interrupting us on Python 2
             # In this case the signal handler could have messed up our internal state
             # so don't retry just return with no handles.
             try:
-                r, w, _ = select_inner(timeout)
+                r, w, ex = select_inner(timeout)
             except select.error as e:
-                if select_errno(e) != errno.EINTR:
+                if socket_errno(e) != errno.EINTR:
                     raise
                 r, w = ([], [])
+
+            # For windows non blocking connect we get exception not writable so add exceptions to writable
+            w += ex
 
             # Calculate timed out selectables
             now = time.time()

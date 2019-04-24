@@ -52,7 +52,7 @@ if PY3:
     def iteritems(d, **kw):
         return iter(d.items(**kw))
 
-    def select_errno(e):
+    def socket_errno(e):
         return e.errno
 
     unichr = chr
@@ -66,7 +66,7 @@ else:
     def iteritems(d, **kw):
         return d.iteritems(**kw)
 
-    def select_errno(e):
+    def socket_errno(e):
         return e[0]
 
     unichr = unichr

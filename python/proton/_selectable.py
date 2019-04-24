@@ -63,7 +63,8 @@ class Selectable(object):
         self._collector = collector
 
     def push_event(self, context, type):
-        self._collector.put(context, type)
+        if self._collector:
+            self._collector.put(context, type)
 
     def update(self):
         if not self._terminated:
@@ -74,16 +75,13 @@ class Selectable(object):
                 self.push_event(self, Event.SELECTABLE_UPDATED)
 
     def readable(self):
-        if self._collector:
-            self.push_event(self, Event.SELECTABLE_READABLE)
+        self.push_event(self, Event.SELECTABLE_READABLE)
 
     def writable(self):
-        if self._collector:
-            self.push_event(self, Event.SELECTABLE_WRITABLE)
+        self.push_event(self, Event.SELECTABLE_WRITABLE)
 
     def expired(self):
-        if self._collector:
-            self.push_event(self, Event.SELECTABLE_EXPIRED)
+        self.push_event(self, Event.SELECTABLE_EXPIRED)
 
     @property
     def is_terminal(self):

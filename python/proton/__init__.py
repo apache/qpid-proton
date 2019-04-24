@@ -31,6 +31,8 @@ The proton APIs consist of the following classes:
 from __future__ import absolute_import
 
 import logging
+import logging.config
+import os
 
 from cproton import PN_VERSION_MAJOR, PN_VERSION_MINOR, PN_VERSION_POINT
 
@@ -127,5 +129,9 @@ class NullHandler(logging.Handler):
 
 handler = NullHandler()
 
-log = logging.getLogger("proton")
-log.addHandler(handler)
+logconfigfile = os.getenv('PNPY_LOGGER_CONFIG', None)
+if logconfigfile:
+    logging.config.fileConfig(logconfigfile, None, False)
+else:
+    log = logging.getLogger("proton")
+    log.addHandler(handler)
