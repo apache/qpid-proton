@@ -181,6 +181,10 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// @see reconnect_options, messaging_handler
     PN_CPP_EXTERN bool reconnected() const;
 
+    /// **Unsettled API** - update the connection options prior to an automatic reconnect.
+    /// Note this will over-write existing options like connection_options::update()
+    PN_CPP_EXTERN void reconnect_update(const connection_options&);
+
     /// @cond INTERNAL
   friend class internal::factory<connection>;
   friend class container;

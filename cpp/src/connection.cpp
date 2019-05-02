@@ -56,7 +56,7 @@ void connection::open() {
 }
 
 void connection::open(const connection_options &opts) {
-    opts.apply_unbound(*this);
+    if (uninitialized()) opts.apply_unbound(*this);
     pn_connection_open(pn_object());
 }
 
@@ -197,5 +197,10 @@ bool connection::reconnected() const {
     reconnect_context* rc = cc.reconnect_context_.get();
     return (rc && rc->reconnected_);
 }
+
+void connection::reconnect_update(const connection_options &opts) {
+    opts.apply_unbound(*this);
+}
+
 
 } // namespace proton

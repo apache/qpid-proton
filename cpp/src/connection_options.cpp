@@ -79,11 +79,6 @@ class connection_options::impl {
      */
     void apply_unbound(connection& c) {
         pn_connection_t *pnc = unwrap(c);
-
-        // Only apply connection options if uninit.
-        bool uninit = c.uninitialized();
-        if (!uninit) return;
-
         if (reconnect.set)
             connection_context::get(pnc).reconnect_context_.reset(new reconnect_context(reconnect.value));
         if (container_id.set)
