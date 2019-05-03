@@ -158,7 +158,7 @@ class IO(object):
             except select.error as e:
                 if socket_errno(e) != errno.EINTR:
                     raise
-                r, w = ([], [])
+                r, w, ex = ([], [], [])
 
             # For windows non blocking connect we get exception not writable so add exceptions to writable
             w += ex
