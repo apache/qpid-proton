@@ -43,6 +43,7 @@ class IO(object):
     def listen(host, port):
         s = socket.socket()
         IO._setupsocket(s)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
         s.bind((host, port))
         s.listen(10)
         return s
