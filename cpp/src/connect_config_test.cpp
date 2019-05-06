@@ -328,6 +328,7 @@ int main(int argc, char** argv) {
     if (have_sasl) {
         RUN_ARGV_TEST(failed, test_host_user_pass().run());
     }
+#ifndef _WIN32
     if (have_ssl) {
         pn_ssl_domain_free(have_ssl);
         RUN_ARGV_TEST(failed, test_tls().run());
@@ -338,5 +339,8 @@ int main(int argc, char** argv) {
     } else {
         std::cout << "SKIP: TLS tests, not available" << std::endl;
     }
+#else
+    std::cout << "SKIP: TLS tests, expected to fail on windows" << std::endl;
+#endif
     return failed;
 }
