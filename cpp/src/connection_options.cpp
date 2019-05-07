@@ -84,8 +84,12 @@ class connection_options::impl {
         bool uninit = c.uninitialized();
         if (!uninit) return;
 
-        if (reconnect.set)
+        if (reconnect.set) {
+            // Transfer reconnect options from connection options to reconnect contexts
+            // to stop the reconnect context being reset every retry unless there are new options
             connection_context::get(pnc).reconnect_context_.reset(new reconnect_context(reconnect.value));
+            reconnect.set = false;
+        }
         if (container_id.set)
             pn_connection_set_container(pnc, container_id.value.c_str());
         if (virtual_host.set)

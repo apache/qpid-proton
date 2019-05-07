@@ -194,7 +194,7 @@ pn_connection_t* container::impl::make_connection_lh(
     cc.connection_options_.reset(new connection_options(opts));
 
     setup_connection_lh(url, pnc);
-    make_wrapper(pnc).open(opts);
+    make_wrapper(pnc).open(*cc.connection_options_);
 
     return pnc;                 // 1 refcount from pn_connection()
 }

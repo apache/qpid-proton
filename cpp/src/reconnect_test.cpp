@@ -185,7 +185,7 @@ class tester : public proton::messaging_handler, public waiter {
         container_.run();
         ASSERT_EQUAL(1, start_count);
         ASSERT_EQUAL(3, open_count);
-        // Could be > 3, unpredicatble number reconnects while listener comes up.
+        // Could be > 3, unpredictable number reconnects while listener comes up.
         ASSERT(2 < transport_error_count);
         // Last reconnect fails before opening links
         ASSERT(link_open_count > 1);
@@ -316,12 +316,74 @@ int test_auth_fail_reconnect() {
     return 0;
 }
 
-int main(int argc, char** argv) {
+// Verify we can change connection options for reconnect on_transport_error()
+class test_reconnect_update : public proton::messaging_handler {
+public:
+    test_reconnect_update()
+            : errors_(0), container_(*this, "test_reconnect_update") {}
+
+    proton::reconnect_options ropts() {
+        // Fast as we can to avoid needless test slowness.
+        return proton::reconnect_options().delay(proton::duration::MILLISECOND);
+    }
+
+    proton::connection_options copts() { return proton::connection_options(); }
+
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+        // Never actually connects, keeps re-trying to bogus hostnames with
+        // changing options.
+        c.connect("nosuchhost0", copts().reconnect(ropts()).virtual_host("vhost0").user("user0"));
+    }
+
+    void on_transport_error(proton::transport &t) PN_CPP_OVERRIDE {
+        switch (++errors_) {
+        case 1:
+            ASSERT_SUBSTRING("nosuchhost0", t.error().what()); // First failure
+            break;
+        case 2: {
+            ASSERT_SUBSTRING("nosuchhost0",t.error().what()); // Second failure
+            std::vector<std::string> urls;
+            urls.push_back("nosuchhost1");
+            // Update the failover list
+            t.connection().update_options(copts().reconnect(ropts().failover_urls(urls)));
+            // Verify changing reconnect options does not affect other options.
+            ASSERT_EQUAL("user0", t.connection().user());
+            break;
+        }
+        case 3:
+        case 4:
+            ASSERT_SUBSTRING("nosuchhost0", t.error().what()); // Re-try original
+            break;
+        case 5:
+            ASSERT_SUBSTRING("nosuchhost1", t.error().what()); // Using failover host
+            // Change a non-reconnect option should not affect reconnect
+            t.connection().update_options(copts().user("user1"));
+            break;
+        case 6:
+            ASSERT_SUBSTRING("nosuchhost0", t.error().what()); // Back to original
+            ASSERT_EQUAL("user1", t.connection().user());
+            break;
+        case 7:
+            ASSERT_SUBSTRING("nosuchhost1", t.error().what()); // Still have failover
+            break;
+        default:
+            t.connection().container().stop();
+        }
+    }
+
+    void run() { container_.run(); }
+
+private:
+    int errors_;
+    proton::container container_;
+};
+
+int main(int argc, char **argv) {
     int failed = 0;
     RUN_ARGV_TEST(failed, test_failover_simple());
     RUN_ARGV_TEST(failed, test_stop_reconnect());
     RUN_ARGV_TEST(failed, test_auth_fail_reconnect());
     RUN_ARGV_TEST(failed, test_reconnecting_close().run());
+    RUN_ARGV_TEST(failed, test_reconnect_update().run());
     return failed;
 }
-

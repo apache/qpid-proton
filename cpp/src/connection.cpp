@@ -198,4 +198,9 @@ bool connection::reconnected() const {
     return (rc && rc->reconnected_);
 }
 
+void connection::update_options(const connection_options& options) {
+    connection_context& cc = connection_context::get(pn_object());
+    cc.connection_options_->update(options);
+}
+
 } // namespace proton
