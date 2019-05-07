@@ -260,13 +260,21 @@ class DataTest(Test):
     self._test(itype, *self.int_values(itype))
 
   def testByte(self): self._test_int("byte")
-  def testUbyte(self): self._test_int("ubyte")
+  def testUbyte(self):
+    self._test_int("ubyte")
+    self.assertRaises(AssertionError, ubyte, -1)
   def testShort(self): self._test_int("short")
-  def testUshort(self): self._test("ushort")
+  def testUshort(self):
+    self._test("ushort")
+    self.assertRaises(AssertionError, ushort, -1)
   def testInt(self): self._test_int("int")
-  def testUint(self): self._test_int("uint")
+  def testUint(self):
+    self._test_int("uint")
+    self.assertRaises(AssertionError, uint, -1)
   def testLong(self): self._test_int("long")
-  def testUlong(self): self._test_int("ulong")
+  def testUlong(self):
+    self._test_int("ulong")
+    self.assertRaises(AssertionError, ulong, -1)
 
   def testString(self):
     self._test("string", "one", "two", "three", "this is a test", "")

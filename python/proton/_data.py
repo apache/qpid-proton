@@ -69,6 +69,11 @@ class UnmappedType:
 
 class ulong(long):
 
+    def __init__(self, l):
+        if (l < 0):
+            raise AssertionError("initializing ulong with negative value")
+        super(ulong, self).__new__(ulong, l)
+
     def __repr__(self):
         return "ulong(%s)" % long.__repr__(self)
 
@@ -111,17 +116,32 @@ class int32(int):
 
 class ubyte(int):
 
+    def __init__(self, i):
+        if (i < 0):
+            raise AssertionError("initializing ubyte with negative value")
+        super(ubyte, self).__new__(ubyte, i)
+
     def __repr__(self):
         return "ubyte(%s)" % int.__repr__(self)
 
 
 class ushort(int):
 
+    def __init__(self, i):
+        if (i < 0):
+            raise AssertionError("initializing ushort with negative value")
+        super(ushort, self).__new__(ushort, i)
+
     def __repr__(self):
         return "ushort(%s)" % int.__repr__(self)
 
 
 class uint(long):
+
+    def __init__(self, l):
+        if (l < 0):
+            raise AssertionError("initializing uint with negative value")
+        super(uint, self).__new__(uint, l)
 
     def __repr__(self):
         return "uint(%s)" % long.__repr__(self)
