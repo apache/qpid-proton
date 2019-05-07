@@ -166,13 +166,18 @@ void container::impl::remove_work_queue(container::impl::container_work_queue* l
     work_queues_.erase(l);
 }
 
-void container::impl::setup_connection_lh(const url& url, pn_connection_t *pnc) {
-    pn_connection_set_container(pnc, id_.c_str());
-    pn_connection_set_hostname(pnc, url.host().c_str());
+namespace {
+void default_url_options(connection_options& opts, const url& url) {
+    opts.virtual_host(url.host());
     if (!url.user().empty())
-        pn_connection_set_user(pnc, url.user().c_str());
+        opts.user(url.user());
     if (!url.password().empty())
-        pn_connection_set_password(pnc, url.password().c_str());
+        opts.password(url.password());
+    // If scheme is amqps then use default tls settings
+    if (url.scheme()==url.AMQPS) {
+        opts.ssl_client_options(ssl_client_options());
+    }
+}
 }
 
 pn_connection_t* container::impl::make_connection_lh(
@@ -183,10 +188,8 @@ pn_connection_t* container::impl::make_connection_lh(
         throw proton::error("container is stopping");
 
     connection_options opts;
-    // If scheme is amqps then use default tls settings
-    if (url.scheme()==url.AMQPS) {
-        opts.ssl_client_options(ssl_client_options());
-    }
+    opts.container_id(id_);
+    default_url_options(opts, url);
     opts.update(client_connection_options_);
     opts.update(user_opts);
     messaging_handler* mh = opts.handler();
@@ -196,11 +199,10 @@ pn_connection_t* container::impl::make_connection_lh(
     cc.container = &container_;
     cc.handler = mh;
     cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, pnc);
-    cc.connected_address_ = url;
+    cc.reconnect_url_ = url;
     cc.connection_options_.reset(new connection_options(opts));
 
-    setup_connection_lh(url, pnc);
-    make_wrapper(pnc).open(opts);
+    make_wrapper(pnc).open(*cc.connection_options_);
 
     return pnc;                 // 1 refcount from pn_connection()
 }
@@ -216,12 +218,13 @@ pn_connection_t* container::impl::make_connection_lh(
 // after start_connection() which is undefined!
 //
 void container::impl::start_connection(const url& url, pn_connection_t *pnc) {
-    char caddr[PN_MAX_ADDR];
-    pn_proactor_addr(caddr, sizeof(caddr), url.host().c_str(), url.port().c_str());
     pn_transport_t* pnt = pn_transport();
     connection_context& cc = connection_context::get(pnc);
     connection_options& co = *cc.connection_options_;
     co.apply_unbound_client(pnt);
+
+    char caddr[PN_MAX_ADDR];
+    pn_proactor_addr(caddr, sizeof(caddr), url.host().c_str(), url.port().c_str());
     pn_proactor_connect2(proactor_, pnc, pnt, caddr); // Takes ownership of pnc, pnt
 }
 
@@ -237,26 +240,33 @@ void container::impl::reconnect(pn_connection_t* pnc) {
 
     connection_context& cc = connection_context::get(pnc);
     reconnect_context& rc = *cc.reconnect_context_.get();
-    const reconnect_options::impl& roi = *rc.reconnect_options_->impl_;
+
+    connection_options& co = *cc.connection_options_;
+    co.apply_reconnect_urls(pnc);
 
     // Figure out next connection url to try
     // rc.current_url_ == -1 means try the url specified in connect, not a failover url
-    const proton::url url(rc.current_url_==-1 ? cc.connected_address_ : roi.failover_urls[rc.current_url_]);
+    const proton::url url(rc.current_url_==-1 ? cc.reconnect_url_ : cc.failover_urls_[rc.current_url_]);
 
     // XXXX Debug:
-    //std::cout << "Retries: " << rc.retries_ << " Delay: " << rc.delay_ << " Trying: " << url << std::endl;
+    //std::cout << "Retries: " << rc.retries_ << " Delay: " << rc.delay_ << " Trying: " << url << "@" << rc.current_url_ << std::endl;
 
-    setup_connection_lh(url, pnc);
-    make_wrapper(pnc).open(*cc.connection_options_);
-    start_connection(url, pnc);
-
+    ++rc.current_url_;
     // Did we go through all the urls?
-    if (rc.current_url_==int(roi.failover_urls.size())-1) {
+    if (rc.current_url_==int(cc.failover_urls_.size())) {
         rc.current_url_ = -1;
         ++rc.retries_;
-    } else {
-        ++rc.current_url_;
     }
+
+    connection_options opts;
+    opts.container_id(id_);
+    default_url_options(opts, url);
+    opts.update(co);
+    messaging_handler* mh = opts.handler();
+    cc.handler = mh;
+
+    make_wrapper(pnc).open(co);
+    start_connection(url, pnc);
 }
 
 namespace {
@@ -273,22 +283,22 @@ duration random_between(duration, duration max)
     return max;
 }
 #endif
-}
 
-duration container::impl::next_delay(reconnect_context& rc) {
+duration next_delay(reconnect_context& rc) {
     // If we've not retried before do it immediately
     if (rc.retries_==0) return duration(0);
 
     // If we haven't tried all failover urls yet this round do it immediately
     if (rc.current_url_!=-1) return duration(0);
 
-    const reconnect_options::impl& roi = *rc.reconnect_options_->impl_;
+    const reconnect_options_base& roi = rc.reconnect_options_;
     if (rc.retries_==1) {
         rc.delay_ = roi.delay;
     } else {
         rc.delay_ = std::min(roi.max_delay, rc.delay_ * roi.delay_multiplier);
     }
     return random_between(roi.delay, rc.delay_);
+}
 }
 
 void container::impl::reset_reconnect(pn_connection_t* pnc) {
@@ -299,6 +309,7 @@ void container::impl::reset_reconnect(pn_connection_t* pnc) {
 
     rc->delay_ = 0;
     rc->retries_ = 0;
+    // set retry to the initial url next
     rc->current_url_ = -1;
 }
 
@@ -321,7 +332,7 @@ bool container::impl::can_reconnect(pn_connection_t* pnc) {
     // If reconnect not enabled just fail
     if (!rc) return false;
 
-    const reconnect_options::impl& roi = *rc->reconnect_options_->impl_;
+    const reconnect_options_base& roi = rc->reconnect_options_;
 
     pn_transport_t* t = pn_connection_transport(pnc);
     pn_condition_t* condition = pn_transport_condition(t);

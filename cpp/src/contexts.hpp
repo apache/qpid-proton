@@ -22,6 +22,8 @@
  *
  */
 
+#include "reconnect_options_impl.hpp"
+
 #include "proton/work_queue.hpp"
 #include "proton/message.hpp"
 #include "proton/internal/pn_unique_ptr.hpp"
@@ -91,19 +93,22 @@ class connection_context : public context {
     io::link_namer* link_gen;      // Link name generator.
 
     messaging_handler* handler;
-    std::string connected_address_;
+    std::string reconnect_url_;
+    std::vector<std::string> failover_urls_;
     internal::pn_unique_ptr<connection_options> connection_options_;
     internal::pn_unique_ptr<reconnect_context> reconnect_context_;
     listener_context* listener_context_;
     work_queue work_queue_;
 };
 
+class reconnect_options_base;
+
 // This is not a context object on its own, but an optional part of connection
 class reconnect_context {
   public:
-    reconnect_context(const reconnect_options& ro);
+    reconnect_context(const reconnect_options_base& ro);
 
-    internal::pn_unique_ptr<const reconnect_options> reconnect_options_;
+    const reconnect_options_base reconnect_options_;
     duration delay_;
     int retries_;
     int current_url_;

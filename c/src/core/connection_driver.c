@@ -77,12 +77,13 @@ int pn_connection_driver_bind(pn_connection_driver_t *d) {
 
 pn_connection_t *pn_connection_driver_release_connection(pn_connection_driver_t *d) {
   if (d->transport) {           /* Make sure transport is closed and unbound */
-      pn_connection_driver_close(d);
-      pn_transport_unbind(d->transport);
+    pn_connection_driver_close(d);
+    pn_transport_unbind(d->transport);
   }
   pn_connection_t *c = d->connection;
   if (c) {
     d->connection = NULL;
+    pn_connection_reset(c);
     pn_connection_collect(c, NULL); /* Disconnect from the collector */
   }
   return c;

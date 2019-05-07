@@ -25,7 +25,7 @@
 namespace proton {
 
 reconnect_options::reconnect_options() : impl_(new impl()) {}
-reconnect_options::reconnect_options(const reconnect_options& x) : impl_(new impl()) {
+reconnect_options::reconnect_options(const reconnect_options& x) : impl_(new impl) {
     *this = x;
 }
 reconnect_options::~reconnect_options() {}
