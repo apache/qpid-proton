@@ -443,8 +443,19 @@ set(qpid-proton-core-src
   ${qpid-proton-include-generated}
 )
 
-add_library (qpid-proton-core SHARED ${qpid-proton-core-src})
-add_dependencies (qpid-proton-core generated_c_files)
+add_library (qpid-proton-core-objects OBJECT ${qpid-proton-core-src})
+add_dependencies (qpid-proton-core-objects generated_c_files)
+set_target_properties(qpid-proton-core-objects PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_definitions(qpid-proton-core-objects PRIVATE qpid_proton_core_EXPORTS)
+
+# Can't use target_link_libraries() because cmake 2.8.12 doesn't allow object libraries as the first param
+# otherwise for cmake 3.9 and on this would be:
+#   target_link_libraries (qpid-proton-core-objects ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
+target_compile_definitions(qpid-proton-core-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-core,COMPILE_DEFINITIONS>)
+target_compile_options    (qpid-proton-core-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-core,COMPILE_OPTIONS>)
+target_include_directories(qpid-proton-core-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-core,INCLUDE_DIRECTORIES>)
+
+add_library (qpid-proton-core SHARED $<TARGET_OBJECTS:qpid-proton-core-objects>)
 target_link_libraries (qpid-proton-core ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 set_target_properties (qpid-proton-core
   PROPERTIES
@@ -458,12 +469,6 @@ if (BUILD_STATIC_LIBS)
 endif(BUILD_STATIC_LIBS)
 
 set(qpid-proton-src
-  # Proton Core
-  ${qpid-proton-core}
-  ${qpid-proton-layers}
-  ${qpid-proton-platform}
-  ${qpid-proton-include}
-  ${qpid-proton-include-generated}
   # Proactor
   ${qpid-proton-proactor}
   # Proton Reactor/Messenger
@@ -472,7 +477,7 @@ set(qpid-proton-src
   ${qpid-proton-include-extra}
 )
 
-add_library (qpid-proton SHARED ${qpid-proton-src})
+add_library (qpid-proton SHARED $<TARGET_OBJECTS:qpid-proton-core-objects> ${qpid-proton-src})
 target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 set_target_properties (qpid-proton
   PROPERTIES

@@ -37,8 +37,11 @@ endif()
 # Tests for each library are combined in a single executable.
 
 if (CMAKE_CXX_COMPILER)
+
+  add_library(test_main OBJECT test_main.cpp)
+
   macro(add_c_test exe)
-    add_executable(${exe} test_main.cpp pn_test.cpp ${ARGN})
+    add_executable(${exe} $<TARGET_OBJECTS:test_main> pn_test.cpp ${ARGN})
     set_target_properties(${exe} PROPERTIES
       COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
     add_test(NAME ${exe} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${exe}>)
