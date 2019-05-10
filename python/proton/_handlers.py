@@ -1396,26 +1396,33 @@ class ConnectSelectable(Selectable):
     def writable(self):
         e = self._delegate.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         t = self._transport
+
+        # Always cleanup this ConnectSelectable: either we failed or created a new one
+        # Do it first to ensure the socket gets deregistered before being registered again
+        # in the case of connecting
+        self.terminate()
+        self._transport = None
+        self.update()
+
         if e == 0:
             log.debug("Connection succeeded")
+
+            # Disassociate from the socket (which will be passed on)
+            self.release()
+
             s = self._reactor.selectable(delegate=self._delegate)
             s._transport = t
             t._selectable = s
             self._iohandler.update(t, s, t._reactor.now)
 
-            # Disassociate from the socket (which has been passed on)
-            self._delegate = None
-            self.terminate()
-            self._transport = None
-            self.update()
             return
         elif e == errno.ECONNREFUSED:
             if len(self._addrs) > 0:
                 log.debug("Connection refused: trying next transport address: %s", self._addrs[0])
+
                 sock = IO.connect(self._addrs[0])
-                self._addrs = self._addrs[1:]
-                self._delegate.close()
-                self._delegate = sock
+                # New ConnectSelectable for the new socket with rest of addresses
+                ConnectSelectable(sock, self._reactor, self._addrs[1:], t, self._iohandler)
                 return
             else:
                 log.debug("Connection refused, but tried all transport addresses")
@@ -1426,6 +1433,3 @@ class ConnectSelectable(Selectable):
 
         t.close_tail()
         t.close_head()
-        self.terminate()
-        self._transport = None
-        self.update()

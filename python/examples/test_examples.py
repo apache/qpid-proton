@@ -69,6 +69,12 @@ class ExamplesTest(unittest.TestCase):
     def test_helloworld_blocking(self):
         self.test_helloworld('helloworld_blocking.py')
 
+    def test_helloworld_tornado(self):
+        self.test_helloworld('helloworld_tornado.py')
+
+    def test_helloworld_direct_tornado(self):
+        self.test_helloworld('helloworld_direct_tornado.py')
+
     def test_simple_send_recv(self, recv='simple_recv.py', send='simple_send.py'):
         with Popen([recv]) as r:
             with Popen([send]):
