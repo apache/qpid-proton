@@ -18,9 +18,7 @@
  */
 
 //
-// This example requires C++11.  See @ref
-// multithreaded_client_flow_control_0x.cpp for a variant compatible
-// with older versions of C++.
+// This example requires C++0x threading.
 //
 // A multithreaded client that sends and receives messages from
 // multiple AMQP addresses.
@@ -53,7 +51,6 @@
 #include <proton/sender.hpp>
 #include <proton/work_queue.hpp>
 
-#include <atomic>
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
@@ -88,9 +85,9 @@ class sender : private proton::messaging_handler {
   public:
     sender(proton::container& cont, const std::string& url, const std::string& address)
         : work_queue_(0), queued_(0), credit_(0)
-    {
-        cont.open_sender(url+"/"+address, proton::connection_options().handler(*this));
-    }
+        {
+            cont.open_sender(url+"/"+address, proton::connection_options().handler(*this));
+        }
 
     // Thread safe
     void send(const proton::message& m) {
@@ -100,16 +97,16 @@ class sender : private proton::messaging_handler {
             while (!work_queue_ || queued_ >= credit_) sender_ready_.wait(l);
             ++queued_;
         }
-        work_queue_->add([=]() { this->do_send(m); }); // work_queue_ is thread safe
+
+        work_queue()->add(make_work(&sender::do_send, this, m)); // work_queue() is thread safe
     }
 
     // Thread safe
     void close() {
-        work_queue()->add([=]() { sender_.connection().close(); });
+        work_queue()->add(make_work(&sender::do_close, this));
     }
 
   private:
-
     proton::work_queue* work_queue() {
         // Wait till work_queue_ and sender_ are initialized.
         std::unique_lock<std::mutex> l(lock_);
@@ -117,40 +114,45 @@ class sender : private proton::messaging_handler {
         return work_queue_;
     }
 
+    // work_queue work items are automatically dequeued and called by proton.
+    // This function is called because it was queued by send().
+    void do_send(proton::message m) {
+        sender_.send(m);
+        std::lock_guard<std::mutex> l(lock_);
+        --queued_;                    // Work item was consumed from the work_queue
+        credit_ = sender_.credit();   // Update credit
+        sender_ready_.notify_all();   // Notify senders we have space on queue
+    }
+
+    void do_close() {
+        sender_.connection().close();
+    }
+
     // == messaging_handler overrides, only called in proton handler thread
 
-    void on_sender_open(proton::sender& s) override {
+    void on_sender_open(proton::sender& s) {
         // Make sure sender_ and work_queue_ are set atomically
         std::lock_guard<std::mutex> l(lock_);
         sender_ = s;
         work_queue_ = &s.work_queue();
     }
 
-    void on_sendable(proton::sender& s) override {
+    void on_sendable(proton::sender& s) {
         std::lock_guard<std::mutex> l(lock_);
         credit_ = s.credit();
         sender_ready_.notify_all(); // Notify senders we have credit
     }
 
-    // work_queue work items is are automatically dequeued and called by proton
-    // This function is called because it was queued by send()
-    void do_send(const proton::message& m) {
-        sender_.send(m);
-        std::lock_guard<std::mutex> l(lock_);
-        --queued_;                    // work item was consumed from the work_queue
-        credit_ = sender_.credit();   // update credit
-        sender_ready_.notify_all();       // Notify senders we have space on queue
-    }
-
-    void on_error(const proton::error_condition& e) override {
+    void on_error(const proton::error_condition& e) {
         OUT(std::cerr << "unexpected error: " << e << std::endl);
         exit(1);
     }
 };
 
-// A thread safe receiving connection that blocks receiving threads when there
-// are no messages available, and maintains a bounded buffer of incoming
-// messages by issuing AMQP credit only when there is space in the buffer.
+// A thread safe receiving connection that blocks receiving threads
+// when there are no messages available, and maintains a bounded
+// buffer of incoming messages by issuing AMQP credit only when there
+// is space in the buffer.
 class receiver : private proton::messaging_handler {
     static const size_t MAX_BUFFER = 100; // Max number of buffered messages
 
@@ -165,41 +167,46 @@ class receiver : private proton::messaging_handler {
     bool closed_;
 
   public:
-
     // Connect to url
     receiver(proton::container& cont, const std::string& url, const std::string& address)
         : work_queue_(0), closed_(false)
-    {
-        // NOTE:credit_window(0) disables automatic flow control.
-        // We will use flow control to match AMQP credit to buffer capacity.
-        cont.open_receiver(url+"/"+address, proton::receiver_options().credit_window(0),
-                           proton::connection_options().handler(*this));
-    }
+        {
+            // NOTE: credit_window(0) disables automatic flow control.
+            // We will use flow control to match AMQP credit to buffer capacity.
+            cont.open_receiver(url + "/" + address, proton::receiver_options().credit_window(0),
+                               proton::connection_options().handler(*this));
+        }
 
     // Thread safe receive
     proton::message receive() {
         std::unique_lock<std::mutex> l(lock_);
+
         // Wait for buffered messages
         while (!closed_ && (!work_queue_ || buffer_.empty())) {
             can_receive_.wait(l);
         }
-        if (closed_) throw closed("receiver closed");
+
+        if (closed_) throw closed("Receiver closed");
+
         proton::message m = std::move(buffer_.front());
         buffer_.pop();
+
         // Add a lambda to the work queue to call receive_done().
         // This will tell the handler to add more credit.
-        work_queue_->add([=]() { this->receive_done(); });
+        work_queue_->add(make_work(&receiver::receive_done, this));
+
         return m;
     }
 
     // Thread safe
     void close() {
         std::lock_guard<std::mutex> l(lock_);
+
         if (!closed_) {
             closed_ = true;
             can_receive_.notify_all();
             if (work_queue_) {
-                work_queue_->add([this]() { this->receiver_.connection().close(); });
+                work_queue_->add(make_work(&receiver::do_close, this));
             }
         }
     }
@@ -207,14 +214,18 @@ class receiver : private proton::messaging_handler {
   private:
     // ==== The following are called by proton threads only.
 
-    void on_receiver_open(proton::receiver& r) override {
+    void do_close() {
+        receiver_.connection().close();
+    }
+
+    void on_receiver_open(proton::receiver& r) {
         receiver_ = r;
         std::lock_guard<std::mutex> l(lock_);
         work_queue_ = &receiver_.work_queue();
         receiver_.add_credit(MAX_BUFFER); // Buffer is empty, initial credit is the limit
     }
 
-    void on_message(proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &d, proton::message &m) {
         // Proton automatically reduces credit by 1 before calling on_message
         std::lock_guard<std::mutex> l(lock_);
         buffer_.push(m);
@@ -227,7 +238,7 @@ class receiver : private proton::messaging_handler {
         receiver_.add_credit(1);
     }
 
-    void on_error(const proton::error_condition& e) override {
+    void on_error(const proton::error_condition& e) {
         OUT(std::cerr << "unexpected error: " << e << std::endl);
         exit(1);
     }
@@ -235,34 +246,53 @@ class receiver : private proton::messaging_handler {
 
 // ==== Example code using the sender and receiver
 
+void run_container(proton::container& cont) {
+    cont.run();
+}
+
 // Send n messages
-void send_thread(sender& s, int n) {
+void run_sender(sender& s, int n) {
     auto id = std::this_thread::get_id();
+
     for (int i = 0; i < n; ++i) {
         std::ostringstream ss;
         ss << std::this_thread::get_id() << "-" << i;
         s.send(proton::message(ss.str()));
+
         OUT(std::cout << id << " sent \"" << ss.str() << '"' << std::endl);
     }
+
     OUT(std::cout << id << " sent " << n << std::endl);
 }
 
-// Receive messages till atomic remaining count is 0.
-// remaining is shared among all receiving threads
-void receive_thread(receiver& r, std::atomic_int& remaining) {
+// Receive messages till remaining count is 0.  n_remaining is shared
+// among all receiving threads.
+void run_receiver(receiver& r, int& n_remaining, std::mutex& lock) {
     try {
         auto id = std::this_thread::get_id();
         int n = 0;
-        // atomically check and decrement remaining *before* receiving.
+
+        // Atomically check and decrement remaining *before* receiving.
         // If it is 0 or less then return, as there are no more
         // messages to receive so calling r.receive() would block forever.
-        while (remaining-- > 0) {
+        while (true) {
+            {
+                std::lock_guard<std::mutex> l(lock);
+                n_remaining--;
+                if (n_remaining <= 0) {
+                    break;
+                }
+            }
+
             auto m = r.receive();
             ++n;
+
             OUT(std::cout << id << " received \"" << m.body() << '"' << std::endl);
         }
+
         OUT(std::cout << id << " received " << n << " messages" << std::endl);
-    } catch (const closed&) {}
+    } catch (const closed&) {
+    }
 }
 
 int main(int argc, const char **argv) {
@@ -279,43 +309,59 @@ int main(int argc, const char **argv) {
 
         const char *url = argv[1];
         const char *address = argv[2];
-        int n_messages = atoi(argv[3]);
-        int n_threads = atoi(argv[4]);
-        int count = n_messages * n_threads;
+        const int n_messages = atoi(argv[3]);
+        const int n_threads = atoi(argv[4]);
+        const int count = n_messages * n_threads;
 
-        // Total messages to be received, multiple receiver threads will decrement this.
-        std::atomic_int remaining;
-        remaining.store(count);
+        // Total messages to be received.  Multiple receiver threads
+        // will decrement this.
+        std::mutex lock;
+        int n_remaining = count;
 
         // Run the proton container
         proton::container container;
-        auto container_thread = std::thread([&]() { container.run(); });
+        std::thread container_thread(run_container, std::ref(container));
 
         // A single sender and receiver to be shared by all the threads
         sender send(container, url, address);
         receiver recv(container, url, address);
 
-        // Start receiver threads, then sender threads.
-        // Starting receivers first gives all receivers a chance to compete for messages.
+        // Start receiver threads, then sender threads.  Starting
+        // receivers first gives all receivers a chance to compete for
+        // messages.
         std::vector<std::thread> threads;
-        threads.reserve(n_threads*2); // Avoid re-allocation once threads are started
-        for (int i = 0; i < n_threads; ++i)
-            threads.push_back(std::thread([&]() { receive_thread(recv, remaining); }));
-        for (int i = 0; i < n_threads; ++i)
-            threads.push_back(std::thread([&]() { send_thread(send, n_messages); }));
+
+        // Avoid re-allocation once threads are started
+        threads.reserve(n_threads * 2);
+
+        for (int i = 0; i < n_threads; ++i) {
+            threads.push_back(std::thread(run_receiver, std::ref(recv), std::ref(n_remaining), std::ref(lock)));
+        }
+
+        for (int i = 0; i < n_threads; ++i) {
+            threads.push_back(std::thread(run_sender, std::ref(send), n_messages));
+        }
 
         // Wait for threads to finish
-        for (auto& t : threads) t.join();
+        for (auto t = threads.begin(); t != threads.end(); ++t) {
+            t->join();
+        }
+
         send.close();
         recv.close();
+
         container_thread.join();
-        if (remaining > 0)
-            throw std::runtime_error("not all messages were received");
+
+        if (n_remaining > 0) {
+            throw std::runtime_error("Not all messages were received");
+        }
+
         std::cout << count << " messages sent and received" << std::endl;
 
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
+
     return 1;
 }

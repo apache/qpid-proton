@@ -130,10 +130,26 @@ __Requires C++11__
 
 */
 
+/** @example multithreaded_client_0x.cpp
+
+A multithreaded sender and receiver for pre-C++11 compilers.
+
+__Requires C++0x threading__
+
+*/
+
 /** @example multithreaded_client_flow_control.cpp
 
 A multithreaded sender and receiver enhanced for flow control.
 
 __Requires C++11__
+
+*/
+
+/** @example multithreaded_client_flow_control_0x.cpp
+
+A multithreaded sender and receiver for pre-C++11 compilers enhanced for flow control.
+
+__Requires C++0x threading__
 
 */

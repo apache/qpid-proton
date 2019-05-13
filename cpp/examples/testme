@@ -165,17 +165,34 @@ expected conversion_error: "unexpected type, want: uint got: string"
 
     def test_multithreaded_client(self):
         if not in_path("multithreaded_client"):
+            print("Skipping test: multithreaded_client is missing")
             return
         got = check_output(["multithreaded_client", Broker.addr, "examples", "10"])
         self.maxDiff = None
         self.assertIn("10 messages sent and received", got);
 
+    def test_multithreaded_client_0x(self):
+        if not in_path("multithreaded_client_0x"):
+            print("Skipping test: multithreaded_client_0x is missing")
+            return
+        got = check_output(["multithreaded_client_0x", Broker.addr, "examples", "10"])
+        self.maxDiff = None
+        self.assertIn("10 messages sent and received", got);
 
     # Test is unstable, enable when fixed
     def skip_test_multithreaded_client_flow_control(self):
         if not in_path("multithreaded_client_flow_control"):
+            print("Skipping test: multithreaded_client_flow_control is missing")
             return
         got = check_output(["multithreaded_client_flow_control", Broker.addr, "examples", "10", "2"])
+        self.maxDiff = None
+        self.assertIn("20 messages sent and received", got);
+
+    def test_multithreaded_client_flow_control_0x(self):
+        if not in_path("multithreaded_client_flow_control_0x"):
+            print("Skipping test: multithreaded_client_flow_control_0x is missing")
+            return
+        got = check_output(["multithreaded_client_flow_control_0x", Broker.addr, "examples", "10", "2"])
         self.maxDiff = None
         self.assertIn("20 messages sent and received", got);
 

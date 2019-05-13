@@ -18,8 +18,7 @@
  */
 
 //
-// This example requires C++11.  See @ref multithreaded_client_0x.cpp
-// for a variant compatible with older versions of C++.
+// This example requires C++0x threading.
 //
 // A multithreaded client that calls proton::container::run() in one
 // thread, sends messages in another, and receives messages in a
@@ -75,9 +74,7 @@ class client : public proton::messaging_handler {
 
     // Thread safe
     void send(const proton::message& msg) {
-        // Use [=] to copy the message, we cannot pass it by reference since it
-        // will be used in another thread.
-        work_queue()->add([=]() { sender_.send(msg); });
+        work_queue()->add(make_work(&client::do_send, this, msg));
     }
 
     // Thread safe
@@ -91,11 +88,10 @@ class client : public proton::messaging_handler {
 
     // Thread safe
     void close() {
-        work_queue()->add([=]() { sender_.connection().close(); });
+        work_queue()->add(make_work(&client::do_close, this));
     }
 
   private:
-
     proton::work_queue* work_queue() {
         // Wait till work_queue_ and sender_ are initialized.
         std::unique_lock<std::mutex> l(lock_);
@@ -103,22 +99,30 @@ class client : public proton::messaging_handler {
         return work_queue_;
     }
 
+    void do_send(proton::message msg) {
+        sender_.send(msg);
+    }
+
+    void do_close() {
+        sender_.connection().close();
+    }
+
     // == messaging_handler overrides, only called in proton handler thread
 
-    // Note: this example creates a connection when the container starts.
-    // To create connections after the container has started, use
-    // container::connect().
-    // See @ref multithreaded_client_flow_control.cpp for an example.
-    void on_container_start(proton::container& cont) override {
+    // Note: this example creates a connection when the container
+    // starts.  To create connections after the container has started,
+    // use container::connect().  See @ref
+    // multithreaded_client_flow_control.cpp for an example.
+    void on_container_start(proton::container& cont) {
         cont.connect(url_);
     }
 
-    void on_connection_open(proton::connection& conn) override {
+    void on_connection_open(proton::connection& conn) {
         conn.open_sender(address_);
         conn.open_receiver(address_);
     }
 
-    void on_sender_open(proton::sender& s) override {
+    void on_sender_open(proton::sender& s) {
         // sender_ and work_queue_ must be set atomically
         std::lock_guard<std::mutex> l(lock_);
         sender_ = s;
@@ -126,17 +130,37 @@ class client : public proton::messaging_handler {
         sender_ready_.notify_all();
     }
 
-    void on_message(proton::delivery& dlv, proton::message& msg) override {
+    void on_message(proton::delivery& dlv, proton::message& msg) {
         std::lock_guard<std::mutex> l(lock_);
         messages_.push(msg);
         messages_ready_.notify_all();
     }
 
-    void on_error(const proton::error_condition& e) override {
+    void on_error(const proton::error_condition& e) {
         OUT(std::cerr << "unexpected error: " << e << std::endl);
         exit(1);
     }
 };
+
+void run_container(proton::container& container) {
+    container.run();
+}
+
+void run_sender(client& cl, const int n_messages) {
+    for (int i = 0; i < n_messages; ++i) {
+        proton::message msg(std::to_string(static_cast<long long>(i + 1)));
+        cl.send(msg);
+        OUT(std::cout << "sent \"" << msg.body() << '"' << std::endl);
+    }
+}
+
+void run_receiver(client& cl, const int n_messages, int& n_received) {
+    for (int i = 0; i < n_messages; ++i) {
+        auto msg = cl.receive();
+        OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
+        ++n_received;
+    }
+}
 
 int main(int argc, const char** argv) {
     try {
@@ -148,36 +172,24 @@ int main(int argc, const char** argv) {
                 "MESSAGE-COUNT: number of messages to send\n";
             return 1;
         }
+
         const char *url = argv[1];
         const char *address = argv[2];
-        int n_messages = atoi(argv[3]);
+        const int n_messages = atoi(argv[3]);
+        int n_received = 0;
 
         client cl(url, address);
         proton::container container(cl);
-        std::thread container_thread([&]() { container.run(); });
+        std::thread container_thread(run_container, std::ref(container));
+        std::thread sender_thread(run_sender, std::ref(cl), n_messages);
+        std::thread receiver_thread(run_receiver, std::ref(cl), n_messages, std::ref(n_received));
 
-        std::thread sender([&]() {
-                for (int i = 0; i < n_messages; ++i) {
-                    proton::message msg(std::to_string(i + 1));
-                    cl.send(msg);
-                    OUT(std::cout << "sent \"" << msg.body() << '"' << std::endl);
-                }
-            });
-
-        int received = 0;
-        std::thread receiver([&]() {
-                for (int i = 0; i < n_messages; ++i) {
-                    auto msg = cl.receive();
-                    OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
-                    ++received;
-                }
-            });
-
-        sender.join();
-        receiver.join();
+        sender_thread.join();
+        receiver_thread.join();
         cl.close();
         container_thread.join();
-        std::cout << received << " messages sent and received" << std::endl;
+
+        std::cout << n_received << " messages sent and received" << std::endl;
 
         return 0;
     } catch (const std::exception& e) {

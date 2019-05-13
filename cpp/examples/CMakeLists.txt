@@ -84,6 +84,16 @@ foreach(example
   add_executable(${example} ${example}.cpp)
 endforeach()
 
+# Multithreaded examples that work on C++0x
+if (Threads_FOUND)
+  foreach(example
+      multithreaded_client_0x
+      multithreaded_client_flow_control_0x)
+    add_executable(${example} ${example}.cpp)
+    target_link_libraries(${example} ${CMAKE_THREAD_LIBS_INIT})
+  endforeach()
+endif ()
+
 if(HAS_ENOUGH_CPP11)
   # Examples that require C++11
   foreach(example
