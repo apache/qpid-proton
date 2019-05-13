@@ -156,6 +156,14 @@ typedef struct {
   DWORD num_transferred;
 } iocp_result_t;
 
+// Completion keys to distinguish IO from some other user port completions
+enum {
+    proactor_io = 0,
+    proactor_wake_key,
+    psocket_wakeup_key,
+    recycle_accept_key,
+};
+
 struct read_result_t {
   iocp_result_t base;
   size_t drain_count;
@@ -1234,7 +1242,7 @@ static void bind_to_completion_port(iocpdesc_t *iocpd)
     return;
   }
 
-  if (CreateIoCompletionPort ((HANDLE) iocpd->socket, iocpd->iocp->completion_port, 0, 0))
+  if (CreateIoCompletionPort ((HANDLE) iocpd->socket, iocpd->iocp->completion_port, proactor_io, 0))
     iocpd->bound = true;
   else {
     iocpdesc_fail(iocpd, GetLastError(), "IOCP socket setup.");
@@ -1585,15 +1593,6 @@ std::string errno_str(const std::string& msg, bool is_wsa) {
 
 
 using namespace pn_experimental;
-
-static void proactor_wake_stub() {}
-ULONG_PTR proactor_wake_key = (ULONG_PTR) &proactor_wake_stub;
-
-static void psocket_wakeup_stub() {}
-ULONG_PTR psocket_wakeup_key = (ULONG_PTR) &psocket_wakeup_stub;
-
-static void recycle_accept_stub() {}
-ULONG_PTR recycle_accept_key = (ULONG_PTR) &recycle_accept_stub;
 
 static int pgetaddrinfo(const char *host, const char *port, int flags, struct addrinfo **res)
 {
@@ -2536,24 +2535,30 @@ static pn_event_batch_t *proactor_completion_loop(struct pn_proactor_t* p, bool 
       abort();
     }
 
-    if (completion_key == NULL) {
+    switch (completion_key) {
+    case proactor_io: {
       // Normal IO case for connections and listeners
       iocp_result_t *result = (iocp_result_t *) overlapped;
       result->status = good_op ? 0 : GetLastError();
       result->num_transferred = num_xfer;
       psocket_t *ps = (psocket_t *) result->iocpd->active_completer;
       batch = psocket_process(ps, result, p->reaper);
+      break;
     }
-    else {
       // completion_key on our completion port is always null unless set by us
       // in PostQueuedCompletionStatus.  In which case, we hijack the overlapped
       // data structure for our own use.
-      if (completion_key == psocket_wakeup_key)
+    case psocket_wakeup_key:
         batch = psocket_process((psocket_t *) overlapped, NULL, p->reaper);
-      else if (completion_key == proactor_wake_key)
+        break;
+    case proactor_wake_key:
         batch = proactor_process((pn_proactor_t *) overlapped);
-      else if (completion_key == recycle_accept_key)
+        break;
+    case recycle_accept_key:
         recycle_result((accept_result_t *) overlapped);
+        break;
+    default:
+        break;
     }
     if (batch) return batch;
     // No event generated.  Try again with next completion.
@@ -2647,7 +2652,7 @@ static bool connect_step(pconnection_t *pc) {
         pc->psocket.iocpd->read_closed = true;
         fd.release();
         iocpdesc_t *iocpd = pc->psocket.iocpd;
-        if (CreateIoCompletionPort ((HANDLE) iocpd->socket, iocpd->iocp->completion_port, 0, 0)) {
+        if (CreateIoCompletionPort ((HANDLE) iocpd->socket, iocpd->iocp->completion_port, proactor_io, 0)) {
           LPFN_CONNECTEX fn_connect_ex = lookup_connect_ex2(iocpd->socket);
           // addrinfo is owned by the pconnection so pass NULL to the connect result
           connect_result_t *result = connect_result(iocpd, NULL);
