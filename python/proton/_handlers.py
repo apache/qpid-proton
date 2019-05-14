@@ -359,20 +359,20 @@ class EndpointStateHandler(Handler):
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_connection_error', event)
         else:
-            self.log_error(event.connection, "connection")
+            self.print_error(event.connection, "connection")
 
     def on_session_error(self, event):
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_session_error', event)
         else:
-            self.log_error(event.session, "session")
+            self.print_error(event.session, "session")
             event.connection.close()
 
     def on_link_error(self, event):
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_link_error', event)
         else:
-            self.log_error(event.link, "link")
+            self.print_error(event.link, "link")
             event.connection.close()
 
     def on_connection_closed(self, event):
