@@ -468,7 +468,7 @@ if (BUILD_STATIC_LIBS)
   add_library (qpid-proton-core-static STATIC ${qpid-proton-core-src})
 endif(BUILD_STATIC_LIBS)
 
-set(qpid-proton-src
+set(qpid-proton-noncore-src
   # Proactor
   ${qpid-proton-proactor}
   # Proton Reactor/Messenger
@@ -477,7 +477,7 @@ set(qpid-proton-src
   ${qpid-proton-include-extra}
 )
 
-add_library (qpid-proton SHARED $<TARGET_OBJECTS:qpid-proton-core-objects> ${qpid-proton-src})
+add_library (qpid-proton SHARED $<TARGET_OBJECTS:qpid-proton-core-objects> ${qpid-proton-noncore-src})
 target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 set_target_properties (qpid-proton
   PROPERTIES
@@ -487,7 +487,7 @@ set_target_properties (qpid-proton
 )
 
 if (BUILD_STATIC_LIBS)
-  add_library(qpid-proton-static STATIC ${qpid-proton-src})
+  add_library(qpid-proton-static STATIC ${qpid-proton-core-src} ${qpid-proton-noncore-src})
 endif(BUILD_STATIC_LIBS)
 
 if (MSVC)
