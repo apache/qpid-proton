@@ -113,11 +113,7 @@ endif()
 # off if building there:
 if (APPLE)
   set (NOENABLE_WARNING_ERROR ON)
-  set (NOENABLE_UNDEFINED_ERROR ON)
 endif (APPLE)
-
-# Make LTO default to off until we can figure out the valgrind issues
-set (NOENABLE_LINKTIME_OPTIMIZATION ON)
 
 # Add options here called <whatever> they will turn into "ENABLE_<whatever" and can be
 # overridden on a platform specific basis above by NOENABLE_<whatever>
