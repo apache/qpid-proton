@@ -2453,7 +2453,7 @@ class EventTest(CollectorTest):
     self.expect(Event.TRANSPORT_ERROR, Event.TRANSPORT_TAIL_CLOSED)
     assert t.condition is not None
     assert t.condition.name == "amqp:connection:framing-error"
-    assert "AMQP header mismatch" in t.condition.description
+    assert "AMQP protocol header" in t.condition.description
     p = t.pending()
     assert p > 0
     t.pop(p)

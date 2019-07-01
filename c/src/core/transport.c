@@ -274,7 +274,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
   const char* error;
   bool eos = transport->tail_closed;
   if (eos && available==0) {
-    pn_do_error(transport, "amqp:connection:framing-error", "No valid protocol header found");
+    pn_do_error(transport, "amqp:connection:framing-error", "No protocol header found (connection aborted)");
     pn_set_error_layer(transport);
     return PN_EOS;
   }
@@ -1848,7 +1848,7 @@ static ssize_t transport_consume(pn_transport_t *transport)
   // flow to the app the same way, but provides cleaner error messages
   // since we don't try to look for a protocol header when, e.g. the
   // connection was refused.
-  if (!transport->bytes_input && transport->tail_closed &&
+  if (!(transport->present_layers & LAYER_AMQP1) && transport->tail_closed &&
       pn_condition_is_set(&transport->condition)) {
     pn_do_error(transport, NULL, NULL);
     return PN_EOS;
@@ -2577,9 +2577,15 @@ static void pn_error_amqp(pn_transport_t* transport, unsigned int layer)
 static ssize_t pn_input_read_amqp_header(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
 {
   bool eos = transport->tail_closed;
+  if (eos && available==0) {
+    pn_do_error(transport, "amqp:connection:framing-error",
+                "Expected AMQP protocol header: no protocol header found (connection aborted)");
+    return PN_EOS;
+  }
   pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
   switch (protocol) {
   case PNI_PROTOCOL_AMQP1:
+    transport->present_layers |= LAYER_AMQP1;
     if (transport->io_layers[layer] == &amqp_read_header_layer) {
       transport->io_layers[layer] = &amqp_layer;
     } else {
@@ -2597,7 +2603,7 @@ static ssize_t pn_input_read_amqp_header(pn_transport_t* transport, unsigned int
   char quoted[1024];
   pn_quote_data(quoted, 1024, bytes, available);
   pn_do_error(transport, "amqp:connection:framing-error",
-              "%s header mismatch: %s ['%s']%s", "AMQP", pni_protocol_name(protocol), quoted,
+              "Expected AMQP protocol header got: %s ['%s']%s", pni_protocol_name(protocol), quoted,
               !eos ? "" : " (connection aborted)");
   return PN_EOS;
 }

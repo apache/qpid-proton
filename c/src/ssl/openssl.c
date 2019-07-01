@@ -1012,7 +1012,10 @@ static int start_ssl_shutdown(pn_transport_t *transport)
 static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer, const char *input_data, size_t available)
 {
   pni_ssl_t *ssl = transport->ssl;
-  if (ssl->ssl == NULL && init_ssl_socket(transport, ssl, NULL)) return PN_EOS;
+  if (ssl->ssl == NULL) {
+    if (init_ssl_socket(transport, ssl, NULL)) return PN_EOS;
+    transport->present_layers |= LAYER_SSL;
+  }
 
   ssl_log( transport, "process_input_ssl( data size=%d )",available );
 
