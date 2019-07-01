@@ -116,8 +116,9 @@ class connection_options::impl {
 
         // Skip entirely if SASL explicitly disabled
         if (!sasl_enabled.set || sasl_enabled.value) {
-            if (sasl_enabled.set)  // Explicitly set, not just default behaviour.
-                pn_sasl(pnt);      // Force a sasl instance.  Lazily create one otherwise.
+            // We now default to enabling SASL even without specific SASL configuration
+            // This gives better interoperability and consistency across bindings
+            pn_sasl(pnt);
             if (sasl_allow_insecure_mechs.set)
                 pn_sasl_set_allow_insecure_mechs(pn_sasl(pnt), sasl_allow_insecure_mechs.value);
             if (sasl_allowed_mechs.set)
