@@ -53,11 +53,11 @@ endif()
 
 # Deprecated options to enable runtime checks
 macro(deprecated_enable_check old new doc)
-  option(${old} ${doc} OFF)
   if (${old})
     message("WARNING: option ${old} is deprecated, use RUNTIME_CHECK=${new} instead")
     set(RUNTIME_CHECK_DEFAULT ${new})
   endif()
+  unset(${old} CACHE)
 endmacro()
 deprecated_enable_check(ENABLE_VALGRIND memcheck "Use valgrind to detect run-time problems")
 deprecated_enable_check(ENABLE_SANITIZERS asan "Compile with memory sanitizers (asan, ubsan)")
