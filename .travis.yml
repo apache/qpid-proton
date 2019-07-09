@@ -22,7 +22,8 @@ language: cpp
 compiler:
 - gcc
 - clang
-
+env:
+- OPENSSL_ia32cap='0x00000000'
 
 matrix:
   include:
