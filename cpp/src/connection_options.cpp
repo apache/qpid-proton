@@ -33,6 +33,7 @@
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
+#include "ssl_options_impl.hpp"
 
 #include <proton/connection.h>
 #include <proton/proactor.h>
@@ -141,12 +142,15 @@ class connection_options::impl {
             // hostname to the connection hostname, which has
             // already been adjusted for the virtual_host option.
             pn_ssl_t *ssl = pn_ssl(pnt);
-            if (pn_ssl_init(ssl, ssl_client_options.value.pn_domain(), NULL))
+            pn_ssl_domain_t* ssl_domain = ssl_client_options.value.impl_ ? ssl_client_options.value.impl_->pn_domain() : NULL;
+            if (pn_ssl_init(ssl, ssl_domain, NULL)) {
                 throw error(MSG("client SSL/TLS initialization error"));
+            }
         } else if (!client && ssl_server_options.set) {
-                pn_ssl_t *ssl = pn_ssl(pnt);
-                if (pn_ssl_init(ssl, ssl_server_options.value.pn_domain(), NULL))
-                    throw error(MSG("server SSL/TLS initialization error"));
+            pn_ssl_t *ssl = pn_ssl(pnt);
+            if (pn_ssl_init(ssl, ssl_server_options.value.impl_->pn_domain(), NULL)) {
+                throw error(MSG("server SSL/TLS initialization error"));
+            }
         }
 
     }

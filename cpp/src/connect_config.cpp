@@ -124,20 +124,25 @@ void parse_sasl(Value root, connection_options& opts) {
 void parse_tls(const string& scheme, Value root, connection_options& opts) {
     Value tls = get(objectValue, root, "tls");
     if (scheme == "amqps") { // TLS is enabled
-        bool verify = get_bool(tls, "verify", true);
-        ssl::verify_mode mode = verify ? ssl::VERIFY_PEER_NAME : ssl::ANONYMOUS_PEER;
+        ssl::verify_mode mode = ssl::VERIFY_PEER_NAME;
+        Value verifyValue = get(booleanValue, tls, "verify");
+        if (!verifyValue.empty()) {
+            mode = verifyValue.asBool() ? ssl::VERIFY_PEER_NAME : ssl::ANONYMOUS_PEER;
+        }
         string ca = get_string(tls, "ca", "");
         string cert = get_string(tls, "cert", "");
         string key = get_string(tls, "key", "");
-        ssl_client_options ssl_opts;
         if (!cert.empty()) {
             ssl_certificate sc = key.empty() ? ssl_certificate(cert) : ssl_certificate(cert, key);
-            ssl_opts = ssl_client_options(sc, ca, mode);
+            opts.ssl_client_options(ssl_client_options(sc, ca, mode));
         } else if (!ca.empty()) {
-            ssl_opts = ssl_client_options(ca, mode);
+            opts.ssl_client_options(ssl_client_options(ca, mode));
+        } else if (!verifyValue.empty()) {
+            opts.ssl_client_options(ssl_client_options(mode));
+        } else {
+            opts.ssl_client_options(ssl_client_options());
         }
-        opts.ssl_client_options(ssl_opts);
-    } else if (!tls.isNull()) {
+    } else if (!tls.empty()) {
         throw err(msg() << "'tls' object not allowed unless scheme is \"amqps\"");
     }
 }

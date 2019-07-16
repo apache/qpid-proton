@@ -321,7 +321,6 @@ int main(int argc, char **argv) {
                      connection_options()
                      .user(sb_key_name)
                      .password(sb_key)
-                     .ssl_client_options(ssl_client_options())
                      .sasl_allowed_mechs("PLAIN"));
         proton::container(seq).run();
         return 0;

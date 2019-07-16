@@ -149,7 +149,7 @@ set(qpid-proton-cpp-source
   src/session_options.cpp
   src/source.cpp
   src/ssl.cpp
-  src/ssl_domain.cpp
+  src/ssl_options.cpp
   src/target.cpp
   src/terminus.cpp
   src/timestamp.cpp

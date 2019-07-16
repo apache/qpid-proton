@@ -151,7 +151,7 @@ class test_handler : public messaging_handler,  public listen_handler {
         on_listener_start(l.container());
     }
 
-    connection_options on_accept(listener& ) PN_CPP_OVERRIDE {
+    connection_options on_accept(listener& l) PN_CPP_OVERRIDE {
         return connection_options_;
     }
 
@@ -189,6 +189,10 @@ class test_handler : public messaging_handler,  public listen_handler {
     void connect(container& c, const string& bare_config) {
         connection_options opts;
         c.connect(configure(opts, config_with_port(bare_config)), opts);
+    }
+
+    void stop_listener() {
+        listener_.stop();
     }
 
   public:
@@ -249,6 +253,39 @@ class test_tls : public test_handler {
 
     void on_listener_start(proton::container & c) PN_CPP_OVERRIDE {
         connect(c, RAW_STRING("scheme":"amqps", "tls": { "verify":false }));
+    }
+};
+
+class test_tls_default_fail : public test_handler {
+    static connection_options make_opts() {
+        ssl_certificate cert("testdata/certs/server-certificate.pem",
+                             "testdata/certs/server-private-key.pem",
+                             "server-password");
+        connection_options opts;
+        opts.ssl_server_options(ssl_server_options(cert));
+        return opts;
+    }
+    bool failed_;
+
+  public:
+
+    test_tls_default_fail() : test_handler(make_opts()), failed_(false) {}
+
+    void on_listener_start(proton::container& c) PN_CPP_OVERRIDE {
+        connect(c, RAW_STRING("scheme":"amqps"));
+    }
+
+    void on_messaging_error(const proton::error_condition& c) PN_CPP_OVERRIDE {
+        if (failed_) return;
+
+        ASSERT_SUBSTRING("verify failed", c.description());
+        failed_ = true;
+        stop_listener();
+    }
+
+    void run() {
+        container(*this).run();
+        ASSERT(failed_);
     }
 };
 
@@ -332,6 +369,7 @@ int main(int argc, char** argv) {
     if (have_ssl) {
         pn_ssl_domain_free(have_ssl);
         RUN_ARGV_TEST(failed, test_tls().run());
+        RUN_ARGV_TEST(failed, test_tls_default_fail().run());
         RUN_ARGV_TEST(failed, test_tls_external().run());
         if (have_sasl) {
             RUN_ARGV_TEST(failed, test_tls_plain().run());

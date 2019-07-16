@@ -25,7 +25,6 @@
 #include "./internal/export.hpp"
 #include "./internal/config.hpp"
 
-
 #include <proton/ssl.h>
 
 #include <string>
@@ -123,38 +122,18 @@ class ssl_certificate {
     /// @endcond
 };
 
-class ssl_domain_impl;
 
-namespace internal {
-
-// Base class for SSL configuration
-class ssl_domain {
-  public:
-    PN_CPP_EXTERN ssl_domain(const ssl_domain&);
-    PN_CPP_EXTERN ssl_domain& operator=(const ssl_domain&);
-    PN_CPP_EXTERN ~ssl_domain();
-
-  protected:
-    ssl_domain(bool is_server);
-    pn_ssl_domain_t *pn_domain();
-
-  private:
-    ssl_domain_impl *impl_;
-    bool server_type_;
-};
-
-}
 
 /// **Unsettled API** - SSL configuration for inbound connections.
-class ssl_server_options : private internal::ssl_domain {
+class ssl_server_options {
   public:
     /// Server SSL options based on the supplied X.509 certificate
     /// specifier.
-    PN_CPP_EXTERN ssl_server_options(ssl_certificate &cert);
+    PN_CPP_EXTERN ssl_server_options(const ssl_certificate &cert);
 
     /// Server SSL options requiring connecting clients to provide a
     /// client certificate.
-    PN_CPP_EXTERN ssl_server_options(ssl_certificate &cert, const std::string &trust_db,
+    PN_CPP_EXTERN ssl_server_options(const ssl_certificate &cert, const std::string &trust_db,
                                      const std::string &advertise_db = std::string(),
                                      enum ssl::verify_mode mode = ssl::VERIFY_PEER);
 
@@ -162,10 +141,13 @@ class ssl_server_options : private internal::ssl_domain {
     /// suites on the platform.
     PN_CPP_EXTERN ssl_server_options();
 
+    PN_CPP_EXTERN ~ssl_server_options();
+    PN_CPP_EXTERN ssl_server_options(const ssl_server_options&);
+    PN_CPP_EXTERN ssl_server_options& operator=(const ssl_server_options&);
+
   private:
-    // Bring pn_domain into scope and allow connection_options to use
-    // it.
-    using internal::ssl_domain::pn_domain;
+    class impl;
+    impl* impl_;
 
     /// @cond INTERNAL
   friend class connection_options;
@@ -173,24 +155,29 @@ class ssl_server_options : private internal::ssl_domain {
 };
 
 /// **Unsettled API** - SSL configuration for outbound connections.
-class ssl_client_options : private internal::ssl_domain {
+class ssl_client_options {
   public:
-    /// Create SSL client options (no client certificate).
+    /// Create SSL client with defaults (use system certificate trust database and require name verification)
+    PN_CPP_EXTERN ssl_client_options();
+
+    /// Create SSL client with unusual verification policy (but default certificate trust database)
+    PN_CPP_EXTERN ssl_client_options(enum ssl::verify_mode);
+
+    /// Create SSL client specifying the certificate trust database.
     PN_CPP_EXTERN ssl_client_options(const std::string &trust_db,
                                      enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
 
-    /// Create SSL client options with a client certificate.
-    PN_CPP_EXTERN ssl_client_options(ssl_certificate&, const std::string &trust_db,
+    /// Create SSL client with a client certificate.
+    PN_CPP_EXTERN ssl_client_options(const ssl_certificate&, const std::string &trust_db,
                                      enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
 
-    /// SSL connections restricted to available anonymous cipher
-    /// suites on the platform.
-    PN_CPP_EXTERN ssl_client_options();
+    PN_CPP_EXTERN ~ssl_client_options();
+    PN_CPP_EXTERN ssl_client_options(const ssl_client_options&);
+    PN_CPP_EXTERN ssl_client_options& operator=(const ssl_client_options&);
 
   private:
-    // Bring pn_domain into scope and allow connection_options to use
-    // it.
-    using internal::ssl_domain::pn_domain;
+    class impl;
+    impl* impl_;
 
     /// @cond INTERNAL
   friend class connection_options;

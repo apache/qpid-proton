@@ -25,6 +25,7 @@
 #include "proton/listen_handler.hpp"
 #include "proton/listener.hpp"
 #include "proton/reconnect_options.hpp"
+#include "proton/ssl.hpp"
 #include "proton/transport.hpp"
 #include "proton/url.hpp"
 
@@ -181,7 +182,12 @@ pn_connection_t* container::impl::make_connection_lh(
     if (stopping_)
         throw proton::error("container is stopping");
 
-    connection_options opts = client_connection_options_; // Defaults
+    connection_options opts;
+    // If scheme is amqps then use default tls settings
+    if (url.scheme()==url.AMQPS) {
+        opts.ssl_client_options(ssl_client_options());
+    }
+    opts.update(client_connection_options_);
     opts.update(user_opts);
     messaging_handler* mh = opts.handler();
 
