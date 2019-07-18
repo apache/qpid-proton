@@ -25,6 +25,7 @@
 #include "core/dispatch_actions.h"
 #include "core/engine-internal.h"
 #include "core/util.h"
+#include "platform/platform_fmt.h"
 #include "protocol.h"
 
 #include "proton/ssl.h"
@@ -613,7 +614,7 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
     if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "SASL Encryption enabled: buffer=%d", sasl->max_encrypt_size);
+      pn_transport_logf(transport, "SASL Encryption enabled: buffer=%" PN_ZU, sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
   } else {
     transport->io_layers[layer] = &pni_passthru_layer;
@@ -692,7 +693,7 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
     if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "SASL Encryption enabled: buffer=%d", sasl->max_encrypt_size);
+      pn_transport_logf(transport, "SASL Encryption enabled: buffer=%" PN_ZU, sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
   } else {
     transport->io_layers[layer] = &pni_passthru_layer;
