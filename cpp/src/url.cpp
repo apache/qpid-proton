@@ -35,7 +35,7 @@ namespace {
 
 /** URL-encode src and append to dst. */
 static std::string pni_urlencode(const std::string &src) {
-    static const char *bad = "@:/";
+    static const char *bad = "@:/%[]?#";
 
     std::ostringstream dst;
     dst << std::hex << std::uppercase << std::setfill('0');
