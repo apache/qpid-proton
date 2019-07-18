@@ -20,6 +20,7 @@
  */
 
 #include "platform/platform.h"
+#include "platform/platform_fmt.h"
 #include "core/engine-internal.h"
 #include "core/log_private.h"
 #include "core/util.h"
@@ -1037,7 +1038,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer,
         consumed += written;
         ssl->read_blocked = false;
         work_pending = (available > 0);
-        ssl_log( transport, "Wrote %d bytes to BIO Layer, %d left over", written, available );
+        ssl_log( transport, "Wrote %d bytes to BIO Layer, %" PN_ZU " left over", written, available );
       }
     } else if (shutdown_input) {
       // lower layer (caller) has closed.  Close the WRITE side of the BIO.  This will cause
@@ -1184,7 +1185,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
       if (app_bytes > 0) {
         ssl->out_count += app_bytes;
         work_pending = true;
-        ssl_log(transport, "Gathered %d bytes from app to send to peer", app_bytes );
+        ssl_log(transport, "Gathered %" PN_ZI " bytes from app to send to peer", app_bytes);
       } else {
         if (app_bytes < 0) {
           ssl_log(transport, "Application layer closed its output, error=%d (%d bytes pending send)",
@@ -1467,7 +1468,7 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t finger
   }
 
   if(fingerprint_length < min_required_length) {
-    ssl_log_error("Insufficient fingerprint_length %i. fingerprint_length must be %i or above for %s digest",
+    ssl_log_error("Insufficient fingerprint_length %" PN_ZU ". fingerprint_length must be %" PN_ZU " or above for %s digest",
                   fingerprint_length, min_required_length, digest_name);
     return PN_ERR;
   }
