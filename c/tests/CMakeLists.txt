@@ -40,13 +40,17 @@ if (CMAKE_CXX_COMPILER)
 
   add_library(test_main OBJECT test_main.cpp)
 
-  macro(add_c_test exe)
-    add_executable(${exe} $<TARGET_OBJECTS:test_main> pn_test.cpp ${ARGN})
+  macro(add_test_executable exe)
+    add_executable(${exe} ${ARGN})
     set_target_properties(${exe} PROPERTIES
-      COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
+            COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
     add_test(NAME ${exe} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${exe}>)
     set_tests_properties(${exe} PROPERTIES
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  endmacro()
+
+  macro(add_c_test exe)
+    add_test_executable(${exe} $<TARGET_OBJECTS:test_main> pn_test.cpp ${ARGN})
   endmacro()
 
   ## Tests that depend only on qpid-proton-core
@@ -80,7 +84,7 @@ if (CMAKE_CXX_COMPILER)
     # problems are cleared up
     option(THREADERCISER "Run the threaderciser concurrency tests" OFF)
     if (THREADERCISER)
-      add_c_test(c-threaderciser threaderciser.c)
+      add_test_executable(c-threaderciser threaderciser.c)
       target_link_libraries (c-threaderciser qpid-proton-proactor)
       find_library(Pthread_LIBRARY pthread)
       if (Pthread_LIBRARY)
