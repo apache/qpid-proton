@@ -44,9 +44,9 @@ static std::string pni_urlencode(const std::string &src) {
     std::size_t j = src.find_first_of(bad);
     while (j!=std::string::npos) {
         dst << src.substr(i, j-i);
-        dst << "%" << std::setw(2) << src[j];
+        dst << "%" << std::setw(2) << int(src[j]);
         i = j + 1;
-        j = src.find_first_of(bad);
+        j = src.find_first_of(bad, i);
     }
     dst << src.substr(i);
     return dst.str();
