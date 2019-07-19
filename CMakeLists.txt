@@ -116,9 +116,12 @@ if (APPLE)
   set (NOENABLE_WARNING_ERROR ON)
 endif (APPLE)
 
+# Benchmarks should be disabled by default
+set (NOENABLE_BENCHMARKS ON)
+
 # Add options here called <whatever> they will turn into "ENABLE_<whatever" and can be
 # overridden on a platform specific basis above by NOENABLE_<whatever>
-set (OPTIONS WARNING_ERROR UNDEFINED_ERROR LINKTIME_OPTIMIZATION HIDE_UNEXPORTED_SYMBOLS FUZZ_TESTING)
+set (OPTIONS WARNING_ERROR UNDEFINED_ERROR LINKTIME_OPTIMIZATION HIDE_UNEXPORTED_SYMBOLS FUZZ_TESTING BENCHMARKS)
 
 foreach (OPTION ${OPTIONS})
   if (NOT NOENABLE_${OPTION})
@@ -132,6 +135,7 @@ option(ENABLE_UNDEFINED_ERROR "Check for unresolved library symbols" ${DEFAULT_U
 option(ENABLE_LINKTIME_OPTIMIZATION "Perform link time optimization" ${DEFAULT_LINKTIME_OPTIMIZATION})
 option(ENABLE_HIDE_UNEXPORTED_SYMBOLS "Only export library symbols that are explicitly requested" ${DEFAULT_HIDE_UNEXPORTED_SYMBOLS})
 option(ENABLE_FUZZ_TESTING "Enable building fuzzers and regression testing with libFuzzer" ${DEFAULT_FUZZ_TESTING})
+option(ENABLE_BENCHMARKS "Enable building and running benchmarks with Google Benchmark" ${DEFAULT_BENCHMARKS})
 
 # Set any additional compiler specific flags
 if (CMAKE_COMPILER_IS_GNUCC)
