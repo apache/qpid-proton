@@ -389,9 +389,9 @@ func (d *MessagingAdapter) outgoing(e Event) {
 		if delivery.Settled() {
 			// The delivery was settled remotely, inform the local end.
 			d.mhandler.HandleMessagingEvent(MSettled, e)
-		}
-		if d.AutoSettle {
-			delivery.Settle() // Local settle, don't mhandler MSettled till the remote end settles.
+			if d.AutoSettle {
+				delivery.Settle()
+			}
 		}
 	}
 	return
