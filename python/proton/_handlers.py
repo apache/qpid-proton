@@ -66,8 +66,8 @@ class OutgoingMessageHandler(Handler):
                 self.on_released(event)
             if dlv.settled:
                 self.on_settled(event)
-            if self.auto_settle:
-                dlv.settle()
+                if self.auto_settle:
+                    dlv.settle()
 
     def on_sendable(self, event):
         """
