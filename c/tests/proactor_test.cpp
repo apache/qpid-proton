@@ -567,6 +567,9 @@ TEST_CASE("proactor_ssl") {
 
 TEST_CASE("proactor_addr") {
   /* Test the address formatter */
+  CHECK(1 == pn_proactor_addr(NULL, 0, "", ""));
+  CHECK(7 == pn_proactor_addr(NULL, 0, "foo", "bar"));
+  
   char addr[PN_MAX_ADDR];
   pn_proactor_addr(addr, sizeof(addr), "foo", "bar");
   CHECK_THAT("foo:bar", Equals(addr));

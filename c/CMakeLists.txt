@@ -505,7 +505,7 @@ endif(MSVC)
 
 if (qpid-proton-proactor)
   set(HAS_PROACTOR True)
-  add_library (qpid-proton-proactor SHARED ${qpid-proton-proactor})
+  add_library (qpid-proton-proactor SHARED ${qpid-proton-proactor} ${qpid-proton-platform})
   target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
   target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
   set_target_properties (qpid-proton-proactor
@@ -515,7 +515,7 @@ if (qpid-proton-proactor)
     LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
   )
   if (BUILD_STATIC_LIBS)
-    add_library (qpid-proton-proactor-static STATIC ${qpid-proton-proactor})
+    add_library (qpid-proton-proactor-static STATIC ${qpid-proton-proactor} ${qpid-proton-platform})
   endif(BUILD_STATIC_LIBS)
 endif()
 
