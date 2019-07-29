@@ -2656,15 +2656,19 @@ static bool connect_step(pconnection_t *pc) {
           LPFN_CONNECTEX fn_connect_ex = lookup_connect_ex2(iocpd->socket);
           // addrinfo is owned by the pconnection so pass NULL to the connect result
           connect_result_t *result = connect_result(iocpd, NULL);
+          iocpd->ops_in_progress++;
+          iocpd->active_completer = &pc->psocket;
+          // getpeername unreliable for outgoing connections, but we know it at this point
+          memcpy(&pc->remote.ss, ai->ai_addr, ai->ai_addrlen);
           DWORD unused;
           bool success = fn_connect_ex(iocpd->socket, ai->ai_addr, ai->ai_addrlen,
                                        NULL, 0, &unused, (LPOVERLAPPED) result);
           if (success || WSAGetLastError() == ERROR_IO_PENDING) {
-            iocpd->ops_in_progress++;
-            iocpd->active_completer = &pc->psocket;
-            // getpeername unreliable for outgoing connections, but we know it at this point
-            memcpy(&pc->remote.ss, ai->ai_addr, ai->ai_addrlen);
             return true;  // logic resumes at connect_step_done()
+          } else {
+            iocpd->ops_in_progress--;
+            iocpd->active_completer = NULL;
+            memset(&pc->remote.ss, 0, sizeof(pc->remote.ss));
           }
           pn_free(result);
         }
