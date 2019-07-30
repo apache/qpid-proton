@@ -74,12 +74,14 @@ set (pysrc
     proton/_exceptions.py
     proton/_io.py
     proton/_message.py
+    proton/_tracing.py
     proton/_transport.py
     proton/_url.py
     proton/_wrapper.py
 
     proton/handlers.py
     proton/reactor.py
+    proton/tracing.py
     proton/utils.py
 
     proton/_handlers.py

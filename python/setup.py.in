@@ -336,6 +336,9 @@ setup(name='python-qpid-proton',
                    "Programming Language :: Python :: 3.5",
                    "Programming Language :: Python :: 3.6"],
       cmdclass=cmdclass,
+      extras_require={
+          'opentracing': ['opentracing', 'jaeger_client']
+      },
       # Note well: the following extension instance is modified during the
       # installation!  If you make changes below, you may need to update the
       # Configure class above
