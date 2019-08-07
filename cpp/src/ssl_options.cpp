@@ -145,3 +145,87 @@ ssl_certificate::ssl_certificate(const std::string &main, const std::string &ext
     : certdb_main_(main), certdb_extra_(extra), passwd_(pw), pw_set_(true) {}
 
 } // namespace
+
+// Hack alert - don't do this at home - just design better initially!
+// For backwards ABI compatibility we need to define some symbols:
+//
+
+// Don't do this on MacOS or with Visual Studio
+#if !defined(_MSC_VER) && !(defined(__APPLE__) && defined(__MACH__))
+
+// These are a bit harder because they can't be publicly in the classes anymore so just use alias definitions
+// but that needs the mangled symbol names unfortunately.
+//
+// PN_CPP_EXTERN proton::ssl_server_options::ssl_server_options(ssl_certificate &cert);
+// PN_CPP_EXTERN proton::ssl_server_options::ssl_server_options(ssl_certificate &cert, const std::string &trust_db,
+//                                                              const std::string &advertise_db = std::string(),
+//                                                              enum ssl::verify_mode mode = ssl::VERIFY_PEER);
+// PN_CPP_EXTERN proton::ssl_client_options::ssl_client_options(ssl_certificate&, const std::string &trust_db,
+//                                                              enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
+
+extern "C" {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpragmas"
+#pragma GCC diagnostic ignored "-Wunknown-warning-option"
+#pragma GCC diagnostic ignored "-Wattribute-alias"
+// 2 variants of each constructor (base & complete)
+PN_CPP_EXTERN void    _ZN6proton18ssl_server_optionsC1ERNS_15ssl_certificateE()
+__attribute__((alias("_ZN6proton18ssl_server_optionsC1ERKNS_15ssl_certificateE")));
+PN_CPP_EXTERN void    _ZN6proton18ssl_server_optionsC2ERNS_15ssl_certificateE()
+__attribute__((alias("_ZN6proton18ssl_server_optionsC2ERKNS_15ssl_certificateE")));
+#if defined(_GLIBCXX_USE_CXX11_ABI) && _GLIBCXX_USE_CXX11_ABI>0
+// Post gcc 5.1 "C++11" ABI
+PN_CPP_EXTERN void    _ZN6proton18ssl_server_optionsC1ERNS_15ssl_certificateERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_NS_3ssl11verify_modeE()
+__attribute__((alias("_ZN6proton18ssl_server_optionsC1ERKNS_15ssl_certificateERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESB_NS_3ssl11verify_modeE")));
+PN_CPP_EXTERN void    _ZN6proton18ssl_server_optionsC2ERNS_15ssl_certificateERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESA_NS_3ssl11verify_modeE()
+__attribute__((alias("_ZN6proton18ssl_server_optionsC2ERKNS_15ssl_certificateERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEESB_NS_3ssl11verify_modeE")));
+PN_CPP_EXTERN void    _ZN6proton18ssl_client_optionsC1ERNS_15ssl_certificateERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEENS_3ssl11verify_modeE()
+__attribute__((alias("_ZN6proton18ssl_client_optionsC1ERKNS_15ssl_certificateERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEENS_3ssl11verify_modeE")));
+PN_CPP_EXTERN void    _ZN6proton18ssl_client_optionsC2ERNS_15ssl_certificateERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEENS_3ssl11verify_modeE()
+__attribute__((alias("_ZN6proton18ssl_client_optionsC2ERKNS_15ssl_certificateERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEENS_3ssl11verify_modeE")));
+#else
+// Pre gcc 5.1 ABI
+PN_CPP_EXTERN void    _ZN6proton18ssl_server_optionsC1ERNS_15ssl_certificateERKSsS4_NS_3ssl11verify_modeE()
+__attribute__((alias("_ZN6proton18ssl_server_optionsC1ERKNS_15ssl_certificateERKSsS5_NS_3ssl11verify_modeE")));
+PN_CPP_EXTERN void    _ZN6proton18ssl_server_optionsC2ERNS_15ssl_certificateERKSsS4_NS_3ssl11verify_modeE()
+__attribute__((alias("_ZN6proton18ssl_server_optionsC2ERKNS_15ssl_certificateERKSsS5_NS_3ssl11verify_modeE")));
+PN_CPP_EXTERN void    _ZN6proton18ssl_client_optionsC1ERNS_15ssl_certificateERKSsNS_3ssl11verify_modeE()
+__attribute__((alias("_ZN6proton18ssl_client_optionsC1ERKNS_15ssl_certificateERKSsNS_3ssl11verify_modeE")));
+PN_CPP_EXTERN void    _ZN6proton18ssl_client_optionsC2ERNS_15ssl_certificateERKSsNS_3ssl11verify_modeE()
+__attribute__((alias("_ZN6proton18ssl_client_optionsC2ERKNS_15ssl_certificateERKSsNS_3ssl11verify_modeE")));
+#endif
+#pragma GCC diagnostic pop
+}
+
+//
+// These are a bit easier as the entire class has been removed so we can just define the class here
+// They do rely on the impl_ member being effectively the same type and structure location from
+// The previous parent type ssl_domain to ssl_server_options/ssl_client_options.
+//
+// PN_CPP_EXTERN proton::internal::ssl_domain::ssl_domain(const ssl_domain&);
+// PN_CPP_EXTERN proton::internal::ssl_domain::ssl_domain& operator=(const ssl_domain&);
+// PN_CPP_EXTERN proton::internal::ssl_domain::~ssl_domain();
+//
+namespace proton {
+namespace internal {
+class ssl_domain {
+  PN_CPP_EXTERN ssl_domain(const ssl_domain&);
+  PN_CPP_EXTERN ssl_domain& operator=(const ssl_domain&);
+  PN_CPP_EXTERN ~ssl_domain();
+
+  ssl_options_impl* impl_;
+};
+
+ssl_domain::ssl_domain(const ssl_domain& x): impl_(x.impl_) { if (impl_) impl_->incref(); }
+ssl_domain& ssl_domain::operator=(const ssl_domain& x) {
+    if (&x != this) {
+        if (impl_) impl_->decref();
+        impl_ = x.impl_;
+        if (impl_) impl_->incref();
+    }
+    return *this;
+}
+ssl_domain::~ssl_domain() { if (impl_) impl_->decref(); }
+}}
+
+#endif
