@@ -76,6 +76,14 @@ if "TypeExtender" not in globals():
 
 
 class EventType(object):
+    """
+    Connects an event number to an event name, and is used
+    internally by :class:`Event` to represent all known
+    event types. A global list of events is maintained. An
+    :class:`EventType` created with a name but no number is
+    treated as an *extended* event, and is assigned an
+    internal event number starting at 10000.
+    """
     _lock = threading.Lock()
     _extended = TypeExtender(10000)
     TYPES = {}
@@ -124,13 +132,32 @@ class EventBase(object):
 
     @property
     def type(self):
+        """
+        The type name for this event
+
+        :type: ``str``
+        """
         return self._type
 
     @property
     def handler(self):
+        """
+        The handler for this event type. Not implemented, always returns ``None``.
+
+        :type: ``None``
+        """
         return None
 
     def dispatch(self, handler, type=None):
+        """
+        Process this event by sending it to all known handlers that
+        are valid for this event type.
+
+        :param handler: Parent handler to process this event
+        :type handler: :class:`Handler`
+        :param type: Event type
+        :type type: :class:`EventType`
+        """
         type = type or self._type
         _dispatch(handler, type.method, self)
         if hasattr(handler, "handlers"):
@@ -161,46 +188,217 @@ wrappers = {
 
 
 class Event(EventBase):
+    """
+    Notification of a state change in the protocol engine.
+    """
     TIMER_TASK = _core(PN_TIMER_TASK, "on_timer_task")
+    """A timer event has occurred."""
+
 
     CONNECTION_INIT = _core(PN_CONNECTION_INIT, "on_connection_init")
+    """
+    The connection has been created. This is the first event that
+    will ever be issued for a connection. Events of this type point
+    to the relevant connection.
+    """
+
     CONNECTION_BOUND = _core(PN_CONNECTION_BOUND, "on_connection_bound")
+    """
+    The connection has been bound to a transport. This event is
+    issued when the :meth:`Transport.bind` operation is invoked.
+    """
+
     CONNECTION_UNBOUND = _core(PN_CONNECTION_UNBOUND, "on_connection_unbound")
+    """
+    The connection has been unbound from its transport. This event is
+    issued when the :meth:`Transport.unbind` operation is invoked.
+    """
+
     CONNECTION_LOCAL_OPEN = _core(PN_CONNECTION_LOCAL_OPEN, "on_connection_local_open")
+    """
+    The local connection endpoint has been closed. Events of this
+    type point to the relevant connection.
+    """
+
     CONNECTION_LOCAL_CLOSE = _core(PN_CONNECTION_LOCAL_CLOSE, "on_connection_local_close")
+    """
+    The local connection endpoint has been closed. Events of this
+    type point to the relevant connection.
+    """
+
     CONNECTION_REMOTE_OPEN = _core(PN_CONNECTION_REMOTE_OPEN, "on_connection_remote_open")
+    """
+    The remote endpoint has opened the connection. Events of this
+    type point to the relevant connection.
+    """
+
     CONNECTION_REMOTE_CLOSE = _core(PN_CONNECTION_REMOTE_CLOSE, "on_connection_remote_close")
+    """
+    The remote endpoint has closed the connection. Events of this
+    type point to the relevant connection.
+    """
+
     CONNECTION_FINAL = _core(PN_CONNECTION_FINAL, "on_connection_final")
+    """
+    The connection has been freed and any outstanding processing has
+    been completed. This is the final event that will ever be issued
+    for a connection.
+    """
+
 
     SESSION_INIT = _core(PN_SESSION_INIT, "on_session_init")
+    """
+    The session has been created. This is the first event that will
+    ever be issued for a session.
+    """
+
     SESSION_LOCAL_OPEN = _core(PN_SESSION_LOCAL_OPEN, "on_session_local_open")
+    """
+    The local session endpoint has been opened. Events of this type
+    point to the relevant session.
+    """
+
     SESSION_LOCAL_CLOSE = _core(PN_SESSION_LOCAL_CLOSE, "on_session_local_close")
+    """
+    The local session endpoint has been closed. Events of this type
+    point ot the relevant session.
+    """
+
     SESSION_REMOTE_OPEN = _core(PN_SESSION_REMOTE_OPEN, "on_session_remote_open")
+    """
+    The remote endpoint has opened the session. Events of this type
+    point to the relevant session.
+    """
+
     SESSION_REMOTE_CLOSE = _core(PN_SESSION_REMOTE_CLOSE, "on_session_remote_close")
+    """
+    The remote endpoint has closed the session. Events of this type
+    point to the relevant session.
+    """
+
     SESSION_FINAL = _core(PN_SESSION_FINAL, "on_session_final")
+    """
+    The session has been freed and any outstanding processing has
+    been completed. This is the final event that will ever be issued
+    for a session.
+    """
+
 
     LINK_INIT = _core(PN_LINK_INIT, "on_link_init")
+    """
+    The link has been created. This is the first event that will ever
+    be issued for a link.
+    """
+
     LINK_LOCAL_OPEN = _core(PN_LINK_LOCAL_OPEN, "on_link_local_open")
+    """
+    The local link endpoint has been opened. Events of this type
+    point ot the relevant link.    
+    """
+
     LINK_LOCAL_CLOSE = _core(PN_LINK_LOCAL_CLOSE, "on_link_local_close")
+    """
+    The local link endpoint has been closed. Events of this type
+    point to the relevant link.
+    """
+
     LINK_LOCAL_DETACH = _core(PN_LINK_LOCAL_DETACH, "on_link_local_detach")
+    """
+    The local link endpoint has been detached. Events of this type
+    point to the relevant link.
+    """
+
     LINK_REMOTE_OPEN = _core(PN_LINK_REMOTE_OPEN, "on_link_remote_open")
+    """
+    The remote endpoint has opened the link. Events of this type
+    point to the relevant link.
+    """
+
     LINK_REMOTE_CLOSE = _core(PN_LINK_REMOTE_CLOSE, "on_link_remote_close")
+    """
+    The remote endpoint has closed the link. Events of this type
+    point to the relevant link.
+    """
+
     LINK_REMOTE_DETACH = _core(PN_LINK_REMOTE_DETACH, "on_link_remote_detach")
+    """
+    The remote endpoint has detached the link. Events of this type
+    point to the relevant link.
+    """
+
     LINK_FLOW = _core(PN_LINK_FLOW, "on_link_flow")
+    """
+    The flow control state for a link has changed. Events of this
+    type point to the relevant link.
+    """
+
     LINK_FINAL = _core(PN_LINK_FINAL, "on_link_final")
+    """
+    The link has been freed and any outstanding processing has been
+    completed. This is the final event that will ever be issued for a
+    link. Events of this type point to the relevant link.
+    """
+
 
     DELIVERY = _core(PN_DELIVERY, "on_delivery")
+    """
+    A delivery has been created or updated. Events of this type point
+    to the relevant delivery.
+    """
+
 
     TRANSPORT = _core(PN_TRANSPORT, "on_transport")
+    """
+    The transport has new data to read and/or write. Events of this
+    type point to the relevant transport.
+    """
+
     TRANSPORT_ERROR = _core(PN_TRANSPORT_ERROR, "on_transport_error")
+    """
+    Indicates that a transport error has occurred. Use :attr:`Transport.condition`
+    to access the details of the error from the associated transport.
+    """
+
     TRANSPORT_HEAD_CLOSED = _core(PN_TRANSPORT_HEAD_CLOSED, "on_transport_head_closed")
+    """
+    Indicates that the "head" or writing end of the transport has been closed. This
+    means the transport will never produce more bytes for output to
+    the network. Events of this type point to the relevant transport.
+    """
+
     TRANSPORT_TAIL_CLOSED = _core(PN_TRANSPORT_TAIL_CLOSED, "on_transport_tail_closed")
+    """
+    Indicates that the "tail" of the transport has been closed. This
+    means the transport will never be able to process more bytes from
+    the network. Events of this type point to the relevant transport.
+    """
+
     TRANSPORT_CLOSED = _core(PN_TRANSPORT_CLOSED, "on_transport_closed")
+    """
+    Indicates that the both the "head" and "tail" of the transport are
+    closed. Events of this type point to the relevant transport.
+    """
+
 
     # These events are now internal events in the python code
     REACTOR_INIT = _internal("reactor_init")
+    """
+    A reactor has been started. Events of this type point to the
+    reactor.
+    """
+
     REACTOR_QUIESCED = _internal("reactor_quiesced")
+    """
+    A reactor has no more events to process. Events of this type
+    point to the reactor.
+    """
+
     REACTOR_FINAL = _internal("reactor_final")
+    """
+    A reactor has been stopped. Events of this type point to the
+    reactor.
+    """
+
 
     SELECTABLE_INIT = _internal("selectable_init")
     SELECTABLE_UPDATED = _internal("selectable_updated")
@@ -268,15 +466,40 @@ class Event(EventBase):
 
     @property
     def clazz(self):
+        """
+        The name of the class associated with the event context.
+
+        :type: ``str``
+        """
         return self._clsname
 
     @property
     def context(self):
-        """Returns the context object associated with the event. The type of this depends on the type of event."""
+        """
+        The context object associated with the event.
+
+        :type: Depends on the type of event, and include the following:
+               - :class:`Connection`
+               - :class:`Session`
+               - :class:`Link`
+               - :class:`Delivery`
+               - :class:`Transport`
+        """
         return self._context
 
     @property
     def handler(self):
+        """
+        The handler for this event. The handler is determined by looking
+        at the following in order:
+
+        - The link
+        - The session
+        - The connection
+        - The context object with an attribute "handler"
+
+        If none of these has a handler, then ``None`` is returned.
+        """
         l = self.link
         if l:
             h = l.handler
@@ -301,14 +524,14 @@ class Event(EventBase):
     @property
     def reactor(self):
         """
-        Deprecated: Returns the container (was reactor) associated with the event.
+        **Deprecated** - The :class:`reactor.Container` (was reactor) associated with the event.
         """
         return self.container
 
     @property
     def container(self):
         """
-        Returns the container associated with the event.
+        The :class:`reactor.Container` associated with the event.
         """
         return self._transport._reactor
 
@@ -327,30 +550,54 @@ class Event(EventBase):
 
     @property
     def transport(self):
-        """Returns the transport associated with the event, or null if none is associated with it."""
+        """
+        The transport associated with the event, or ``None`` if none
+        is associated with it.
+
+        :type: :class:`Transport`
+        """
         return self._transport
 
     @property
     def connection(self):
-        """Returns the connection associated with the event, or null if none is associated with it."""
+        """
+        The connection associated with the event, or ``None`` if none
+        is associated with it.
+
+        :type: :class:`Connection`
+        """
         return self._connection
 
     @property
     def session(self):
-        """Returns the session associated with the event, or null if none is associated with it."""
+        """
+        The session associated with the event, or ``None`` if none
+        is associated with it.
+
+        :type: :class:`Session`
+        """
         return self._session
 
     @property
     def link(self):
-        """Returns the link associated with the event, or null if none is associated with it."""
+        """
+        The link associated with the event, or ``None`` if none
+        is associated with it.
+
+        :type: :class:`Link`
+        """
         return self._link
 
     @property
     def sender(self):
-        """Returns the sender link associated with the event, or null if
-           none is associated with it. This is essentially an alias for
-           link(), that does an additional check on the type of the
-           link."""
+        """
+        The sender link associated with the event, or ``None`` if
+        none is associated with it. This is essentially an alias for
+        link(), that does an additional check on the type of the
+        link.
+
+        :type: :class:`Sender` (**<-- CHECK!**)
+        """
         l = self.link
         if l and l.is_sender:
             return l
@@ -359,9 +606,13 @@ class Event(EventBase):
 
     @property
     def receiver(self):
-        """Returns the receiver link associated with the event, or null if
-           none is associated with it. This is essentially an alias for
-           link(), that does an additional check on the type of the link."""
+        """
+        The receiver link associated with the event, or ``None`` if
+        none is associated with it. This is essentially an alias for
+        link(), that does an additional check on the type of the link.
+
+        :type: :class:`Receiver` (**<-- CHECK!**)
+        """
         l = self.link
         if l and l.is_receiver:
             return l
@@ -370,7 +621,12 @@ class Event(EventBase):
 
     @property
     def delivery(self):
-        """Returns the delivery associated with the event, or null if none is associated with it."""
+        """
+        The delivery associated with the event, or ``None`` if none
+        is associated with it.
+
+        :type: :class:`Delivery`
+        """
         return self._delivery
 
 
@@ -384,12 +640,29 @@ class LazyHandlers(object):
 
 
 class Handler(object):
+    """
+    An abstract handler for events which supports child handlers.
+    """
     handlers = LazyHandlers()
 
     # TODO What to do with on_error?
     def add(self, handler, on_error=None):
-        """Add a child handler"""
+        """
+        Add a child handler
+
+        :param handler: A child handler
+        :type handler: :class:`Handler` or one of its derivatives.
+        :param on_error: Not used
+        """
         self.handlers.append(handler)
 
     def on_unhandled(self, method, *args):
+        """
+        The callback for handling events which are not handled by
+        any other handler.
+
+        :param method: The name of the intended handler method.
+        :type method: ``str``
+        :param args: Arguments for the intended handler method.
+        """
         pass

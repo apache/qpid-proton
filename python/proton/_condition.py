@@ -26,6 +26,36 @@ from ._data import Data, dat2obj
 
 
 class Condition:
+    """
+    An AMQP Condition object. Conditions hold exception information
+    pertaining to the closing of an AMQP endpoint such as a :class:`Connection`,
+    :class:`Session`, or :class:`Link`. Conditions also hold similar information
+    pertaining to deliveries that have reached terminal states.
+    Connections, Sessions, Links, and Deliveries may all have local and
+    remote conditions associated with them.
+
+    The local condition may be modified by the local endpoint to signal
+    a particular condition to the remote peer. The remote condition may
+    be examined by the local endpoint to detect whatever condition the
+    remote peer may be signaling. Although often conditions are used to
+    indicate errors, not all conditions are errors *per/se*, e.g.
+    conditions may be used to redirect a connection from one host to
+    another.
+
+    Every condition has a short symbolic name, a longer description,
+    and an additional info map associated with it. The name identifies
+    the formally defined condition, and the map contains additional
+    information relevant to the identified condition.
+
+    :ivar ~.name: The name of the condition.
+    :vartype ~.name: ``str``
+    :ivar ~.description: A description of the condition.
+    :vartype ~.description: ``str``
+    :ivar ~.info: A data object that holds the additional information associated
+        with the condition. The data object may be used both to access and to
+        modify the additional information associated with the condition.
+    :vartype ~.info: :class:`Data`
+    """
 
     def __init__(self, name, description=None, info=None):
         self.name = name

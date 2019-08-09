@@ -118,35 +118,26 @@ endmacro(py_compile)
 py_compile(${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated} CPROTON_ARTIFACTS)
 py_compile(${CMAKE_CURRENT_SOURCE_DIR} "${pysrc}" PROTON_ARTIFACTS)
 
-find_program(EPYDOC_EXE epydoc)
-mark_as_advanced (EPYDOC_EXE)
-if (EPYDOC_EXE)
-   foreach (py_src_doc ${pysrc})
-     list(APPEND PY_DOC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${py_src_doc}")
-   endforeach(py_src_doc)
-   add_custom_target(docs-py
-     COMMAND ${PN_ENV_SCRIPT} -- PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
-             ${EPYDOC_EXE} -v --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html ${PY_DOC_FILES}
-     DEPENDS ${SWIG_MODULE_${cproton}_REAL_NAME})
-   add_dependencies(docs docs-py)
-   install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
-           DESTINATION "${PROTON_SHARE}/docs/api-py"
-           COMPONENT documentation
-           OPTIONAL)
-endif (EPYDOC_EXE)
-
-find_program(SPHINX_EXE sphinx-build)
-mark_as_advanced (SPHINX_EXE)
-if (SPHINX_EXE)
-   add_custom_target(tutorial-py
-     COMMAND ${PN_ENV_SCRIPT} -- PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
-     ${SPHINX_EXE} -b html ${CMAKE_CURRENT_SOURCE_DIR}/docs ${CMAKE_CURRENT_BINARY_DIR}/tutorial)
-   add_dependencies(docs tutorial-py)
-   install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tutorial/"
-           DESTINATION "${PROTON_SHARE}/docs/tutorial-py"
-           COMPONENT documentation
-           OPTIONAL)
-endif (SPHINX_EXE)
+# Sphinx documentation
+check_python_module("sphinx" SPHINX_MODULE_FOUND)
+if (SPHINX_MODULE_FOUND)
+    message(STATUS "Python Sphinx module found - doc generation enabled.")
+    add_custom_target(docs-py
+        COMMAND ${PN_ENV_SCRIPT} --
+        PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
+        LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/c"
+        ${PYTHON_EXECUTABLE} -m sphinx "${CMAKE_CURRENT_SOURCE_DIR}/docs" "${CMAKE_CURRENT_BINARY_DIR}/docs")
+    add_dependencies(docs docs-py)
+    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/docs/"
+            DESTINATION "${PROTON_SHARE}/docs/api-py"
+            COMPONENT documentation
+            OPTIONAL)
+else ()
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} --version
+                    ERROR_VARIABLE PYTHYON_VERSION_ERR)
+    string(STRIP ${PYTHYON_VERSION_ERR} PYTHON_VERSION_STR)
+    message(WARNING "Sphinx module NOT found for ${PYTHON_VERSION_STR} - doc generation disabled.")
+endif ()
 
 install(FILES ${CPROTON_ARTIFACTS}
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
@@ -162,7 +153,7 @@ install(DIRECTORY examples/
         COMPONENT Python
         USE_SOURCE_PERMISSIONS)
 
-set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "html;tutorial")
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES docs)
 
 #
 # Set up the directory 'dist' for building the python native package

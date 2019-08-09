@@ -43,6 +43,11 @@ class OutgoingMessageHandler(Handler):
     """
     A utility for simpler and more intuitive handling of delivery
     events related to outgoing i.e. sent messages.
+
+    :param auto_settle: If ``True``, settle all messages (default). Otherwise
+        messages must be explicitly settled.
+    :type auto_settle: ``bool``
+    :param delegate: A client handler for the endpoint event
     """
 
     def __init__(self, auto_settle=True, delegate=None):
@@ -73,6 +78,10 @@ class OutgoingMessageHandler(Handler):
         """
         Called when the sender link has credit and messages can
         therefore be transferred.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_sendable', event)
@@ -80,6 +89,10 @@ class OutgoingMessageHandler(Handler):
     def on_accepted(self, event):
         """
         Called when the remote peer accepts an outgoing message.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_accepted', event)
@@ -87,6 +100,10 @@ class OutgoingMessageHandler(Handler):
     def on_rejected(self, event):
         """
         Called when the remote peer rejects an outgoing message.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_rejected', event)
@@ -94,8 +111,12 @@ class OutgoingMessageHandler(Handler):
     def on_released(self, event):
         """
         Called when the remote peer releases an outgoing message. Note
-        that this may be in response to either the RELEASE or MODIFIED
+        that this may be in response to either the ``RELEASE`` or ``MODIFIED``
         state as defined by the AMQP specification.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_released', event)
@@ -105,6 +126,10 @@ class OutgoingMessageHandler(Handler):
         Called when the remote peer has settled the outgoing
         message. This is the point at which it should never be
         retransmitted.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_settled', event)
@@ -119,25 +144,32 @@ def recv_msg(delivery):
 
 class Reject(ProtonException):
     """
-    An exception that indicate a message should be rejected
+    An exception that indicates a message should be rejected.
     """
     pass
 
 
 class Release(ProtonException):
     """
-    An exception that indicate a message should be rejected
+    An exception that indicates a message should be released.
     """
     pass
 
 
 class Acking(object):
+    """
+    A class containing methods for handling received messages.
+    """
     def accept(self, delivery):
         """
         Accepts a received message.
 
-        Note that this method cannot currently be used in combination
-        with transactions.
+        .. note:: This method cannot currently be used in combination
+            with transactions. See :class:`proton.reactor.Transaction`
+            for transactional methods.
+
+        :param delivery: The message delivery tracking object
+        :type delivery: :class:`proton.Delivery`
         """
         self.settle(delivery, Delivery.ACCEPTED)
 
@@ -145,6 +177,13 @@ class Acking(object):
         """
         Rejects a received message that is considered invalid or
         unprocessable.
+
+        .. note:: This method cannot currently be used in combination
+            with transactions. See :class:`proton.reactor.Transaction`
+            for transactional methods.
+
+        :param delivery: The message delivery tracking object
+        :type delivery: :class:`proton.Delivery`
         """
         self.settle(delivery, Delivery.REJECTED)
 
@@ -154,6 +193,19 @@ class Acking(object):
         for any (other) interested receiver. The ``delivered``
         parameter indicates whether this should be considered a
         delivery attempt (and the delivery count updated) or not.
+
+        .. note:: This method cannot currently be used in combination
+            with transactions. See :class:`proton.reactor.Transaction`
+            for transactional methods.
+
+        :param delivery: The message delivery tracking object
+        :type delivery: :class:`proton.Delivery`
+        :param delivered: If ``True``, the message will be annotated
+            with a delivery attempt (setting delivery flag
+            :const:`proton.Delivery.MODIFIED`). Otherwise, the message
+            will be returned without the annotation and released (setting
+            delivery flag :const:`proton.Delivery.RELEASED`
+        :type delivered: ``bool``
         """
         if delivered:
             self.settle(delivery, Delivery.MODIFIED)
@@ -161,6 +213,16 @@ class Acking(object):
             self.settle(delivery, Delivery.RELEASED)
 
     def settle(self, delivery, state=None):
+        """
+        Settles the message delivery, and optionally updating the
+        delivery state.
+
+        :param delivery: The message delivery tracking object
+        :type delivery: :class:`proton.Delivery`
+        :param state: The delivery state, or ``None`` if not update
+            is to be performed.
+        :type  state: ``int`` or ``None``
+        """
         if state:
             delivery.update(state)
         delivery.settle()
@@ -170,6 +232,11 @@ class IncomingMessageHandler(Handler, Acking):
     """
     A utility for simpler and more intuitive handling of delivery
     events related to incoming i.e. received messages.
+
+    :type auto_accept: ``bool``
+    :param auto_settle: If ``True``, settle all messages (default). Otherwise
+        messages must be explicitly settled.
+    :param delegate: A client handler for the endpoint event
     """
 
     def __init__(self, auto_accept=True, delegate=None):
@@ -210,30 +277,54 @@ class IncomingMessageHandler(Handler, Acking):
         referring to this message in further actions (e.g. if
         explicitly accepting it, the ``delivery`` should be used, also
         obtainable via a property on the event.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_message', event)
 
     def on_settled(self, event):
+        """
+        Callback for when a message delivery is settled by the remote peer.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_settled', event)
 
     def on_aborted(self, event):
+        """
+        Callback for when a message delivery is aborted by the remote peer.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_aborted', event)
 
 
 class EndpointStateHandler(Handler):
     """
-    A utility that exposes 'endpoint' events i.e. the open/close for
+    A utility that exposes 'endpoint' events - ie the open/close for
     links, sessions and connections in a more intuitive manner. A
-    XXX_opened method will be called when both local and remote peers
+    ``XXX_opened()`` method will be called when both local and remote peers
     have opened the link, session or connection. This can be used to
-    confirm a locally initiated action for example. A XXX_opening
+    confirm a locally initiated action for example. A ``XXX_opening()``
     method will be called when the remote peer has requested an open
     that was not initiated locally. By default this will simply open
-    locally, which then triggers the XXX_opened call. The same applies
+    locally, which then triggers the ``XXX_opened()`` call. The same applies
     to close.
+
+    :param peer_close_is_error: If ``True``, a peer endpoint closing will be
+        treated as an error with an error callback. Otherwise (default), the
+        normal callbacks for the closing will occur. 
+    :type peer_close_is_error:  ``bool`` 
+    :param delegate: A client handler for the endpoint event
     """
 
     def __init__(self, peer_close_is_error=False, delegate=None):
@@ -242,26 +333,85 @@ class EndpointStateHandler(Handler):
 
     @classmethod
     def is_local_open(cls, endpoint):
+        """
+        Test if local ``enpoint`` is open (ie has state
+        :const:`proton.Endpoint.LOCAL_ACTIVE`).
+
+        :param endpoint: The local endpoint to be tested.
+        :type endpoint: Any child of :class:`proton.Endpoint`
+        :return: ``True`` if local endpoint is in state
+            :const:`proton.Endpoint.LOCAL_ACTIVE`, ``False`` otherwise.
+        :rtype: ``bool``
+        """
         return endpoint.state & Endpoint.LOCAL_ACTIVE
 
     @classmethod
     def is_local_uninitialised(cls, endpoint):
+        """
+        Test if local ``enpoint`` is uninitialised (ie has state
+        :const:`proton.Endpoint.LOCAL_UNINIT`).
+
+        :param endpoint: The local endpoint to be tested.
+        :type endpoint: Any child of :class:`proton.Endpoint`
+        :return: ``True`` if local endpoint is in state
+            :const:`proton.Endpoint.LOCAL_UNINIT`, ``False`` otherwise.
+        :rtype: ``bool``
+        """
         return endpoint.state & Endpoint.LOCAL_UNINIT
 
     @classmethod
     def is_local_closed(cls, endpoint):
+        """
+        Test if local ``enpoint`` is closed (ie has state
+        :const:`proton.Endpoint.LOCAL_CLOSED`).
+
+        :param endpoint: The local endpoint to be tested.
+        :type endpoint: Any child of :class:`proton.Endpoint`
+        :return: ``True`` if local endpoint is in state
+            :const:`proton.Endpoint.LOCAL_CLOSED`, ``False`` otherwise.
+        :rtype: ``bool``
+        """
         return endpoint.state & Endpoint.LOCAL_CLOSED
 
     @classmethod
     def is_remote_open(cls, endpoint):
+        """
+        Test if remote ``enpoint`` is open (ie has state
+        :const:`proton.Endpoint.LOCAL_ACTIVE`).
+
+        :param endpoint: The remote endpoint to be tested.
+        :type endpoint: Any child of :class:`proton.Endpoint`
+        :return: ``True`` if remote endpoint is in state
+            :const:`proton.Endpoint.LOCAL_ACTIVE`, ``False`` otherwise.
+        :rtype: ``bool``
+        """
         return endpoint.state & Endpoint.REMOTE_ACTIVE
 
     @classmethod
     def is_remote_closed(cls, endpoint):
+        """
+        Test if remote ``enpoint`` is closed (ie has state
+        :const:`proton.Endpoint.REMOTE_CLOSED`).
+
+        :param endpoint: The remote endpoint to be tested.
+        :type endpoint: Any child of :class:`proton.Endpoint`
+        :return: ``True`` if remote endpoint is in state
+            :const:`proton.Endpoint.REMOTE_CLOSED`, ``False`` otherwise.
+        :rtype: ``bool``
+        """
         return endpoint.state & Endpoint.REMOTE_CLOSED
 
     @classmethod
     def print_error(cls, endpoint, endpoint_type):
+        """
+        Logs an error message related to an error condition at an endpoint.
+
+        :param endpoint: The endpoint to be tested
+        :type endpoint: :class:`proton.Endpoint`
+        :param endpoint_type: The endpoint type as a string to be printed
+            in the log message.
+        :type endpoint_type: ``str``
+        """
         if endpoint.remote_condition:
             log.error(endpoint.remote_condition.description or endpoint.remote_condition.name)
         elif cls.is_local_open(endpoint) and cls.is_remote_closed(endpoint):
@@ -332,36 +482,98 @@ class EndpointStateHandler(Handler):
             event.link.open()
 
     def on_connection_opened(self, event):
+        """
+        Callback for when both the local and remote endpoints of a
+        connection have opened.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_connection_opened', event)
 
     def on_session_opened(self, event):
+        """
+        Callback for when both the local and remote endpoints of a
+        session have opened.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_session_opened', event)
 
     def on_link_opened(self, event):
+        """
+        Callback for when both the local and remote endpoints of a
+        link have opened.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_link_opened', event)
 
     def on_connection_opening(self, event):
+        """
+        Callback for when a remote peer initiates the opening of
+        a connection.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_connection_opening', event)
 
     def on_session_opening(self, event):
+        """
+        Callback for when a remote peer initiates the opening of
+        a session.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_session_opening', event)
 
     def on_link_opening(self, event):
+        """
+        Callback for when a remote peer initiates the opening of
+        a link.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_link_opening', event)
 
     def on_connection_error(self, event):
+        """
+        Callback for when an initiated connection open fails.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_connection_error', event)
         else:
             self.print_error(event.connection, "connection")
 
     def on_session_error(self, event):
+        """
+        Callback for when an initiated session open fails.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_session_error', event)
         else:
@@ -369,6 +581,13 @@ class EndpointStateHandler(Handler):
             event.connection.close()
 
     def on_link_error(self, event):
+        """
+        Callback for when an initiated link open fails.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_link_error', event)
         else:
@@ -376,39 +595,103 @@ class EndpointStateHandler(Handler):
             event.connection.close()
 
     def on_connection_closed(self, event):
+        """
+        Callback for when both the local and remote endpoints of a
+        connection have closed.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_connection_closed', event)
 
     def on_session_closed(self, event):
+        """
+        Callback for when both the local and remote endpoints of a
+        session have closed.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_session_closed', event)
 
     def on_link_closed(self, event):
+        """
+        Callback for when both the local and remote endpoints of a
+        link have closed.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_link_closed', event)
 
     def on_connection_closing(self, event):
+        """
+        Callback for when a remote peer initiates the closing of
+        a connection.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_connection_closing', event)
         elif self.peer_close_is_error:
             self.on_connection_error(event)
 
     def on_session_closing(self, event):
+        """
+        Callback for when a remote peer initiates the closing of
+        a session.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_session_closing', event)
         elif self.peer_close_is_error:
             self.on_session_error(event)
 
     def on_link_closing(self, event):
+        """
+        Callback for when a remote peer initiates the closing of
+        a link.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_link_closing', event)
         elif self.peer_close_is_error:
             self.on_link_error(event)
 
     def on_transport_tail_closed(self, event):
+        """
+        Callback for when the transport tail has closed (ie no further input will
+        be accepted by the transport).
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         self.on_transport_closed(event)
 
     def on_transport_closed(self, event):
+        """
+        Callback for when the transport has closed - ie both the head (input) and
+        tail (output) of the transport pipeline are closed.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         if self.delegate is not None and event.connection and self.is_local_open(event.connection):
             _dispatch(self.delegate, 'on_disconnected', event)
 
@@ -418,6 +701,19 @@ class MessagingHandler(Handler, Acking):
     A general purpose handler that makes the proton-c events somewhat
     simpler to deal with and/or avoids repetitive tasks for common use
     cases.
+
+    :param prefetch: Initial flow credit for receiving messages, defaults to 10.
+    :type prefetch: ``int``
+    :param auto_accept: If ``True``, accept all messages (default). Otherwise messages
+        must be individually accepted or rejected.
+    :type auto_accept: ``bool``
+    :param auto_settle: If ``True``, settle all messages (default). Otherwise
+        messages must be explicitly settled.
+    :type auto_settle: ``bool``
+    :param peer_close_is_error: If ``True``, a peer endpoint closing will be
+        treated as an error with an error callback. Otherwise (default), the
+        normal callbacks for the closing will occur. 
+    :type peer_close_is_error:  ``bool``  
     """
 
     def __init__(self, prefetch=10, auto_accept=True, auto_settle=True, peer_close_is_error=False):
@@ -434,6 +730,10 @@ class MessagingHandler(Handler, Acking):
         Called when some error is encountered with the transport over
         which the AMQP connection is to be established. This includes
         authentication errors as well as socket errors.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         if event.transport.condition:
             if event.transport.condition.info:
@@ -450,12 +750,20 @@ class MessagingHandler(Handler, Acking):
     def on_connection_error(self, event):
         """
         Called when the peer closes the connection with an error condition.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         EndpointStateHandler.print_error(event.connection, "connection")
 
     def on_session_error(self, event):
         """
         Called when the peer closes the session with an error condition.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         EndpointStateHandler.print_error(event.session, "session")
         event.connection.close()
@@ -463,6 +771,10 @@ class MessagingHandler(Handler, Acking):
     def on_link_error(self, event):
         """
         Called when the peer closes the link with an error condition.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         EndpointStateHandler.print_error(event.link, "link")
         event.connection.close()
@@ -470,6 +782,10 @@ class MessagingHandler(Handler, Acking):
     def on_reactor_init(self, event):
         """
         Called when the event loop - the reactor - starts.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         if hasattr(event.reactor, 'subclass'):
             setattr(event, event.reactor.subclass.__name__.lower(), event.reactor)
@@ -478,48 +794,80 @@ class MessagingHandler(Handler, Acking):
     def on_start(self, event):
         """
         Called when the event loop starts. (Just an alias for on_reactor_init)
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
     def on_connection_closed(self, event):
         """
         Called when the connection is closed.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
     def on_session_closed(self, event):
         """
         Called when the session is closed.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
     def on_link_closed(self, event):
         """
         Called when the link is closed.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
     def on_connection_closing(self, event):
         """
         Called when the peer initiates the closing of the connection.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
     def on_session_closing(self, event):
         """
         Called when the peer initiates the closing of the session.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
     def on_link_closing(self, event):
         """
         Called when the peer initiates the closing of the link.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
     def on_disconnected(self, event):
         """
         Called when the socket is disconnected.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
@@ -527,18 +875,30 @@ class MessagingHandler(Handler, Acking):
         """
         Called when the sender link has credit and messages can
         therefore be transferred.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
     def on_accepted(self, event):
         """
         Called when the remote peer accepts an outgoing message.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
     def on_rejected(self, event):
         """
         Called when the remote peer rejects an outgoing message.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
@@ -547,6 +907,10 @@ class MessagingHandler(Handler, Acking):
         Called when the remote peer releases an outgoing message. Note
         that this may be in response to either the RELEASE or MODIFIED
         state as defined by the AMQP specification.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
@@ -555,6 +919,10 @@ class MessagingHandler(Handler, Acking):
         Called when the remote peer has settled the outgoing
         message. This is the point at which it should never be
         retransmitted.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
         """
         pass
 
@@ -565,42 +933,113 @@ class MessagingHandler(Handler, Acking):
         referring to this message in further actions (e.g. if
         explicitly accepting it, the ``delivery`` should be used, also
         obtainable via a property on the event.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event. In particular, the message itself may
+            be obtained by accessing ``event.message``.
+        :type event: :class:`proton.Event`
         """
         pass
 
 
 class TransactionHandler(object):
     """
-    The interface for transaction handlers, i.e. objects that want to
+    The interface for transaction handlers - ie objects that want to
     be notified of state changes related to a transaction.
     """
 
     def on_transaction_declared(self, event):
+        """
+        Called when a local transaction is declared.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event. In particular, the :class:`proton.reactor.Transaction`
+            object may be obtained by accessing ``event.transaction``.
+        :type event: :class:`proton.Event`
+        """
         pass
 
     def on_transaction_committed(self, event):
+        """
+        Called when a local transaction is discharged successfully
+        (committed).
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         pass
 
     def on_transaction_aborted(self, event):
+        """
+        Called when a local transaction is discharged unsuccessfully
+        (aborted).
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         pass
 
     def on_transaction_declare_failed(self, event):
+        """
+        Called when a local transaction declare fails.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         pass
 
     def on_transaction_commit_failed(self, event):
+        """
+        Called when the commit of a local transaction fails. 
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        :type event: :class:`proton.Event`
+        """
         pass
 
 
 class TransactionalClientHandler(MessagingHandler, TransactionHandler):
     """
     An extension to the MessagingHandler for applications using
-    transactions.
+    transactions. This handler provides all of the callbacks found
+    in :class:`MessagingHandler` and :class:`TransactionHandler`,
+    and provides a convenience method :meth:`accept` for performing
+    a transactional acceptance of received messages.
+
+    :param prefetch: Initial flow credit for receiving messages, defaults to 10.
+    :type prefetch: ``int``
+    :param auto_accept: If ``True``, accept all messages (default). Otherwise messages
+        must be individually accepted or rejected.
+    :type auto_accept: ``bool``
+    :param auto_settle: If ``True``, settle all messages (default). Otherwise
+        messages must be explicitly settled.
+    :type auto_settle: ``bool``
+    :param peer_close_is_error: If ``True``, a peer endpoint closing will be
+        treated as an error with an error callback. Otherwise (default), the
+        normal callbacks for the closing will occur. 
+    :type peer_close_is_error:  ``bool`` 
     """
 
     def __init__(self, prefetch=10, auto_accept=False, auto_settle=True, peer_close_is_error=False):
         super(TransactionalClientHandler, self).__init__(prefetch, auto_accept, auto_settle, peer_close_is_error)
 
     def accept(self, delivery, transaction=None):
+        """
+        A convenience method for accepting a received message as part of a
+        transaction. If no transaction object is supplied, a regular
+        non-transactional acceptance will be performed.
+
+        :param delivery: Delivery tracking object for received message.
+        :type delivery: :class:`proton.Delivery`
+        :param transaction: Transaction tracking object which is required if
+            the message is being accepted under the transaction. If ``None`` (default),
+            then a normal non-transactional accept occurs.
+        :type transaction: :class:`proton.reactor.Transaction`
+        """
         if transaction:
             transaction.accept(delivery)
         else:

@@ -1,3 +1,5 @@
+.. _overview:
+
 ############
 API Overview
 ############
@@ -56,6 +58,7 @@ establishing an appropriate receiver and handling the
     :show-inheritance: proton.reactor.Reactor
     :members: connect, create_receiver, create_sender, run, schedule
     :undoc-members:
+    :noindex:
 
     .. py:attribute:: container_id
 
@@ -74,22 +77,26 @@ establishing an appropriate receiver and handling the
     :members: open, close, state, session, hostname, container,
               remote_container, remote_desired_capabilities, remote_hostname, remote_offered_capabilities , remote_properties
     :undoc-members:
+    :noindex:
 
 .. autoclass:: proton.Receiver
     :show-inheritance: proton.Link
     :members: flow, recv, drain, draining
     :undoc-members:
+    :noindex:
 
 .. autoclass:: proton.Sender
     :show-inheritance: proton.Link
     :members: offered, send
     :undoc-members:
+    :noindex:
 
 .. autoclass:: proton.Link
     :members: name, state, is_sender, is_receiver,
               credit, queued, session, connection,
               source, target, remote_source, remote_target
     :undoc-members:
+    :noindex:
 
     The :py:meth:`~proton.Link.source()`,
     :py:meth:`~proton.Link.target()`,
@@ -102,6 +109,7 @@ establishing an appropriate receiver and handling the
     :members: update, settle, settled, remote_state, local_state, partial, readable, writable,
               link, session, connection
     :undoc-members:
+    :noindex:
 
 .. autoclass:: proton.handlers.MessagingHandler
     :members: on_start, on_reactor_init,
@@ -116,10 +124,12 @@ establishing an appropriate receiver and handling the
               on_disconnected,
               accept, reject, release, settle
     :undoc-members:
+    :noindex:
 
 .. autoclass:: proton.Event
     :members: delivery, link, receiver, sender, session, connection, reactor, context
     :undoc-members:
+    :noindex:
 
 .. autoclass:: proton.Message
     :members: address, id, priority, subject, ttl, reply_to, correlation_id, durable, user_id,
@@ -127,10 +137,12 @@ establishing an appropriate receiver and handling the
               group_id, group_sequence, reply_to_group_id,
               send, recv, encode, decode
     :undoc-members:
+    :noindex:
 
 .. autoclass:: proton.Terminus
     :members: address, dynamic, properties, capabilities, filter
     :undoc-members:
+    :noindex:
 
 .. _delivery-guarantees:
 

@@ -23,10 +23,8 @@ protocol.
 
 The proton APIs consist of the following classes:
 
- - L{Message}   -- A class for creating and/or accessing AMQP message content.
- - L{Data}      -- A class for creating and/or accessing arbitrary AMQP encoded
-                  data.
-
+ - :class:`Message`    -- A class for creating and/or accessing AMQP message content.
+ - :class:`Data`       -- A class for creating and/or accessing arbitrary AMQP encoded data.
 """
 from __future__ import absolute_import
 

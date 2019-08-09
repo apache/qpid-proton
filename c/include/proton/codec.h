@@ -91,12 +91,12 @@ typedef enum {
   PN_CHAR = 9,
 
   /**
-   * The ulong AMQP type. An unsigned 32 bit integer.
+   * The ulong AMQP type. An unsigned 64 bit integer.
    */
   PN_ULONG = 10,
 
   /**
-   * The long AMQP type. A signed 32 bit integer.
+   * The long AMQP type. A signed 64 bit integer.
    */
   PN_LONG = 11,
 
@@ -1104,7 +1104,7 @@ PN_EXTERN int64_t pn_data_get_long(pn_data_t *data);
 PN_EXTERN pn_timestamp_t pn_data_get_timestamp(pn_data_t *data);
 
 /**
- * If the current node is a float, returns its value, raises 0
+ * If the current node is a float, returns its value, returns 0
  * otherwise.
  *
  * @param data a pn_data_t object

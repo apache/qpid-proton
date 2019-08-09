@@ -57,6 +57,9 @@ class BlockingLink(object):
                 raise LinkDetached(self.link)
 
     def close(self):
+        """
+        Close the link.
+        """
         self.link.close()
         self.connection.wait(lambda: not (self.link.state & Endpoint.REMOTE_ACTIVE),
                              msg="Closing link %s" % self.link.name)
@@ -68,7 +71,10 @@ class BlockingLink(object):
 
 class SendException(ProtonException):
     """
-    Exception used to indicate an exceptional state/condition on a send request
+    Exception used to indicate an exceptional state/condition on a send request.
+
+    :param state: The delivery state which caused the exception.
+    :type state: ``int``
     """
 
     def __init__(self, state):
@@ -80,6 +86,10 @@ def _is_settled(delivery):
 
 
 class BlockingSender(BlockingLink):
+    """
+    A synchronous sender wrapper. This is typically created by calling
+    :meth:`BlockingConnection.create_sender`.
+    """
     def __init__(self, connection, sender):
         super(BlockingSender, self).__init__(connection, sender)
         if self.link.target and self.link.target.address and self.link.target.address != self.link.remote_target.address:
@@ -90,6 +100,21 @@ class BlockingSender(BlockingLink):
             raise LinkException("Failed to open sender %s, target does not match" % self.link.name)
 
     def send(self, msg, timeout=False, error_states=None):
+        """
+        Blocking send which will return only when the send is complete
+        and the message settled.
+
+        :param timeout: Timeout in seconds. If ``False``, the value of ``timeout`` used in the
+            constructor of the :class:`BlockingConnection` object used in the constructor will be used.
+            If ``None``, there is no timeout. Any other value is treated as a timeout in seconds.
+        :type timeout: ``None``, ``False``, ``float``
+        :param error_states: List of delivery flags which when present in Delivery object
+            will cause a :class:`SendException` exception to be raised. If ``None``, these
+            will default to a list containing :const:`proton.Delivery.REJECTED` and :const:`proton.Delivery.RELEASED`.
+        :type error_states: ``list``
+        :return: Delivery object for this message.
+        :rtype: :class:`proton.Delivery`
+        """
         delivery = self.link.send(msg)
         self.connection.wait(lambda: _is_settled(delivery), msg="Sending on sender %s" % self.link.name,
                              timeout=timeout)
@@ -104,6 +129,14 @@ class BlockingSender(BlockingLink):
 
 
 class Fetcher(MessagingHandler):
+    """
+    A message handler for blocking receivers.
+
+    :param connection:
+    :type connection: :class:
+    :param prefetch:
+    :type prefetch:
+    """
     def __init__(self, connection, prefetch):
         super(Fetcher, self).__init__(prefetch=prefetch, auto_accept=False)
         self.connection = connection
@@ -126,15 +159,34 @@ class Fetcher(MessagingHandler):
 
     @property
     def has_message(self):
+        """
+        The number of messages that have been received and are waiting to be
+        retrieved with :meth:`pop`.
+
+        :type: ``int``
+        """
         return len(self.incoming)
 
     def pop(self):
+        """
+        Get the next available incoming message. If the message is unsettled, its
+        delivery object is moved onto the unsettled queue, and can be settled with
+        a call to :meth:`settle`.
+
+        :rtype: :class:`proton.Message`
+        """
         message, delivery = self.incoming.popleft()
         if not delivery.settled:
             self.unsettled.append(delivery)
         return message
 
     def settle(self, state=None):
+        """
+        Settle the next message previously taken with :meth:`pop`.
+
+        :param state:
+        :type state:
+        """
         delivery = self.unsettled.popleft()
         if state:
             delivery.update(state)
@@ -142,6 +194,10 @@ class Fetcher(MessagingHandler):
 
 
 class BlockingReceiver(BlockingLink):
+    """
+    A synchronous receiver wrapper. This is typically created by calling
+    :meth:`BlockingConnection.create_receiver`.
+    """
     def __init__(self, connection, receiver, fetcher, credit=1):
         super(BlockingReceiver, self).__init__(connection, receiver)
         if self.link.source and self.link.source.address and self.link.source.address != self.link.remote_source.address:
@@ -163,8 +219,17 @@ class BlockingReceiver(BlockingLink):
             self.link.handler = None  # implicit call to reactor
 
     def receive(self, timeout=False):
+        """
+        Blocking receive call which will return only when a message is received or
+        a timeout (if supplied) occurs.
+
+        :param timeout: Timeout in seconds. If ``False``, the value of ``timeout`` used in the
+            constructor of the :class:`BlockingConnection` object used in the constructor will be used.
+            If ``None``, there is no timeout. Any other value is treated as a timeout in seconds.
+        :type timeout: ``None``, ``False``, ``float``
+        """
         if not self.fetcher:
-            raise Exception("Can't call receive on this receiver as a handler was provided")
+            raise Exception("Can't call receive on this receiver as a handler was not provided")
         if not self.link.credit:
             self.link.flow(1)
         self.connection.wait(lambda: self.fetcher.has_message, msg="Receiving on receiver %s" % self.link.name,
@@ -172,24 +237,56 @@ class BlockingReceiver(BlockingLink):
         return self.fetcher.pop()
 
     def accept(self):
+        """
+        Accept and settle the received message. The delivery is set to
+        :const:`proton.Delivery.ACCEPTED`.
+        """
         self.settle(Delivery.ACCEPTED)
 
     def reject(self):
+        """
+        Reject the received message. The delivery is set to
+        :const:`proton.Delivery.REJECTED`.
+        """
         self.settle(Delivery.REJECTED)
 
     def release(self, delivered=True):
+        """
+        Release the received message.
+
+        :param delivered: If ``True``, the message delivery is being set to
+            :const:`proton.Delivery.MODIFIED`, ie being returned to the sender
+            and annotated. If ``False``, the message is returned without
+            annotations and the delivery set to  :const:`proton.Delivery.RELEASED`.
+        :type delivered: ``bool``
+        """
         if delivered:
             self.settle(Delivery.MODIFIED)
         else:
             self.settle(Delivery.RELEASED)
 
     def settle(self, state=None):
+        """
+        Settle any received messages.
+
+        :param state: Update the delivery of all unsettled messages with the
+            supplied state, then settle them.
+        :type state: ``None`` or a valid delivery state (see
+            :class:`proton.Delivery`.
+        """
         if not self.fetcher:
-            raise Exception("Can't call accept/reject etc on this receiver as a handler was provided")
+            raise Exception("Can't call accept/reject etc on this receiver as a handler was not provided")
         self.fetcher.settle(state)
 
 
 class LinkDetached(LinkException):
+    """
+    The exception raised when the remote peer unexpectedly closes a link in a blocking
+    context, or an unexpected link error occurs.
+
+    :param link: The link which closed unexpectedly.
+    :type link: :class:`proton.Link`
+    """
     def __init__(self, link):
         self.link = link
         if link.is_sender:
@@ -206,6 +303,13 @@ class LinkDetached(LinkException):
 
 
 class ConnectionClosed(ConnectionException):
+    """
+    The exception raised when the remote peer unexpectedly closes a connection in a blocking
+    context, or an unexpected connection error occurs.
+
+    :param connection: The connection which closed unexpectedly.
+    :type connection: :class:`proton.Connection`
+    """
     def __init__(self, connection):
         self.connection = connection
         txt = "Connection %s closed" % connection.hostname
@@ -226,6 +330,19 @@ class BlockingConnection(Handler):
     are released when the object is no longer in use, make sure that
     object operations are enclosed in a try block and that close() is
     always executed on exit.
+
+    :param url: Connection URL
+    :type url: :class:`proton.Url` or ``str``
+    :param timeout: Connection timeout in seconds. If ``None``, defaults to 60 seconds.
+    :type timeout: ``None`` or float
+    :param container: Container to process the events on the connection. If ``None``,
+        a new :class:`proton.Container` will be created.
+    :param ssl_domain: 
+    :param heartbeat: A value in seconds indicating the desired frequency of
+        heartbeats used to test the underlying socket is alive.
+    :type heartbeat: ``float``
+    :param kwargs: Container keyword arguments. See :class:`proton.reactor.Container`
+        for a list of the valid kwargs.
     """
 
     def __init__(self, url, timeout=None, container=None, ssl_domain=None, heartbeat=None, **kwargs):
@@ -249,10 +366,42 @@ class BlockingConnection(Handler):
                 self.close()
 
     def create_sender(self, address, handler=None, name=None, options=None):
+        """
+        Create a blocking sender.
+
+        :param address: Address of target node.
+        :type address: ``str``
+        :param handler: Event handler for this sender.
+        :type handler: Any child class of :class:`proton.Handler`
+        :param name: Sender name.
+        :type name: ``str``
+        :param options: A single option, or a list of sender options
+        :type options: :class:`SenderOption` or [SenderOption, SenderOption, ...]
+        :return: New blocking sender instance.
+        :rtype: :class:`BlockingSender`
+        """
         return BlockingSender(self, self.container.create_sender(self.conn, address, name=name, handler=handler,
                                                                  options=options))
 
     def create_receiver(self, address, credit=None, dynamic=False, handler=None, name=None, options=None):
+        """
+        Create a blocking receiver.
+
+        :param address: Address of source node.
+        :type address: ``str``
+        :param credit: Initial link flow credit. If not set, will default to 1.
+        :type credit: ``int``
+        :param dynamic: If ``True``, indicates dynamic creation of the receiver.
+        :type dynamic: ``bool``
+        :param handler: Event handler for this receiver.
+        :type handler: Any child class of :class:`proton.Handler`
+        :param name: Receiver name.
+        :type name: ``str``
+        :param options: A single option, or a list of receiver options
+        :type options: :class:`ReceiverOption` or [ReceiverOption, ReceiverOption, ...]
+        :return: New blocking receiver instance.
+        :rtype: :class:`BlockingReceiver`
+        """
         prefetch = credit
         if handler:
             fetcher = None
@@ -266,6 +415,9 @@ class BlockingConnection(Handler):
                                            options=options), fetcher, credit=prefetch)
 
     def close(self):
+        """
+        Close the connection.
+        """
         # TODO: provide stronger interrupt protection on cleanup.  See PEP 419
         if self.closing:
             return
@@ -289,13 +441,26 @@ class BlockingConnection(Handler):
         return self.conn.state & (Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED)
 
     def run(self):
-        """ Hand control over to the event loop (e.g. if waiting indefinitely for incoming messages) """
+        """
+        Hand control over to the event loop (e.g. if waiting indefinitely for incoming messages)
+        """
         while self.container.process(): pass
         self.container.stop()
         self.container.process()
 
     def wait(self, condition, timeout=False, msg=None):
-        """Call process until condition() is true"""
+        """
+        Process events until ``condition()`` returns ``True``.
+
+        :param condition: Condition which determines when the wait will end.
+        :type condition: Function which returns ``bool``
+        :param timeout: Timeout in seconds. If ``False``, the value of ``timeout`` used in the
+            constructor of this object will be used. If ``None``, there is no timeout. Any other
+            value is treated as a timeout in seconds.
+        :type timeout: ``None``, ``False``, ``float``
+        :param msg: Context message for :class:`proton.Timeout` exception
+        :type msg: ``str``
+        """
         if timeout is False:
             timeout = self.timeout
         if timeout is None:
@@ -322,12 +487,18 @@ class BlockingConnection(Handler):
                 "Connection %s disconnected: %s" % (self.url, self.disconnected))
 
     def on_link_remote_close(self, event):
+        """
+        Event callback for when the remote terminus closes.
+        """
         if event.link.state & Endpoint.LOCAL_ACTIVE:
             event.link.close()
             if not self.closing:
                 raise LinkDetached(event.link)
 
     def on_connection_remote_close(self, event):
+        """
+        Event callback for when the link peer closes the connection.
+        """
         if event.connection.state & Endpoint.LOCAL_ACTIVE:
             event.connection.close()
             if not self.closing:
@@ -361,22 +532,20 @@ class AtomicCount(object):
 class SyncRequestResponse(IncomingMessageHandler):
     """
     Implementation of the synchronous request-response (aka RPC) pattern.
-    @ivar address: Address for all requests, may be None.
-    @ivar connection: Connection for requests and responses.
+    A single instance can send many requests to the same or different
+    addresses.
+
+    :param connection: Connection for requests and responses.
+    :type connection: :class:`BlockingConnection`
+    :param address: Address for all requests. If not specified, each request
+        must have the address property set. Successive messages may have
+        different addresses.
+    :type address: ``str`` or ``None``
     """
 
     correlation_id = AtomicCount()
 
     def __init__(self, connection, address=None):
-        """
-        Send requests and receive responses. A single instance can send many requests
-        to the same or different addresses.
-
-        @param connection: A L{BlockingConnection}
-        @param address: Address for all requests.
-            If not specified, each request must have the address property set.
-            Successive messages may have different addresses.
-        """
         super(SyncRequestResponse, self).__init__()
         self.connection = connection
         self.address = address
@@ -390,8 +559,9 @@ class SyncRequestResponse(IncomingMessageHandler):
         """
         Send a request message, wait for and return the response message.
 
-        @param request: A L{proton.Message}. If L{self.address} is not set the 
-            L{self.address} must be set and will be used.
+        :param request: Request message. If ``self.address`` is not set the
+            request message address must be set and will be used.
+        :type request: :class:`proton.Message`
         """
         if not self.address and not request.address:
             raise ValueError("Request message has no address: %s" % request)
@@ -410,10 +580,19 @@ class SyncRequestResponse(IncomingMessageHandler):
 
     @property
     def reply_to(self):
-        """Return the dynamic address of our receiver."""
+        """
+        The dynamic address of our receiver.
+
+        :type: ``str``
+        """
         return self.receiver.remote_source.address
 
     def on_message(self, event):
-        """Called when we receive a message for our receiver."""
+        """
+        Called when we receive a message for our receiver.
+
+        :param event: The event which occurs when a message is received.
+        :type event: :class:`proton.Event`
+        """
         self.response = event.message
         self.connection.container.yield_()  # Wake up the wait() loop to handle the message.

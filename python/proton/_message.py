@@ -47,24 +47,24 @@ except NameError:
 
 
 class Message(object):
-    """The L{Message} class is a mutable holder of message content.
+    """The :py:class:`Message` class is a mutable holder of message content.
 
-    @ivar instructions: delivery instructions for the message
-    @type instructions: dict
-    @ivar annotations: infrastructure defined message annotations
-    @type annotations: dict
-    @ivar properties: application defined message properties
-    @type properties: dict
-    @ivar body: message body
-    @type body: bytes | unicode | dict | list | int | long | float | UUID
+    :ivar instructions: delivery instructions for the message
+    :vartype instructions: ``dict``
+    :ivar ~.annotations: infrastructure defined message annotations
+    :vartype ~.annotations: ``dict``
+    :ivar ~.properties: application defined message properties
+    :vartype ~.properties: ``dict``
+    :ivar body: message body
+    :vartype body: bytes | unicode | dict | list | int | long | float | UUID
+
+    :param kwargs: Message property name/value pairs to initialize the Message
     """
 
     DEFAULT_PRIORITY = PN_DEFAULT_PRIORITY
+    """ Default AMQP message priority"""
 
     def __init__(self, body=None, **kwargs):
-        """
-        @param kwargs: Message property name/value pairs to initialise the Message
-        """
         self._msg = pn_message()
         self._id = Data(pn_message_id(self._msg))
         self._correlation_id = Data(pn_message_correlation_id(self._msg))
@@ -145,7 +145,7 @@ class Message(object):
 
     def clear(self):
         """
-        Clears the contents of the L{Message}. All fields will be reset to
+        Clears the contents of the :class:`Message`. All fields will be reset to
         their default values.
         """
         pn_message_clear(self._msg)
@@ -161,13 +161,16 @@ class Message(object):
         self._check(pn_message_set_inferred(self._msg, bool(value)))
 
     inferred = property(_is_inferred, _set_inferred, doc="""
-The inferred flag for a message indicates how the message content
-is encoded into AMQP sections. If inferred is true then binary and
-list values in the body of the message will be encoded as AMQP DATA
-and AMQP SEQUENCE sections, respectively. If inferred is false,
-then all values in the body of the message will be encoded as AMQP
-VALUE sections regardless of their type.
-""")
+        The inferred flag for a message indicates how the message content
+        is encoded into AMQP sections. If inferred is true then binary and
+        list values in the body of the message will be encoded as AMQP DATA
+        and AMQP SEQUENCE sections, respectively. If inferred is false,
+        then all values in the body of the message will be encoded as AMQP
+        VALUE sections regardless of their type.
+
+        :type: ``bool``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _is_durable(self):
         return pn_message_is_durable(self._msg)
@@ -175,11 +178,13 @@ VALUE sections regardless of their type.
     def _set_durable(self, value):
         self._check(pn_message_set_durable(self._msg, bool(value)))
 
-    durable = property(_is_durable, _set_durable,
-                       doc="""
-The durable property indicates that the message should be held durably
-by any intermediaries taking responsibility for the message.
-""")
+    durable = property(_is_durable, _set_durable, doc="""
+        The durable property indicates that the message should be held durably
+        by any intermediaries taking responsibility for the message.
+
+        :type: ``bool``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_priority(self):
         return pn_message_get_priority(self._msg)
@@ -187,10 +192,17 @@ by any intermediaries taking responsibility for the message.
     def _set_priority(self, value):
         self._check(pn_message_set_priority(self._msg, value))
 
-    priority = property(_get_priority, _set_priority,
-                        doc="""
-The priority of the message.
-""")
+    priority = property(_get_priority, _set_priority, doc="""
+        The relative priority of the message, with higher numbers indicating
+        higher priority. The number of available priorities depends
+        on the implementation, but AMQP defines the default priority as
+        the value ``4``. See the
+        `OASIS AMQP 1.0 standard <http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-messaging-v1.0-os.html#type-header>`_
+        for more details on message priority.
+
+        :type: ``int``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_ttl(self):
         return millis2secs(pn_message_get_ttl(self._msg))
@@ -198,11 +210,13 @@ The priority of the message.
     def _set_ttl(self, value):
         self._check(pn_message_set_ttl(self._msg, secs2millis(value)))
 
-    ttl = property(_get_ttl, _set_ttl,
-                   doc="""
-The time to live of the message measured in seconds. Expired messages
-may be dropped.
-""")
+    ttl = property(_get_ttl, _set_ttl, doc="""
+        The time to live of the message measured in seconds. Expired messages
+        may be dropped.
+
+        :type: ``int``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _is_first_acquirer(self):
         return pn_message_is_first_acquirer(self._msg)
@@ -210,10 +224,13 @@ may be dropped.
     def _set_first_acquirer(self, value):
         self._check(pn_message_set_first_acquirer(self._msg, bool(value)))
 
-    first_acquirer = property(_is_first_acquirer, _set_first_acquirer,
-                              doc="""
-True iff the recipient is the first to acquire the message.
-""")
+    first_acquirer = property(_is_first_acquirer, _set_first_acquirer, doc="""
+        ``True`` iff the recipient is the first to acquire the message,
+        ``False`` otherwise.
+
+        :type: ``bool``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_delivery_count(self):
         return pn_message_get_delivery_count(self._msg)
@@ -221,10 +238,12 @@ True iff the recipient is the first to acquire the message.
     def _set_delivery_count(self, value):
         self._check(pn_message_set_delivery_count(self._msg, value))
 
-    delivery_count = property(_get_delivery_count, _set_delivery_count,
-                              doc="""
-The number of delivery attempts made for this message.
-""")
+    delivery_count = property(_get_delivery_count, _set_delivery_count, doc="""
+        The number of delivery attempts made for this message.
+
+        :type: ``int``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_id(self):
         return self._id.get_object()
@@ -235,10 +254,18 @@ The number of delivery attempts made for this message.
         self._id.rewind()
         self._id.put_object(value)
 
-    id = property(_get_id, _set_id,
-                  doc="""
-The id of the message.
-""")
+    id = property(_get_id, _set_id, doc="""
+        The globally unique id of the message, and can be used
+        to determine if a received message is a duplicate. The allowed
+        types to set the id are:
+
+        :type: The valid AMQP types for an id are one of:
+
+               * ``int`` (unsigned)
+               * ``uuid.UUID``
+               * ``bytes``
+               * ``str``
+        """)
 
     def _get_user_id(self):
         return pn_message_get_user_id(self._msg)
@@ -246,10 +273,12 @@ The id of the message.
     def _set_user_id(self, value):
         self._check(pn_message_set_user_id(self._msg, value))
 
-    user_id = property(_get_user_id, _set_user_id,
-                       doc="""
-The user id of the message creator.
-""")
+    user_id = property(_get_user_id, _set_user_id, doc="""
+        The user id of the message creator.
+
+        :type: ``bytes``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_address(self):
         return utf82unicode(pn_message_get_address(self._msg))
@@ -257,10 +286,12 @@ The user id of the message creator.
     def _set_address(self, value):
         self._check(pn_message_set_address(self._msg, unicode2utf8(value)))
 
-    address = property(_get_address, _set_address,
-                       doc="""
-The address of the message.
-""")
+    address = property(_get_address, _set_address, doc="""
+        The address of the message.
+
+        :type: ``str``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_subject(self):
         return utf82unicode(pn_message_get_subject(self._msg))
@@ -268,10 +299,12 @@ The address of the message.
     def _set_subject(self, value):
         self._check(pn_message_set_subject(self._msg, unicode2utf8(value)))
 
-    subject = property(_get_subject, _set_subject,
-                       doc="""
-The subject of the message.
-""")
+    subject = property(_get_subject, _set_subject, doc="""
+        The subject of the message.
+
+        :type: ``str``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_reply_to(self):
         return utf82unicode(pn_message_get_reply_to(self._msg))
@@ -279,10 +312,12 @@ The subject of the message.
     def _set_reply_to(self, value):
         self._check(pn_message_set_reply_to(self._msg, unicode2utf8(value)))
 
-    reply_to = property(_get_reply_to, _set_reply_to,
-                        doc="""
-The reply-to address for the message.
-""")
+    reply_to = property(_get_reply_to, _set_reply_to, doc="""
+        The reply-to address for the message.
+
+        :type: ``str``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_correlation_id(self):
         return self._correlation_id.get_object()
@@ -293,10 +328,16 @@ The reply-to address for the message.
         self._correlation_id.rewind()
         self._correlation_id.put_object(value)
 
-    correlation_id = property(_get_correlation_id, _set_correlation_id,
-                              doc="""
-The correlation-id for the message.
-""")
+    correlation_id = property(_get_correlation_id, _set_correlation_id, doc="""
+        The correlation-id for the message.
+
+        :type: The valid AMQP types for a correlation-id are one of:
+
+               * ``int`` (unsigned)
+               * ``uuid.UUID``
+               * ``bytes``
+               * ``str``
+        """)
 
     def _get_content_type(self):
         return symbol(utf82unicode(pn_message_get_content_type(self._msg)))
@@ -304,10 +345,12 @@ The correlation-id for the message.
     def _set_content_type(self, value):
         self._check(pn_message_set_content_type(self._msg, unicode2utf8(value)))
 
-    content_type = property(_get_content_type, _set_content_type,
-                            doc="""
-The content-type of the message.
-""")
+    content_type = property(_get_content_type, _set_content_type, doc="""
+        The RFC-2046 [RFC2046] MIME type for the message body.
+
+        :type: :class:`symbol`
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_content_encoding(self):
         return symbol(utf82unicode(pn_message_get_content_encoding(self._msg)))
@@ -315,10 +358,12 @@ The content-type of the message.
     def _set_content_encoding(self, value):
         self._check(pn_message_set_content_encoding(self._msg, unicode2utf8(value)))
 
-    content_encoding = property(_get_content_encoding, _set_content_encoding,
-                                doc="""
-The content-encoding of the message.
-""")
+    content_encoding = property(_get_content_encoding, _set_content_encoding, doc="""
+        The content-encoding of the message.
+
+        :type: :class:`symbol`
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_expiry_time(self):
         return millis2secs(pn_message_get_expiry_time(self._msg))
@@ -326,10 +371,12 @@ The content-encoding of the message.
     def _set_expiry_time(self, value):
         self._check(pn_message_set_expiry_time(self._msg, secs2millis(value)))
 
-    expiry_time = property(_get_expiry_time, _set_expiry_time,
-                           doc="""
-The expiry time of the message.
-""")
+    expiry_time = property(_get_expiry_time, _set_expiry_time, doc="""
+        The absolute expiry time of the message in seconds using the Unix time_t [IEEE1003] encoding.
+
+        :type: ``int``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_creation_time(self):
         return millis2secs(pn_message_get_creation_time(self._msg))
@@ -337,10 +384,12 @@ The expiry time of the message.
     def _set_creation_time(self, value):
         self._check(pn_message_set_creation_time(self._msg, secs2millis(value)))
 
-    creation_time = property(_get_creation_time, _set_creation_time,
-                             doc="""
-The creation time of the message.
-""")
+    creation_time = property(_get_creation_time, _set_creation_time, doc="""
+        The creation time of the message in seconds using the Unix time_t [IEEE1003] encoding.
+
+        :type: ``int``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_group_id(self):
         return utf82unicode(pn_message_get_group_id(self._msg))
@@ -348,10 +397,12 @@ The creation time of the message.
     def _set_group_id(self, value):
         self._check(pn_message_set_group_id(self._msg, unicode2utf8(value)))
 
-    group_id = property(_get_group_id, _set_group_id,
-                        doc="""
-The group id of the message.
-""")
+    group_id = property(_get_group_id, _set_group_id, doc="""
+        The group id of the message.
+
+        :type: ``str``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_group_sequence(self):
         return pn_message_get_group_sequence(self._msg)
@@ -359,10 +410,12 @@ The group id of the message.
     def _set_group_sequence(self, value):
         self._check(pn_message_set_group_sequence(self._msg, value))
 
-    group_sequence = property(_get_group_sequence, _set_group_sequence,
-                              doc="""
-The sequence of the message within its group.
-""")
+    group_sequence = property(_get_group_sequence, _set_group_sequence, doc="""
+        The sequence of the message within its group.
+
+        :type: ``int``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.
+        """)
 
     def _get_reply_to_group_id(self):
         return utf82unicode(pn_message_get_reply_to_group_id(self._msg))
@@ -370,10 +423,12 @@ The sequence of the message within its group.
     def _set_reply_to_group_id(self, value):
         self._check(pn_message_set_reply_to_group_id(self._msg, unicode2utf8(value)))
 
-    reply_to_group_id = property(_get_reply_to_group_id, _set_reply_to_group_id,
-                                 doc="""
-The group-id for any replies.
-""")
+    reply_to_group_id = property(_get_reply_to_group_id, _set_reply_to_group_id, doc="""
+        The group-id for any replies.
+
+        :type: ``str``
+        :raise: :exc:`MessageException` if there is any Proton error when using the setter.        
+        """)
 
     def encode(self):
         self._pre_encode()
@@ -392,6 +447,18 @@ The group-id for any replies.
         self._post_decode()
 
     def send(self, sender, tag=None):
+        """
+        Encodes and sends the message content using the specified sender,
+        and, if present, using the specified tag. Upon success, will
+        return the :class:`Delivery` object for the sent message.
+
+        :param sender: The sender to send the message
+        :type sender: :class:`Sender`
+        :param tag: The delivery tag for the sent message
+        :type tag: ``bytes``
+        :return: The delivery associated with the sent message
+        :rtype: :class:`Delivery`
+        """
         dlv = sender.delivery(tag or sender.delivery_tag())
         encoded = self.encode()
         sender.stream(encoded)
@@ -402,15 +469,16 @@ The group-id for any replies.
 
     def recv(self, link):
         """
-        Receives and decodes the message content for the current delivery
+        Receives and decodes the message content for the current :class:`Delivery`
         from the link. Upon success it will return the current delivery
         for the link. If there is no current delivery, or if the current
         delivery is incomplete, or if the link is not a receiver, it will
-        return None.
+        return ``None``.
 
-        @type link: Link
-        @param link: the link to receive a message from
-        @return the delivery associated with the decoded message (or None)
+        :param link: The link to receive a message from
+        :type link: :class:`Link`
+        :return: the delivery associated with the decoded message (or None)
+        :rtype: :class:`Delivery`
 
         """
         if link.is_sender: return None

@@ -69,24 +69,50 @@ class DataException(ProtonException):
 
 
 class TransportException(ProtonException):
+    """
+    An exception class raised when exceptions or errors related to the AMQP
+    transport arise.
+    """
     pass
 
 
 class SSLException(TransportException):
+    """
+    An exception class raised when exceptions or errors related to SSL usage
+    arise. These typically include problems with initializing or configuring
+    SSL.
+    """
     pass
 
 
 class SSLUnavailable(SSLException):
+    """
+    An exception class raised when exceptions or errors related to SSL
+    availability arise. These typically include problems finding the SSL
+    libraries.
+    """
     pass
 
 
 class ConnectionException(ProtonException):
+    """
+    An exception class raised when exceptions or errors related to a
+    connection arise.
+    """
     pass
 
 
 class SessionException(ProtonException):
+    """
+    An exception class raised when exceptions or errors related to a
+    session arise.
+    """
     pass
 
 
 class LinkException(ProtonException):
+    """
+    An exception class raised when exceptions or errors related to a
+    link arise.
+    """
     pass
