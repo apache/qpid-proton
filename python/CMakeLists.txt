@@ -93,7 +93,10 @@ set (pysrc
 set(py_dist_files
     cproton.i
     MANIFEST.in
-    setuputils
+    setuputils/__init__.py
+    setuputils/log.py
+    setuputils/misc.py
+    setuputils/PYZMQ_LICENSE.BSD
     docs
     )
 
@@ -165,15 +168,16 @@ set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "html;tutorial")
 
 set(py_dist_dir ${CMAKE_CURRENT_BINARY_DIR}/dist)
 
-file(COPY ${py_dist_files} DESTINATION ${py_dist_dir})
-
-file(MAKE_DIRECTORY ${py_dist_dir}/proton)
-file(COPY ${pysrc} DESTINATION ${py_dist_dir}/proton)
-
 add_custom_target(py_src_dist ALL)
 add_dependencies(py_src_dist generated_c_files)
 
-file(MAKE_DIRECTORY ${py_dist_dir})
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
+               ${CMAKE_CURRENT_BINARY_DIR}/README.rst
+)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/setup.py
+)
 
 add_custom_command(TARGET py_src_dist
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_INCLUDE_DIR} "${py_dist_dir}/include")
@@ -181,12 +185,16 @@ add_custom_command(TARGET py_src_dist
 add_custom_command(TARGET py_src_dist
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR} "${py_dist_dir}/src")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
-               ${py_dist_dir}/setup.py
-)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
-               ${py_dist_dir}/README.rst
-)
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/README.rst "${py_dist_dir}")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/setup.py "${py_dist_dir}")
+
+foreach(file IN LISTS py_dist_files pysrc)
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${file} "${py_dist_dir}/${file}")
+endforeach()
 
 # python test: python/tests/proton-test
 set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
