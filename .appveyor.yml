@@ -9,6 +9,10 @@ environment:
     - CMAKE_GENERATOR: Visual Studio 10
 install:
 - cinst -y swig
+- cd C:\Tools\vcpkg
+- git pull
+- .\bootstrap-vcpkg.bat
+- cd %APPVEYOR_BUILD_FOLDER%
 - vcpkg install jsoncpp:x86-windows
 - vcpkg install jsoncpp:x64-windows
 - vcpkg integrate install
