@@ -97,7 +97,10 @@ set(py_dist_files
     setuputils/log.py
     setuputils/misc.py
     setuputils/PYZMQ_LICENSE.BSD
-    docs
+    docs/conf.py
+    docs/index.rst
+    docs/overview.rst
+    docs/tutorial.rst
     )
 
 macro (py_compile directory files artifacts)
