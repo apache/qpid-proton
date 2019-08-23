@@ -18,10 +18,16 @@
 # under the License.
 #
 
-import collections, optparse, uuid
+import collections
+import optparse
+import uuid
+
+import unittest
+
 from proton import Endpoint
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
 
 class Queue(object):
     def __init__(self, dynamic=False):
@@ -33,9 +39,12 @@ class Queue(object):
         self.consumers.append(consumer)
 
     def unsubscribe(self, consumer):
+        """
+        :return: True if the queue is to be deleted
+        """
         if consumer in self.consumers:
             self.consumers.remove(consumer)
-        return len(self.consumers) == 0 and (self.dynamic or self.queue.count == 0)
+        return len(self.consumers) == 0 and (self.dynamic or len(self.queue) == 0)
 
     def publish(self, message):
         self.queue.append(message)
@@ -46,7 +55,8 @@ class Queue(object):
             c = [consumer]
         else:
             c = self.consumers
-        while self._deliver_to(c): pass
+        while self._deliver_to(c):
+            pass
 
     def _deliver_to(self, consumers):
         try:
@@ -56,8 +66,9 @@ class Queue(object):
                     c.send(self.queue.popleft())
                     result = True
             return result
-        except IndexError: # no more messages
+        except IndexError:  # no more messages
             return False
+
 
 class Broker(MessagingHandler):
     def __init__(self, url):
@@ -117,11 +128,18 @@ class Broker(MessagingHandler):
             address = event.message.address
         self._queue(address).publish(event.message)
 
-parser = optparse.OptionParser(usage="usage: %prog [options]")
-parser.add_option("-a", "--address", default="localhost:5672",
-                  help="address router listens on (default %default)")
-opts, args = parser.parse_args()
 
-try:
-    Container(Broker(opts.address)).run()
-except KeyboardInterrupt: pass
+def main():
+    parser = optparse.OptionParser(usage="usage: %prog [options]")
+    parser.add_option("-a", "--address", default="localhost:5672",
+                      help="address router listens on (default %default)")
+    opts, args = parser.parse_args()
+
+    try:
+        Container(Broker(opts.address)).run()
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == '__main__':
+    main()
