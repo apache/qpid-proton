@@ -179,7 +179,7 @@ if(BUILD_STATIC_LIBS)
   add_library(qpid-proton-cpp-static STATIC ${qpid-proton-cpp-source})
 endif(BUILD_STATIC_LIBS)
 
-target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS})
+target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} ${CONNECT_CONFIG_LIBS} LINK_PUBLIC qpid-proton-core qpid-proton-proactor)
 
 set_target_properties (
   qpid-proton-cpp
