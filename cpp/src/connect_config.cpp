@@ -18,6 +18,7 @@
  */
 
 #include <proton/connect_config.hpp>
+#include "connect_config.hpp"
 
 #include "msg.hpp"
 
