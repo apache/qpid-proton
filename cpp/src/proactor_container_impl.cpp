@@ -20,7 +20,7 @@
 #include "proactor_container_impl.hpp"
 #include "proactor_work_queue_impl.hpp"
 
-#include "proton/connect_config.hpp"
+#include "connect_config.hpp"
 #include "proton/error_condition.hpp"
 #include "proton/listen_handler.hpp"
 #include "proton/listener.hpp"
@@ -383,7 +383,7 @@ returned<connection> container::impl::connect(
 
 returned<connection> container::impl::connect() {
     connection_options opts;
-    std::string addr = connect_config::parse_default(opts);
+    std::string addr = apply_config(opts);
     return connect(addr, opts);
 }
 

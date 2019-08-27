@@ -1,5 +1,5 @@
-#ifndef CONNECT_CONFIG_HPP
-#define CONNECT_CONFIG_HPP
+#ifndef PROTON_CONNECT_CONFIG_HPP
+#define PROTON_CONNECT_CONFIG_HPP
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,7 +20,10 @@
  * under the License.
  */
 
-#include <proton/connection_options.hpp>
+#include "./internal/export.hpp"
+
+#include <iosfwd>
+#include <string>
 
 namespace proton {
 

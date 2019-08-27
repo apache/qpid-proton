@@ -17,12 +17,13 @@
  * under the License.
  */
 
+#include <proton/connect_config.hpp>
+
 #include "msg.hpp"
 
-#include <proton/connect_config.hpp>
+#include <proton/connection_options.hpp>
 #include <proton/error.hpp>
 #include <proton/ssl.hpp>
-
 #include <proton/version.h>
 
 #include <json/value.h>
@@ -57,7 +58,6 @@ ostream& operator<<(ostream& o, ValueType t) { return o << type_name(t); }
 }
 
 namespace proton {
-namespace connect_config {
 
 namespace {
 
@@ -90,8 +90,6 @@ static const string FILE_NAME("connect.json");
 static const string HOME_FILE_NAME("/.config/messaging/" + FILE_NAME);
 static const string ETC_FILE_NAME("/etc/messaging/" + FILE_NAME);
 
-bool exists(const string& name) { return std::ifstream(name.c_str()).good(); }
-
 void parse_sasl(Value root, connection_options& opts) {
     Value sasl = get(objectValue, root, "sasl");
     opts.sasl_enabled(get_bool(sasl, "enable", true));
@@ -112,7 +110,7 @@ void parse_sasl(Value root, connection_options& opts) {
                   if (i > 0) s << " ";
                   s << v.asString();
               }
-              opts.sasl_allowed_mechs(s.str().c_str());
+              opts.sasl_allowed_mechs(s.str());
               break;
           }
           default:
@@ -149,43 +147,106 @@ void parse_tls(const string& scheme, Value root, connection_options& opts) {
 
 } // namespace
 
+std::string parse(Value root, connection_options& opts) {
+    std::ostringstream addr;
+
+    validate(objectValue, root, "configuration");
+
+    string scheme = get_string(root, "scheme", "amqps");
+    if (scheme != "amqp" && scheme != "amqps") {
+        throw err(msg() << "'scheme' must be \"amqp\" or \"amqps\"");
+    }
+
+    string host = get_string(root, "host", "localhost");
+    opts.virtual_host(host.c_str());
+    addr << host << ":";
+
+    Value port = root.get("port", scheme);
+    switch (port.type()) {
+        case stringValue:
+        addr << port.asString(); break;
+        case intValue:
+        case uintValue:
+        addr << port.asUInt(); break;
+        default:
+        throw err(msg() << "'port' expected string or uint, found " << port.type());
+    }
+
+    Value user = get(stringValue, root, "user");
+    if (!user.isNull()) opts.user(user.asString());
+    Value password = get(stringValue, root, "password");
+    if (!password.isNull()) opts.password(password.asString());
+
+    parse_sasl(root, opts);
+    parse_tls(scheme, root, opts);
+
+    return addr.str();
+}
+
+std::ifstream config_file(std::string& name) {
+    const char *env_path = getenv(ENV_VAR.c_str());
+    const char *home = getenv(HOME.c_str());
+
+    // Try environment variable if set
+    std::ifstream f;
+    if (env_path) {
+        name = env_path;
+        f.open(name);
+        return f;
+    }
+
+    std::vector<std::string> path;
+    // current directory
+    path.push_back(FILE_NAME);
+    // $HOME/.config/messaging/FILE_NAME
+    if (home) path.push_back(home + HOME_FILE_NAME);
+    // INSTALL_PREFIX/etc/messaging/FILE_NAME
+    if (PN_INSTALL_PREFIX && *PN_INSTALL_PREFIX) path.push_back(PN_INSTALL_PREFIX + ETC_FILE_NAME);
+
+    for (unsigned i = 0; i < path.size(); ++i) {
+        name = path[i];
+        f.open(name);
+        if (f.good()) return f;
+        f.close();
+    }
+
+    /* /etc/messaging/FILE_NAME */
+    name = ETC_FILE_NAME;
+    f.open(name);
+    return f;
+}
+
+string apply_config(connection_options& opts) {
+    std::string name;
+    std::ifstream f = config_file(name);
+    try {
+        Value root;
+        if (f.good()) {
+            f >> root;
+            f.close();
+        } else {
+            std::istringstream is("{}");
+            is >> root;
+        }
+        return parse(root, opts);
+    } catch (const std::ifstream::failure& e) {
+        throw err(msg() << "io error parsing '" << name << "': " << e.what());
+    } catch (const std::exception& e) {
+        throw err(msg() << "error parsing '" << name << "': " << e.what());
+    } catch (...) {
+        throw err(msg() << "error parsing '" << name << "'");
+    }
+}
+
+// Legacy Unsettled API
+
+namespace connect_config {
+
 std::string parse(std::istream& is, connection_options& opts) {
     try {
-        std::ostringstream addr;
-
         Value root;
         is >> root;
-        validate(objectValue, root, "configuration");
-
-        string scheme = get_string(root, "scheme", "amqps");
-        if (scheme != "amqp" && scheme != "amqps") {
-            throw err(msg() << "'scheme' must be \"amqp\" or \"amqps\"");
-        }
-
-        string host = get_string(root, "host", "localhost");
-        opts.virtual_host(host.c_str());
-        addr << host << ":";
-
-        Value port = root.get("port", scheme);
-        switch (port.type()) {
-          case stringValue:
-            addr << port.asString(); break;
-          case intValue:
-          case uintValue:
-            addr << port.asUInt(); break;
-          default:
-            throw err(msg() << "'port' expected string or uint, found " << port.type());
-        }
-
-        Value user = get(stringValue, root, "user");
-        if (!user.isNull()) opts.user(user.asString());
-        Value password = get(stringValue, root, "password");
-        if (!password.isNull()) opts.password(password.asString());
-
-        parse_sasl(root, opts);
-        parse_tls(scheme, root, opts);
-
-        return addr.str();
+        return parse(root, opts);
     } catch (const std::exception& e) {
         throw err(e.what());
     } catch (...) {
@@ -194,38 +255,27 @@ std::string parse(std::istream& is, connection_options& opts) {
 }
 
 string default_file() {
-    /* Use environment variable if set */
-    const char *env_path = getenv(ENV_VAR.c_str());
-    if (env_path) return env_path;
-    /* current directory */
-    if (exists(FILE_NAME)) return FILE_NAME;
-    /* $HOME/.config/messaging/FILE_NAME */
-    const char *home = getenv(HOME.c_str());
-    if (home) {
-        string path = home + HOME_FILE_NAME;
-        if (exists(path)) return path;
+    std::string name;
+    std::ifstream f = config_file(name);
+    bool good = f.good();
+    f.close();
+    if (good || name!=ETC_FILE_NAME) {
+        return name;
     }
-    /* INSTALL_PREFIX/etc/messaging/FILE_NAME */
-    if (PN_INSTALL_PREFIX && *PN_INSTALL_PREFIX) {
-        string path = PN_INSTALL_PREFIX + ETC_FILE_NAME;
-        if (exists(path)) return path;
-    }
-    /* /etc/messaging/FILE_NAME */
-    if (exists(ETC_FILE_NAME)) return ETC_FILE_NAME;
-    throw err("no default configuration");
+    throw err("no default configuration, last tried: " + name);
 }
 
 string parse_default(connection_options& opts) {
-    string name = default_file();
-    std::ifstream f;
-    try {
-        f.exceptions(std::ifstream::badbit|std::ifstream::failbit);
-        f.open(name.c_str());
-    } catch (const std::exception& e) {
-        throw err(msg() << "error opening '" << name << "': " << e.what());
+    std::string name;
+    std::ifstream f = config_file(name);
+    if (!f.good()) {
+        throw err("no default configuration, last tried: " + name);
     }
     try {
-        return parse(f, opts);
+        Value root;
+        f >> root;
+        f.close();
+        return parse(root, opts);
     } catch (const std::ifstream::failure& e) {
         throw err(msg() << "io error parsing '" << name << "': " << e.what());
     } catch (const std::exception& e) {
