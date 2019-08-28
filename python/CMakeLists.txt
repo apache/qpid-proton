@@ -120,8 +120,10 @@ py_compile(${CMAKE_CURRENT_SOURCE_DIR} "${pysrc}" PROTON_ARTIFACTS)
 
 # Sphinx documentation
 check_python_module("sphinx" SPHINX_MODULE_FOUND)
-if (SPHINX_MODULE_FOUND)
-    message(STATUS "Python Sphinx module found - doc generation enabled.")
+check_python_module("sphinx_automodapi" SPHINX_AUTOMODAPI_MODULE_FOUND)
+if (NOT SPHINX_MODULE_FOUND OR NOT SPHINX_AUTOMODAPI_MODULE_FOUND)
+    message(STATUS "Sphinx modules not found; doc generation disabled.")
+else ()
     add_custom_target(docs-py
         COMMAND ${PN_ENV_SCRIPT} --
         PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
@@ -132,11 +134,6 @@ if (SPHINX_MODULE_FOUND)
             DESTINATION "${PROTON_SHARE}/docs/api-py"
             COMPONENT documentation
             OPTIONAL)
-else ()
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} --version
-                    ERROR_VARIABLE PYTHYON_VERSION_ERR)
-    string(STRIP ${PYTHYON_VERSION_ERR} PYTHON_VERSION_STR)
-    message(WARNING "Sphinx module NOT found for ${PYTHON_VERSION_STR} - doc generation disabled.")
 endif ()
 
 install(FILES ${CPROTON_ARTIFACTS}
