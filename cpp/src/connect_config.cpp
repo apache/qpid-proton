@@ -184,16 +184,15 @@ std::string parse(Value root, connection_options& opts) {
     return addr.str();
 }
 
-std::ifstream config_file(std::string& name) {
+bool config_file(std::ifstream& f, std::string& name) {
     const char *env_path = getenv(ENV_VAR.c_str());
     const char *home = getenv(HOME.c_str());
 
     // Try environment variable if set
-    std::ifstream f;
     if (env_path) {
         name = env_path;
-        f.open(name);
-        return f;
+        f.open(name.c_str());
+        return f.good();
     }
 
     std::vector<std::string> path;
@@ -206,23 +205,24 @@ std::ifstream config_file(std::string& name) {
 
     for (unsigned i = 0; i < path.size(); ++i) {
         name = path[i];
-        f.open(name);
-        if (f.good()) return f;
+        f.open(name.c_str());
+        if (f.good()) return true;
         f.close();
     }
 
     /* /etc/messaging/FILE_NAME */
     name = ETC_FILE_NAME;
-    f.open(name);
-    return f;
+    f.open(name.c_str());
+    return f.good();
 }
 
 string apply_config(connection_options& opts) {
     std::string name;
-    std::ifstream f = config_file(name);
+    std::ifstream f;
+    bool good = config_file(f, name);
     try {
         Value root;
-        if (f.good()) {
+        if (good) {
             f >> root;
             f.close();
         } else {
@@ -257,8 +257,8 @@ std::string parse(std::istream& is, connection_options& opts) {
 
 string default_file() {
     std::string name;
-    std::ifstream f = config_file(name);
-    bool good = f.good();
+    std::ifstream f;
+    bool good = config_file(f, name);
     f.close();
     if (good || name!=ETC_FILE_NAME) {
         return name;
@@ -268,8 +268,9 @@ string default_file() {
 
 string parse_default(connection_options& opts) {
     std::string name;
-    std::ifstream f = config_file(name);
-    if (!f.good()) {
+    std::ifstream f;
+    bool good = config_file(f, name);
+    if (!good) {
         throw err("no default configuration, last tried: " + name);
     }
     try {
