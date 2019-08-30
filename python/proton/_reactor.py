@@ -961,12 +961,10 @@ class Connector(Handler):
         if self.reconnect:
             self.reconnect.reset()
 
-    def on_transport_tail_closed(self, event):
-        event.transport.close_head()
-
     def on_transport_closed(self, event):
         if self.connection is None: return
         if self.connection.state & Endpoint.LOCAL_ACTIVE:
+
             if self.reconnect:
                 event.transport.unbind()
                 delay = self.reconnect.next()
