@@ -174,7 +174,25 @@ add_custom_command(TARGET py_src_dist
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_INCLUDE_DIR} "${py_dist_dir}/include")
 
 add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR} "${py_dist_dir}/src")
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/core "${py_dist_dir}/src/core")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/compiler "${py_dist_dir}/src/compiler")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/platform "${py_dist_dir}/src/platform")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/ssl "${py_dist_dir}/src/ssl")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/sasl "${py_dist_dir}/src/sasl")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/encodings.h "${py_dist_dir}/src")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/protocol.h "${py_dist_dir}/src")
 
 add_custom_command(TARGET py_src_dist
                    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/README.rst "${py_dist_dir}")
