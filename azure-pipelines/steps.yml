@@ -5,6 +5,10 @@ steps:
     versionSpec: $(PythonVersion)
     addToPath: true
     architecture: $(PythonArch)
+- script: |
+    python -m pip install --user --upgrade pip
+    python -m pip install --user setuptools wheel tox
+  name: InstallPythonModules
 - task: CMake@1
   name: CMakeConfigure
   inputs:

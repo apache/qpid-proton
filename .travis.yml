@@ -74,7 +74,7 @@ addons:
 
 install:
 - python -m pip install --user --upgrade pip
-- python -m pip install --user coverage tox
+- python -m pip install --user coverage setuptools wheel tox
 - gem install minitest
 
 before_script:
