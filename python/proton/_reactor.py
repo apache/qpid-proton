@@ -1214,7 +1214,7 @@ class Container(Reactor):
         """
         if not url and not urls and not address:
             config = _get_default_config()
-            scheme = config.get('scheme', 'amqp')
+            scheme = config.get('scheme', 'amqps')
             _url = "%s://%s:%s" % (scheme, config.get('host', 'localhost'), config.get('port', _get_default_port_for_scheme(scheme)))
             _ssl_domain = None
             _kwargs = kwargs
