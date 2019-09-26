@@ -1051,7 +1051,7 @@ class SSLConfig(object):
 
 def _find_config_file():
     confname = 'connect.json'
-    confpath = ['.', '~/.config/messaging','/etc/messaging']
+    confpath = ['.', os.path.expanduser('~/.config/messaging'), '/etc/messaging']
     for d in confpath:
         f = os.path.join(d, confname)
         if os.path.isfile(f):
