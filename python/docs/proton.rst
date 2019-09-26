@@ -11,6 +11,7 @@ Module Summary
 
 .. autosummary::
 
+    AnnotationDict
     Condition
     Connection
     Data
@@ -21,6 +22,7 @@ Module Summary
     EventType
     Link
     Message
+    PropertyDict
     Receiver
     SASL
     Sender
@@ -28,6 +30,7 @@ Module Summary
     SSL
     SSLDomain
     SSLSessionDetails
+    SymbolList
     Terminus
     Transport
     Url
@@ -87,9 +90,8 @@ Module Detail
 .. The following classes in the __all__ list are excluded (blacklisted):
    * Collector
 
-|
 
-.. autoclass:: proton.Array
+.. autoclass:: proton.AnnotationDict
     :members:
     :show-inheritance:
     :inherited-members:
@@ -236,6 +238,14 @@ Module Detail
 
 ------------
 
+.. autoclass:: proton.PropertyDict
+    :members:
+    :show-inheritance:
+    :inherited-members:
+    :undoc-members:
+
+------------
+
 .. autoclass:: proton.Receiver
     :members:
     :show-inheritance:
@@ -322,6 +332,14 @@ Module Detail
 
 ------------
 
+.. autoclass:: proton.SymbolList
+    :members:
+    :show-inheritance:
+    :inherited-members:
+    :undoc-members:
+
+------------
+
 .. autoclass:: proton.Terminus
     :members:
     :show-inheritance:
@@ -369,6 +387,14 @@ Module Detail
 .. autoclass:: proton.Url
     :members:
     :show-inheritance:
+    :undoc-members:
+
+------------
+
+.. autoclass:: proton.Array
+    :members:
+    :show-inheritance:
+    :inherited-members:
     :undoc-members:
 
 ------------

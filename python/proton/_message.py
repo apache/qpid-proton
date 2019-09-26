@@ -34,7 +34,7 @@ from cproton import PN_DEFAULT_PRIORITY, PN_OVERFLOW, pn_error_text, pn_message,
 
 from . import _compat
 from ._common import isinteger, millis2secs, secs2millis, unicode2utf8, utf82unicode
-from ._data import Data, symbol, ulong
+from ._data import Data, symbol, ulong, AnnotationDict
 from ._endpoints import Link
 from ._exceptions import EXCEPTIONS, MessageException
 
@@ -69,7 +69,7 @@ class Message(object):
         self._id = Data(pn_message_id(self._msg))
         self._correlation_id = Data(pn_message_correlation_id(self._msg))
         self.instructions = None
-        self.annotations = None
+        self.annotation_dict = None
         self.properties = None
         self.body = body
         for k, v in _compat.iteritems(kwargs):
@@ -150,7 +150,7 @@ class Message(object):
         """
         pn_message_clear(self._msg)
         self.instructions = None
-        self.annotations = None
+        self.annotation = None
         self.properties = None
         self.body = None
 
@@ -429,6 +429,19 @@ class Message(object):
         :type: ``str``
         :raise: :exc:`MessageException` if there is any Proton error when using the setter.        
         """)
+
+    def _get_annotations(self):
+        return self.annotation_dict
+    def _set_annotations(self, annotations):
+        if isinstance(annotations, dict):
+            self.annotation_dict = AnnotationDict(annotations, throw=False)
+        else:
+            self.annotation_dict = annotations
+    annotations = property(_get_annotations, _set_annotations, doc="""
+    Message annotations.
+
+    :type: ``dict`` with :class:`ulong` or :class:`symbol` keys.
+    """)
 
     def encode(self):
         self._pre_encode()

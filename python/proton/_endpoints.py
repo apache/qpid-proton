@@ -57,7 +57,7 @@ from cproton import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN_DIST_MOD
 
 from ._common import unicode2utf8, utf82unicode
 from ._condition import cond2obj, obj2cond
-from ._data import Data, dat2obj, obj2dat
+from ._data import Data, dat2obj, obj2dat, PropertyDict, SymbolList
 from ._delivery import Delivery
 from ._exceptions import ConnectionException, EXCEPTIONS, LinkException, SessionException
 from ._transport import Transport
@@ -167,9 +167,9 @@ class Connection(Wrapper, Endpoint):
 
     def _init(self):
         Endpoint._init(self)
-        self.offered_capabilities = None
-        self.desired_capabilities = None
-        self.properties = None
+        self.offered_capabilities_list = None
+        self.desired_capabilities_list = None
+        self.properties_dict = None
         self.url = None
         self._acceptor = None
 
@@ -499,6 +499,45 @@ class Connection(Wrapper, Endpoint):
         released and all :class:`Delivery` objects are settled.
         """
         pn_connection_release(self._impl)
+
+    def _get_offered_capabilities(self):
+        return self.offered_capabilities_list
+    def _set_offered_capabilities(self, offered_capability_list):
+        if isinstance(offered_capability_list, list):
+            self.offered_capabilities_list = SymbolList(offered_capability_list, throw=False)
+        else:
+            self.offered_capabilities_list = offered_capability_list
+    offered_capabilities = property(_get_offered_capabilities, _set_offered_capabilities, doc="""
+    Offered capabilities.
+
+    :type: ``list`` containing :class:`symbol`.
+    """)
+
+    def _get_desired_capabilities(self):
+        return self.desired_capabilities_list
+    def _set_desired_capabilities(self, desired_capability_list):
+        if isinstance(desired_capability_list, list):
+            self.desired_capabilities_list = SymbolList(desired_capability_list, throw=False)
+        else:
+            self.desired_capabilities_list = desired_capability_list
+    desired_capabilities = property(_get_desired_capabilities, _set_desired_capabilities, doc="""
+    Desired capabilities.
+
+    :type: ``list`` containing :class:`symbol`.
+    """)
+
+    def _get_properties(self):
+        return self.properties_dict
+    def _set_properties(self, properties_dict):
+        if isinstance(properties_dict, dict):
+            self.properties_dict = PropertyDict(properties_dict, throw=False)
+        else:
+            self.properties_dict = properties_dict
+    properties = property(_get_properties, _set_properties, doc="""
+    Connection properties.
+
+    :type: ``dict`` containing :class:`symbol`` keys
+    """)
 
 
 class Session(Wrapper, Endpoint):
