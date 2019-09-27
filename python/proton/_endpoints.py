@@ -167,9 +167,9 @@ class Connection(Wrapper, Endpoint):
 
     def _init(self):
         Endpoint._init(self)
-        self.offered_capabilities_list = None
-        self.desired_capabilities_list = None
-        self.properties_dict = None
+        self.offered_capabilities = None
+        self.desired_capabilities = None
+        self.properties = None
         self.url = None
         self._acceptor = None
 

@@ -69,7 +69,7 @@ class Message(object):
         self._id = Data(pn_message_id(self._msg))
         self._correlation_id = Data(pn_message_correlation_id(self._msg))
         self.instructions = None
-        self.annotation_dict = None
+        self.annotations = None
         self.properties = None
         self.body = body
         for k, v in _compat.iteritems(kwargs):
@@ -150,7 +150,7 @@ class Message(object):
         """
         pn_message_clear(self._msg)
         self.instructions = None
-        self.annotation = None
+        self.annotations = None
         self.properties = None
         self.body = None
 
