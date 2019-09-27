@@ -1,6 +1,6 @@
 github:
   description: "Mirror of Apache Qpid Proton"
-  homepage: https://qpid.apache.org/proton/index.html
+  homepage: https://qpid.apache.org/proton
   labels:
     - qpid
     - amqp
