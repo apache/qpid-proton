@@ -1,0 +1,23 @@
+github:
+  description: "Mirror of Apache Qpid Proton"
+  homepage: https://qpid.apache.org/proton/index.html
+  labels:
+    - qpid
+    - amqp
+    - messaging
+    - library
+    - apache
+
+    - amqp-client
+    - amqp-connection
+    - amqp-messages
+    - amqps
+    - amqp10
+
+    - c
+    - cpp
+    - golang
+    - ruby
+    - python
+    - python2
+    - python3
