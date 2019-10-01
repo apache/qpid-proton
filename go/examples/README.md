@@ -2,7 +2,7 @@
 
 ## Electron examples
 
-[qpid.apache.org/electron](http://godoc.org/qpid.apache.org/electron) is a
+[electron](http://godoc.org/github.com/apache/qpid-proton/go/pkg/electron) is a
 simple API for writing concurrent AMQP clients and servers.
 
 - [receive.go](electron/receive.go) receive from many connections concurrently.
@@ -11,9 +11,9 @@ simple API for writing concurrent AMQP clients and servers.
 
 ## Proton examples
 
-[qpid.apache.org/proton](http://godoc.org/qpid.apache.org/proton) is an
+[proton](http://godoc.org/github.com/apache/qpid-proton/go/pkg/proton) is an
 event-driven, concurrent-unsafe Go wrapper for the proton-C library. The
-[electron](http://godoc.org/qpid.apache.org/electron) package provides a more
+[electron](http://godoc.org/github.com/apache/qpid-proton/go/pkg/electron) package provides a more
 Go-friendly concurrent API built on top of proton.
 
 - [broker.go](proton/broker.go) a simple broker using the proton API
@@ -25,14 +25,14 @@ See [A Tale of Two Brokers](#a-tale-of-two-brokers) for a comparison of the two 
 If you have the proton-C library and headers installed you can get the latest go
 packages with
 
-    go get qpid.apache.org/electron
+    go get github.com/apache/qpid-proton/go/pkg/electron
 
 If Proton-C is installed in a non-standard place (other than /usr or /usr/local)
 you should set these environment variables before `go get`:
 
     export CGO_LDFLAGS="-L/<my-proton>/lib[64]"
     export CGO_CFLAGS="-I/<my-proton>/include"
-    go get qpid.apache.org/electron
+    go get github.com/apache/qpid-proton
 
 If you have a proton build you don't need to `go get`, you can set your GOPATH
 to use the binding from the checkout with:
@@ -91,10 +91,10 @@ Or use the Go broker and the python clients:
 
 ## A tale of two brokers.
 
-The [proton](http://godoc.org/qpid.apache.org/proton) and
-[electron](http://godoc.org/qpid.apache.org/electron) packages provide two
+The [proton](http://godoc.org/github.com/apache/qpid-proton/go/pkg/proton) and
+[electron](http://godoc.org/github.com/apache/qpid-proton/go/pkg/electron) packages provide two
 different APIs for building AMQP applications. For most applications,
-[electron](http://godoc.org/qpid.apache.org/electron) is easier to use.
+[electron](http://godoc.org/github.com/apache/qpid-proton/go/pkg/electron) is easier to use.
 
 The examples [proton/broker.go](proton/broker.go) and
 [electron/broker.go](electron/broker.go) implement the same simple broker

@@ -25,8 +25,8 @@ import (
 	"sync"
 	"testing"
 
-	"qpid.apache.org/amqp"
-	"qpid.apache.org/internal/test"
+	"github.com/apache/qpid-proton/go/pkg/amqp"
+	"github.com/apache/qpid-proton/go/pkg/internal/test"
 )
 
 // To change capacity use

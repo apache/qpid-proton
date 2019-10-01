@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"qpid.apache.org/internal/test"
+	"github.com/apache/qpid-proton/go/pkg/internal/test"
 )
 
 func checkUnmarshal(marshaled []byte, v interface{}) error {
