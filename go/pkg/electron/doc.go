@@ -20,7 +20,7 @@ under the License.
 /*
 Package electron lets you write concurrent AMQP 1.0 messaging clients and servers.
 
-This package requires the [proton-C library](http://qpid.apache.org/proton) to be installed.
+This package requires the [proton-C library](http://github.com/apache/qpid-proton/go/pkg/proton) to be installed.
 
 Start by creating a Container with NewContainer. An AMQP Container represents a
 single AMQP "application" and can contain client and server connections.

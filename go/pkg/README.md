@@ -1,8 +1,8 @@
 # Qpid Go packages for AMQP
 
-These packages provide [Go](http://golang.org) support for sending and receiving
+These packages provide [Go](https://golang.org) support for sending and receiving
 AMQP messages in client or server applications. Reference documentation is
-available at: <http://godoc.org/?q=qpid.apache.org>
+available at: <https://godoc.org/github.com/apache/qpid-proton>
 
 They require the
 [proton-C library and header files](http://qpid.apache.org/proton) to be
@@ -25,18 +25,18 @@ add them to the following environment variables:
 
 There are 3 packages:
 
-[qpid.apache.org/amqp](http://godoc.org/qpid.apache.org/amqp) provides functions
+[amqp](http://godoc.org/github.com/apache/qpid-proton/go/pkg/amqp) provides functions
 to convert AMQP messages and data types to and from Go data types.  Used by both
 the proton and electron packages to manage AMQP data.
 
-[qpid.apache.org/electron](http://godoc.org/qpid.apache.org/electron) is a
+[electron](http://godoc.org/github.com/apache/qpid-proton/go/pkg/electron) is a
 simple, concurrent-safe API for sending and receiving messages. It can be used
 with goroutines and channels to build concurrent AMQP clients and servers.
 
-[qpid.apache.org/proton](http://godoc.org/qpid.apache.org/proton) is an
+[proton](http://godoc.org/github.com/apache/qpid-proton/go/pkg/proton) is an
 event-driven, concurrent-unsafe package that closely follows the proton C
 API. Most Go programmers will find the
-[electron](http://godoc.org/qpid.apache.org/electron) package easier to use.
+[electron](http://godoc.org/github.com/apache/qpid-proton/go/pkg/electron) package easier to use.
 
 See the [examples](https://github.com/apache/qpid-proton/blob/master/go/examples/README.md)
 to help you get started.

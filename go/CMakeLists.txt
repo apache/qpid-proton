@@ -42,10 +42,12 @@ endif()
 separate_arguments(GO_BUILD_FLAGS)
 separate_arguments(GO_TEST_FLAGS)
 
-# Create a Go tree in the binary directory, link src to the source directory
+# Create a Go tree in the binary directory, link pkg to the source directory, link go.mod file
 set(GOPATH ${CMAKE_CURRENT_BINARY_DIR})
-add_custom_target(go-src-link ALL
-  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/src ${GOPATH}/src)
+add_custom_target(go-pkg-link ALL
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/pkg ${GOPATH}/pkg)
+add_custom_target(go-mod-link ALL
+        COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/../go.mod ${GOPATH}/../go.mod)
 
 # Following are CACHE INTERNAL so examples/CMakeLists.txt can see them.
 set(GO_ENV ${PN_ENV_SCRIPT} --
@@ -66,12 +68,12 @@ set(GO_TEST ${GO} test ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} ${GO_TEST_FLAGS} CACH
 # CMake so just run them every time, they do nothing if nothing needs to be
 # done.
 add_custom_target(go-build ALL
-  COMMAND ${GO_INSTALL} qpid.apache.org/...
-  DEPENDS qpid-proton-core
+  COMMAND ${GO_INSTALL} $ENV{PWD}/go/pkg/...
+  DEPENDS qpid-proton-core go-pkg-link go-mod-link
   WORKING_DIRECTORY $ENV{PWD})
 
 add_test(
-  NAME go-test COMMAND ${GO_TEST} qpid.apache.org/...
+  NAME go-test COMMAND ${GO_TEST} $ENV{PWD}/go/pkg/...
   WORKING_DIRECTORY $ENV{PWD})
 
 # Clean up go output directories.
@@ -80,10 +82,10 @@ list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${GOPATH}/pkg ${GOPATH}/bin)
 add_subdirectory(examples)
 
 # Install go sources.
-set (GO_INSTALL_DIR ${SHARE_INSTALL_DIR}/gocode/src CACHE PATH "Installation directory for Go code")
+set (GO_INSTALL_DIR ${SHARE_INSTALL_DIR}/gocode/pkg CACHE PATH "Installation directory for Go code")
 mark_as_advanced (GO_INSTALL_DIR)
 
-install(DIRECTORY src/qpid.apache.org DESTINATION ${GO_INSTALL_DIR} COMPONENT Go)
+install(DIRECTORY pkg DESTINATION ${GO_INSTALL_DIR} COMPONENT Go)
 install(DIRECTORY examples/
   DESTINATION "${PROTON_SHARE}/examples/go"
   COMPONENT Go

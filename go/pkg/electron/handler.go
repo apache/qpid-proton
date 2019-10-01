@@ -20,8 +20,8 @@ under the License.
 package electron
 
 import (
-	"qpid.apache.org/amqp"
-	"qpid.apache.org/proton"
+	"github.com/apache/qpid-proton/go/pkg/amqp"
+	"github.com/apache/qpid-proton/go/pkg/proton"
 )
 
 // NOTE: methods in this file are called only in the proton goroutine unless otherwise indicated.

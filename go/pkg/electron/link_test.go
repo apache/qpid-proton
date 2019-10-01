@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"qpid.apache.org/amqp"
-	"qpid.apache.org/internal/test"
-	"qpid.apache.org/proton"
+	"github.com/apache/qpid-proton/go/pkg/amqp"
+	"github.com/apache/qpid-proton/go/pkg/internal/test"
+	"github.com/apache/qpid-proton/go/pkg/proton"
 )
 
 func TestLinkSettings(t *testing.T) {

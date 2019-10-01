@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"qpid.apache.org/proton"
+	"github.com/apache/qpid-proton/go/pkg/proton"
 )
 
 // Container is an AMQP container, it represents a single AMQP "application"
