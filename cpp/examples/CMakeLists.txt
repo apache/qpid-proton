@@ -56,6 +56,18 @@ if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
   endif ()
   set(CMAKE_CXX_STANDARD ${STD})
   set(CMAKE_CXX_EXTENSIONS OFF)
+  else ()
+  if (BUILD_CPP_03)
+    set(CXX_STANDARD "-std=c++98")
+  else ()
+    include(CheckCXXCompilerFlag)
+    # These flags work with GCC/Clang/SunPro compilers
+    check_cxx_compiler_flag("-std=c++11" ACCEPTS_CXX11)
+    if (ACCEPTS_CXX11)
+      add_compile_options("-std=c++11")
+      set(HAS_ENOUGH_CPP11 "True")
+    endif()
+  endif()
 endif()
 
 # Single-threaded examples that work on C++03
