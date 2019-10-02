@@ -508,7 +508,18 @@ class Connection(Wrapper, Endpoint):
         else:
             self.offered_capabilities_list = offered_capability_list
     offered_capabilities = property(_get_offered_capabilities, _set_offered_capabilities, doc="""
-    Offered capabilities.
+    Offered capabilities as a list of symbols. The AMQP 1.0 specification
+    restricts this list to symbol elements only. It is recommended that the
+    special ``list`` subclass :class:`SymbolList` is used as it will by
+    default enforce this restriction on construction. In addition, if a
+    string type is used, it will be silently converted into the required
+    symbol.
+
+        >>> from proton import symbol, Connection, SymbolList
+        >>> c = Connection()
+        >>> c.offered_capabilities = SymbolList(['one', symbol('two')])
+        >>> c.offered_capabilities
+        SymbolList([symbol('one'), symbol('two')])
 
     :type: ``list`` containing :class:`symbol`.
     """)
@@ -521,7 +532,18 @@ class Connection(Wrapper, Endpoint):
         else:
             self.desired_capabilities_list = desired_capability_list
     desired_capabilities = property(_get_desired_capabilities, _set_desired_capabilities, doc="""
-    Desired capabilities.
+    Desired capabilities as a list of symbols. The AMQP 1.0 specification
+    restricts this list to symbol elements only. It is recommended that the
+    special ``list`` subclass :class:`SymbolList` is used as it will by
+    default enforce this restriction on construction. In addition, if a
+    string type is used, it will be silently converted into the required
+    symbol.
+
+        >>> from proton import symbol, Connection, SymbolList
+        >>> c = Connection()
+        >>> c.desired_capabilities = SymbolList(['one', symbol('two')])
+        >>> c.desired_capabilities
+        SymbolList([symbol('one'), symbol('two')])
 
     :type: ``list`` containing :class:`symbol`.
     """)
@@ -534,7 +556,19 @@ class Connection(Wrapper, Endpoint):
         else:
             self.properties_dict = properties_dict
     properties = property(_get_properties, _set_properties, doc="""
-    Connection properties.
+    Connection properties as a dictionary of key/values. The AMQP 1.0
+    specification restricts this dictionary to have keys that are only
+    :class:`symbol` types. It is recommended that the special ``dict``
+    subclass :class:`PropertyDict` is used as it will by default
+    enforce these restrictions on construction. In addition,
+    if a string type is used, it will be silently converted into the
+    required symbol.
+
+        >>> from proton import symbol, Connection, PropertyDict
+        >>> c = Connection()
+        >>> c.properties = PropertyDict({'one':1, symbol('two'):2})
+        >>> c.properties
+        PropertyDict({symbol('one'): 1, symbol('two'): 2})
 
     :type: ``dict`` containing :class:`symbol`` keys
     """)
