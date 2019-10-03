@@ -509,8 +509,8 @@ class Connection(Wrapper, Endpoint):
             self.offered_capabilities_list = offered_capability_list
     offered_capabilities = property(_get_offered_capabilities, _set_offered_capabilities, doc="""
     Offered capabilities as a list of symbols. The AMQP 1.0 specification
-    restricts this list to symbol elements only. It is recommended that the
-    special ``list`` subclass :class:`SymbolList` is used as it will by
+    restricts this list to symbol elements only. It is possible to use
+    the special ``list`` subclass :class:`SymbolList` as it will by
     default enforce this restriction on construction. In addition, if a
     string type is used, it will be silently converted into the required
     symbol.
@@ -533,8 +533,8 @@ class Connection(Wrapper, Endpoint):
             self.desired_capabilities_list = desired_capability_list
     desired_capabilities = property(_get_desired_capabilities, _set_desired_capabilities, doc="""
     Desired capabilities as a list of symbols. The AMQP 1.0 specification
-    restricts this list to symbol elements only. It is recommended that the
-    special ``list`` subclass :class:`SymbolList` is used as it will by
+    restricts this list to symbol elements only. It is possible to use
+    the special ``list`` subclass :class:`SymbolList` as it will by
     default enforce this restriction on construction. In addition, if a
     string type is used, it will be silently converted into the required
     symbol.

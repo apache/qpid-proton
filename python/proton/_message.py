@@ -49,9 +49,9 @@ except NameError:
 class Message(object):
     """The :py:class:`Message` class is a mutable holder of message content.
 
-    :ivar instructions: delivery instructions for the message
+    :ivar instructions: delivery instructions for the message ("Delivery Annotations" in the AMQP 1.0 spec)
     :vartype instructions: ``dict``
-    :ivar ~.annotations: infrastructure defined message annotations
+    :ivar ~.annotations: infrastructure defined message annotations ("Message Annotations" in the AMQP 1.0 spec)
     :vartype ~.annotations: ``dict``
     :ivar ~.properties: application defined message properties
     :vartype ~.properties: ``dict``
@@ -430,6 +430,31 @@ class Message(object):
         :raise: :exc:`MessageException` if there is any Proton error when using the setter.        
         """)
 
+    def _get_instructions(self):
+        return self.instruction_dict
+    def _set_instructions(self, instructions):
+        if isinstance(instructions, dict):
+            self.instruction_dict = AnnotationDict(instructions, throw=False)
+        else:
+            self.instruction_dict = instructions
+    instructions = property(_get_instructions, _set_instructions, doc="""
+    Delivery annotations as a dictionary of key/values. The AMQP 1.0
+    specification restricts this dictionary to have keys that are either
+    :class:`symbol` or :class:`ulong` types. It is possible to use
+    the special ``dict`` subclass :class:`AnnotationDict` as it
+    will by default enforce these restrictions on construction. In addition,
+    if a string type is used, it will be silently converted into the
+    required symbol.
+
+        >>> from proton import symbol, ulong, Message, AnnotationDict
+        >>> msg = Message()
+        >>> msg.instructions = AnnotationDict({'one':1, symbol('two'):2, ulong(3):'three'})
+        >>> msg.instructions
+        AnnotationDict({symbol('one'): 1, symbol('two'): 2, ulong(3): 'three'})
+
+    :type: :class:`AnnotationDict`. Any ``dict`` with :class:`ulong` or :class:`symbol` keys.
+    """)
+
     def _get_annotations(self):
         return self.annotation_dict
     def _set_annotations(self, annotations):
@@ -440,8 +465,8 @@ class Message(object):
     annotations = property(_get_annotations, _set_annotations, doc="""
     Message annotations as a dictionary of key/values. The AMQP 1.0
     specification restricts this dictionary to have keys that are either
-    :class:`symbol` or :class:`ulong` types. It is recommended that
-    the special ``dict`` subclass :class:`AnnotationDict` is used as it
+    :class:`symbol` or :class:`ulong` types. It is possible to use
+    the special ``dict`` subclass :class:`AnnotationDict` as it
     will by default enforce these restrictions on construction. In addition,
     if a string type is used, it will be silently converted into the
     required symbol.
