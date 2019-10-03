@@ -23,17 +23,17 @@ Scalar Types
 +------------+-------------------+---------------------------+------------------------------------------------------------------------+
 | byte       | PN_BYTE           | :class:`proton.byte`      | Integer in the range :math:`-(2^7)` to :math:`2^7 - 1` inclusive.      |
 +------------+-------------------+---------------------------+------------------------------------------------------------------------+
-| ushort     | PN_USHORT         | :class:`proton.ushort`    | Integer in the range :math:`0` to :math:`2^16 - 1` inclusive.          |
+| ushort     | PN_USHORT         | :class:`proton.ushort`    | Integer in the range :math:`0` to :math:`2^{16} - 1` inclusive.        |
 +------------+-------------------+---------------------------+------------------------------------------------------------------------+
 | short      | PN_SHORT          | :class:`proton.short`     | Integer in the range :math:`-(2^{15})` to :math:`2^{15} - 1` inclusive.|
 +------------+-------------------+---------------------------+------------------------------------------------------------------------+
-| uint       | PN_UINT           | :class:`proton.uint`      | Integer in the range :math:`0` to :math:`2^32 - 1` inclusive.          |
+| uint       | PN_UINT           | :class:`proton.uint`      | Integer in the range :math:`0` to :math:`2^{32} - 1` inclusive.        |
 +------------+-------------------+---------------------------+------------------------------------------------------------------------+
 | int        | PN_INT            | :class:`proton.int32`     | Integer in the range :math:`-(2^{31})` to :math:`2^{31} - 1` inclusive.|
 +------------+-------------------+---------------------------+------------------------------------------------------------------------+
 | char       | PN_CHAR           | :class:`proton.char`      | A single Unicode character.                                            |
 +------------+-------------------+---------------------------+------------------------------------------------------------------------+
-| ulong      | PN_ULONG          | :class:`proton.ulong`     | Integer in the range :math:`0` to :math:`2^64 - 1` inclusive.          |
+| ulong      | PN_ULONG          | :class:`proton.ulong`     | Integer in the range :math:`0` to :math:`2^{64} - 1` inclusive.        |
 +------------+-------------------+---------------------------+------------------------------------------------------------------------+
 | long       | PN_LONG           | ``int`` or ``long``       | Integer in the range :math:`-(2^{63})` to :math:`2^{63} - 1` inclusive.|
 +------------+-------------------+---------------------------+------------------------------------------------------------------------+
@@ -90,12 +90,29 @@ enforce type restrictions in the AMQP specification.
 +-------------------------------+------------------------------------------------------------------------------------+------------------------------------------------+
 | Proton Python API Type        | Description                                                                        | Where used in API                              |
 +===============================+====================================================================================+================================================+
-| :class:`proton.SymbolList`    | A ``list`` that only accepts :class:`proton.symbol` elements.                      | :attr:`proton.Connection.desired_capabilities` |
-|                               |                                                                                    | :attr:`proton.Connection.offered_capabilities` |
+| :class:`proton.SymbolList`    | A ``list`` that only accepts :class:`proton.symbol` elements. However, will        | :attr:`proton.Connection.desired_capabilities` |
+|                               | silently convert strings to symbols.                                               | :attr:`proton.Connection.offered_capabilities` |
 +-------------------------------+------------------------------------------------------------------------------------+------------------------------------------------+
-| :class:`proton.PropertyDict`  | A ``dict`` that only accppts :class:`proton.symbol` keys.                          | :attr:`proton.Connection.properties`           |
+| :class:`proton.PropertyDict`  | A ``dict`` that only accppts :class:`proton.symbol` keys. However, will silently   | :attr:`proton.Connection.properties`           |
+|                               | convert strings to symbols.                                                        |                                                |
 +-------------------------------+------------------------------------------------------------------------------------+------------------------------------------------+
 | :class:`proton.AnnotationDict`| A ``dict`` that only accppts :class:`proton.symbol` or :class:`proton.ulong` keys. | :attr:`proton.Message.annotations`             |
-|                               |                                                                                    | :attr:`proton.Message.instructions`            |
+|                               | However, will silently convert strings to symbols.                                 | :attr:`proton.Message.instructions`            |
 +-------------------------------+------------------------------------------------------------------------------------+------------------------------------------------+
+
+|
+
+These types would typically be used where the the above attributes are set. They will silently convert strings to symbols,
+but will raise an error if a not-allowed type is used. For example:
+
+        >>> from proton import symbol, ulong, Message, AnnotationDict
+        >>> msg = Message()
+        >>> msg.annotations = AnnotationDict({'one':1, symbol('two'):2, ulong(3):'three'})
+        >>> msg.annotations
+        AnnotationDict({symbol('one'): 1, symbol('two'): 2, ulong(3): 'three'})
+        >>> m.instructions = AnnotationDict({'one':1, symbol('two'):2, ulong(3):'three', 4:'four'})
+          ...
+        KeyError: "invalid non-symbol key: <class 'int'>: 4"
+        >>> m.instructions
+        >>> 
 
