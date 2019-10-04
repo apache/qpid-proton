@@ -44,7 +44,8 @@
 #include <iostream>
 #include <sstream>
 
-#include "./netaddr-internal.h" /* Include after socket/inet headers */
+#include "netaddr-internal.h" /* Include after socket/inet headers */
+#include "core/logger_private.h"
 
 /*
  * Proactor for Windows using IO completion ports.
@@ -1556,8 +1557,8 @@ iocp_t *pni_iocp()
 // Proton Proactor support
 // ======================================================================
 
-#include "../core/log_private.h"
-#include "./proactor-internal.h"
+#include "core/logger_private.h"
+#include "proactor-internal.h"
 
 class csguard {
   public:
@@ -2031,7 +2032,7 @@ static inline bool proactor_has_event(pn_proactor_t *p) {
 
 static pn_event_t *log_event(void* p, pn_event_t *e) {
   if (e) {
-    pn_logf("[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
+    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, "[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
   }
   return e;
 }
@@ -2531,7 +2532,7 @@ static pn_event_batch_t *proactor_completion_loop(struct pn_proactor_t* p, bool 
     if (!good_op && !overlapped) {
       // Should never happen.  shutdown?
       // We aren't expecting a timeout, closed completion port, or other error here.
-      pn_logf("%s", errno_str("Windows Proton proactor internal failure\n", false).c_str());
+      PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_CRITICAL, "%s", errno_str("Windows Proton proactor internal failure\n", false).c_str());
       abort();
     }
 
@@ -2727,7 +2728,7 @@ void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *
   assert(pc); // TODO: memory safety
   const char *err = pconnection_setup(pc, p, c, t, false, addr);
   if (err) {
-    pn_logf("pn_proactor_connect failure: %s", err);
+    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_proactor_connect failure: %s", err);
     return;
   }
   // TODO: check case of proactor shutting down
@@ -3185,7 +3186,7 @@ void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t
     assert(pc);  // TODO: memory safety
     const char *err_str = pconnection_setup(pc, p, c, t, true, "");
     if (err_str) {
-      pn_logf("pn_listener_accept failure: %s", err_str);
+      PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_listener_accept failure: %s", err_str);
       return;
     }
     proactor_add(&pc->context);

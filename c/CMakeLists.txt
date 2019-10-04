@@ -177,15 +177,6 @@ if (PN_WINAPI)
   list(APPEND PLATFORM_DEFINITIONS "PN_WINAPI")
 endif (PN_WINAPI)
 
-# Flags for example self-test build, CACHE INTERNAL for visibility
-set(C_EXAMPLE_FLAGS "${COMPILE_WARNING_FLAGS}")
-set(C_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}")
-
-if (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_COMPILER_IS_GNUCC)
-  # Ensure that examples build with c90, to deal with older c++03-as-c compilers.
-  set(C_EXAMPLE_FLAGS "${C_EXAMPLE_FLAGS} -std=iso9899:1990 -pedantic")
-endif()
-
 if (MSVC)
     set(CMAKE_DEBUG_POSTFIX "d")
     add_definitions(
@@ -194,8 +185,21 @@ if (MSVC)
         /wd4800
         /wd4996
     )
-    set (qpid-proton-platform src/compiler/msvc/snprintf.c)
 endif (MSVC)
+
+# Ensure that examples build with c90 on gcc/clang, to deal with older c++03-as-c compilers.
+set(C_EXAMPLE_FLAGS_GNU "-std=iso9899:1990 -pedantic")
+set(C_EXAMPLE_FLAGS_Clang "-std=iso9899:1990 -pedantic")
+
+# Flags for example self-test build
+set(C_EXAMPLE_FLAGS "${COMPILE_WARNING_FLAGS} ${C_EXAMPLE_FLAGS_${CMAKE_C_COMPILER_ID}}")
+set(C_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}")
+
+set(qpid-proton-platform_GNU src/compiler/gcc/start.c)
+set(qpid-proton-platform_Clang src/compiler/gcc/start.c)
+set(qpid-proton-platform_MSVC src/compiler/msvc/snprintf.c src/compiler/msvc/start.c)
+
+set(qpid-proton-platform ${qpid-proton-platform_${CMAKE_C_COMPILER_ID}})
 
 # for full source distribution:
 set (qpid-proton-platform-all
@@ -240,7 +244,8 @@ set (qpid-proton-core
   src/core/object/iterator.c
   src/core/object/record.c
 
-  src/core/log.c
+  src/core/init.c
+  src/core/logger.c
   src/core/util.c
   src/core/error.c
   src/core/buffer.c
@@ -267,39 +272,9 @@ set (qpid-proton-include-generated
   ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
   )
 
-set (qpid-proton-private-includes
-  src/messenger/store.h
-  src/messenger/subscription.h
-  src/messenger/messenger.h
-  src/messenger/transform.h
-  src/ssl/ssl-internal.h
-  src/sasl/sasl-internal.h
-  src/core/autodetect.h
-  src/core/log_private.h
-  src/core/config.h
-  src/core/encoder.h
-  src/core/dispatch_actions.h
-  src/core/engine-internal.h
-  src/core/transport.h
-  src/core/framing.h
-  src/core/buffer.h
-  src/core/util.h
-  src/core/dispatcher.h
-  src/core/data.h
-  src/core/decoder.h
-  src/core/max_align.h
-  src/core/message-internal.h
-  src/reactor/io/windows/iocp.h
-  src/reactor/selector.h
-  src/reactor/io.h
-  src/reactor/reactor.h
-  src/reactor/selectable.h
-  src/platform/platform.h
-  src/platform/platform_fmt.h
-  src/proactor/proactor-internal.h
-  )
-
 set (qpid-proton-extra
+  src/core/log.c
+
   src/extra/url.c
 
   src/reactor/reactor.c
@@ -333,7 +308,7 @@ set (qpid-proton-include
   include/proton/import_export.h
   include/proton/link.h
   include/proton/listener.h
-  include/proton/log.h
+  include/proton/logger.h
   include/proton/message.h
   include/proton/netaddr.h
   include/proton/object.h
@@ -350,6 +325,7 @@ set (qpid-proton-include
 
 set (qpid-proton-include-extra
   include/proton/handlers.h
+  include/proton/log.h
   include/proton/messenger.h
   include/proton/reactor.h
   include/proton/selectable.h

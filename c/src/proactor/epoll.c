@@ -26,8 +26,8 @@
 /* Avoid GNU extensions, in particular the incompatible alternative strerror_r() */
 #undef _GNU_SOURCE
 
-#include "../core/log_private.h"
-#include "./proactor-internal.h"
+#include "core/logger_private.h"
+#include "proactor-internal.h"
 
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
@@ -684,7 +684,7 @@ static inline bool proactor_has_event(pn_proactor_t *p) {
 
 static pn_event_t *log_event(void* p, pn_event_t *e) {
   if (e) {
-    pn_logf("[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
+    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, "[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
   }
   return e;
 }
@@ -1387,7 +1387,7 @@ void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *
   assert(pc); // TODO: memory safety
   const char *err = pconnection_setup(pc, p, c, t, false, addr);
   if (err) {    /* TODO aconway 2017-09-13: errors must be reported as events */
-    pn_logf("pn_proactor_connect failure: %s", err);
+    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_proactor_connect failure: %s", err);
     return;
   }
   // TODO: check case of proactor shutting down
@@ -1796,7 +1796,7 @@ void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t
   assert(pc); // TODO: memory safety
   const char *err = pconnection_setup(pc, pn_listener_proactor(l), c, t, true, "");
   if (err) {
-    pn_logf("pn_listener_accept failure: %s", err);
+    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_listener_accept failure: %s", err);
     return;
   }
   // TODO: fuller sanity check on input args

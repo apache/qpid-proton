@@ -21,20 +21,21 @@
 
 #include "dispatcher.h"
 
-#include "framing.h"
-#include "protocol.h"
 #include "engine-internal.h"
+#include "framing.h"
+#include "logger_private.h"
+#include "protocol.h"
 
 #include "dispatch_actions.h"
 
 int pni_bad_frame(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload) {
-  pn_transport_logf(transport, "Error dispatching frame: type: %d: Unknown performative", frame_type);
+  PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame: type: %d: Unknown performative", frame_type);
   return PN_ERR;
 }
 
 int pni_bad_frame_type(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload) {
-    pn_transport_logf(transport, "Error dispatching frame: Unknown frame type: %d", frame_type);
-    return PN_ERR;
+  PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame: Unknown frame type: %d", frame_type);
+  return PN_ERR;
 }
 
 // We could use a table based approach here if we needed to dynamically
@@ -44,7 +45,7 @@ static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode,
   pn_action_t *action;
   switch (frame_type) {
   case AMQP_FRAME_TYPE:
-    /* Regular AMQP fames */
+    /* Regular AMQP frames */
     switch (lcode) {
     case OPEN:            action = pn_do_open; break;
     case BEGIN:           action = pn_do_begin; break;
@@ -77,8 +78,7 @@ static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode,
 static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_frame_t frame)
 {
   if (frame.size == 0) { // ignore null frames
-    if (transport->trace & PN_TRACE_FRM)
-      pn_transport_logf(transport, "%u <- (EMPTY FRAME)", frame.channel);
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME, "%u <- (EMPTY FRAME)", frame.channel);
     return 0;
   }
 
@@ -88,7 +88,7 @@ static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_fr
                      "Error decoding frame: %s %s\n", pn_code(dsize),
                      pn_error_text(pn_data_error(args)));
     pn_quote(transport->scratch, frame.payload, frame.size);
-    pn_transport_log(transport, pn_string_get(transport->scratch));
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, pn_string_get(transport->scratch));
     return dsize;
   }
 
@@ -100,11 +100,11 @@ static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_fr
   bool scanned;
   int e = pn_data_scan(args, "D?L.", &scanned, &lcode);
   if (e) {
-    pn_transport_log(transport, "Scan error");
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Scan error");
     return e;
   }
   if (!scanned) {
-    pn_transport_log(transport, "Error dispatching frame");
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame");
     return PN_ERR;
   }
   size_t payload_size = frame.size - dsize;

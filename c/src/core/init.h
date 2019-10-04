@@ -1,6 +1,8 @@
-#ifndef LOG_H
-#define LOG_H
+#ifndef PROTON_INIT_H
+#define PROTON_INIT_H 1
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,44 +19,10 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- */
-
-#include <proton/import_export.h>
-#include <proton/logger.h>
-#include <proton/type_compat.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**
- * @cond INTERNAL
- */
-    
-/**
- * Enable/disable global logging.
  *
- * By default, logging is enabled by environment variable PN_TRACE_LOG.
- * Calling this function overrides the environment setting.
- */
-PN_EXTERN void pn_log_enable(bool enabled);
-
-/**
- * Set the logger.
- *
- * By default a logger that prints to stderr is installed.
- *  
- * @param logger is called with each log message if logging is enabled.
- * Passing 0 disables logging regardless of pn_log_enable() or environment settings.
- */
-PN_EXTERN void pn_log_logger(void (*logger)(const char *message));
-
-/**
- * @endcond
  */
 
-#ifdef __cplusplus
-}
-#endif
+void pn_init(void);
+void pn_fini(void);
 
-#endif
+#endif // init.h

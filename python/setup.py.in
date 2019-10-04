@@ -133,7 +133,14 @@ class Configure(build_ext):
         macros += [('PROTON_DECLARE_STATIC', None)]
 
         if self.compiler_type=='msvc':
-            sources.append(os.path.join(proton_src, 'compiler' , 'msvc', 'snprintf.c'))
+            sources += [
+                os.path.join(proton_src, 'compiler', 'msvc', 'snprintf.c'),
+                os.path.join(proton_src, 'compiler', 'msvc', 'start.c')
+            ]
+        elif self.compiler_type=='unix':
+            sources += [
+                os.path.join(proton_src, 'compiler' , 'gcc', 'start.c')
+            ]
 
         # Check whether openssl is installed by poking
         # pkg-config for a minimum version 0. If it's installed, it should

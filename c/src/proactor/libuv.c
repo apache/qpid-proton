@@ -24,7 +24,7 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 
-#include "../core/log_private.h"
+#include "core/logger_private.h"
 #include "proactor-internal.h"
 
 #include <proton/condition.h>
@@ -821,7 +821,7 @@ static pn_event_batch_t *proactor_batch_lh(pn_proactor_t *p, pn_event_type_t t) 
 
 static pn_event_t *log_event(void* p, pn_event_t *e) {
   if (e) {
-    pn_logf("[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
+    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, "[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
   }
   return e;
 }

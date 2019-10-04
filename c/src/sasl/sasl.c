@@ -47,8 +47,8 @@ void pnx_sasl_logf(pn_transport_t *logger, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    if (logger->trace & PN_TRACE_DRV)
-        pn_transport_vlogf(logger, fmt, ap);
+    if (PN_SHOULD_LOG(&logger->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_ERROR))
+        pni_logger_vlogf(&logger->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_ERROR, fmt, ap);
     va_end(ap);
 }
 
@@ -150,7 +150,7 @@ void  pnx_sasl_succeed_authentication(pn_transport_t *transport, const char *use
     transport->sasl->outcome = PN_SASL_OK;
     transport->authenticated = true;
 
-    pnx_sasl_logf(transport, "Authenticated user: %s with mechanism %s",
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_INFO, "Authenticated user: %s with mechanism %s",
                   username, transport->sasl->selected_mechanism);
   }
 }
@@ -358,14 +358,11 @@ void pnx_sasl_set_desired_state(pn_transport_t *transport, enum pnx_sasl_state d
 {
   pni_sasl_t *sasl = transport->sasl;
   if (sasl->last_state > desired_state) {
-    if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "Trying to send SASL frame (%d), but illegal: already in later state (%d)", desired_state, sasl->last_state);
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_ERROR, "Trying to send SASL frame (%d), but illegal: already in later state (%d)", desired_state, sasl->last_state);
   } else if (sasl->client && !pni_sasl_is_client_state(desired_state)) {
-    if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "Trying to send server SASL frame (%d) on a client", desired_state);
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_ERROR, "Trying to send server SASL frame (%d) on a client", desired_state);
   } else if (!sasl->client && !pni_sasl_is_server_state(desired_state)) {
-    if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "Trying to send client SASL frame (%d) on a server", desired_state);
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_ERROR, "Trying to send client SASL frame (%d) on a server", desired_state);
   } else {
     // If we need to repeat CHALLENGE or RESPONSE frames adjust current state to seem
     // like they haven't been sent yet
@@ -558,8 +555,7 @@ static ssize_t pn_input_read_sasl_header(pn_transport_t* transport, unsigned int
     } else {
         transport->io_layers[layer] = &sasl_write_header_layer;
     }
-    if (transport->trace & PN_TRACE_FRM)
-        pn_transport_logf(transport, "  <- %s", "SASL");
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_FRAME, "  <- %s", "SASL");
     pni_sasl_set_external_security(transport, pn_ssl_get_ssf((pn_ssl_t*)transport), pn_ssl_get_remote_subject((pn_ssl_t*)transport));
     return SASL_HEADER_LEN;
   case PNI_PROTOCOL_INSUFFICIENT:
@@ -613,8 +609,7 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
 
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
-    if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "SASL Encryption enabled: buffer=%" PN_ZU, sasl->max_encrypt_size);
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_INFO, "Encryption enabled: buffer=%" PN_ZU, sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
   } else {
     transport->io_layers[layer] = &pni_passthru_layer;
@@ -651,8 +646,7 @@ static ssize_t pn_input_read_sasl_encrypt(pn_transport_t* transport, unsigned in
 
 static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, unsigned int layer, char *bytes, size_t size)
 {
-  if (transport->trace & PN_TRACE_FRM)
-    pn_transport_logf(transport, "  -> %s", "SASL");
+  PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_FRAME, "  -> %s", "SASL");
   assert(size >= SASL_HEADER_LEN);
   memmove(bytes, SASL_HEADER, SASL_HEADER_LEN);
   if (transport->io_layers[layer]==&sasl_write_header_layer) {
@@ -692,8 +686,7 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
   // We know that auth succeeded or we're not in final input state
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
-    if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "SASL Encryption enabled: buffer=%" PN_ZU, sasl->max_encrypt_size);
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_INFO, "Encryption enabled: buffer=%" PN_ZU, sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
   } else {
     transport->io_layers[layer] = &pni_passthru_layer;

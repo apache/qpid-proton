@@ -25,6 +25,7 @@
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
 #include <proton/condition.h>
+#include <proton/logger.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -225,6 +226,19 @@ PN_EXTERN bool pn_transport_is_encrypted(pn_transport_t *transport);
  * @return the transport's condition object
  */
 PN_EXTERN pn_condition_t *pn_transport_condition(pn_transport_t *transport);
+
+/**
+ * Get the transport logger
+ *
+ * This can be used to control the logging information emitted by the transport
+ *
+ * The pointer returned by this operation is valid until the
+ * transport object is freed.
+ *
+ * @param[in] transport the transport object
+ * @return the transport's logger object
+ */
+PN_EXTERN pn_logger_t *pn_transport_logger(pn_transport_t *transport);
 
 /**
  * **Deprecated** - Use ::pn_transport_condition().

@@ -30,7 +30,7 @@
 #include "protocol.h"
 #include "dispatch_actions.h"
 #include "config.h"
-#include "log_private.h"
+#include "logger_private.h"
 
 #include "proton/event.h"
 
@@ -130,12 +130,6 @@ static void pni_delivery_map_clear(pn_delivery_map_t *dm)
     pn_delivery_map_del(dm, dlv);
   }
   dm->next = 0;
-}
-
-static void pni_default_tracer(pn_transport_t *transport, const char *message)
-{
-  fprintf(stderr, "[%p]:%s\n", (void *) transport, message);
-  fflush(stderr);
 }
 
 static ssize_t pn_io_layer_input_passthru(pn_transport_t *, unsigned int, const char *, size_t );
@@ -279,8 +273,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
     return PN_EOS;
   }
   pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
-  if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "%s detected", pni_protocol_name(protocol));
+  PN_LOG(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_DEBUG, "%s detected", pni_protocol_name(protocol));
   switch (protocol) {
   case PNI_PROTOCOL_SSL:
     if (!(transport->allowed_layers & LAYER_SSL)) {
@@ -320,8 +313,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
     }
     transport->io_layers[layer] = &sasl_write_header_layer;
     transport->io_layers[layer+1] = &pni_autodetect_layer;
-    if (transport->trace & PN_TRACE_FRM)
-        pn_transport_logf(transport, "  <- %s", "SASL");
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_FRAME, "  <- %s", "SASL");
     pni_sasl_set_external_security(transport, pn_ssl_get_ssf((pn_ssl_t*)transport), pn_ssl_get_remote_subject((pn_ssl_t*)transport));
     return 8;
   case PNI_PROTOCOL_AMQP1:
@@ -344,8 +336,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
       return 8;
     }
     transport->io_layers[layer] = &amqp_write_header_layer;
-    if (transport->trace & PN_TRACE_FRM)
-        pn_transport_logf(transport, "  <- %s", "AMQP");
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME, "  <- %s", "AMQP");
     return 8;
   case PNI_PROTOCOL_INSUFFICIENT:
     if (!eos) return 0;
@@ -410,7 +401,8 @@ static void pn_transport_initialize(void *object)
   transport->output_size = PN_TRANSPORT_INITIAL_BUFFER_SIZE;
   transport->input_buf = NULL;
   transport->input_size =  PN_TRANSPORT_INITIAL_BUFFER_SIZE;
-  transport->tracer = pni_default_tracer;
+  pni_logger_init(&transport->logger);
+  transport->tracer = NULL;
   transport->sasl = NULL;
   transport->ssl = NULL;
 
@@ -495,12 +487,6 @@ static void pn_transport_initialize(void *object)
   transport->encryption_required = false;
 
   transport->referenced = true;
-
-  transport->trace =
-    (pn_env_bool("PN_TRACE_RAW") ? PN_TRACE_RAW : PN_TRACE_OFF) |
-    (pn_env_bool("PN_TRACE_FRM") ? PN_TRACE_FRM : PN_TRACE_OFF) |
-    (pn_env_bool("PN_TRACE_DRV") ? PN_TRACE_DRV : PN_TRACE_OFF) |
-    (pn_env_bool("PN_TRACE_EVT") ? PN_TRACE_EVT : PN_TRACE_OFF) ;
 }
 
 
@@ -682,6 +668,7 @@ static void pn_transport_finalize(void *object)
   pn_buffer_free(transport->frame);
   pn_free(transport->context);
   pn_buffer_free(transport->output_buffer);
+  pni_logger_fini(&transport->logger);
 }
 
 static void pni_post_remote_open_events(pn_transport_t *transport, pn_connection_t *connection) {
@@ -822,6 +809,12 @@ pn_condition_t *pn_transport_condition(pn_transport_t *transport)
   return &transport->condition;
 }
 
+pn_logger_t *pn_transport_logger(pn_transport_t *transport)
+{
+  assert(transport);
+  return &transport->logger;
+}
+
 static void pni_map_remote_handle(pn_link_t *link, uint32_t handle)
 {
   link->state.remote_handle = handle;
@@ -890,7 +883,7 @@ static int pni_disposition_encode(pn_disposition_t *disposition, pn_data_t *data
 void pn_do_trace(pn_transport_t *transport, uint16_t ch, pn_dir_t dir,
                  pn_data_t *args, const char *payload, size_t size)
 {
-  if (transport->trace & PN_TRACE_FRM) {
+  if (PN_SHOULD_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME) ) {
     pn_string_format(transport->scratch, "%u %s ", ch, dir == OUT ? "->" : "<-");
     pn_inspect(args, transport->scratch);
 
@@ -905,7 +898,7 @@ void pn_do_trace(pn_transport_t *transport, uint16_t ch, pn_dir_t dir,
                      e == PN_OVERFLOW ? "... (truncated)" : "");
     }
 
-    pn_transport_log(transport, pn_string_get(transport->scratch));
+    pni_logger_log(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME, pn_string_get(transport->scratch));
   }
 }
 
@@ -918,7 +911,7 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
   int err = pn_data_vfill(transport->output_args, fmt, ap);
   va_end(ap);
   if (err) {
-    pn_transport_logf(transport,
+    pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR,
                       "error posting frame: %s, %s: %s", fmt, pn_code(err),
                       pn_error_text(pn_data_error(transport->output_args)));
     return PN_ERR;
@@ -937,7 +930,7 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
       pn_buffer_ensure( frame_buf, pn_buffer_available( frame_buf ) * 2 );
       goto encode_performatives;
     }
-    pn_transport_logf(transport,
+    pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR,
                       "error posting frame: %s", pn_code(wr));
     return PN_ERR;
   }
@@ -950,11 +943,11 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
   pn_buffer_ensure(transport->output_buffer, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
   pn_write_frame(transport->output_buffer, frame);
   transport->output_frames_ct += 1;
-  if (transport->trace & PN_TRACE_RAW) {
+  if (PN_SHOULD_LOG(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW)) {
     pn_string_set(transport->scratch, "RAW: \"");
     pn_buffer_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
     pn_string_addf(transport->scratch, "\"");
-    pn_transport_log(transport, pn_string_get(transport->scratch));
+    pni_logger_log(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW, pn_string_get(transport->scratch));
   }
 
   return 0;
@@ -995,7 +988,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
                          aborted, aborted,
                          batchable, batchable);
   if (err) {
-    pn_transport_logf(transport,
+    pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR,
                       "error posting transfer frame: %s: %s", pn_code(err),
                       pn_error_text(pn_data_error(transport->output_args)));
     return PN_ERR;
@@ -1014,7 +1007,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
         pn_buffer_ensure( frame, pn_buffer_available( frame ) * 2 );
         goto encode_performatives;
       }
-      pn_transport_logf(transport, "error posting frame: %s", pn_code(wr));
+      pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "error posting frame: %s", pn_code(wr));
       return PN_ERR;
     }
     buf.size = wr;
@@ -1057,11 +1050,11 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
     pn_write_frame(transport->output_buffer, frame);
     transport->output_frames_ct += 1;
     framecount++;
-    if (transport->trace & PN_TRACE_RAW) {
+    if (PN_SHOULD_LOG(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW)) {
       pn_string_set(transport->scratch, "RAW: \"");
       pn_buffer_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
       pn_string_addf(transport->scratch, "\"");
-      pn_transport_log(transport, pn_string_get(transport->scratch));
+      pni_logger_log(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW, pn_string_get(transport->scratch));
     }
   } while (payload->size > 0 && framecount < frame_limit);
 
@@ -1143,8 +1136,12 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   }
   pn_collector_t *collector = pni_transport_collector(transport);
   pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT_ERROR);
-  if (transport->trace & PN_TRACE_DRV) {
-    pn_transport_logf(transport, "ERROR %s %s", condition, buf);
+  // Special case being called with no condition and no fmt to log the existing error condition
+  if (fmt && condition) {
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "%s %s", condition, buf);
+  } else {
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "%s %s",
+           pn_condition_get_name(cond), pn_condition_get_description(cond));
   }
 
   for (int i = 0; i<PN_IO_LAYER_CT; ++i) {
@@ -1192,8 +1189,9 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   if (transport->remote_max_frame > 0) {
     if (transport->remote_max_frame < AMQP_MIN_MAX_FRAME_SIZE) {
-      pn_transport_logf(transport, "Peer advertised bad max-frame (%u), forcing to %u",
-                        transport->remote_max_frame, AMQP_MIN_MAX_FRAME_SIZE);
+      pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_WARNING,
+                     "Peer advertised bad max-frame (%u), forcing to %u",
+                     transport->remote_max_frame, AMQP_MIN_MAX_FRAME_SIZE);
       transport->remote_max_frame = AMQP_MIN_MAX_FRAME_SIZE;
     }
   }
@@ -1869,8 +1867,7 @@ static ssize_t transport_consume(pn_transport_t *transport)
       break;
     } else {
       assert(n == PN_EOS);
-      if (transport->trace & (PN_TRACE_RAW | PN_TRACE_FRM))
-        pn_transport_log(transport, "  <- EOS");
+      PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP | PN_SUBSYSTEM_IO, PN_LEVEL_FRAME | PN_LEVEL_RAW, "  <- EOS");
       transport->input_pending = 0;  // XXX ???
       return n;
     }
@@ -1979,7 +1976,7 @@ static int pni_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpo
     if (!(endpoint->state & PN_LOCAL_UNINIT) && state->local_channel == (uint16_t) -1)
     {
       if (! pni_map_local_channel(ssn)) {
-        pn_transport_logf(transport, "unable to find an open available channel within limit of %d", transport->channel_max );
+        pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_WARNING, "unable to find an open available channel within limit of %d", transport->channel_max );
         return PN_ERR;
       }
       state->incoming_window = pni_session_incoming_window(ssn);
@@ -2591,8 +2588,7 @@ static ssize_t pn_input_read_amqp_header(pn_transport_t* transport, unsigned int
     } else {
       transport->io_layers[layer] = &amqp_write_header_layer;
     }
-    if (transport->trace & PN_TRACE_FRM)
-      pn_transport_logf(transport, "  <- %s", "AMQP");
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME, "  <- %s", "AMQP");
     return 8;
   case PNI_PROTOCOL_INSUFFICIENT:
     if (!eos) return 0;
@@ -2674,8 +2670,7 @@ static pn_timestamp_t pn_tick_amqp(pn_transport_t* transport, unsigned int layer
 
 static ssize_t pn_output_write_amqp_header(pn_transport_t* transport, unsigned int layer, char* bytes, size_t available)
 {
-  if (transport->trace & PN_TRACE_FRM)
-    pn_transport_logf(transport, "  -> %s", "AMQP");
+  PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME, "  -> %s", "AMQP");
   assert(available >= 8);
   memmove(bytes, AMQP_HEADER, 8);
   if (pn_condition_is_set(&transport->condition)) {
@@ -2697,7 +2692,7 @@ static ssize_t pn_output_write_amqp(pn_transport_t* transport, unsigned int laye
   if (transport->connection && !transport->done_processing) {
     int err = pni_process(transport);
     if (err) {
-      pn_transport_logf(transport, "process error %i", err);
+      pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "process error %i", err);
       transport->done_processing = true;
     }
   }
@@ -2760,9 +2755,7 @@ static ssize_t transport_produce(pn_transport_t *transport)
     } else {
       if (transport->output_pending)
         break;   // return what is available
-      if (transport->trace & (PN_TRACE_RAW | PN_TRACE_FRM)) {
-        pn_transport_log(transport, "  -> EOS");
-      }
+      PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP | PN_SUBSYSTEM_IO, PN_LEVEL_FRAME | PN_LEVEL_RAW, "  -> EOS");
       pni_close_head(transport);
       return n;
     }
@@ -2787,15 +2780,32 @@ ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size)
 
 void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace)
 {
-  transport->trace = trace;
+  unsigned int level_mask = 0;
+  if (trace & PN_TRACE_FRM) level_mask = level_mask | PN_LEVEL_FRAME;
+  if (trace & PN_TRACE_RAW) level_mask = level_mask | PN_LEVEL_RAW;
+
+  // Don't change the subsystem bits, but forcibly set the level bits (back compat behaviour)
+  pn_logger_reset_mask(&transport->logger, PN_SUBSYSTEM_NONE, PN_LEVEL_ALL);
+  pn_logger_set_mask(&transport->logger, PN_SUBSYSTEM_NONE, (pn_log_level_t)level_mask);
+}
+
+static void pni_tracer_to_log_sink(intptr_t context, pn_log_subsystem_t subsystem, pn_log_level_t sev, const char* msg)
+{
+  pn_transport_t *transport = (pn_transport_t*)context;
+  // can't use either logger or transport scratch string as we could be called with either
+  char buf[2048]; // Arbitrarily large
+  strcpy(buf, pn_logger_level_name(sev));
+  strcat(buf, ": ");
+  strncat(buf, msg, 2037); // Up to 11 more characters than msg in buf
+  transport->tracer(transport, buf);
 }
 
 void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t tracer)
 {
   assert(transport);
   assert(tracer);
-
   transport->tracer = tracer;
+  pn_logger_set_log_sink(&transport->logger, pni_tracer_to_log_sink, (intptr_t)transport);
 }
 
 pn_tracer_t pn_transport_get_tracer(pn_transport_t *transport)
@@ -2824,18 +2834,14 @@ pn_record_t *pn_transport_attachments(pn_transport_t *transport)
 
 void pn_transport_log(pn_transport_t *transport, const char *message)
 {
-  assert(transport);
-  transport->tracer(transport, message);
+  pn_logger_t *logger = transport ? &transport->logger : pn_default_logger();
+  pni_logger_log(logger, PN_SUBSYSTEM_ALL, PN_LEVEL_TRACE, message);
 }
 
 void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, va_list ap)
 {
-  if (transport) {
-    pn_string_vformat(transport->scratch, fmt, ap);
-    pn_transport_log(transport, pn_string_get(transport->scratch));
-  } else {
-    pn_vlogf(fmt, ap);
-  }
+  pn_logger_t *logger = transport ? &transport->logger : pn_default_logger();
+  pni_logger_vlogf(logger, PN_SUBSYSTEM_ALL, PN_LEVEL_TRACE, fmt, ap);
 }
 
 void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...)
@@ -2865,7 +2871,7 @@ int pn_transport_set_channel_max(pn_transport_t *transport, uint16_t requested_c
    * is sent.
    */
   if(transport->open_sent) {
-    pn_transport_logf(transport, "Cannot change local channel-max after OPEN frame sent.");
+    pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_WARNING, "Cannot change local channel-max after OPEN frame sent.");
     return PN_STATE_ERR;
   }
 

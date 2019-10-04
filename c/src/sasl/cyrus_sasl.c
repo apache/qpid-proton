@@ -22,7 +22,7 @@
 #define _GNU_SOURCE
 #endif
 
-#include "core/log_private.h"
+#include "core/logger_private.h"
 
 #include "proton/sasl.h"
 #include "proton/sasl-plugin.h"
@@ -132,7 +132,7 @@ static void pni_cyrus_interact(pn_transport_t *transport, sasl_interact_t *inter
       break;
     }
     default:
-      pn_logf("(%s): %s - %s", i->challenge, i->prompt, i->defresult);
+      pnx_sasl_logf(transport, "(%s): %s - %s", i->challenge, i->prompt, i->defresult);
     }
   }
 }

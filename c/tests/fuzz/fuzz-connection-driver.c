@@ -26,7 +26,7 @@
 
 #include "proton/connection_driver.h"
 #include "proton/engine.h"
-#include "proton/log.h"
+#include "proton/logger.h"
 #include "proton/message.h"
 
 #include "libFuzzingEngine.h"
@@ -56,7 +56,7 @@ const bool VERBOSE = false;
 const bool ERRORS = false;
 
 // I could not get rid of the error messages on stderr in any other way
-void devnull(pn_transport_t *transport, const char *message) {}
+void devnull(intptr_t context, pn_log_subsystem_t sub,  pn_log_level_t sev, const char *message) {}
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (VERBOSE)
@@ -71,10 +71,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     exit(1);
   }
 
-  pn_log_enable(false);
-  pn_log_logger(NULL);
-  pn_transport_trace(driver.transport, PN_TRACE_OFF);
-  pn_transport_set_tracer(driver.transport, devnull);
+  pn_logger_set_log_sink(pn_default_logger(), devnull, 0);
 
   uint8_t *data = (uint8_t *)Data;
   size_t size = Size;

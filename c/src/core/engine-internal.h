@@ -28,6 +28,7 @@
 
 #include "buffer.h"
 #include "dispatcher.h"
+#include "logger_private.h"
 #include "util.h"
 
 typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER} pn_endpoint_type_t;
@@ -124,6 +125,7 @@ typedef struct pni_sasl_t pni_sasl_t;
 typedef struct pni_ssl_t pni_ssl_t;
 
 struct pn_transport_t {
+  pn_logger_t logger;
   pn_tracer_t tracer;
   pni_sasl_t *sasl;
   pni_ssl_t *ssl;
@@ -187,8 +189,6 @@ struct pn_transport_t {
   char *input_buf;
 
   pn_record_t *context;
-
-  pn_trace_t trace;
 
   /*
    * The maximum channel number can be constrained in several ways:

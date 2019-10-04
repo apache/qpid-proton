@@ -36,7 +36,7 @@
 #include "decoder.h"
 #include "encoder.h"
 #include "data.h"
-#include "log_private.h"
+#include "logger_private.h"
 
 const char *pn_type_name(pn_type_t type)
 {
@@ -717,7 +717,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
           }
           break;
         default:
-          pn_logf("unrecognized * code: 0x%.2X '%c'", code, code);
+          PN_LOG_DEFAULT(PN_SUBSYSTEM_AMQP, PN_LEVEL_CRITICAL, "unrecognized * code: 0x%.2X '%c'", code, code);
           return PN_ARG_ERR;
         }
       }
@@ -742,7 +742,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         break;
       }
      default:
-      pn_logf("unrecognized fill code: 0x%.2X '%c'", code, code);
+      PN_LOG_DEFAULT(PN_SUBSYSTEM_AMQP, PN_LEVEL_CRITICAL, "unrecognized fill code: 0x%.2X '%c'", code, code);
       return PN_ARG_ERR;
     }
 

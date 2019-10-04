@@ -1,5 +1,3 @@
-#ifndef LOG_H
-#define LOG_H
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,42 +17,33 @@
  * under the License.
  */
 
-#include <proton/import_export.h>
-#include <proton/logger.h>
-#include <proton/type_compat.h>
+#define WIN32_LEAN_AMD_MEAN
+#include <windows.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include "core/init.h"
 
-/**
- * @cond INTERNAL
- */
-    
-/**
- * Enable/disable global logging.
- *
- * By default, logging is enabled by environment variable PN_TRACE_LOG.
- * Calling this function overrides the environment setting.
- */
-PN_EXTERN void pn_log_enable(bool enabled);
+BOOL WINAPI DllMain(HINSTANCE dLL, DWORD reason, LPVOID reserved)
+{
+// Perform actions based on the reason for calling.
+  switch (reason)
+  {
+  case DLL_PROCESS_ATTACH:
+    // Initialize once for each new process.
+    pn_init();
+    break;
 
-/**
- * Set the logger.
- *
- * By default a logger that prints to stderr is installed.
- *  
- * @param logger is called with each log message if logging is enabled.
- * Passing 0 disables logging regardless of pn_log_enable() or environment settings.
- */
-PN_EXTERN void pn_log_logger(void (*logger)(const char *message));
+  case DLL_THREAD_ATTACH:
+    // Do thread-specific initialization.
+    break;
 
-/**
- * @endcond
- */
+  case DLL_THREAD_DETACH:
+    // Do thread-specific cleanup.
+    break;
 
-#ifdef __cplusplus
+  case DLL_PROCESS_DETACH:
+    // Perform any necessary cleanup.
+    pn_fini();
+    break;
+  }
+  return TRUE;
 }
-#endif
-
-#endif
