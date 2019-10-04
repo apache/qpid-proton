@@ -1280,6 +1280,8 @@ class IOHandler(Handler):
         t.close_head()
         t.close_tail()
         s.terminate()
+        s._transport = None
+        t._selectable = None
         s.update()
 
     def on_selectable_expired(self, event):
@@ -1351,12 +1353,16 @@ class IOHandler(Handler):
         except:
             if transport.closed:
                 selectable.terminate()
+                selectable._transport = None
+                transport._selectable = None
         try:
             pending = transport.pending()
             selectable.writing = pending>0
         except:
             if transport.closed:
                 selectable.terminate()
+                selectable._transport = None
+                transport._selectable = None
         selectable.deadline = transport.tick(now)
         selectable.update()
 
@@ -1373,6 +1379,8 @@ class IOHandler(Handler):
         s = t._selectable
         if s and not s.is_terminal:
             s.terminate()
+            s._transport = None
+            t._selectable = None
             r.update(s)
         t.unbind()
 
@@ -1400,6 +1408,7 @@ class ConnectSelectable(Selectable):
             # Disassociate from the socket (which has been passed on)
             self._delegate = None
             self.terminate()
+            self._transport = None
             self.update()
             return
         elif e == errno.ECONNREFUSED:
@@ -1420,4 +1429,5 @@ class ConnectSelectable(Selectable):
         t.close_tail()
         t.close_head()
         self.terminate()
+        self._transport = None
         self.update()
