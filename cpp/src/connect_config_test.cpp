@@ -46,6 +46,8 @@
 #include <proton/transport.h>
 #include <proton/connection.h>
 
+#include <json/version.h>
+
 // Windows has a different set of APIs for setting the environment
 #ifdef _WIN32
 #include <string.h>
@@ -119,16 +121,29 @@ void test_addr() {
 // Hack to write strings with embedded '"' and newlines
 #define RAW_STRING(...) #__VA_ARGS__
 
-void test_invalid() {
+void test_invalid_config() {
     connection_options opts;
-    ASSERT_THROWS_MSG(proton::error, "Missing '}'", configure(opts, "{"));
-    ASSERT_THROWS_MSG(proton::error, "Syntax error", configure(opts, ""));
-    ASSERT_THROWS_MSG(proton::error, "Missing ','", configure(opts, RAW_STRING({ "user":"x" "host":"y"})));
     ASSERT_THROWS_MSG(proton::error, "expected string", configure(opts, RAW_STRING({ "scheme":true})));
     ASSERT_THROWS_MSG(proton::error, "expected object", configure(opts, RAW_STRING({ "tls":""})));
     ASSERT_THROWS_MSG(proton::error, "expected object", configure(opts, RAW_STRING({ "sasl":true})));
     ASSERT_THROWS_MSG(proton::error, "expected boolean", configure(opts, RAW_STRING({ "sasl": { "enable":""}})));
     ASSERT_THROWS_MSG(proton::error, "expected boolean", configure(opts, RAW_STRING({ "tls": { "verify":""}})));
+}
+
+void test_invalid_json() {
+  connection_options opts;
+  // ancient versions of jsoncpp use a generic error message for parse errors
+  //  in the exception, and print the detailed message to stderr
+  // https://github.com/open-source-parsers/jsoncpp/commit/6b10ce8c0d07ea07861e82f65f17d9fd6abd658d
+  if (std::make_tuple(JSONCPP_VERSION_MAJOR, JSONCPP_VERSION_MINOR) < std::make_tuple(1, 7)) {
+    ASSERT_THROWS_MSG(proton::error, "reader error", configure(opts, "{"));
+    ASSERT_THROWS_MSG(proton::error, "reader error", configure(opts, ""));
+    ASSERT_THROWS_MSG(proton::error, "reader error", configure(opts, RAW_STRING({ "user" : "x" "host" : "y"})));
+  } else {
+    ASSERT_THROWS_MSG(proton::error, "Missing '}'", configure(opts, "{"));
+    ASSERT_THROWS_MSG(proton::error, "Syntax error", configure(opts, ""));
+    ASSERT_THROWS_MSG(proton::error, "Missing ','", configure(opts, RAW_STRING({ "user":"x" "host":"y"})));
+  }
 }
 
 // Extra classes to resolve clash of on_error in both messaging_handler and listen_handler
@@ -399,7 +414,8 @@ int main(int argc, char** argv) {
     int failed = 0;
     RUN_ARGV_TEST(failed, test_default_file());
     RUN_ARGV_TEST(failed, test_addr());
-    RUN_ARGV_TEST(failed, test_invalid());
+    RUN_ARGV_TEST(failed, test_invalid_config());
+    RUN_ARGV_TEST(failed, test_invalid_json());
     RUN_ARGV_TEST(failed, test_default_connect().run());
     RUN_ARGV_TEST(failed, test_almost_default_connect().run());
 
