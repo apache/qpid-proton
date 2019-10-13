@@ -38,7 +38,7 @@ matrix:
     env:
     - PKG_CONFIG_PATH='/usr/local/opt/openssl/lib/pkgconfig'
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
-    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.12 -DBUILD_RUBY=NO'
+    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.12 -DBUILD_RUBY=NO -DBUILD_GO=OFF'
     before_install:
     - brew update
     - brew install libuv swig jsoncpp
@@ -48,7 +48,7 @@ matrix:
     env:
     - PKG_CONFIG_PATH='/usr/local/opt/openssl/lib/pkgconfig'
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
-    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 -DBUILD_RUBY=NO -DBUILD_PYTHON=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 -DBUILD_RUBY=NO -DBUILD_PYTHON=OFF -DBUILD_GO=ON'
     before_install:
     - brew update
     - brew install libuv swig jsoncpp
