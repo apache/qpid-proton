@@ -275,7 +275,7 @@ class DataTest(Test):
     self.assertRaises(KeyError, AnnotationDict, {'one': 1, 1.23: 4})
 
   def testAnnotationDictNoRaiseError(self):
-    a = AnnotationDict(one=1, two=2, three=3, throw=False)
+    a = AnnotationDict(one=1, two=2, three=3, raise_on_error=False)
     a[ulong(4)] = 'four'
     a[5] = 'five'
     b = AnnotationDict({'one': 1, 'two': 2, 'three': 3, ulong(4): 'four', 5: 'five'}, raise_on_error=False)
