@@ -502,11 +502,13 @@ class Connection(Wrapper, Endpoint):
 
     def _get_offered_capabilities(self):
         return self.offered_capabilities_list
+
     def _set_offered_capabilities(self, offered_capability_list):
         if isinstance(offered_capability_list, list):
-            self.offered_capabilities_list = SymbolList(offered_capability_list, throw=False)
+            self.offered_capabilities_list = SymbolList(offered_capability_list, raise_on_error=False)
         else:
             self.offered_capabilities_list = offered_capability_list
+
     offered_capabilities = property(_get_offered_capabilities, _set_offered_capabilities, doc="""
     Offered capabilities as a list of symbols. The AMQP 1.0 specification
     restricts this list to symbol elements only. It is possible to use
@@ -515,62 +517,46 @@ class Connection(Wrapper, Endpoint):
     string type is used, it will be silently converted into the required
     symbol.
 
-        >>> from proton import symbol, Connection, SymbolList
-        >>> c = Connection()
-        >>> c.offered_capabilities = SymbolList(['one', symbol('two')])
-        >>> c.offered_capabilities
-        SymbolList([symbol('one'), symbol('two')])
-
     :type: ``list`` containing :class:`symbol`.
     """)
 
     def _get_desired_capabilities(self):
         return self.desired_capabilities_list
+
     def _set_desired_capabilities(self, desired_capability_list):
         if isinstance(desired_capability_list, list):
-            self.desired_capabilities_list = SymbolList(desired_capability_list, throw=False)
+            self.desired_capabilities_list = SymbolList(desired_capability_list, raise_on_error=False)
         else:
             self.desired_capabilities_list = desired_capability_list
+
     desired_capabilities = property(_get_desired_capabilities, _set_desired_capabilities, doc="""
     Desired capabilities as a list of symbols. The AMQP 1.0 specification
     restricts this list to symbol elements only. It is possible to use
-    the special ``list`` subclass :class:`SymbolList` as it will by
-    default enforce this restriction on construction. In addition, if a
-    string type is used, it will be silently converted into the required
-    symbol.
-
-        >>> from proton import symbol, Connection, SymbolList
-        >>> c = Connection()
-        >>> c.desired_capabilities = SymbolList(['one', symbol('two')])
-        >>> c.desired_capabilities
-        SymbolList([symbol('one'), symbol('two')])
+    the special ``list`` subclass :class:`SymbolList` which will by
+    default enforce this restriction on construction. In addition, if string
+    types are used, this class will be silently convert them into symbols.
 
     :type: ``list`` containing :class:`symbol`.
     """)
 
     def _get_properties(self):
         return self.properties_dict
+
     def _set_properties(self, properties_dict):
         if isinstance(properties_dict, dict):
-            self.properties_dict = PropertyDict(properties_dict, throw=False)
+            self.properties_dict = PropertyDict(properties_dict, raise_on_error=False)
         else:
             self.properties_dict = properties_dict
+
     properties = property(_get_properties, _set_properties, doc="""
     Connection properties as a dictionary of key/values. The AMQP 1.0
     specification restricts this dictionary to have keys that are only
-    :class:`symbol` types. It is recommended that the special ``dict``
-    subclass :class:`PropertyDict` is used as it will by default
-    enforce these restrictions on construction. In addition,
-    if a string type is used, it will be silently converted into the
-    required symbol.
+    :class:`symbol` types. It is possible to use the special ``dict``
+    subclass :class:`PropertyDict` which will by default enforce this
+    restrictions on construction. In addition, if strings type are used,
+    this will silently convert them into symbols.
 
-        >>> from proton import symbol, Connection, PropertyDict
-        >>> c = Connection()
-        >>> c.properties = PropertyDict({'one':1, symbol('two'):2})
-        >>> c.properties
-        PropertyDict({symbol('one'): 1, symbol('two'): 2})
-
-    :type: ``dict`` containing :class:`symbol`` keys
+    :type: ``dict`` containing :class:`symbol`` keys.
     """)
 
 

@@ -239,15 +239,15 @@ class DataTest(Test):
     self.assertRaises(KeyError, AnnotationDict, {'one': 1, None: 'none'})
     self.assertRaises(KeyError, AnnotationDict, {'one': 1, 1.23: 4})
 
-  def testPropertyDictNoThrow(self):
-    a = PropertyDict(one=1, two=2, three=3, throw=False)
+  def testPropertyDictNoRaiseError(self):
+    a = PropertyDict(one=1, two=2, three=3, raise_on_error=False)
     a[4] = 'four'
-    b = PropertyDict({'one': 1, 'two': 2, 'three': 3, 4: 'four'}, throw=False)
-    c = PropertyDict(zip(['one', 'two', 'three', 4], [1, 2, 3, 'four']), throw=False)
-    d = PropertyDict([('two', 2), ('one', 1), ('three', 3), (4, 'four')], throw=False)
-    e = PropertyDict({4: 'four', symbol('three'): 3, symbol('one'): 1, symbol('two'): 2}, throw=False)
-    f = PropertyDict(a, throw=False)
-    g = PropertyDict(throw=False)
+    b = PropertyDict({'one': 1, 'two': 2, 'three': 3, 4: 'four'}, raise_on_error=False)
+    c = PropertyDict(zip(['one', 'two', 'three', 4], [1, 2, 3, 'four']), raise_on_error=False)
+    d = PropertyDict([('two', 2), ('one', 1), ('three', 3), (4, 'four')], raise_on_error=False)
+    e = PropertyDict({4: 'four', symbol('three'): 3, symbol('one'): 1, symbol('two'): 2}, raise_on_error=False)
+    f = PropertyDict(a, raise_on_error=False)
+    g = PropertyDict(raise_on_error=False)
     g['one'] = 1
     g[4] = 'four'
     g[symbol('two')] = 2
@@ -258,7 +258,7 @@ class DataTest(Test):
     # AnnotationMap c'tor calls update(), so this method is also covered
     a = AnnotationDict(one=1, two=2, three=3)
     a[ulong(4)] = 'four'
-    b = AnnotationDict({'one': 1, 'two': 2, 'three': 3, ulong(4):'four'})
+    b = AnnotationDict({'one': 1, 'two': 2, 'three': 3, ulong(4): 'four'})
     c = AnnotationDict(zip(['one', 'two', 'three', ulong(4)], [1, 2, 3, 'four']))
     d = AnnotationDict([('two', 2), ('one', 1), ('three', 3), (ulong(4), 'four')])
     e = AnnotationDict({symbol('three'): 3, ulong(4): 'four', symbol('one'): 1, symbol('two'): 2})
@@ -274,16 +274,16 @@ class DataTest(Test):
     self.assertRaises(KeyError, AnnotationDict, {'one': 1, None: 'none'})
     self.assertRaises(KeyError, AnnotationDict, {'one': 1, 1.23: 4})
 
-  def testAnnotationDictNoThrow(self):
+  def testAnnotationDictNoRaiseError(self):
     a = AnnotationDict(one=1, two=2, three=3, throw=False)
     a[ulong(4)] = 'four'
     a[5] = 'five'
-    b = AnnotationDict({'one': 1, 'two': 2, 'three': 3, ulong(4):'four', 5: 'five'}, throw=False)
-    c = AnnotationDict(zip(['one', 'two', 'three', ulong(4), 5], [1, 2, 3, 'four', 'five']), throw=False)
-    d = AnnotationDict([('two', 2), ('one', 1), ('three', 3), (ulong(4), 'four'), (5, 'five')], throw=False)
-    e = AnnotationDict({5: 'five', symbol('three'): 3, ulong(4): 'four', symbol('one'): 1, symbol('two'): 2}, throw=False)
-    f = AnnotationDict(a, throw=False)
-    g = AnnotationDict(throw=False)
+    b = AnnotationDict({'one': 1, 'two': 2, 'three': 3, ulong(4): 'four', 5: 'five'}, raise_on_error=False)
+    c = AnnotationDict(zip(['one', 'two', 'three', ulong(4), 5], [1, 2, 3, 'four', 'five']), raise_on_error=False)
+    d = AnnotationDict([('two', 2), ('one', 1), ('three', 3), (ulong(4), 'four'), (5, 'five')], raise_on_error=False)
+    e = AnnotationDict({5: 'five', symbol('three'): 3, ulong(4): 'four', symbol('one'): 1, symbol('two'): 2}, raise_on_error=False)
+    f = AnnotationDict(a, raise_on_error=False)
+    g = AnnotationDict(raise_on_error=False)
     g[ulong(4)] = 'four'
     g['one'] = 1
     g[symbol('two')] = 2
@@ -314,22 +314,22 @@ class DataTest(Test):
     self.assertRaises(TypeError, SymbolList, ['one', ['two']])
     self.assertRaises(TypeError, SymbolList, ['one', {'two': 3}])
 
-  def testSymbolListNoThrow(self):
-    a = SymbolList(['one', 'two', 'three', 4], throw=False)
-    b = SymbolList([symbol('one'), symbol('two'), symbol('three'), 4], throw=False)
-    c = SymbolList(throw=False)
+  def testSymbolListNoRaiseError(self):
+    a = SymbolList(['one', 'two', 'three', 4], raise_on_error=False)
+    b = SymbolList([symbol('one'), symbol('two'), symbol('three'), 4], raise_on_error=False)
+    c = SymbolList(raise_on_error=False)
     c.append('one')
     c.extend([symbol('two'), 'three', 4])
-    d1 = SymbolList(['one'], throw=False)
-    d2 = SymbolList(['two', symbol('three'), 4], throw=False)
+    d1 = SymbolList(['one'], raise_on_error=False)
+    d2 = SymbolList(['two', symbol('three'), 4], raise_on_error=False)
     d = d1 + d2
-    e = SymbolList(['one'], throw=False)
-    e += SymbolList(['two', symbol('three'), 4], throw=False)
-    f = SymbolList(['one', 'hello', 'goodbye', 'what?'], throw=False)
+    e = SymbolList(['one'], raise_on_error=False)
+    e += SymbolList(['two', symbol('three'), 4], raise_on_error=False)
+    f = SymbolList(['one', 'hello', 'goodbye', 'what?'], raise_on_error=False)
     f[1] = symbol('two')
     f[2] = 'three'
     f[3] = 4
-    g = SymbolList(a, throw=False)
+    g = SymbolList(a, raise_on_error=False)
     assert a == b == c == d == e == f == g
 
   def _test(self, dtype, *values, **kwargs):

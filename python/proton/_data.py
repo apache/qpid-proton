@@ -308,7 +308,7 @@ class Array(object):
             return False
 
 
-def _check_type(s, allow_ulong=False, throw=True):
+def _check_type(s, allow_ulong=False, raise_on_error=True):
     if isinstance(s, symbol):
         return s
     if allow_ulong and isinstance(s, ulong):
@@ -319,53 +319,31 @@ def _check_type(s, allow_ulong=False, throw=True):
     if isinstance(s, unicode):
         # This must be python2 unicode as we already detected py3 str above
         return symbol(s.encode('utf-8'))
-    if throw:
+    if raise_on_error:
         raise TypeError('Non-symbol type %s: %s' % (type(s), s))
     return s
 
-def check_is_symbol(s, throw=True):
-    """
-    Check if s is a symbol type. If s is a string, convert to a symbol
-    and return it. If s is already a symbol, just return it.
-    For other types of s, if throw == True, raise a ``TypeError``,
-    otherwise return s without any changes.
 
-    :param s: Any object that should be checked
-    :type s: any
-    :param throw: If true, raise exception if non-allowed type is found.
-                  Otherwise, return non-allowed types without any changes.
-    :type throw: ``bool``
-    """
-    return _check_type(s, allow_ulong=False, throw=throw)
+def _check_is_symbol(s, raise_on_error=True):
+    return _check_type(s, allow_ulong=False, raise_on_error=raise_on_error)
 
-def check_is_symbol_or_ulong(s, throw=True):
-    """
-    Check if s is a symbol or ulong type. If s is a string, convert to
-    a symbol and return it. If s is already a symbol, just return it.
-    For other types of s, if throw == True, raise a ``TypeError``,
-    otherwise return s without any changes.
 
-    :param s: Any object that should be checked
-    :type s: any
-    :param throw: If true, raise exception if non-allowed type is found.
-                  Otherwise, return non-allowed types without any changes.
-    :type throw: ``bool``
-    """
-    return _check_type(s, allow_ulong=True, throw=throw)
+def _check_is_symbol_or_ulong(s, raise_on_error=True):
+    return _check_type(s, allow_ulong=True, raise_on_error=raise_on_error)
 
 
 class RestrictedKeyDict(dict):
     """Parent class for :class:`PropertyDict` and :class:`AnnotationDict`"""
-    def __init__(self, validation_fn, e=None, throw=True, **kwargs):
+    def __init__(self, validation_fn, e=None, raise_on_error=True, **kwargs):
         super(RestrictedKeyDict, self).__init__()
         self.validation_fn = validation_fn
-        self.throw = throw
+        self.raise_on_error = raise_on_error
         self.update(e, **kwargs)
 
     def __setitem__(self, key, value):
         """Checks if the key is a :class:`symbol` type before setting the value"""
         try:
-            return super(RestrictedKeyDict, self).__setitem__(self.validation_fn(key, self.throw), value)
+            return super(RestrictedKeyDict, self).__setitem__(self.validation_fn(key, self.raise_on_error), value)
         except TypeError:
             pass
         # __setitem__() must raise a KeyError, not TypeError
@@ -381,11 +359,12 @@ class RestrictedKeyDict(dict):
                 for k in e:
                     self.__setitem__(k, e[k])
             except TypeError:
-                self.__setitem__(k[0], k[1]) # use tuple consumed from from zip
+                self.__setitem__(k[0], k[1])  # use tuple consumed from from zip
                 for (k, v) in e:
                     self.__setitem__(k, v)
         for k in kwargs:
             self.__setitem__(k, kwargs[k])
+
 
 class PropertyDict(RestrictedKeyDict):
     """
@@ -402,20 +381,28 @@ class PropertyDict(RestrictedKeyDict):
         >>> a == b == c == d == e
         True
 
-    By default, non-string and non-symbol keys cause a KeyError to be raised:
+    By default, non-string and non-symbol keys cause a ``KeyError`` to be raised:
 
         >>> PropertyDict({'one':1, 2:'two'})
           ...
         KeyError: "invalid non-symbol key: <type 'int'>: 2"
 
-    but by setting throw=False, non-string and non-symbol keys will be ignored:
+    but by setting ``raise_on_error=False``, non-string and non-symbol keys will be ignored:
 
-        >>> PropertyDict({'one':1, 2:'two'}, throw=False)
+        >>> PropertyDict({'one':1, 2:'two'}, raise_on_error=False)
         PropertyDict({2: 'two', symbol(u'one'): 1})
 
+    :param e: Initialization for ``dict``
+    :type e: ``dict`` or ``list`` of ``tuple`` or ``zip`` object
+    :param raise_on_error: If ``True``, will raise an ``KeyError`` if a non-string or non-symbol
+        is encountered as a key in the initialization, or in a subsequent operation which
+        adds such an key. If ``False``, non-strings and non-symbols will be added as keys
+        to the dictionary without an error.
+    :type raise_on_error: ``bool``
+    :param kwargs: Keyword args for initializing a ``dict`` of the form key1=val1, key2=val2, ...
     """
-    def __init__(self, e=None, throw=True, **kwargs):
-        super(PropertyDict, self).__init__(check_is_symbol, e, throw, **kwargs)
+    def __init__(self, e=None, raise_on_error=True, **kwargs):
+        super(PropertyDict, self).__init__(_check_is_symbol, e, raise_on_error, **kwargs)
 
     def __repr__(self):
         """ Representation of PropertyDict """
@@ -438,20 +425,28 @@ class AnnotationDict(RestrictedKeyDict):
         >>> a == b == c == d == e
         True
 
-    By default, non-string, non-symbol and non-ulong keys cause a KeyError to be raised:
+    By default, non-string, non-symbol and non-ulong keys cause a ``KeyError`` to be raised:
 
         >>> AnnotationDict({'one': 1, 2: 'two'})
           ...
         KeyError: "invalid non-symbol key: <type 'int'>: 2"
 
-    but by setting throw=False, non-string, non-symbol and non-ulong keys will be ignored:
+    but by setting ``raise_on_error=False``, non-string, non-symbol and non-ulong keys will be ignored:
 
-        >>> AnnotationDict({'one': 1, 2: 'two'}, throw=False)
+        >>> AnnotationDict({'one': 1, 2: 'two'}, raise_on_error=False)
         AnnotationDict({2: 'two', symbol(u'one'): 1})
 
+    :param e: Initialization for ``dict``
+    :type e: ``dict`` or ``list`` of ``tuple`` or ``zip`` object
+    :param raise_on_error: If ``True``, will raise an ``KeyError`` if a non-string, non-symbol or
+        non-ulong is encountered as a key in the initialization, or in a subsequent
+        operation which adds such an key. If ``False``, non-strings, non-ulongs and non-symbols
+        will be added as keys to the dictionary without an error.
+    :type raise_on_error: ``bool``
+    :param kwargs: Keyword args for initializing a ``dict`` of the form key1=val1, key2=val2, ...
     """
-    def __init__(self, e=None, throw=True, **kwargs):
-        super(AnnotationDict, self).__init__(check_is_symbol_or_ulong, e, throw, **kwargs)
+    def __init__(self, e=None, raise_on_error=True, **kwargs):
+        super(AnnotationDict, self).__init__(_check_is_symbol_or_ulong, e, raise_on_error, **kwargs)
 
     def __repr__(self):
         """ Representation of AnnotationDict """
@@ -475,15 +470,22 @@ class SymbolList(list):
           ...
         TypeError: Non-symbol type <class 'int'>: 3
 
-    but by setting throw=False, non-symbol and non-string keys will be ignored:
+    but by setting ``raise_on_error=False``, non-symbol and non-string keys will be ignored:
 
-        >>> SymbolList(['one', symbol('two'), 3], throw=False)
+        >>> SymbolList(['one', symbol('two'), 3], raise_on_error=False)
         SymbolList([symbol(u'one'), symbol(u'two'), 3])
 
+    :param t: Initialization for list
+    :type t: ``list``
+    :param raise_on_error: If ``True``, will raise an ``TypeError`` if a non-string or non-symbol is
+        encountered in the initialization list, or in a subsequent operation which adds such
+        an element. If ``False``, non-strings and non-symbols will be added to the list without
+        an error.
+    :type raise_on_error: ``bool``
     """
-    def __init__(self, t=None, throw=True):
+    def __init__(self, t=None, raise_on_error=True):
         super(SymbolList, self).__init__()
-        self.throw = throw
+        self.raise_on_error = raise_on_error
         if t:
             self.extend(t)
 
@@ -492,12 +494,12 @@ class SymbolList(list):
         l = []
         if t:
             for v in t:
-                l.append(check_is_symbol(v, self.throw))
+                l.append(_check_is_symbol(v, self.raise_on_error))
         return l
 
     def append(self, v):
         """ Add a single value v to the end of the list """
-        return super(SymbolList, self).append(check_is_symbol(v, self.throw))
+        return super(SymbolList, self).append(_check_is_symbol(v, self.raise_on_error))
 
     def extend(self, t):
         """ Add all elements of an iterable t to the end of the list """
@@ -505,11 +507,11 @@ class SymbolList(list):
 
     def insert(self, i, v):
         """ Insert a value v at index i """
-        return super(SymbolList, self).insert(i, check_is_symbol(v, self.throw))
+        return super(SymbolList, self).insert(i, _check_is_symbol(v, self.raise_on_error))
 
     def __add__(self, t):
         """ Handles list1 + list2 """
-        return SymbolList(super(SymbolList, self).__add__(self._check_list(t)), throw=self.throw)
+        return SymbolList(super(SymbolList, self).__add__(self._check_list(t)), raise_on_error=self.raise_on_error)
 
     def __iadd__(self, t):
         """ Handles list1 += list2 """
@@ -517,7 +519,7 @@ class SymbolList(list):
 
     def __setitem__(self, i, t):
         """ Handles list[i] = v """
-        return super(SymbolList, self).__setitem__(i, check_is_symbol(t, self.throw))
+        return super(SymbolList, self).__setitem__(i, _check_is_symbol(t, self.raise_on_error))
 
     def __repr__(self):
         """ Representation of SymbolList """

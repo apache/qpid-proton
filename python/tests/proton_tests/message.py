@@ -119,7 +119,7 @@ class CodecTest(Test):
 
     assert msg2.properties['key'] == 'value', msg2.properties['key']
 
-  def testAnnotationsSymbolicAndUlongKey(self, a={symbol('one'):1, 'two':2, ulong(3):'three'}):
+  def testAnnotationsSymbolicAndUlongKey(self, a={symbol('one'): 1, 'two': 2, ulong(3): 'three'}):
     self.msg.annotations = a
     data = self.msg.encode()
 
