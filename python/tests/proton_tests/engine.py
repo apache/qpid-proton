@@ -175,7 +175,7 @@ class ConnectionTest(Test):
     assert self.c1.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
     assert self.c2.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
 
-  def test_capabilities(self):
+  def test_capabilities_array(self):
     self.c1.offered_capabilities = Array(UNDESCRIBED, Data.SYMBOL,
                                          symbol("O_one"),
                                          symbol("O_two"),
@@ -185,6 +185,21 @@ class ConnectionTest(Test):
                                          symbol("D_one"),
                                          symbol("D_two"),
                                          symbol("D_three"))
+    self.c1.open()
+
+    assert self.c2.remote_offered_capabilities is None
+    assert self.c2.remote_desired_capabilities is None
+
+    self.pump()
+
+    assert self.c2.remote_offered_capabilities == self.c1.offered_capabilities, \
+        (self.c2.remote_offered_capabilities, self.c1.offered_capabilities)
+    assert self.c2.remote_desired_capabilities == self.c1.desired_capabilities, \
+        (self.c2.remote_desired_capabilities, self.c1.desired_capabilities)
+
+  def test_capabilities_symbol_list(self):
+    self.c1.offered_capabilities = SymbolList(['O_one', 'O_two', symbol('O_three')])
+    self.c1.desired_capabilities = SymbolList([symbol('D_one'), 'D_two', 'D_three'])
     self.c1.open()
 
     assert self.c2.remote_offered_capabilities is None
@@ -216,7 +231,7 @@ class ConnectionTest(Test):
     rcond = self.c2.remote_condition
     assert rcond == cond, (rcond, cond)
 
-  def test_properties(self, p1={symbol("key"): symbol("value")}, p2=None):
+  def test_properties(self, p1=PropertyDict(key=symbol("value")), p2=None):
     self.c1.properties = p1
     self.c2.properties = p2
     self.c1.open()
@@ -224,7 +239,7 @@ class ConnectionTest(Test):
     self.pump()
 
     assert self.c2.remote_properties == p1, (self.c2.remote_properties, p1)
-    assert self.c1.remote_properties == p2, (self.c2.remote_properties, p2)
+    assert self.c1.remote_properties == p2, (self.c1.remote_properties, p2)
 
   # The proton implementation limits channel_max to 32767.
   # If I set the application's limit lower than that, I should

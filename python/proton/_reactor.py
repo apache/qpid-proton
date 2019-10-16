@@ -1188,9 +1188,13 @@ class Container(Reactor):
                 the client; if ``virtual_host`` is not supplied the host field
                 from the URL is used instead.
             *   ``offered_capabilities``, a list of capabilities being offered to the
-                peer.
+                peer. The list must contain symbols (or strings, which will be converted
+                to symbols).
             *   ``desired_capabilities``, a list of capabilities desired from the peer.
-            *   ``properties``, a list of connection properties
+                The list must contain symbols (or strings, which will be converted
+                to symbols).
+            *   ``properties``, a list of connection properties. This must be a map
+                with symbol keys (or string keys, which will be converted to symbol keys).
             *   ``sni`` (``str``), a hostname to use with SSL/TLS Server Name Indication (SNI)
             *   ``max_frame_size`` (``int``), the maximum allowable TCP packet size between the
                 peers.

@@ -24,6 +24,7 @@ About AMQP and the Qpid Proton Python API
    :maxdepth: 1
 
    overview
+   types
    tutorial
 
 Key API Features
@@ -120,6 +121,11 @@ Several event handlers are provided which provide default behavior for most even
 ``proton.handlers`` module. The :class:`proton.handlers.MessagingHandler` is the most commonly used handler for
 non-transactional applications. Developers would typically directly inherit from this handler to provide the
 application's event behavior, and override callbacks as needed to provide additional behavior they may require.
+
+AMQP types
+----------
+The types defined by the AMQP specification are mapped to either native Python types or to special proton classes
+which represent the AMQP type. See :ref:`types` for a summary.
 
 Examples
 --------

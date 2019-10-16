@@ -57,7 +57,7 @@ from cproton import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN_DIST_MOD
 
 from ._common import unicode2utf8, utf82unicode
 from ._condition import cond2obj, obj2cond
-from ._data import Data, dat2obj, obj2dat
+from ._data import Data, dat2obj, obj2dat, PropertyDict, SymbolList
 from ._delivery import Delivery
 from ._exceptions import ConnectionException, EXCEPTIONS, LinkException, SessionException
 from ._transport import Transport
@@ -499,6 +499,65 @@ class Connection(Wrapper, Endpoint):
         released and all :class:`Delivery` objects are settled.
         """
         pn_connection_release(self._impl)
+
+    def _get_offered_capabilities(self):
+        return self.offered_capabilities_list
+
+    def _set_offered_capabilities(self, offered_capability_list):
+        if isinstance(offered_capability_list, list):
+            self.offered_capabilities_list = SymbolList(offered_capability_list, raise_on_error=False)
+        else:
+            self.offered_capabilities_list = offered_capability_list
+
+    offered_capabilities = property(_get_offered_capabilities, _set_offered_capabilities, doc="""
+    Offered capabilities as a list of symbols. The AMQP 1.0 specification
+    restricts this list to symbol elements only. It is possible to use
+    the special ``list`` subclass :class:`SymbolList` as it will by
+    default enforce this restriction on construction. In addition, if a
+    string type is used, it will be silently converted into the required
+    symbol.
+
+    :type: ``list`` containing :class:`symbol`.
+    """)
+
+    def _get_desired_capabilities(self):
+        return self.desired_capabilities_list
+
+    def _set_desired_capabilities(self, desired_capability_list):
+        if isinstance(desired_capability_list, list):
+            self.desired_capabilities_list = SymbolList(desired_capability_list, raise_on_error=False)
+        else:
+            self.desired_capabilities_list = desired_capability_list
+
+    desired_capabilities = property(_get_desired_capabilities, _set_desired_capabilities, doc="""
+    Desired capabilities as a list of symbols. The AMQP 1.0 specification
+    restricts this list to symbol elements only. It is possible to use
+    the special ``list`` subclass :class:`SymbolList` which will by
+    default enforce this restriction on construction. In addition, if string
+    types are used, this class will be silently convert them into symbols.
+
+    :type: ``list`` containing :class:`symbol`.
+    """)
+
+    def _get_properties(self):
+        return self.properties_dict
+
+    def _set_properties(self, properties_dict):
+        if isinstance(properties_dict, dict):
+            self.properties_dict = PropertyDict(properties_dict, raise_on_error=False)
+        else:
+            self.properties_dict = properties_dict
+
+    properties = property(_get_properties, _set_properties, doc="""
+    Connection properties as a dictionary of key/values. The AMQP 1.0
+    specification restricts this dictionary to have keys that are only
+    :class:`symbol` types. It is possible to use the special ``dict``
+    subclass :class:`PropertyDict` which will by default enforce this
+    restrictions on construction. In addition, if strings type are used,
+    this will silently convert them into symbols.
+
+    :type: ``dict`` containing :class:`symbol`` keys.
+    """)
 
 
 class Session(Wrapper, Endpoint):
