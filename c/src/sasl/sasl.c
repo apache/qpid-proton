@@ -471,8 +471,8 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       pni_emit(transport);
       break;
     case SASL_POSTED_MECHANISMS: {
-      // TODO: Hardcoded limit of 16 mechanisms
-      char *mechs[16];
+      // TODO(PROTON-2122) Replace magic number 32 with dynamically sized memory
+      char *mechs[32];
       char *mechlist = pn_strdup(pni_sasl_impl_list_mechs(transport));
 
       int count = 0;
