@@ -979,7 +979,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
   unsigned framecount = 0;
   pn_buffer_t *frame = transport->frame;
 
-  // create preformatives, assuming 'more' flag need not change
+  // create performatives, assuming 'more' flag need not change
 
  compute_performatives:
   pn_data_clear(transport->output_args);
