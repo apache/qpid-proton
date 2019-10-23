@@ -38,7 +38,8 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
   for (unsigned i = 0; i < size; i++)
   {
     uint8_t c = src[i];
-    if (c < 128 && isprint(c)) {
+    // output printable ASCII, ensure '\' always introduces hex escape
+    if (c < 128 && c != '\\' && isprint(c)) {
       if (idx < (int) (capacity - 1)) {
         dst[idx++] = c;
       } else {
