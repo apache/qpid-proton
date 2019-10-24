@@ -17,6 +17,10 @@
 # under the License
 #
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import unittest
 
 # Monkey-patch a few unittest 2.7 features for Python 2.6.
