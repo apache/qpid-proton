@@ -38,7 +38,7 @@
 static const pnx_sasl_implementation *global_sasl_impl = NULL;
 
 // List of SASL mechansms to exclude by default as they cause user pain
-static const char* pni_excluded_mechs = "GSSAPI GSS-SPNEGO";
+static const char* pni_excluded_mechs = "GSSAPI GSS-SPNEGO GS2-KRB5 GS2-IAKERB";
 
 //-----------------------------------------------------------------------------
 // pnx_sasl: API for SASL implementations to use
