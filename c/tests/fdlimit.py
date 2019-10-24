@@ -68,8 +68,8 @@ class FdLimitTest(unittest.TestCase):
                 receivers.append(receiver)
 
             # All FDs are now in use, send attempt will (with present implementation) hang
-            with subprocess.Popen(["send", "", b.port, "x"],
-                                  stdout=self.devnull, stderr=subprocess.STDOUT) as sender:
+            with test_subprocess.Popen(["send", "", b.port, "x"],
+                                       stdout=self.devnull, stderr=subprocess.STDOUT) as sender:
                 time.sleep(1)  # polling for None immediately would always succeed, regardless whether send hangs or not
                 self.assertIsNone(sender.poll())
 
