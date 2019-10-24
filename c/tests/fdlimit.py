@@ -20,6 +20,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import os
 import subprocess
 import time
 
@@ -28,7 +29,7 @@ from test_unittest import unittest
 
 # Check if we can run prlimit to control resources
 try:
-    assert subprocess.check_call(["prlimit"], stdout=subprocess.DEVNULL) == 0, 'prlimit is present, but broken'
+    assert subprocess.check_call(["prlimit"], stdout=open(os.devnull, 'w')) == 0, 'prlimit is present, but broken'
     prlimit_available = True
 except OSError:
     prlimit_available = False
@@ -38,11 +39,18 @@ class PRLimitedBroker(test_subprocess.Server):
     def __init__(self, fdlimit, *args, **kwargs):
         super(PRLimitedBroker, self).__init__(
             ['prlimit', '-n{0:d}'.format(fdlimit), "broker", "", "0"],
-            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, universal_newlines=True, *args, **kwargs)
+            stdout=subprocess.PIPE, universal_newlines=True, *args, **kwargs)
         self.fdlimit = fdlimit
 
 
 class FdLimitTest(unittest.TestCase):
+    devnull = open(os.devnull, 'w')
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.devnull:
+            cls.devnull.close()
+
     @unittest.skipUnless(prlimit_available, "prlimit not available")
     def test_fd_limit_broker(self):
         """Check behaviour when running out of file descriptors on accept"""
@@ -56,12 +64,12 @@ class FdLimitTest(unittest.TestCase):
             #  PN_TRANSPORT_CLOSED: amqp:connection:framing-error: connection aborted
             #  PN_TRANSPORT_CLOSED: proton:io: Connection reset by peer - disconnected :5672 (connection aborted)
             for i in range(fdlimit + 1):
-                receiver = subprocess.Popen(["receive", "", b.port, str(i)], stdout=subprocess.DEVNULL)
+                receiver = test_subprocess.Popen(["receive", "", b.port, str(i)], stdout=self.devnull)
                 receivers.append(receiver)
 
             # All FDs are now in use, send attempt will (with present implementation) hang
             with subprocess.Popen(["send", "", b.port, "x"],
-                                  stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT) as sender:
+                                  stdout=self.devnull, stderr=subprocess.STDOUT) as sender:
                 time.sleep(1)  # polling for None immediately would always succeed, regardless whether send hangs or not
                 self.assertIsNone(sender.poll())
 
@@ -75,8 +83,8 @@ class FdLimitTest(unittest.TestCase):
                 self.assertEqual(sender.wait(), 0)
 
             # Additional send/receive should succeed now
-            self.assertIn("10 messages sent", subprocess.check_output(["send", "", b.port], universal_newlines=True))
-            self.assertIn("10 messages received", subprocess.check_output(["receive", "", b.port], universal_newlines=True))
+            self.assertIn("10 messages sent", test_subprocess.check_output(["send", "", b.port], universal_newlines=True))
+            self.assertIn("10 messages received", test_subprocess.check_output(["receive", "", b.port], universal_newlines=True))
 
 
 if __name__ == "__main__":
