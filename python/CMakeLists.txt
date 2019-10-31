@@ -212,7 +212,8 @@ if (SETUPTOOLS_MODULE_FOUND)
   add_custom_target(py_pkg_src ALL
                      WORKING_DIRECTORY dist
                      DEPENDS py_src_dist
-                     COMMAND ${PYTHON_EXECUTABLE} setup.py sdist --dist-dir ${CMAKE_CURRENT_BINARY_DIR}/pkgs)
+		     COMMAND ${PN_ENV_SCRIPT} "SWIG=${SWIG_EXECUTABLE}" --
+		      ${PYTHON_EXECUTABLE} setup.py sdist --dist-dir ${CMAKE_CURRENT_BINARY_DIR}/pkgs)
   if (WHEEL_MODULE_FOUND)
     add_custom_target(py_pkg_wheel ALL
                        WORKING_DIRECTORY dist

@@ -150,8 +150,8 @@ ssl_certificate::ssl_certificate(const std::string &main, const std::string &ext
 // For backwards ABI compatibility we need to define some symbols:
 //
 
-// Don't do this on MacOS or with Visual Studio
-#if !defined(_MSC_VER) && !(defined(__APPLE__) && defined(__MACH__))
+// Don't do this on MacOS, FreeBSD or with Visual Studio
+#if !defined(_MSC_VER) && !(defined(__APPLE__) && defined(__MACH__)) && !defined(__FreeBSD__)
 
 //
 // These are a bit easier as the entire class has been removed so we can just define the class here
