@@ -1419,10 +1419,10 @@ static void pconnection_tick(pconnection_t *pc) {
   pn_transport_t *t = pc->driver.transport;
   if (pn_transport_get_idle_timeout(t) || pn_transport_get_remote_idle_timeout(t)) {
     ptimer_set(&pc->timer, 0);
-    int64_t now = pn_proactor_now_64();
-    int64_t next = pn_transport_tick(t, now);
+    uint64_t now = pn_proactor_now_64();
+    uint64_t next = pn_transport_tick(t, now);
     if (next) {
-      ptimer_set(&pc->timer, (uint64_t) next - now);
+      ptimer_set(&pc->timer, next - now);
     }
   }
 }

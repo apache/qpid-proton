@@ -2132,8 +2132,8 @@ static void pconnection_tick(pconnection_t *pc) {
     if(!stop_timer(pc->context.proactor->timer_queue, &pc->tick_timer)) {
       // TODO: handle error
     }
-    int64_t now = pn_proactor_now_64();
-    int64_t next = pn_transport_tick(t, now);
+    uint64_t now = pn_proactor_now_64();
+    uint64_t next = pn_transport_tick(t, now);
     if (next) {
       if (!start_timer(pc->context.proactor->timer_queue, &pc->tick_timer, tick_timer_cb, pc, next - now)) {
         // TODO: handle error
