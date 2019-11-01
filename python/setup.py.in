@@ -159,13 +159,21 @@ class Configure(build_ext):
         # implementations will be used.
         sources.append(os.path.join(proton_src, 'sasl', 'sasl.c'))
         sources.append(os.path.join(proton_src, 'sasl', 'default_sasl.c'))
-        if cc.has_function('sasl_client_done', includes=['sasl/sasl.h'],
-                           libraries=['sasl2']):
-            libraries.append('sasl2')
-            sources.append(os.path.join(proton_src, 'sasl', 'cyrus_sasl.c'))
+
+        # Skip the SASL detection on Windows.
+        # MSbuild scans output of Exec tasks and fails the build if it notices error-like
+        # strings there. This is a known issue with CMake and msbuild, see
+        # * https://github.com/Microsoft/msbuild/issues/2424
+        # * https://cmake.org/pipermail/cmake-developers/2015-October/026775.html
+        if cc.compiler_type!='msvc':
+            if cc.has_function('sasl_client_done', includes=['sasl/sasl.h'], libraries=['sasl2']):
+                libraries.append('sasl2')
+                sources.append(os.path.join(proton_src, 'sasl', 'cyrus_sasl.c'))
+            else:
+                log.warn("Cyrus SASL not installed - only the ANONYMOUS and PLAIN mechanisms will be supported!")
+                sources.append(os.path.join(proton_src, 'sasl', 'cyrus_stub.c'))
         else:
-            log.warn("Cyrus SASL not installed - only the ANONYMOUS and"
-                     " PLAIN mechanisms will be supported!")
+            log.warn("Windows - only the ANONYMOUS and PLAIN mechanisms will be supported!")
             sources.append(os.path.join(proton_src, 'sasl', 'cyrus_stub.c'))
 
         # Hack for Windows/msvc: We need to compile proton as C++, but it seems the only way to
@@ -175,9 +183,10 @@ class Configure(build_ext):
             targets = []
             target_base = os.path.join(self.build_temp, 'srcs')
             try:
-                os.mkdir(target_base)
-            except FileExistsError:
-	            pass
+                # Might need to make intermediate directories use os.makedirs() not os.mkdir()
+                os.makedirs(target_base)
+            except OSError:
+                pass
 
             for f in sources:
                 # We know each file ends in '.c' as we filtered on that above so just add 'pp' to end
