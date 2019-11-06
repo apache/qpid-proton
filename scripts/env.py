@@ -26,6 +26,7 @@ import os
 import subprocess
 from optparse import OptionParser
 
+
 def main(argv=None):
 
     parser = OptionParser(usage="Usage: %prog [options] [--] VAR=VALUE... command [options] arg1 arg2...")
@@ -41,10 +42,10 @@ def main(argv=None):
         new_env = os.environ.copy()
 
     # pull out each name value pair
-    while (len(args)):
-        z = args[0].split("=",1)
+    while len(args):
+        z = args[0].split("=", 1)
         if len(z) != 2:
-            break;  # done with env args
+            break  # done with env args
         if len(z[0]) == 0:
             raise Exception("Error: incorrect format for env var: '%s'" % str(args[x]))
         del args[0]
@@ -60,6 +61,7 @@ def main(argv=None):
 
     p = subprocess.Popen(args, env=new_env)
     return p.wait()
+
 
 if __name__ == "__main__":
     sys.exit(main())

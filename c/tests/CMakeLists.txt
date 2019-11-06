@@ -97,7 +97,12 @@ if (CMAKE_CXX_COMPILER)
       set(path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
     endif(WIN32)
 
-    add_test(NAME c-fdlimit-tests COMMAND ${PN_ENV_SCRIPT} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
+    set(pypath "${CMAKE_SOURCE_DIR}/tests/py")
+
+    add_test(
+        NAME c-fdlimit-tests
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND ${PN_ENV_SCRIPT} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
   endif(HAS_PROACTOR)
 else (CMAKE_CXX_COMPILER)
   message(WARNING "No C++ compiler, some C library tests were not built")

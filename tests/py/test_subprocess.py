@@ -19,9 +19,12 @@
 
 # Extends the subprocess module to use runtime checkers, and report stderr output.
 
-import subprocess, re, os, tempfile
-
+import os
+import re
+import subprocess
+import tempfile
 from subprocess import PIPE
+
 
 def in_path(name):
     """Look for name in the PATH""" 
@@ -30,6 +33,7 @@ def in_path(name):
         if os.path.isfile(f) and os.access(f, os.X_OK):
             return f
 
+
 class TestProcessError(Exception):
     def __init__(self, proc, what, output=None):
         self.output = output
@@ -37,6 +41,7 @@ class TestProcessError(Exception):
         error = sep + proc.error + sep if proc.error else ""
         super(TestProcessError, self).__init__("%s pid=%s exit=%s: %s%s" % (
             proc.cmd, proc.pid, proc.returncode, what, error))
+
 
 class Popen(subprocess.Popen):
     """
@@ -92,8 +97,8 @@ class Popen(subprocess.Popen):
         """Return stderr as string, may only be used after process has terminated."""
         assert(self.poll is not None)
         if not hasattr(self, "_error"):
-            self.errfile.close() # Not auto-deleted
-            with open(self.errfile.name) as f: # Re-open to read
+            self.errfile.close()  # Not auto-deleted
+            with open(self.errfile.name) as f:  # Re-open to read
                 self._error = f.read().strip()
             os.unlink(self.errfile.name)
         return self._error
@@ -104,8 +109,10 @@ class Popen(subprocess.Popen):
     def __exit__(self, *args):
         self.on_exit()
 
+
 def check_output(*args, **kwargs):
     return Popen(*args, **kwargs).communicate()[0]
+
 
 class Server(Popen):
     """A process that prints 'listening on <port>' to stdout"""
