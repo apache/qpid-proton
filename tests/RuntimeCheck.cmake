@@ -96,8 +96,15 @@ elseif(RUNTIME_CHECK STREQUAL "helgrind")
 elseif(RUNTIME_CHECK STREQUAL "asan")
   assert_has_sanitizers()
   message(STATUS "Runtime memory checker: gcc/clang memory sanitizers")
-  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=address,undefined")
+  # clang defaults to static sanitizer libs (which is preferred), but then we cannot LD_PRELOAD
+  if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+      set(CLANG_ASAN_FLAG "-shared-libasan")
+  endif()
+
+  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer ${CLANG_ASAN_FLAG} -fsanitize=address,undefined -fsanitize-recover=vptr")
   set(TEST_WRAP_PREFIX "${CMAKE_SOURCE_DIR}/tests/preload_asan.sh $<TARGET_FILE:qpid-proton-core>")
+  list(APPEND TEST_ENV "UBSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/tests/ubsan.supp")
+  list(APPEND TEST_ENV "LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/tests/lsan.supp")
 
 elseif(RUNTIME_CHECK STREQUAL "tsan")
   assert_has_sanitizers()
