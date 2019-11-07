@@ -29,6 +29,9 @@ matrix:
   include:
   - os: linux
     env:
+    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
+  - os: linux
+    env:
     - QPID_PROTON_CMAKE_ARGS='-DCMAKE_BUILD_TYPE=Coverage'
     after_success:
     - bash <(curl -s https://codecov.io/bash)
