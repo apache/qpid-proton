@@ -83,5 +83,5 @@ before_script:
 - cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install ${QPID_PROTON_CMAKE_ARGS}
 
 script:
-- cmake --build . --target install && ctest -V ${QPID_PROTON_CTEST_ARGS}
+- cmake --build . --target install -- -j$(nproc) && ctest -V ${QPID_PROTON_CTEST_ARGS}
 
