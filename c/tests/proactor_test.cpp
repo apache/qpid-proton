@@ -173,7 +173,7 @@ TEST_CASE("proactor_connection_wake") {
 
   REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
-  CHECK(!pn_proactor_get(p)); /* Should be idle */
+  while (p.flush().first != 0);
   pn_connection_wake(c);
   REQUIRE_RUN(p, PN_CONNECTION_WAKE);
   REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
