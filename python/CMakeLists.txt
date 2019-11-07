@@ -266,11 +266,11 @@ else ()
         "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
         "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
       add_test (NAME python-tox-test
-        COMMAND ${PN_ENV_SCRIPT}
+        COMMAND ${PN_ENV_SCRIPT} --
         "PATH=${py_path}"
         "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
         "SWIG=${SWIG_EXECUTABLE}"
-        ${TEST_ENV} --
+        ${TEST_ENV}
         ${TEST_WRAP_PREFIX_CMD} ${PYTHON_EXECUTABLE} -m tox)
       set_tests_properties(python-tox-test
         PROPERTIES

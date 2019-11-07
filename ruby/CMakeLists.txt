@@ -121,7 +121,7 @@ to_native_path("${bin};${c_lib_dir};$ENV{PATH}" PATH)
 execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
   RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 if (result EQUAL 0)  # Have minitest
-  set(test_env ${PN_ENV_SCRIPT} --
+  set(test_env
     "PATH=${PATH}"
     "RUBYLIB=${RUBYLIB}"
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
@@ -132,13 +132,13 @@ if (result EQUAL 0)  # Have minitest
     string(REPLACE "_" "-" name "ruby-${name}")
     add_test(
       NAME ${name}
-      COMMAND ${test_env} ${TEST_WRAP_PREFIX_CMD} ${RUBY_EXECUTABLE} ${script} -v
+      COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${TEST_WRAP_PREFIX_CMD} ${RUBY_EXECUTABLE} ${script} -v
       ${ARGN})
   endmacro()
 
   add_test(
     NAME ruby-example-test
-    COMMAND ${test_env} ${RUBY_EXECUTABLE} testme -v
+    COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${RUBY_EXECUTABLE} testme -v
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples)
 
   file(GLOB TESTS tests/test_*.rb)

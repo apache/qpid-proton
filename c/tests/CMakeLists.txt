@@ -20,8 +20,9 @@
 configure_file(test_config.h.in test_config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/tests/include)
 if (WIN32)
-  set(test_env ${PN_ENV_SCRIPT} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
+  set(test_env "PATH=$<TARGET_FILE_DIR:qpid-proton-core>" ${TEST_ENV})
 else()
+  set(test_env ${TEST_ENV})
   set(platform_test_src ssl_test.cpp)
 endif()
 
@@ -44,7 +45,7 @@ if (CMAKE_CXX_COMPILER)
     add_executable(${exe} $<TARGET_OBJECTS:test_main> pn_test.cpp ${ARGN})
     set_target_properties(${exe} PROPERTIES
       COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
-    add_test(NAME ${exe} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${exe}>)
+    add_test(NAME ${exe} COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${exe}>)
     set_tests_properties(${exe} PROPERTIES
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
   endmacro()
@@ -82,7 +83,7 @@ if (CMAKE_CXX_COMPILER)
     if (THREADERCISER)
       add_executable(c-threaderciser threaderciser.c)
       set_target_properties(c-threaderciser PROPERTIES COMPILE_FLAGS "${CMAKE_C_FLAGS} ${C_WARNING_FLAGS}")
-      add_test(NAME c-threaderciser COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:c-threaderciser>)
+      add_test(NAME c-threaderciser COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:c-threaderciser>)
       set_tests_properties(c-threaderciser PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
       target_link_libraries (c-threaderciser qpid-proton-proactor)
       find_library(Pthread_LIBRARY pthread)
@@ -99,10 +100,11 @@ if (CMAKE_CXX_COMPILER)
 
     set(pypath "${CMAKE_SOURCE_DIR}/tests/py")
 
+    # unset TEST_EXE_PREFIX as valgrind does not run succesfully when fds are limited
     add_test(
         NAME c-fdlimit-tests
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        COMMAND ${PN_ENV_SCRIPT} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
+        COMMAND ${PN_ENV_SCRIPT} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${test_env} "TEST_EXE_PREFIX=" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
   endif(HAS_PROACTOR)
 else (CMAKE_CXX_COMPILER)
   message(WARNING "No C++ compiler, some C library tests were not built")
