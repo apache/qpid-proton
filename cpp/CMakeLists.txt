@@ -248,6 +248,7 @@ install (FILES
   DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
 
 set(testdata "${CMAKE_CURRENT_BINARY_DIR}/testdata")
+set(test_env ${TEST_ENV})
 
 # SASL configuration for tests
 if(CyrusSASL_Saslpasswd_EXECUTABLE)
@@ -272,7 +273,7 @@ macro(add_cpp_test test)
   add_executable (${test} src/${test}.cpp)
   target_link_libraries (${test} qpid-proton-cpp ${PLATFORM_LIBS})
   add_test (NAME cpp-${test}
-    COMMAND ${PN_ENV_SCRIPT} -- ${test_env}  ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}> ${ARGN})
+    COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}> ${ARGN})
 endmacro(add_cpp_test)
 
 add_cpp_test(codec_test)
