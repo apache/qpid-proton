@@ -35,6 +35,8 @@ matrix:
     compiler: clang
     env:
     - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan '
+    # otherwise, on Travis ldd gives `libclang_rt.asan-x86_64.so => not found` and binaries don't work
+    - LD_LIBRARY_PATH=/usr/local/clang-7.0.0/lib/clang/7.0.0/lib/linux/
   - os: linux
     env:
     - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
