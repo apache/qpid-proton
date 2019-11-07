@@ -138,7 +138,7 @@ if (result EQUAL 0)  # Have minitest
   endmacro()
 
   pn_add_test(
-    UNWRAPPED
+    INTERPRETED
     NAME ruby-example-test
     PREPEND_ENVIRONMENT ${test_env}
     COMMAND ${RUBY_EXECUTABLE} testme -v

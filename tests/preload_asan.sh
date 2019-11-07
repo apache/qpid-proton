@@ -34,6 +34,9 @@ case $EXE in
 
         # Disable link order check to run with limited sanitizing
         # Still seeing problems.
+
+        # https://github.com/google/sanitizers/issues/1066
+        # asan on Ubuntu Trusty does not recognize verify_asan_link_order=0 option
         ASAN_OPTIONS=verify_asan_link_order=0
         export ASAN_OPTIONS
         ;;
