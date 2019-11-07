@@ -38,7 +38,7 @@ except OSError:
 class PRLimitedBroker(test_subprocess.Server):
     def __init__(self, fdlimit, *args, **kwargs):
         super(PRLimitedBroker, self).__init__(
-            ['prlimit', '-n{0:d}'.format(fdlimit), "broker", "", "0"],
+            ['prlimit', '-n{0:d}:'.format(fdlimit), "broker", "", "0"],  # `-n 256:` sets only soft limit to 256
             stdout=subprocess.PIPE, universal_newlines=True, *args, **kwargs)
         self.fdlimit = fdlimit
 
