@@ -21,6 +21,9 @@
 
 #include "ssl_options_impl.hpp"
 
+// https://stackoverflow.com/questions/31657499/how-to-detect-stdlib-libc-in-the-preprocessor
+#include <ciso646>
+
 #include "proton/ssl.hpp"
 #include "proton/error.hpp"
 #include "msg.hpp"
@@ -150,8 +153,8 @@ ssl_certificate::ssl_certificate(const std::string &main, const std::string &ext
 // For backwards ABI compatibility we need to define some symbols:
 //
 
-// Don't do this on MacOS, FreeBSD or with Visual Studio
-#if !defined(_MSC_VER) && !(defined(__APPLE__) && defined(__MACH__)) && !defined(__FreeBSD__)
+// Don't do this with libc++ or with Visual Studio
+#if !defined(_LIBCPP_VERSION) && !defined(_MSC_VER)
 
 //
 // These are a bit easier as the entire class has been removed so we can just define the class here
