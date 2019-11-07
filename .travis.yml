@@ -28,6 +28,14 @@ env:
 matrix:
   include:
   - os: linux
+    compiler: gcc
+    env:
+    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan'
+  - os: linux
+    compiler: clang
+    env:
+    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan '
+  - os: linux
     env:
     - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
   - os: linux
