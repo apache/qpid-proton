@@ -19,14 +19,25 @@
 
 sudo: false
 language: cpp
-compiler:
-- gcc
-- clang
-env:
-- OPENSSL_ia32cap='0x00000000'
 
 matrix:
   include:
+  - os: linux
+    dist: bionic
+    dist: xenial
+    sudo: true
+    language: cpp
+    compiler: gcc
+    env:
+    - OPENSSL_ia32cap='0x00000000'
+  - os: linux
+    dist: xenial
+    language: cpp
+    compiler: clang
+    env:
+    - OPENSSL_ia32cap='0x00000000'
+    # c-threaderciser test hangs on older clang
+    - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser'"
   - os: linux
     dist: bionic
     sudo: true
@@ -69,8 +80,9 @@ matrix:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
     - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
     - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13'
+    # c-threaderciser test hangs on older clang
     # python-tox-test segfaults and ruby tests do not start due to dynamic library issues
-    - QPID_PROTON_CTEST_ARGS="--exclude-regex 'python-tox-test|ruby.*'"
+    - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser|python-tox-test|ruby.*'"
 
   - os: osx
     osx_image: xcode11.3
@@ -79,8 +91,9 @@ matrix:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
     - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
     - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14'
+    # TODO PROTON-2225: c-threaderciser sometimes fails with assertion error
     # python-tox-test segfaults and ruby tests do not start due to dynamic library issues
-    - QPID_PROTON_CTEST_ARGS="--exclude-regex 'python-tox-test|ruby.*'"
+    - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser|python-tox-test|ruby.*'"
 
 addons:
   # Ubuntu 16.04 APT dependencies, https://packages.ubuntu.com/

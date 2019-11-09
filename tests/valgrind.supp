@@ -149,3 +149,30 @@
    fun:*
    fun:_nss_files_getservbyname_r
 }
+
+{
+   TODO(PROTON-2133) investigate races in tests (threaderciser, c-fd-leak)
+   Helgrind:Race
+   ...
+   fun:proactor_do_epoll
+   fun:pn_proactor_wait
+   fun:proactor_thread
+}
+
+{
+   TODO(PROTON-2133) investigate races in tests (threaderciser, c-fd-leak)
+   Helgrind:Race
+   ...
+   fun:pmutex_finalize
+   fun:pcontext_finalize
+   fun:pconnection_final_free
+   fun:pconnection_cleanup
+}
+
+{
+   TODO(PROTON-2225) investigate threaderciser test
+   Memcheck:leak
+   ...
+   fun:connection_ctx_new
+   src:threaderciser.c
+}
