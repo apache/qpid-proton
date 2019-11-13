@@ -90,7 +90,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     fcd_read(&driver, &data, &size);
     if (VERBOSE)
       printf("size is %d, data is %p\n", (int)size, (void *)data);
-    pn_event_t *event;
     while ((event = pn_connection_driver_next_event(&driver)) != NULL) {
       handle(&app, event);
     }
@@ -200,7 +199,11 @@ size_t fcd_read(pn_connection_driver_t *driver, uint8_t **data, size_t *size) {
   pn_rwbytes_t buf = pn_connection_driver_read_buffer(driver);
   size_t s = (*size < buf.size) ? *size : buf.size;
   if (buf.start == NULL) {
-    exit(1);
+    // The engine offered a null buffer for further input.
+    // This is legit, because it is just that the "socket" was closed
+    //  for further input, after reading the invalid header.
+    *size = 0;
+    return *size;
   }
   memcpy(buf.start, *data, s);
 
