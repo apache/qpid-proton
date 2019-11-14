@@ -1339,5 +1339,9 @@ const pn_netaddr_t *pn_listener_addr(pn_listener_t *l) {
 }
 
 pn_millis_t pn_proactor_now(void) {
+  return (pn_millis_t) pn_proactor_now_64();
+}
+
+int64_t pn_proactor_now_64(void) {
   return uv_hrtime() / 1000000; // uv_hrtime returns time in nanoseconds
 }

@@ -695,7 +695,7 @@ PN_EXTERN bool pn_transport_closed(pn_transport_t *transport);
  *
  * @param[in] transport the transport to process.
  * @param[in] now A monotonically-increasing time value in milliseconds.
- *   Does not need to be wall-clock time or a valid AMQP timestamp, but must increase montonically.
+ *   Does not need to be wall-clock time or a valid AMQP timestamp, but must increase monotonically.
  *
  * @return If non-zero, then the monotonic expiration time of the next pending
  * timer event for the transport.  The caller must invoke pn_transport_tick
