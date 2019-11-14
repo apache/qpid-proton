@@ -54,6 +54,46 @@ void pni_logger_fini(pn_logger_t *logger)
   logger->scratch = NULL;
 }
 
+#define LOGLEVEL(x) {#x, sizeof(#x)-1, PN_LEVEL_ ## x, (pn_log_level_t)(PN_LEVEL_ ## x-1)}
+#define TRACE(x) {#x, sizeof(#x)-1, PN_LEVEL_ ## x, PN_LEVEL_NONE}
+typedef struct {
+    const char *str;
+    size_t     strlen;
+    pn_log_level_t level;
+    pn_log_level_t plus_levels;
+} log_level;
+static const log_level log_levels[] = {
+  LOGLEVEL(ERROR),
+  LOGLEVEL(WARNING),
+  LOGLEVEL(INFO),
+  LOGLEVEL(DEBUG),
+  LOGLEVEL(TRACE),
+  LOGLEVEL(ALL),
+  TRACE(FRAME),
+  TRACE(RAW),
+  {NULL, 0, PN_LEVEL_ALL}
+};
+
+void pni_decode_log_env(const char *log_env, int *setmask)
+{
+  if (!log_env) return;
+
+  for (int i = 0; log_env[i]; i++) {
+    for (const log_level *level = &log_levels[0]; level->str; level++) {
+      if (pn_strncasecmp(&log_env[i], level->str, level->strlen)==0) {
+        *setmask |= level->level;
+        i += level->strlen;
+        if (log_env[i]=='+') {
+          i++;
+          *setmask |= level->plus_levels;
+        }
+        i--;
+        break;
+      }
+    }
+  }
+}
+
 void pni_init_default_logger(void)
 {
   int sev_mask = 0;
@@ -62,15 +102,13 @@ void pni_init_default_logger(void)
   if (pn_env_bool("PN_TRACE_RAW")) { sev_mask |= PN_LEVEL_RAW; }
   if (pn_env_bool("PN_TRACE_FRM")) { sev_mask |= PN_LEVEL_FRAME; }
 
-  /* These aren't used enough to make them back compatible */
+  /* These are close enough for obscure undocumented settings */
   if (pn_env_bool("PN_TRACE_DRV")) { sev_mask |= PN_LEVEL_TRACE | PN_LEVEL_DEBUG; }
   if (pn_env_bool("PN_TRACE_EVT")) { sev_mask |= PN_LEVEL_DEBUG; }
 
-  if (pn_env_bool("PN_TRACE_LOG")) { sev_mask |= PN_LEVEL_TRACE; }
-  if (pn_env_bool("PN_DEBUG_LOG")) { sev_mask |= PN_LEVEL_DEBUG; }
-  if (pn_env_bool("PN_INFO_LOG"))  { sev_mask |= PN_LEVEL_INFO; }
-  if (pn_env_bool("PN_WARNING_LOG")) { sev_mask |= PN_LEVEL_WARNING; }
-  if (pn_env_bool("PN_ERROR_LOG")) { sev_mask |= PN_LEVEL_ERROR; }
+  /* Decode PN_LOG into logger settings */
+  pni_decode_log_env(getenv("PN_LOG"), &sev_mask);
+
   the_default_logger.sev_mask = (pn_log_level_t) (the_default_logger.sev_mask | sev_mask);
   the_default_logger.sub_mask = (pn_log_subsystem_t) (the_default_logger.sub_mask | sub_mask);
   the_default_logger.scratch = pn_string(NULL);
