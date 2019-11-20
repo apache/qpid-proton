@@ -364,6 +364,38 @@ static int pn_data_inspect(void *obj, pn_string_t *dst)
 #define pn_data_hashcode NULL
 #define pn_data_compare NULL
 
+static inline pn_string_t *pni_data_str(pn_data_t *data)
+{
+  if (data->str == NULL) {
+    data->str = pn_string(NULL);
+  }
+  return data->str;
+}
+
+static inline pn_decoder_t *pni_data_decoder(pn_data_t *data)
+{
+  if (data->decoder == NULL) {
+    data->decoder = pn_decoder();
+  }
+  return data->decoder;
+}
+
+static inline pn_encoder_t *pni_data_encoder(pn_data_t *data)
+{
+  if (data->encoder == NULL) {
+    data->encoder = pn_encoder();
+  }
+  return data->encoder;
+}
+
+static inline pn_error_t *pni_data_error(pn_data_t *data)
+{
+  if (data->error == NULL) {
+    data->error = pn_error();
+  }
+  return data->error;
+}
+
 pn_data_t *pn_data(size_t capacity)
 {
   static const pn_class_t clazz = PN_CLASS(pn_data);
@@ -371,15 +403,15 @@ pn_data_t *pn_data(size_t capacity)
   data->capacity = capacity;
   data->size = 0;
   data->nodes = capacity ? (pni_node_t *) malloc(capacity * sizeof(pni_node_t)) : NULL;
-  data->buf = pn_buffer(64);
+  data->buf = NULL;
   data->parent = 0;
   data->current = 0;
   data->base_parent = 0;
   data->base_current = 0;
-  data->decoder = pn_decoder();
-  data->encoder = pn_encoder();
-  data->error = pn_error();
-  data->str = pn_string(NULL);
+  data->decoder = NULL;
+  data->encoder = NULL;
+  data->error = NULL;
+  data->str = NULL;
   return data;
 }
 
@@ -390,12 +422,12 @@ void pn_data_free(pn_data_t *data)
 
 int pn_data_errno(pn_data_t *data)
 {
-  return pn_error_code(data->error);
+  return pn_error_code(pni_data_error(data));
 }
 
 pn_error_t *pn_data_error(pn_data_t *data)
 {
-  return data->error;
+  return pni_data_error(data);
 }
 
 size_t pn_data_size(pn_data_t *data)
@@ -411,7 +443,7 @@ void pn_data_clear(pn_data_t *data)
     data->current = 0;
     data->base_parent = 0;
     data->base_current = 0;
-    pn_buffer_clear(data->buf);
+    if (data->buf) pn_buffer_clear(data->buf);
   }
 }
 
@@ -431,6 +463,9 @@ static int pni_data_grow(pn_data_t *data)
 
 static ssize_t pni_data_intern(pn_data_t *data, const char *start, size_t size)
 {
+  if (data->buf == NULL) {
+    data->buf = pn_buffer(size);
+  }
   size_t offset = pn_buffer_size(data->buf);
   int err = pn_buffer_append(data->buf, start, size);
   if (err) return err;
@@ -465,6 +500,9 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
 {
   pn_bytes_t *bytes = pni_data_bytes(data, node);
   if (!bytes) return 0;
+  if (data->buf == NULL) {
+    data->buf = pn_buffer(bytes->size);
+  }
   size_t oldcap = pn_buffer_capacity(data->buf);
   ssize_t offset = pni_data_intern(data, bytes->start, bytes->size);
   if (offset < 0) return offset;
@@ -655,7 +693,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         if (parent->atom.type == PN_ARRAY) {
           parent->type = (pn_type_t) va_arg(ap, int);
         } else {
-          return pn_error_format(data->error, PN_ERR, "naked type");
+          return pn_error_format(pni_data_error(data), PN_ERR, "naked type");
         }
       }
       break;
@@ -687,7 +725,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     case '}':
     case ']':
       if (!pn_data_exit(data))
-        return pn_error_format(data->error, PN_ERR, "exit failed");
+        return pn_error_format(pni_data_error(data), PN_ERR, "exit failed");
       break;
     case '?':
       if (!va_arg(ap, int)) {
@@ -1123,7 +1161,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
     case '}':
       level--;
       if (!suspend && !pn_data_exit(data))
-        return pn_error_format(data->error, PN_ERR, "exit failed");
+        return pn_error_format(pni_data_error(data), PN_ERR, "exit failed");
       if (resume_count && level == count_level) resume_count--;
       break;
     case '.':
@@ -1133,7 +1171,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       break;
     case '?':
       if (!*fmt || *fmt == '?')
-        return pn_error_format(data->error, PN_ARG_ERR, "codes must follow a ?");
+        return pn_error_format(pni_data_error(data), PN_ARG_ERR, "codes must follow a ?");
       scanarg = va_arg(ap, bool *);
       break;
     case 'C':
@@ -1159,7 +1197,7 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
       if (resume_count && level == count_level) resume_count--;
       break;
     default:
-      return pn_error_format(data->error, PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
+      return pn_error_format(pni_data_error(data), PN_ARG_ERR, "unrecognized scan code: 0x%.2X '%c'", code, code);
     }
 
     if (scanarg && code != '?') {
@@ -1182,16 +1220,16 @@ int pn_data_scan(pn_data_t *data, const char *fmt, ...)
 
 static int pni_data_inspectify(pn_data_t *data)
 {
-  int err = pn_string_set(data->str, "");
+  int err = pn_string_set(pni_data_str(data), "");
   if (err) return err;
-  return pn_data_inspect(data, data->str);
+  return pn_data_inspect(data, pni_data_str(data));
 }
 
 int pn_data_print(pn_data_t *data)
 {
   int err = pni_data_inspectify(data);
   if (err) return err;
-  printf("%s", pn_string_get(data->str));
+  printf("%s", pn_string_get(pni_data_str(data)));
   return 0;
 }
 
@@ -1199,11 +1237,11 @@ int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
 {
   int err = pni_data_inspectify(data);
   if (err) return err;
-  if (pn_string_size(data->str) >= *size) {
+  if (pn_string_size(pni_data_str(data)) >= *size) {
     return PN_OVERFLOW;
   } else {
-    pn_string_put(data->str, bytes);
-    *size = pn_string_size(data->str);
+    pn_string_put(pni_data_str(data), bytes);
+    *size = pn_string_size(pni_data_str(data));
     return 0;
   }
 }
@@ -1447,8 +1485,8 @@ void pn_data_dump(pn_data_t *data)
   for (unsigned i = 0; i < data->size; i++)
   {
     pni_node_t *node = &data->nodes[i];
-    pn_string_set(data->str, "");
-    pni_inspect_atom((pn_atom_t *) &node->atom, data->str);
+    pn_string_set(pni_data_str(data), "");
+    pni_inspect_atom((pn_atom_t *) &node->atom, pni_data_str(data));
     printf("Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI 
            ", children=%" PN_ZI ", type=%s (%s)\n",
            i + 1, (size_t) node->prev,
@@ -1456,7 +1494,7 @@ void pn_data_dump(pn_data_t *data)
            (size_t) node->parent,
            (size_t) node->down,
            (size_t) node->children,
-           pn_type_name(node->atom.type), pn_string_get(data->str));
+           pn_type_name(node->atom.type), pn_string_get(pni_data_str(data)));
   }
 }
 
@@ -1522,17 +1560,17 @@ static pni_node_t *pni_data_add(pn_data_t *data)
 
 ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size)
 {
-  return pn_encoder_encode(data->encoder, data, bytes, size);
+  return pn_encoder_encode(pni_data_encoder(data), data, bytes, size);
 }
 
 ssize_t pn_data_encoded_size(pn_data_t *data)
 {
-  return pn_encoder_size(data->encoder, data);
+  return pn_encoder_size(pni_data_encoder(data), data);
 }
 
 ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
 {
-  return pn_decoder_decode(data->decoder, bytes, size, data);
+  return pn_decoder_decode(pni_data_decoder(data), bytes, size, data);
 }
 
 int pn_data_put_list(pn_data_t *data)
