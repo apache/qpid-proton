@@ -62,6 +62,8 @@ struct pn_data_t {
   pni_nid_t base_current;
 };
 
+pn_data_t *pni_data(size_t capacity, size_t initial_buffer);
+
 static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd) 
 {
   return nd ? (data->nodes + nd - 1) : NULL;

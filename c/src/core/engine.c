@@ -20,6 +20,7 @@
  */
 
 #include "engine-internal.h"
+#include "data.h"
 #include "framing.h"
 #include <stdlib.h>
 #include <string.h>
@@ -203,9 +204,9 @@ pn_transport_t *pn_connection_transport(pn_connection_t *connection)
 
 void pn_condition_init(pn_condition_t *condition)
 {
-  condition->name = pn_string(NULL);
-  condition->description = pn_string(NULL);
-  condition->info = pn_data(0);
+  condition->name = NULL;
+  condition->description = NULL;
+  condition->info = pni_data(0, 0);
 }
 
 pn_condition_t *pn_condition() {
@@ -1090,10 +1091,10 @@ static void pni_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->timeout = 0;
   terminus->dynamic = false;
   terminus->distribution_mode = PN_DIST_MODE_UNSPECIFIED;
-  terminus->properties = pn_data(0);
-  terminus->capabilities = pn_data(0);
-  terminus->outcomes = pn_data(0);
-  terminus->filter = pn_data(0);
+  terminus->properties = pni_data(0, 0);
+  terminus->capabilities = pni_data(0, 0);
+  terminus->outcomes = pni_data(0, 0);
+  terminus->filter = pni_data(0, 0);
 }
 
 static void pn_link_incref(void *object)
@@ -2123,38 +2124,52 @@ pn_condition_t *pn_link_remote_condition(pn_link_t *link)
 
 bool pn_condition_is_set(pn_condition_t *condition)
 {
-  return condition && pn_string_get(condition->name);
+  return condition && condition->name && pn_string_get(condition->name);
 }
 
 void pn_condition_clear(pn_condition_t *condition)
 {
   assert(condition);
-  pn_string_clear(condition->name);
-  pn_string_clear(condition->description);
+  if (condition->name) pn_string_clear(condition->name);
+  if (condition->description) pn_string_clear(condition->description);
   pn_data_clear(condition->info);
 }
 
 const char *pn_condition_get_name(pn_condition_t *condition)
 {
   assert(condition);
-  return pn_string_get(condition->name);
+  if (condition->name == NULL) {
+    return 0;
+  } else {
+    return pn_string_get(condition->name);
+  }
 }
 
 int pn_condition_set_name(pn_condition_t *condition, const char *name)
 {
   assert(condition);
+  if (condition->name == NULL) {
+    condition->name = pn_string(NULL);
+  }
   return pn_string_set(condition->name, name);
 }
 
 const char *pn_condition_get_description(pn_condition_t *condition)
 {
   assert(condition);
-  return pn_string_get(condition->description);
+  if (condition->description == NULL) {
+    return 0;
+  } else {
+    return pn_string_get(condition->description);
+  }
 }
 
 int pn_condition_set_description(pn_condition_t *condition, const char *description)
 {
   assert(condition);
+  if (condition->description == NULL) {
+    condition->description = pn_string(NULL);
+  }
   return pn_string_set(condition->description, description);
 }
 
@@ -2299,7 +2314,11 @@ int pn_condition_copy(pn_condition_t *dest, pn_condition_t *src) {
   assert(src);
   int err = 0;
   if (src != dest) {
+    if (src->name == NULL) src->name = pn_string(NULL);
+    if (dest->name == NULL) dest->name = pn_string(NULL);
     err = pn_string_copy(dest->name, src->name);
+    if (src->description == NULL) src->description = pn_string(NULL);
+    if (dest->description == NULL) dest->description = pn_string(NULL);
     if (!err) err = pn_string_copy(dest->description, src->description);
     if (!err) err = pn_data_copy(dest->info, src->info);
   }

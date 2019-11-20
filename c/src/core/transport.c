@@ -1619,7 +1619,13 @@ static int pn_scan_error(pn_data_t *data, pn_condition_t *condition, const char 
   pn_condition_clear(condition);
   int err = pn_data_scan(data, fmt, &cond, &desc, condition->info);
   if (err) return err;
+  if (condition->name == NULL) {
+    condition->name = pn_string(NULL);
+  }
   pn_string_setn(condition->name, cond.start, cond.size);
+  if (condition->description == NULL) {
+    condition->description = pn_string(NULL);
+  }
   pn_string_setn(condition->description, desc.start, desc.size);
   pn_data_rewind(condition->info);
   return 0;
