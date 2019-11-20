@@ -1396,9 +1396,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
     pn_terminus_set_dynamic(rtgt, tgt_dynamic);
   } else {
     uint64_t code = 0;
-    pn_data_clear(link->remote_target.capabilities);
-    err = pn_data_scan(args, "D.[.....D..DL[C]...]", &code,
-                       link->remote_target.capabilities);
+    err = pn_data_scan(args, "D.[.....D..DL....]", &code);
     if (err) return err;
     if (code == COORDINATOR) {
       pn_terminus_set_type(rtgt, PN_COORDINATOR);
@@ -1418,22 +1416,35 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   pn_data_clear(link->remote_source.filter);
   pn_data_clear(link->remote_source.outcomes);
   pn_data_clear(link->remote_source.capabilities);
-  pn_data_clear(link->remote_target.properties);
-  pn_data_clear(link->remote_target.capabilities);
 
-  err = pn_data_scan(args, "D.[.....D.[.....C.C.CC]D.[.....CC]",
+  err = pn_data_scan(args, "D.[.....D.[.....C.C.CC]",
                      link->remote_source.properties,
                      link->remote_source.filter,
                      link->remote_source.outcomes,
-                     link->remote_source.capabilities,
-                     link->remote_target.properties,
-                     link->remote_target.capabilities);
+                     link->remote_source.capabilities);
+
   if (err) return err;
 
   pn_data_rewind(link->remote_source.properties);
   pn_data_rewind(link->remote_source.filter);
   pn_data_rewind(link->remote_source.outcomes);
   pn_data_rewind(link->remote_source.capabilities);
+
+  pn_data_clear(link->remote_target.properties);
+  pn_data_clear(link->remote_target.capabilities);
+
+  if (pn_terminus_get_type(&link->remote_target) == PN_COORDINATOR) {
+    // coordinator target only has a capabilities field
+    err = pn_data_scan(args, "D.[.....D..D.[C]...]",
+                       link->remote_target.capabilities);
+    if (err) return err;
+  } else {
+    err = pn_data_scan(args, "D.[.....D..D.[.....CC]",
+                       link->remote_target.properties,
+                       link->remote_target.capabilities);
+    if (err) return err;
+  }
+
   pn_data_rewind(link->remote_target.properties);
   pn_data_rewind(link->remote_target.capabilities);
 
