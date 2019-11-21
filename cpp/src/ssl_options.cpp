@@ -99,7 +99,7 @@ ssl_server_options::ssl_server_options(
         throw error(MSG("SSL server configuration failure requiring client certificates using " << db));
 }
 
-ssl_server_options::ssl_server_options() : impl_(new impl) {}
+ssl_server_options::ssl_server_options() : impl_(0) {}
 
 ssl_client_options::ssl_client_options(const ssl_client_options& x): impl_(x.impl_) {
     if (impl_) impl_->incref();

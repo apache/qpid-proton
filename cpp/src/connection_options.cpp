@@ -175,7 +175,8 @@ class connection_options::impl {
             }
         } else if (!client && ssl_server_options.set) {
             pn_ssl_t *ssl = pn_ssl(pnt);
-            if (pn_ssl_init(ssl, ssl_server_options.value.impl_->pn_domain(), NULL)) {
+            pn_ssl_domain_t* ssl_domain = ssl_server_options.value.impl_ ? ssl_server_options.value.impl_->pn_domain() : pn_ssl_domain(PN_SSL_MODE_SERVER);
+            if (pn_ssl_init(ssl, ssl_domain, NULL)) {
                 throw error(MSG("server SSL/TLS initialization error"));
             }
         }
