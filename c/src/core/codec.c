@@ -364,14 +364,46 @@ static int pn_data_inspect(void *obj, pn_string_t *dst)
 #define pn_data_hashcode NULL
 #define pn_data_compare NULL
 
-pn_data_t *pni_data(size_t capacity, size_t initial_buffer)
+static inline pn_string_t *pni_data_str(pn_data_t *data)
+{
+  if (data->str == NULL) {
+    data->str = pn_string(NULL);
+  }
+  return data->str;
+}
+
+static inline pn_decoder_t *pni_data_decoder(pn_data_t *data)
+{
+  if (data->decoder == NULL) {
+    data->decoder = pn_decoder();
+  }
+  return data->decoder;
+}
+
+static inline pn_encoder_t *pni_data_encoder(pn_data_t *data)
+{
+  if (data->encoder == NULL) {
+    data->encoder = pn_encoder();
+  }
+  return data->encoder;
+}
+
+static inline pn_error_t *pni_data_error(pn_data_t *data)
+{
+  if (data->error == NULL) {
+    data->error = pn_error();
+  }
+  return data->error;
+}
+
+pn_data_t *pn_data(size_t capacity)
 {
   static const pn_class_t clazz = PN_CLASS(pn_data);
   pn_data_t *data = (pn_data_t *) pn_class_new(&clazz, sizeof(pn_data_t));
   data->capacity = capacity;
   data->size = 0;
   data->nodes = capacity ? (pni_node_t *) malloc(capacity * sizeof(pni_node_t)) : NULL;
-  data->buf = initial_buffer ? pn_buffer(initial_buffer) : NULL;
+  data->buf = NULL;
   data->parent = 0;
   data->current = 0;
   data->base_parent = 0;
@@ -383,35 +415,6 @@ pn_data_t *pni_data(size_t capacity, size_t initial_buffer)
   return data;
 }
 
-pn_string_t *pni_data_str(pn_data_t *data)
-{
-  if (data->str == NULL) {
-    data->str = pn_string(NULL);
-  }
-  return data->str;
-}
-
-pn_decoder_t *pni_data_decoder(pn_data_t *data)
-{
-  if (data->decoder == NULL) {
-    data->decoder = pn_decoder();
-  }
-  return data->decoder;
-}
-
-pn_encoder_t *pni_data_encoder(pn_data_t *data)
-{
-  if (data->encoder == NULL) {
-    data->encoder = pn_encoder();
-  }
-  return data->encoder;
-}
-
-pn_data_t *pn_data(size_t capacity)
-{
-  return pni_data(capacity, 64);
-}
-
 void pn_data_free(pn_data_t *data)
 {
   pn_free(data);
@@ -419,18 +422,12 @@ void pn_data_free(pn_data_t *data)
 
 int pn_data_errno(pn_data_t *data)
 {
-  if (data->error == NULL) {
-    data->error = pn_error();
-  }
-  return pn_error_code(data->error);
+  return pn_error_code(pni_data_error(data));
 }
 
 pn_error_t *pn_data_error(pn_data_t *data)
 {
-  if (data->error == NULL) {
-    data->error = pn_error();
-  }
-  return data->error;
+  return pni_data_error(data);
 }
 
 size_t pn_data_size(pn_data_t *data)
@@ -467,7 +464,7 @@ static int pni_data_grow(pn_data_t *data)
 static ssize_t pni_data_intern(pn_data_t *data, const char *start, size_t size)
 {
   if (data->buf == NULL) {
-    data->buf = pn_buffer(0);
+    data->buf = pn_buffer(size);
   }
   size_t offset = pn_buffer_size(data->buf);
   int err = pn_buffer_append(data->buf, start, size);
@@ -504,7 +501,7 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
   pn_bytes_t *bytes = pni_data_bytes(data, node);
   if (!bytes) return 0;
   if (data->buf == NULL) {
-    data->buf = pn_buffer(64);
+    data->buf = pn_buffer(bytes->size);
   }
   size_t oldcap = pn_buffer_capacity(data->buf);
   ssize_t offset = pni_data_intern(data, bytes->start, bytes->size);

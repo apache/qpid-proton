@@ -1617,7 +1617,7 @@ static int pn_scan_error(pn_data_t *data, pn_condition_t *condition, const char 
   pn_bytes_t cond;
   pn_bytes_t desc;
   pn_condition_clear(condition);
-  int err = pn_data_scan(data, fmt, &cond, &desc, condition->info);
+  int err = pn_data_scan(data, fmt, &cond, &desc, pn_condition_info(condition));
   if (err) return err;
   if (condition->name == NULL) {
     condition->name = pn_string(NULL);
@@ -1627,7 +1627,7 @@ static int pn_scan_error(pn_data_t *data, pn_condition_t *condition, const char 
     condition->description = pn_string(NULL);
   }
   pn_string_setn(condition->description, desc.start, desc.size);
-  pn_data_rewind(condition->info);
+  pn_data_rewind(pn_condition_info(condition));
   return 0;
 }
 
