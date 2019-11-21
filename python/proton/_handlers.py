@@ -1330,7 +1330,7 @@ class IOHandler(Handler):
             if password:
                 c.password = password
 
-        addrs = socket.getaddrinfo(host, port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        addrs = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
 
         # Try first possible address
         log.debug("Connect trying first transport address: %s", addrs[0])
