@@ -132,22 +132,6 @@ typedef void (*pn_log_sink_t)(intptr_t sink_context, pn_log_subsystem_t subsyste
 PN_EXTERN pn_logger_t *pn_default_logger(void);
 
 /**
- * Create a new logger
- *
- * Note that loggers must be deallocated with @ref pn_logger_free after use.
- *
- * @return a newly constructed logger
- */
-PN_EXTERN pn_logger_t *pn_logger(void);
-
-/**
- * Free an existing logger
- *
- * @param[in] logger the logger to free
- */
-PN_EXTERN void pn_logger_free(pn_logger_t *logger);
-
-/**
  * Get a human readable name for a logger severity
  *
  * @param[in] level the logging level

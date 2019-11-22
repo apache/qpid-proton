@@ -145,20 +145,6 @@ const char *pn_logger_subsystem_name(pn_log_subsystem_t subsystem)
   return "UNKNOWN";
 }
 
-pn_logger_t *pn_logger(void)
-{
-  pn_logger_t *l = (pn_logger_t*) malloc(sizeof(pn_logger_t));
-  pni_logger_init(l);
-  return l;
-}
-
-void pn_logger_free(pn_logger_t *logger)
-{
-  if (!logger) return;
-  pni_logger_fini(logger);
-  free(logger);
-}
-
 pn_logger_t *pn_default_logger(void)
 {
   return &the_default_logger;
