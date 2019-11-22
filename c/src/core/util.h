@@ -117,18 +117,4 @@ static inline pn_bytes_t pn_string_bytes(pn_string_t *s) {
 #define pn_min(X,Y) ((X) > (Y) ? (Y) : (X))
 #define pn_max(X,Y) ((X) < (Y) ? (Y) : (X))
 
-#define PN_ENSURE(ARRAY, CAPACITY, COUNT, TYPE)                 \
-  while ((CAPACITY) < (COUNT)) {                                \
-    (CAPACITY) = (CAPACITY) ? 2 * (CAPACITY) : 16;              \
-    (ARRAY) = (TYPE *) realloc((ARRAY), (CAPACITY) * sizeof (TYPE));    \
-  }                                                             \
-
-#define PN_ENSUREZ(ARRAY, CAPACITY, COUNT, TYPE)           \
-  {                                                        \
-    size_t _old_capacity = (CAPACITY);                     \
-    PN_ENSURE(ARRAY, CAPACITY, COUNT, TYPE);               \
-    memset((ARRAY) + _old_capacity, 0,                     \
-           sizeof(TYPE)*((CAPACITY) - _old_capacity));     \
-  }
-
 #endif /* util.h */
