@@ -326,5 +326,5 @@ setup(name='python-qpid-proton',
       # Configure class above
       ext_modules=[Extension('_cproton',
                              sources=['cproton_wrap.c'],
-                             extra_compile_args=['-pthread'],
+                             extra_compile_args=['-pthread', '-DPROTON_DECLARE_STATIC'],
                              libraries=['qpid-proton-core'])])
