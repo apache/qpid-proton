@@ -92,12 +92,13 @@ typedef struct pn_logger_t pn_logger_t;
  */
 typedef enum pn_log_subsystem_t {
     PN_SUBSYSTEM_NONE    = 0,    /**< No subsystem */
-    PN_SUBSYSTEM_IO      = 1,    /**< Low level Input/Output */
-    PN_SUBSYSTEM_EVENT   = 2,    /**< Events */
-    PN_SUBSYSTEM_AMQP    = 4,    /**< AMQP protocol processing */
-    PN_SUBSYSTEM_SSL     = 8,    /**< TLS/SSL protocol processing */
-    PN_SUBSYSTEM_SASL    = 16,   /**< SASL protocol processing */
-    PN_SUBSYSTEM_BINDING = 32,   /**< Language binding */
+    PN_SUBSYSTEM_MEMORY  = 1,    /**< Memory usage */
+    PN_SUBSYSTEM_IO      = 2,    /**< Low level Input/Output */
+    PN_SUBSYSTEM_EVENT   = 4,    /**< Events */
+    PN_SUBSYSTEM_AMQP    = 8,    /**< AMQP protocol processing */
+    PN_SUBSYSTEM_SSL     = 16,   /**< TLS/SSL protocol processing */
+    PN_SUBSYSTEM_SASL    = 32,   /**< SASL protocol processing */
+    PN_SUBSYSTEM_BINDING = 64,   /**< Language binding */
     PN_SUBSYSTEM_ALL     = 65535 /**< Every subsystem */
 } pn_log_subsystem_t; /* We hint to the compiler it can use 16 bits for this value */
 

@@ -21,6 +21,7 @@
 #include <proton/error.h>
 
 #include "logger_private.h"
+#include "memory.h"
 #include "util.h"
 
 #include <assert.h>
@@ -54,13 +55,15 @@ void pni_logger_fini(pn_logger_t *logger)
   logger->scratch = NULL;
 }
 
-#define LOGLEVEL(x) {#x, sizeof(#x)-1, PN_LEVEL_ ## x, (pn_log_level_t)(PN_LEVEL_ ## x-1)}
-#define TRACE(x) {#x, sizeof(#x)-1, PN_LEVEL_ ## x, PN_LEVEL_NONE}
+#define LOGLEVEL(x)   {sizeof(#x)-1, #x, PN_LEVEL_ ## x, PN_LEVEL_ ## x-1}
+#define TRACE(x)      {sizeof(#x)-1, #x, PN_LEVEL_ ## x}
+#define SPECIAL(x, y) {sizeof(#x)-1, #x, PN_LEVEL_NONE, PN_LEVEL_NONE, y}
 typedef struct {
-    const char *str;
-    size_t     strlen;
-    pn_log_level_t level;
-    pn_log_level_t plus_levels;
+    uint8_t   strlen;
+    const char str[11];
+    uint16_t   level;
+    uint16_t   plus_levels;
+    void     (*special)(void);
 } log_level;
 static const log_level log_levels[] = {
   LOGLEVEL(ERROR),
@@ -71,7 +74,8 @@ static const log_level log_levels[] = {
   LOGLEVEL(ALL),
   TRACE(FRAME),
   TRACE(RAW),
-  {NULL, 0, PN_LEVEL_ALL}
+  SPECIAL(MEMORY, pni_mem_setup_logging),
+  {0, ""}
 };
 
 void pni_decode_log_env(const char *log_env, int *setmask)
@@ -79,7 +83,7 @@ void pni_decode_log_env(const char *log_env, int *setmask)
   if (!log_env) return;
 
   for (int i = 0; log_env[i]; i++) {
-    for (const log_level *level = &log_levels[0]; level->str; level++) {
+    for (const log_level *level = &log_levels[0]; level->strlen; level++) {
       if (pn_strncasecmp(&log_env[i], level->str, level->strlen)==0) {
         *setmask |= level->level;
         i += level->strlen;
@@ -88,6 +92,7 @@ void pni_decode_log_env(const char *log_env, int *setmask)
           *setmask |= level->plus_levels;
         }
         i--;
+        if (level->special) level->special();
         break;
       }
     }
@@ -136,6 +141,7 @@ const char *pn_logger_level_name(pn_log_level_t severity)
 const char *pn_logger_subsystem_name(pn_log_subsystem_t subsystem)
 {
   if (subsystem==PN_SUBSYSTEM_ALL)    return "*ALL*";
+  if (subsystem&PN_SUBSYSTEM_MEMORY)  return "MEMORY";
   if (subsystem&PN_SUBSYSTEM_IO)      return "IO";
   if (subsystem&PN_SUBSYSTEM_EVENT)   return "EVENT";
   if (subsystem&PN_SUBSYSTEM_AMQP)    return "AMQP";

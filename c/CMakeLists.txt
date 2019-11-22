@@ -245,6 +245,7 @@ set (qpid-proton-core
   src/core/object/record.c
 
   src/core/init.c
+  src/core/memory.c
   src/core/logger.c
   src/core/util.c
   src/core/error.c

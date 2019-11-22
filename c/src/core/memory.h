@@ -1,4 +1,8 @@
+#ifndef MEMORY_H
+#define MEMORY_H 1
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,19 +19,24 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include "core/logger_private.h"
-#include "core/memory.h"
+#include <proton/object.h>
 
-void pn_init(void)
-{
-  pni_init_default_logger();
-  pni_init_memory();
-}
+#include <stddef.h>
 
-void pn_fini(void)
-{
-  pni_fini_memory();
-  pni_fini_default_logger();
-}
+void pni_init_memory(void);
+void pni_fini_memory(void);
+
+void pni_mem_setup_logging(void);
+
+void *pni_mem_allocate(const pn_class_t *clazz, size_t size);
+void *pni_mem_zallocate(const pn_class_t *clazz, size_t size);
+void pni_mem_deallocate(const pn_class_t *clazz, void *object);
+
+void *pni_mem_suballocate(const pn_class_t *clazz, void *object, size_t size);
+void *pni_mem_subreallocate(const pn_class_t *clazz, void *object, void *buffer, size_t size);
+void pni_mem_subdeallocate(const pn_class_t *clazz, void *object, void *buffer);
+
+#endif // MEMORY_H
