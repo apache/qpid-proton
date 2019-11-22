@@ -19,11 +19,14 @@
  *
  */
 
+#include <proton/error.h>
+#include <proton/object.h>
+
+#include "memory.h"
 #include "platform/platform.h"
 #include "util.h"
 
 #include <proton/connection.h>
-#include <proton/error.h>
 #include <proton/link.h>
 #include <proton/session.h>
 
@@ -36,9 +39,11 @@ struct pn_error_t {
   int code;
 };
 
+PN_STRUCT_CLASSDEF(pn_error)
+
 pn_error_t *pn_error()
 {
-  pn_error_t *error = (pn_error_t *) malloc(sizeof(pn_error_t));
+  pn_error_t *error = (pn_error_t *) pni_mem_allocate(PN_CLASSCLASS(pn_error), sizeof(pn_error_t));
   if (error != NULL) {
     error->code = 0;
     error->text = NULL;
@@ -49,8 +54,8 @@ pn_error_t *pn_error()
 void pn_error_free(pn_error_t *error)
 {
   if (error) {
-    free(error->text);
-    free(error);
+    pni_mem_subdeallocate(PN_CLASSCLASS(pn_error), error, error->text);
+    pni_mem_deallocate(PN_CLASSCLASS(pn_error), error);
   }
 }
 
@@ -58,7 +63,7 @@ void pn_error_clear(pn_error_t *error)
 {
   if (error) {
     error->code = 0;
-    free(error->text);
+    pni_mem_subdeallocate(PN_CLASSCLASS(pn_error), error, error->text);
     error->text = NULL;
   }
 }

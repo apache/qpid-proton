@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-#include <stdlib.h>
+#include <stddef.h>
 #include <ctype.h>
 #include "encodings.h"
 #define DEFINE_FIELDS
@@ -37,6 +37,7 @@
 #include "encoder.h"
 #include "data.h"
 #include "logger_private.h"
+#include "memory.h"
 
 const char *pn_type_name(pn_type_t type)
 {
@@ -84,7 +85,7 @@ static inline void pni_atom_init(pn_atom_t *atom, pn_type_t type)
 static void pn_data_finalize(void *object)
 {
   pn_data_t *data = (pn_data_t *) object;
-  free(data->nodes);
+  pni_mem_subdeallocate(pn_class(data), data, data->nodes);
   pn_buffer_free(data->buf);
   pn_error_free(data->error);
 }
@@ -375,7 +376,7 @@ pn_data_t *pn_data(size_t capacity)
   pn_data_t *data = (pn_data_t *) pn_class_new(&clazz, sizeof(pn_data_t));
   data->capacity = capacity;
   data->size = 0;
-  data->nodes = capacity ? (pni_node_t *) malloc(capacity * sizeof(pni_node_t)) : NULL;
+  data->nodes = capacity ? (pni_node_t *) pni_mem_suballocate(&clazz, data, capacity * sizeof(pni_node_t)) : NULL;
   data->buf = NULL;
   data->parent = 0;
   data->current = 0;
@@ -424,7 +425,7 @@ static int pni_data_grow(pn_data_t *data)
   else if (capacity < PNI_NID_MAX/2) capacity *= 2;
   else capacity = PNI_NID_MAX;
 
-  pni_node_t *new_nodes = (pni_node_t *)realloc(data->nodes, capacity * sizeof(pni_node_t));
+  pni_node_t *new_nodes = (pni_node_t *) pni_mem_subreallocate(pn_class(data), data, data->nodes, capacity * sizeof(pni_node_t));
   if (new_nodes == NULL) return PN_OUT_OF_MEMORY;
   data->capacity = capacity;
   data->nodes = new_nodes;

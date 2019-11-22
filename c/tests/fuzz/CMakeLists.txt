@@ -56,7 +56,7 @@ pn_add_fuzz_test (fuzz-connection-driver fuzz-connection-driver.c)
 pn_add_fuzz_test (fuzz-message-decode fuzz-message-decode.c)
 
 # pn_url_parse is not in proton core and is only used by messenger so compile specially
-pn_add_fuzz_test (fuzz-url fuzz-url.c ${PN_C_SOURCE_DIR}/extra/url.c  ${PN_C_SOURCE_DIR}/core/util.c)
+pn_add_fuzz_test (fuzz-url fuzz-url.c ${PN_C_SOURCE_DIR}/extra/url.c  ${PN_C_SOURCE_DIR}/core/util.c ${PN_C_SOURCE_DIR}/core/memory.c)
 target_compile_definitions(fuzz-url PRIVATE PROTON_DECLARE_STATIC)
 
 # This regression test can take a very long time so don't run by default

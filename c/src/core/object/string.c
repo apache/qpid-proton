@@ -23,8 +23,10 @@
 #include <proton/error.h>
 #include <proton/object.h>
 
+#include "core/memory.h"
+
 #include <stdio.h>
-#include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
@@ -40,7 +42,7 @@ struct pn_string_t {
 static void pn_string_finalize(void *object)
 {
   pn_string_t *string = (pn_string_t *) object;
-  free(string->bytes);
+  pni_mem_subdeallocate(pn_class(string), string, string->bytes);
 }
 
 static uintptr_t pn_string_hashcode(void *object)
@@ -109,7 +111,7 @@ pn_string_t *pn_stringn(const char *bytes, size_t n)
   static const pn_class_t clazz = PN_CLASS(pn_string);
   pn_string_t *string = (pn_string_t *) pn_class_new(&clazz, sizeof(pn_string_t));
   string->capacity = n ? n * sizeof(char) : 16;
-  string->bytes = (char *) malloc(string->capacity);
+  string->bytes = (char *) pni_mem_suballocate(&clazz, string, string->capacity);
   pn_string_setn(string, bytes, n);
   return string;
 }
@@ -148,7 +150,7 @@ int pn_string_grow(pn_string_t *string, size_t capacity)
   }
 
   if (grow) {
-    char *growed = (char *) realloc(string->bytes, string->capacity);
+    char *growed = (char *) pni_mem_subreallocate(pn_class(string), string, string->bytes, string->capacity);
     if (growed) {
       string->bytes = growed;
     } else {

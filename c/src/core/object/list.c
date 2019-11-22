@@ -20,7 +20,10 @@
  */
 
 #include <proton/object.h>
-#include <stdlib.h>
+
+#include "core/memory.h"
+
+#include <stddef.h>
 #include <assert.h>
 
 struct pn_list_t {
@@ -57,7 +60,7 @@ static void pni_list_ensure(pn_list_t *list, size_t capacity)
   if (list->capacity < capacity) {
     size_t newcap = list->capacity;
     while (newcap < capacity) { newcap *= 2; }
-    list->elements = (void **) realloc(list->elements, newcap * sizeof(void *));
+    list->elements = (void **) pni_mem_subreallocate(pn_class(list), list, list->elements, newcap * sizeof(void *));
     assert(list->elements);
     list->capacity = newcap;
   }
@@ -197,7 +200,7 @@ static void pn_list_finalize(void *object)
   for (size_t i = 0; i < list->size; i++) {
     pn_class_decref(list->clazz, pn_list_get(list, i));
   }
-  free(list->elements);
+  pni_mem_subdeallocate(pn_class(list), list, list->elements);
 }
 
 static uintptr_t pn_list_hashcode(void *object)
@@ -260,7 +263,7 @@ pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity)
   pn_list_t *list = (pn_list_t *) pn_class_new(&list_clazz, sizeof(pn_list_t));
   list->clazz = clazz;
   list->capacity = capacity ? capacity : 16;
-  list->elements = (void **) malloc(list->capacity * sizeof(void *));
+  list->elements = (void **) pni_mem_suballocate(&list_clazz, list, list->capacity * sizeof(void *));
   list->size = 0;
   return list;
 }

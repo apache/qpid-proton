@@ -20,18 +20,20 @@
  */
 
 #include "engine-internal.h"
+
 #include "framing.h"
-#include <stdlib.h>
-#include <string.h>
+#include "memory.h"
+#include "platform/platform.h"
+#include "platform/platform_fmt.h"
 #include "protocol.h"
+#include "transport.h"
 
 #include <assert.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdio.h>
+#include <string.h>
 
-#include "platform/platform.h"
-#include "platform/platform_fmt.h"
-#include "transport.h"
 
 static void pni_session_bound(pn_session_t *ssn);
 static void pni_link_bound(pn_link_t *link);
@@ -209,7 +211,7 @@ void pn_condition_init(pn_condition_t *condition)
 }
 
 pn_condition_t *pn_condition() {
-  pn_condition_t *c = (pn_condition_t*)malloc(sizeof(pn_condition_t));
+  pn_condition_t *c = (pn_condition_t*)pni_mem_allocate(PN_VOID, sizeof(pn_condition_t));
   pn_condition_init(c);
   return c;
 }
@@ -225,7 +227,7 @@ void pn_condition_free(pn_condition_t *c) {
   if (c) {
     pn_condition_clear(c);
     pn_condition_tini(c);
-    free(c);
+    pni_mem_deallocate(PN_VOID, c);
   }
 }
 

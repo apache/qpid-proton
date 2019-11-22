@@ -21,6 +21,7 @@
 
 #include "engine-internal.h"
 #include "framing.h"
+#include "memory.h"
 #include "platform/platform.h"
 #include "platform/platform_fmt.h"
 #include "sasl/sasl-internal.h"
@@ -34,7 +35,7 @@
 
 #include "proton/event.h"
 
-#include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <assert.h>
 #include <stdarg.h>
@@ -553,13 +554,13 @@ pn_transport_t *pn_transport(void)
     (pn_transport_t *) pn_class_new(&clazz, sizeof(pn_transport_t));
   if (!transport) return NULL;
 
-  transport->output_buf = (char *) malloc(transport->output_size);
+  transport->output_buf = (char *) pni_mem_suballocate(&clazz, transport, transport->output_size);
   if (!transport->output_buf) {
     pn_transport_free(transport);
     return NULL;
   }
 
-  transport->input_buf = (char *) malloc(transport->input_size);
+  transport->input_buf = (char *) pni_mem_suballocate(&clazz, transport, transport->input_size);
   if (!transport->input_buf) {
     pn_transport_free(transport);
     return NULL;
@@ -649,8 +650,8 @@ static void pn_transport_finalize(void *object)
 
   pn_ssl_free(transport);
   pn_sasl_free(transport);
-  free(transport->remote_container);
-  free(transport->remote_hostname);
+  pni_mem_deallocate(PN_CLASSCLASS(pn_strdup), transport->remote_container);
+  pni_mem_deallocate(PN_CLASSCLASS(pn_strdup), transport->remote_hostname);
   pn_free(transport->remote_offered_capabilities);
   pn_free(transport->remote_desired_capabilities);
   pn_free(transport->remote_properties);
@@ -660,8 +661,8 @@ static void pn_transport_finalize(void *object)
   pn_error_free(transport->error);
   pn_free(transport->local_channels);
   pn_free(transport->remote_channels);
-  if (transport->input_buf) free(transport->input_buf);
-  if (transport->output_buf) free(transport->output_buf);
+  pni_mem_subdeallocate(pn_class(transport), transport, transport->input_buf);
+  pni_mem_subdeallocate(pn_class(transport), transport, transport->output_buf);
   pn_free(transport->scratch);
   pn_data_free(transport->args);
   pn_data_free(transport->output_args);
@@ -1195,9 +1196,9 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
       transport->remote_max_frame = AMQP_MIN_MAX_FRAME_SIZE;
     }
   }
-  free(transport->remote_container);
+  pni_mem_deallocate(PN_CLASSCLASS(pn_strdup), transport->remote_container);
   transport->remote_container = container_q ? pn_bytes_strdup(remote_container) : NULL;
-  free(transport->remote_hostname);
+  pni_mem_deallocate(PN_CLASSCLASS(pn_strdup), transport->remote_hostname);
   transport->remote_hostname = hostname_q ? pn_bytes_strdup(remote_hostname) : NULL;
 
   if (conn) {
@@ -2749,7 +2750,7 @@ static ssize_t transport_produce(pn_transport_t *transport)
     else if (transport->remote_max_frame > transport->output_size)
       more = pn_min(transport->output_size, transport->remote_max_frame - transport->output_size);
     if (more) {
-      char *newbuf = (char *)realloc( transport->output_buf, transport->output_size + more );
+      char *newbuf = (char *)pni_mem_subreallocate(pn_class(transport), transport, transport->output_buf, transport->output_size + more );
       if (newbuf) {
         transport->output_buf = newbuf;
         transport->output_size += more;
@@ -2978,7 +2979,7 @@ ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
       more = pn_min(transport->input_size, transport->local_max_frame - transport->input_size);
     }
     if (more) {
-      char *newbuf = (char *) realloc( transport->input_buf, transport->input_size + more );
+      char *newbuf = (char *) pni_mem_subreallocate(pn_class(transport), transport, transport->input_buf, transport->input_size + more );
       if (newbuf) {
         transport->input_buf = newbuf;
         transport->input_size += more;
