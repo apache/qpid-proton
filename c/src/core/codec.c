@@ -88,8 +88,6 @@ static void pn_data_finalize(void *object)
   pn_buffer_free(data->buf);
   pn_free(data->str);
   pn_error_free(data->error);
-  pn_free(data->decoder);
-  pn_free(data->encoder);
 }
 
 static const pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
@@ -372,22 +370,6 @@ static inline pn_string_t *pni_data_str(pn_data_t *data)
   return data->str;
 }
 
-static inline pn_decoder_t *pni_data_decoder(pn_data_t *data)
-{
-  if (data->decoder == NULL) {
-    data->decoder = pn_decoder();
-  }
-  return data->decoder;
-}
-
-static inline pn_encoder_t *pni_data_encoder(pn_data_t *data)
-{
-  if (data->encoder == NULL) {
-    data->encoder = pn_encoder();
-  }
-  return data->encoder;
-}
-
 static inline pn_error_t *pni_data_error(pn_data_t *data)
 {
   if (data->error == NULL) {
@@ -408,8 +390,6 @@ pn_data_t *pn_data(size_t capacity)
   data->current = 0;
   data->base_parent = 0;
   data->base_current = 0;
-  data->decoder = NULL;
-  data->encoder = NULL;
   data->error = NULL;
   data->str = NULL;
   return data;
@@ -1560,17 +1540,29 @@ static pni_node_t *pni_data_add(pn_data_t *data)
 
 ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size)
 {
-  return pn_encoder_encode(pni_data_encoder(data), data, bytes, size);
+  pn_encoder_t encoder;
+  pn_encoder_initialize(&encoder);
+  ssize_t r = pn_encoder_encode(&encoder, data, bytes, size);
+  pn_encoder_finalize(&encoder);
+  return r;
 }
 
 ssize_t pn_data_encoded_size(pn_data_t *data)
 {
-  return pn_encoder_size(pni_data_encoder(data), data);
+  pn_encoder_t encoder;
+  pn_encoder_initialize(&encoder);
+  ssize_t r = pn_encoder_size(&encoder, data);
+  pn_encoder_finalize(&encoder);
+  return r;
 }
 
 ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
 {
-  return pn_decoder_decode(pni_data_decoder(data), bytes, size, data);
+  pn_decoder_t decoder;
+  pn_decoder_initialize(&decoder);
+  ssize_t r = pn_decoder_decode(&decoder, bytes, size, data);
+  pn_decoder_finalize(&decoder);
+  return r;
 }
 
 int pn_data_put_list(pn_data_t *data)
