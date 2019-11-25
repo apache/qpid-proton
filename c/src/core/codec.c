@@ -86,7 +86,6 @@ static void pn_data_finalize(void *object)
   pn_data_t *data = (pn_data_t *) object;
   free(data->nodes);
   pn_buffer_free(data->buf);
-  pn_free(data->str);
   pn_error_free(data->error);
 }
 
@@ -362,14 +361,6 @@ static int pn_data_inspect(void *obj, pn_string_t *dst)
 #define pn_data_hashcode NULL
 #define pn_data_compare NULL
 
-static inline pn_string_t *pni_data_str(pn_data_t *data)
-{
-  if (data->str == NULL) {
-    data->str = pn_string(NULL);
-  }
-  return data->str;
-}
-
 static inline pn_error_t *pni_data_error(pn_data_t *data)
 {
   if (data->error == NULL) {
@@ -391,7 +382,6 @@ pn_data_t *pn_data(size_t capacity)
   data->base_parent = 0;
   data->base_current = 0;
   data->error = NULL;
-  data->str = NULL;
   return data;
 }
 
@@ -1198,30 +1188,31 @@ int pn_data_scan(pn_data_t *data, const char *fmt, ...)
   return err;
 }
 
-static int pni_data_inspectify(pn_data_t *data)
-{
-  int err = pn_string_set(pni_data_str(data), "");
-  if (err) return err;
-  return pn_data_inspect(data, pni_data_str(data));
-}
-
 int pn_data_print(pn_data_t *data)
 {
-  int err = pni_data_inspectify(data);
-  if (err) return err;
-  printf("%s", pn_string_get(pni_data_str(data)));
+  pn_string_t *str = pn_string("");
+  int err = pn_data_inspect(data, str);
+  if (err) {
+    pn_free(str);
+    return err;
+  }
+  printf("%s", pn_string_get(str));
+  pn_free(str);
   return 0;
 }
 
 int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
 {
-  int err = pni_data_inspectify(data);
+  pn_string_t *str = pn_string("");
+  int err = pn_data_inspect(data, str);
   if (err) return err;
-  if (pn_string_size(pni_data_str(data)) >= *size) {
+  if (pn_string_size(str) >= *size) {
+    pn_free(str);
     return PN_OVERFLOW;
   } else {
-    pn_string_put(pni_data_str(data), bytes);
-    *size = pn_string_size(pni_data_str(data));
+    pn_string_put(str, bytes);
+    *size = pn_string_size(str);
+    pn_free(str);
     return 0;
   }
 }
@@ -1461,12 +1452,13 @@ bool pn_data_lookup(pn_data_t *data, const char *name)
 
 void pn_data_dump(pn_data_t *data)
 {
+  pn_string_t *str = pn_string(0);
   printf("{current=%" PN_ZI ", parent=%" PN_ZI "}\n", (size_t) data->current, (size_t) data->parent);
   for (unsigned i = 0; i < data->size; i++)
   {
     pni_node_t *node = &data->nodes[i];
-    pn_string_set(pni_data_str(data), "");
-    pni_inspect_atom((pn_atom_t *) &node->atom, pni_data_str(data));
+    pn_string_setn(str, "", 0);
+    pni_inspect_atom((pn_atom_t *) &node->atom, str);
     printf("Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI 
            ", children=%" PN_ZI ", type=%s (%s)\n",
            i + 1, (size_t) node->prev,
@@ -1474,8 +1466,9 @@ void pn_data_dump(pn_data_t *data)
            (size_t) node->parent,
            (size_t) node->down,
            (size_t) node->children,
-           pn_type_name(node->atom.type), pn_string_get(pni_data_str(data)));
+           pn_type_name(node->atom.type), pn_string_get(str));
   }
+  pn_free(str);
 }
 
 static pni_node_t *pni_data_add(pn_data_t *data)
