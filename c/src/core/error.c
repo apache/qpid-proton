@@ -22,7 +22,11 @@
 #include "platform/platform.h"
 #include "util.h"
 
+#include <proton/connection.h>
 #include <proton/error.h>
+#include <proton/link.h>
+#include <proton/session.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
