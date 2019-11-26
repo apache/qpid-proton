@@ -36,26 +36,30 @@ matrix:
   - os: osx
     osx_image: xcode8.3
     env:
-    - PKG_CONFIG_PATH='/usr/local/opt/openssl/lib/pkgconfig'
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
+    - PKG_CONFIG_PATH='/usr/local/opt/openssl/lib/pkgconfig'
     - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.12 -DBUILD_RUBY=NO -DBUILD_GO=OFF'
     before_install:
+    # addons:homebrew:packages is slow and hard to get right on older macOS travis images
     - brew update
     - brew install libuv swig jsoncpp
 
   - os: osx
     osx_image: xcode10.1
     env:
-    - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
+    - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
     - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 -DBUILD_RUBY=NO -DBUILD_PYTHON=OFF -DBUILD_GO=ON'
-    before_install:
-    - brew update
-    - brew install libuv swig jsoncpp
+    addons:
+      # macOS Homebrew dependencies, https://formulae.brew.sh/
+      homebrew:
+        packages:
+        - jsoncpp
+        - libuv
+        - swig
 
-# Note addons is apt specific at the moment and will not be applied for osx.
-# See before_install brew commands above
 addons:
+  # Ubuntu 16.04 APT dependencies, https://packages.ubuntu.com/
   apt:
     packages:
     - cmake
