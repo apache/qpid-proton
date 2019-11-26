@@ -389,7 +389,6 @@ void pn_endpoint_init(pn_endpoint_t *endpoint, int type, pn_connection_t *conn)
   endpoint->type = (pn_endpoint_type_t) type;
   endpoint->referenced = true;
   endpoint->state = PN_LOCAL_UNINIT | PN_REMOTE_UNINIT;
-  endpoint->error = pn_error();
   pn_condition_init(&endpoint->condition);
   pn_condition_init(&endpoint->remote_condition);
   endpoint->endpoint_next = NULL;
@@ -451,7 +450,6 @@ void pn_ep_decref(pn_endpoint_t *endpoint)
 
 static void pni_endpoint_tini(pn_endpoint_t *endpoint)
 {
-  pn_error_free(endpoint->error);
   pn_condition_tini(&endpoint->remote_condition);
   pn_condition_tini(&endpoint->condition);
 }
@@ -567,11 +565,6 @@ pn_collector_t* pn_connection_collector(pn_connection_t *connection) {
 pn_state_t pn_connection_state(pn_connection_t *connection)
 {
   return connection ? connection->endpoint.state : 0;
-}
-
-pn_error_t *pn_connection_error(pn_connection_t *connection)
-{
-  return connection ? connection->endpoint.error : NULL;
 }
 
 const char *pn_connection_get_container(pn_connection_t *connection)
@@ -1075,11 +1068,6 @@ pn_state_t pn_session_state(pn_session_t *session)
   return session->endpoint.state;
 }
 
-pn_error_t *pn_session_error(pn_session_t *session)
-{
-  return session->endpoint.error;
-}
-
 static void pni_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
 {
   terminus->type = type;
@@ -1376,11 +1364,6 @@ pn_link_t *pn_receiver(pn_session_t *session, const char *name)
 pn_state_t pn_link_state(pn_link_t *link)
 {
   return link->endpoint.state;
-}
-
-pn_error_t *pn_link_error(pn_link_t *link)
-{
-  return link->endpoint.error;
 }
 
 const char *pn_link_name(pn_link_t *link)

@@ -136,3 +136,11 @@ const char *pn_code(int code)
   default: return "<unknown>";
   }
 }
+
+// Deprecated ABI compatibility stubs
+// Make sure that no one is actually trying to change this.
+static const pn_error_t nullerror = {NULL, 0};
+
+pn_error_t *pn_connection_error(pn_connection_t *c) {return (pn_error_t*) &nullerror;}
+pn_error_t *pn_session_error(pn_session_t *c) {return (pn_error_t*) &nullerror;}
+pn_error_t *pn_link_error(pn_link_t *c) {return (pn_error_t*) &nullerror;}

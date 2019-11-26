@@ -44,7 +44,6 @@ struct pn_condition_t {
 struct pn_endpoint_t {
   pn_condition_t condition;
   pn_condition_t remote_condition;
-  pn_error_t *error;
   pn_endpoint_t *endpoint_next;
   pn_endpoint_t *endpoint_prev;
   pn_endpoint_t *transport_next;
