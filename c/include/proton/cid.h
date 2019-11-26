@@ -40,8 +40,6 @@ typedef enum {
   CID_pn_collector,
   CID_pn_event,
 
-  CID_pn_encoder,
-  CID_pn_decoder,
   CID_pn_data,
 
   CID_pn_connection,

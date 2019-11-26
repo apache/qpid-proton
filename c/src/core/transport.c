@@ -2041,7 +2041,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
         !(endpoint->state & PN_LOCAL_UNINIT) && state->local_handle == (uint32_t) -1)
     {
       pni_map_local_handle(link);
-      const pn_distribution_mode_t dist_mode = link->source.distribution_mode;
+      const pn_distribution_mode_t dist_mode = (pn_distribution_mode_t) link->source.distribution_mode;
       if (link->target.type == PN_COORDINATOR) {
         int err = pn_post_frame(transport, AMQP_FRAME_TYPE, ssn_state->local_channel,
                                 "DL[SIoBB?DL[SIsIoC?sCnCC]DL[C]nnI]", ATTACH,

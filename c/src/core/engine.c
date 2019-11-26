@@ -75,7 +75,7 @@ static void pn_endpoint_open(pn_endpoint_t *endpoint)
     PN_SET_LOCAL(endpoint->state, PN_LOCAL_ACTIVE);
     pn_connection_t *conn = pni_ep_get_connection(endpoint);
     pn_collector_put(conn->collector, PN_OBJECT, endpoint,
-                     endpoint_event(endpoint->type, true));
+                     endpoint_event((pn_endpoint_type_t) endpoint->type, true));
     pn_modified(conn, endpoint, true);
   }
 }
@@ -86,7 +86,7 @@ static void pn_endpoint_close(pn_endpoint_t *endpoint)
     PN_SET_LOCAL(endpoint->state, PN_LOCAL_CLOSED);
     pn_connection_t *conn = pni_ep_get_connection(endpoint);
     pn_collector_put(conn->collector, PN_OBJECT, endpoint,
-                     endpoint_event(endpoint->type, false));
+                     endpoint_event((pn_endpoint_type_t) endpoint->type, false));
     pn_modified(conn, endpoint, true);
   }
 }
@@ -445,7 +445,7 @@ void pn_ep_decref(pn_endpoint_t *endpoint)
   endpoint->refcount--;
   if (endpoint->refcount == 0) {
     pn_connection_t *conn = pni_ep_get_connection(endpoint);
-    pn_collector_put(conn->collector, PN_OBJECT, endpoint, pn_final_type(endpoint->type));
+    pn_collector_put(conn->collector, PN_OBJECT, endpoint, pn_final_type((pn_endpoint_type_t) endpoint->type));
   }
 }
 
@@ -1236,7 +1236,7 @@ int pn_terminus_set_type(pn_terminus_t *terminus, pn_terminus_type_t type)
 
 pn_terminus_type_t pn_terminus_get_type(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->type : (pn_terminus_type_t) 0;
+  return (pn_terminus_type_t) (terminus ? terminus->type : 0);
 }
 
 const char *pn_terminus_get_address(pn_terminus_t *terminus)
@@ -1253,7 +1253,7 @@ int pn_terminus_set_address(pn_terminus_t *terminus, const char *address)
 
 pn_durability_t pn_terminus_get_durability(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->durability : (pn_durability_t) 0;
+  return (pn_durability_t) (terminus ? terminus->durability : 0);
 }
 
 int pn_terminus_set_durability(pn_terminus_t *terminus, pn_durability_t durability)
@@ -1265,7 +1265,7 @@ int pn_terminus_set_durability(pn_terminus_t *terminus, pn_durability_t durabili
 
 pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->expiry_policy : (pn_expiry_policy_t) 0;
+  return (pn_expiry_policy_t) (terminus ? terminus->expiry_policy : 0);
 }
 
 bool pn_terminus_has_expiry_policy(const pn_terminus_t *terminus)
@@ -1327,7 +1327,7 @@ pn_data_t *pn_terminus_filter(pn_terminus_t *terminus)
 
 pn_distribution_mode_t pn_terminus_get_distribution_mode(const pn_terminus_t *terminus)
 {
-  return terminus ? terminus->distribution_mode : PN_DIST_MODE_UNSPECIFIED;
+  return terminus ? (pn_distribution_mode_t) terminus->distribution_mode : PN_DIST_MODE_UNSPECIFIED;
 }
 
 int pn_terminus_set_distribution_mode(pn_terminus_t *terminus, pn_distribution_mode_t m)
