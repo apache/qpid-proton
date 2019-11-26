@@ -38,7 +38,7 @@
 static const pnx_sasl_implementation *global_sasl_impl = NULL;
 
 // List of SASL mechansms to exclude by default as they cause user pain
-static const char* pni_excluded_mechs = "GSSAPI GSS-SPNEGO GS2-KRB5 GS2-IAKERB";
+static const char pni_excluded_mechs[] = "GSSAPI GSS-SPNEGO GS2-KRB5 GS2-IAKERB";
 
 //-----------------------------------------------------------------------------
 // pnx_sasl: API for SASL implementations to use
@@ -410,7 +410,7 @@ static bool pni_sasl_server_included_mech(const char *included_mech_list, pn_byt
 
 static bool pni_sasl_client_included_mech(const char *included_mech_list, pn_bytes_t s)
 {
-  if (!included_mech_list && pni_excluded_mechs) return !pni_sasl_included_mech(pni_excluded_mechs, s);
+  if (!included_mech_list) return !pni_sasl_included_mech(pni_excluded_mechs, s);
 
   return pni_sasl_included_mech(included_mech_list, s);
 }

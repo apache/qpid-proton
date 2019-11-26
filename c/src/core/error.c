@@ -33,7 +33,6 @@
 
 struct pn_error_t {
   char *text;
-  pn_error_t *root;
   int code;
 };
 
@@ -43,7 +42,6 @@ pn_error_t *pn_error()
   if (error != NULL) {
     error->code = 0;
     error->text = NULL;
-    error->root = NULL;
   }
   return error;
 }
@@ -62,7 +60,6 @@ void pn_error_clear(pn_error_t *error)
     error->code = 0;
     free(error->text);
     error->text = NULL;
-    error->root = NULL;
   }
 }
 
@@ -142,9 +139,10 @@ const char *pn_code(int code)
 }
 
 // Deprecated ABI compatibility stubs
-// Make sure that no one is actually trying to change this.
-static const pn_error_t nullerror = {NULL, 0};
 
-pn_error_t *pn_connection_error(pn_connection_t *c) {return (pn_error_t*) &nullerror;}
-pn_error_t *pn_session_error(pn_session_t *c) {return (pn_error_t*) &nullerror;}
-pn_error_t *pn_link_error(pn_link_t *c) {return (pn_error_t*) &nullerror;}
+// Constant to make sure that no one tries to change this.
+static const pn_error_t pn_error_null = {NULL, 0};
+
+pn_error_t *pn_connection_error(pn_connection_t *c) {return (pn_error_t*) &pn_error_null;}
+pn_error_t *pn_session_error(pn_session_t *c) {return (pn_error_t*) &pn_error_null;}
+pn_error_t *pn_link_error(pn_link_t *c) {return (pn_error_t*) &pn_error_null;}

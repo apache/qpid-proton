@@ -92,7 +92,7 @@ const pnx_sasl_implementation * const cyrus_sasl_impl = &sasl_impl;
 # define sasl_server_done()
 #endif
 
-static const char *amqp_service = "amqp";
+static const char amqp_service[] = "amqp";
 
 static inline bool pni_check_result(sasl_conn_t *conn, int r, pn_transport_t *logger, const char* condition_name)
 {
@@ -165,7 +165,7 @@ static const sasl_callback_t pni_user_callbacks[] = {
 
 // Machinery to initialise the cyrus library only once even in a multithreaded environment
 // Relies on pthreads.
-static const char * const default_config_name = "proton-server";
+static const char default_config_name[] = "proton-server";
 static char *pni_cyrus_config_dir = NULL;
 static char *pni_cyrus_config_name = NULL;
 static pthread_mutex_t pni_cyrus_mutex = PTHREAD_MUTEX_INITIALIZER;
