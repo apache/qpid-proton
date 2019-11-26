@@ -1082,7 +1082,7 @@ class Handshaker(Handler):
     @staticmethod
     def on_session_remote_open(event):
         ssn = event.session
-        if ssn.state() & Endpoint.LOCAL_UNINIT:
+        if ssn.state & Endpoint.LOCAL_UNINIT:
             ssn.open()
 
     @staticmethod
