@@ -695,7 +695,9 @@ class LinkTest(Test):
     self._test_source_target(None, TerminusConfig(address="target"))
 
   def test_coordinator(self):
-    self._test_source_target(None, TerminusConfig(type=Terminus.COORDINATOR))
+    caps = Array(UNDESCRIBED, Data.SYMBOL, symbol("amqp:local-transactions"))
+    self._test_source_target(None, TerminusConfig(type=Terminus.COORDINATOR,
+                                                  capabilities=caps))
 
   def test_source_target_full(self):
     self._test_source_target(TerminusConfig(address="source",
