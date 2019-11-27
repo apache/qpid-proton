@@ -167,7 +167,7 @@ PN_EXTERN const char *pn_logger_subsystem_name(pn_log_subsystem_t subsystem);
  * @param[in] subsystem bits representing subsystems to turn on trace for
  * @param[in] level bits representing log levels to turn on trace for
  */
-PN_EXTERN void pn_logger_set_mask(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t level);
+PN_EXTERN void pn_logger_set_mask(pn_logger_t *logger, uint16_t subsystem, uint16_t level);
 
 /**
  * Clear a logger's tracing flags.
@@ -189,7 +189,7 @@ PN_EXTERN void pn_logger_set_mask(pn_logger_t *logger, pn_log_subsystem_t subsys
  * @param[in] subsystem bits representing subsystems to turn off trace for
  * @param[in] level bits representing log levels to turn off trace for
  */
-PN_EXTERN void pn_logger_reset_mask(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity);
+PN_EXTERN void pn_logger_reset_mask(pn_logger_t *logger, uint16_t subsystem, uint16_t severity);
 
 /**
  * Set the tracing function used by a logger.

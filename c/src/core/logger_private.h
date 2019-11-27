@@ -22,11 +22,11 @@
 #include <proton/logger.h>
 
 struct pn_logger_t {
-    pn_log_sink_t       sink;
-    intptr_t            sink_context;
-    pn_log_level_t   sev_mask;
-    pn_log_subsystem_t  sub_mask;
-    pn_string_t        *scratch;
+    pn_log_sink_t sink;
+    intptr_t      sink_context;
+    pn_string_t  *scratch;
+    uint16_t      sub_mask;
+    uint16_t      sev_mask;
 };
 
 void pni_init_default_logger(void);

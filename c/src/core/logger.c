@@ -150,13 +150,13 @@ pn_logger_t *pn_default_logger(void)
   return &the_default_logger;
 }
 
-void pn_logger_set_mask(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity)
+void pn_logger_set_mask(pn_logger_t *logger, uint16_t subsystem, uint16_t severity)
 {
   logger->sev_mask = (pn_log_level_t) (logger->sev_mask | severity);
   logger->sub_mask = (pn_log_subsystem_t) (logger->sub_mask | subsystem);
 }
 
-void pn_logger_reset_mask(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity)
+void pn_logger_reset_mask(pn_logger_t *logger, uint16_t subsystem, uint16_t severity)
 {
   logger->sev_mask = (pn_log_level_t) (logger->sev_mask & ~severity);
   logger->sub_mask = (pn_log_subsystem_t) (logger->sub_mask & ~subsystem);
