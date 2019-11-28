@@ -278,8 +278,8 @@ const char *AMQP_PORT_NAME = "amqp";
 /* pn_proactor_t and pn_listener_t are plain C structs with normal memory management.
    Class definitions are for identification as pn_event_t context only.
 */
-PN_STRUCT_CLASSDEF(pn_proactor, CID_pn_proactor)
-PN_STRUCT_CLASSDEF(pn_listener, CID_pn_listener)
+PN_STRUCT_CLASSDEF(pn_proactor)
+PN_STRUCT_CLASSDEF(pn_listener)
 
 static bool start_polling(epoll_extended_t *ee, int epollfd) {
   if (ee->polling)
@@ -1460,7 +1460,7 @@ void pn_proactor_release_connection(pn_connection_t *c) {
 // ========================================================================
 
 pn_listener_t *pn_event_listener(pn_event_t *e) {
-  return (pn_event_class(e) == pn_listener__class()) ? (pn_listener_t*)pn_event_context(e) : NULL;
+  return (pn_event_class(e) == PN_CLASSCLASS(pn_listener)) ? (pn_listener_t*)pn_event_context(e) : NULL;
 }
 
 pn_listener_t *pn_listener() {
@@ -1563,7 +1563,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
       psocket_error(&l->acceptors[0].psocket, errno, "listen on");
     }
   } else {
-    pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_OPEN);
+    pn_collector_put(l->collector, PN_CLASSCLASS(pn_listener), l, PN_LISTENER_OPEN);
   }
   proactor_add(&l->context);
   unlock(&l->context.mutex);
@@ -1639,7 +1639,7 @@ static void listener_begin_close(pn_listener_t* l) {
     /* Remove all acceptors from the overflow list.  closing flag prevents re-insertion.*/
     proactor_rearm_overflow(pn_listener_proactor(l));
     lock(&l->context.mutex);
-    pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_CLOSE);
+    pn_collector_put(l->collector, PN_CLASSCLASS(pn_listener), l, PN_LISTENER_CLOSE);
   }
 }
 
@@ -1738,7 +1738,7 @@ static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
   pn_event_t *e = pn_collector_next(l->collector);
   if (!e && l->pending_count && !l->unclaimed) {
     // empty collector means pn_collector_put() will not coalesce
-    pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_ACCEPT);
+    pn_collector_put(l->collector, PN_CLASSCLASS(pn_listener), l, PN_LISTENER_ACCEPT);
     l->unclaimed = true;
     l->pending_count--;
     e = pn_collector_next(l->collector);
@@ -1928,7 +1928,7 @@ void pn_proactor_free(pn_proactor_t *p) {
 }
 
 pn_proactor_t *pn_event_proactor(pn_event_t *e) {
-  if (pn_event_class(e) == pn_proactor__class()) return (pn_proactor_t*)pn_event_context(e);
+  if (pn_event_class(e) == PN_CLASSCLASS(pn_proactor)) return (pn_proactor_t*)pn_event_context(e);
   pn_listener_t *l = pn_event_listener(e);
   if (l) return l->acceptors[0].psocket.proactor;
   pn_connection_t *c = pn_event_connection(e);
@@ -1937,7 +1937,7 @@ pn_proactor_t *pn_event_proactor(pn_event_t *e) {
 }
 
 static void proactor_add_event(pn_proactor_t *p, pn_event_type_t t) {
-  pn_collector_put(p->collector, pn_proactor__class(), p, t);
+  pn_collector_put(p->collector, PN_CLASSCLASS(pn_proactor), p, t);
 }
 
 // Call with lock held.  Leave unchanged if events pending.

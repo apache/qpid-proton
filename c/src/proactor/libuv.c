@@ -75,8 +75,8 @@ const char *AMQP_PORT_NAME = "amqp";
 /* pn_proactor_t and pn_listener_t are plain C structs with normal memory management.
    CLASSDEF is for identification when used as a pn_event_t context.
 */
-PN_STRUCT_CLASSDEF(pn_proactor, CID_pn_proactor)
-PN_STRUCT_CLASSDEF(pn_listener, CID_pn_listener)
+PN_STRUCT_CLASSDEF(pn_proactor)
+PN_STRUCT_CLASSDEF(pn_listener)
 
 
 /* ================ Queues ================ */
@@ -149,7 +149,7 @@ typedef struct lsocket_t {
   struct lsocket_t *next;
 } lsocket_t;
 
-PN_STRUCT_CLASSDEF(lsocket, CID_pn_listener_socket)
+PN_STRUCT_CLASSDEF(pn_listener_socket)
 
 typedef enum { W_NONE, W_PENDING, W_CLOSED } wake_state;
 
@@ -558,7 +558,7 @@ static void on_connection(uv_stream_t* server, int err) {
     listener_error(l, err, "on incoming connection");
   } else {
     uv_mutex_lock(&l->lock);
-    pn_collector_put(l->collector, lsocket__class(), ls, PN_LISTENER_ACCEPT);
+    pn_collector_put(l->collector, PN_CLASSCLASS(pn_listener_socket), ls, PN_LISTENER_ACCEPT);
     uv_mutex_unlock(&l->lock);
   }
   work_notify(&l->work);
@@ -674,7 +674,7 @@ static void leader_listen_lh(pn_listener_t *l) {
   if (err) {
     listener_error_lh(l, err, "listening on");
   } else {
-    pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_OPEN);
+    pn_collector_put(l->collector, PN_CLASSCLASS(pn_listener), l, PN_LISTENER_OPEN);
   }
 }
 
@@ -737,7 +737,7 @@ static bool leader_process_listener(pn_listener_t *l) {
    case L_CLOSING:              /* Closing - can we send PN_LISTENER_CLOSE? */
     if (!l->lsockets) {
       l->state = L_CLOSED;
-      pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_CLOSE);
+      pn_collector_put(l->collector, PN_CLASSCLASS(pn_listener), l, PN_LISTENER_CLOSE);
     }
     break;
 
@@ -814,7 +814,7 @@ static void alloc_read_buffer(uv_handle_t* stream, size_t size, uv_buf_t* buf) {
 
 /* Set the event in the proactor's batch  */
 static pn_event_batch_t *proactor_batch_lh(pn_proactor_t *p, pn_event_type_t t) {
-  pn_collector_put(p->collector, pn_proactor__class(), p, t);
+  pn_collector_put(p->collector, PN_CLASSCLASS(pn_proactor), p, t);
   p->batch_working = true;
   return &p->batch;
 }
@@ -1087,9 +1087,9 @@ void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
 }
 
 pn_listener_t *pn_event_listener(pn_event_t *e) {
-  if (pn_event_class(e) == pn_listener__class()) {
+  if (pn_event_class(e) == PN_CLASSCLASS(pn_listener)) {
     return (pn_listener_t*)pn_event_context(e);
-  } else if (pn_event_class(e) == lsocket__class()) {
+  } else if (pn_event_class(e) == PN_CLASSCLASS(pn_listener_socket)) {
     return ((lsocket_t*)pn_event_context(e))->parent;
   } else {
     return NULL;
@@ -1097,7 +1097,7 @@ pn_listener_t *pn_event_listener(pn_event_t *e) {
 }
 
 pn_proactor_t *pn_event_proactor(pn_event_t *e) {
-  if (pn_event_class(e) == pn_proactor__class()) {
+  if (pn_event_class(e) == PN_CLASSCLASS(pn_proactor)) {
     return (pn_proactor_t*)pn_event_context(e);
   }
   pn_listener_t *l = pn_event_listener(e);
