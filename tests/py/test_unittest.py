@@ -50,7 +50,7 @@ if not hasattr(unittest, "skipIf"):
         if condition:
             return skip(reason)
         return lambda f: f
-    unittest.skipUnless = skipIf
+    unittest.skipIf = skipIf
 
 if not hasattr(unittest, "skipUnless"):
     def skipUnless(condition, reason):
