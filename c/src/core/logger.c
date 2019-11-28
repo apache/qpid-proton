@@ -36,9 +36,9 @@ static void pni_default_log_sink(intptr_t logger, pn_log_subsystem_t subsystem, 
 static pn_logger_t the_default_logger = {
   pni_default_log_sink,
   (intptr_t) &the_default_logger,
+  NULL,
   PN_LEVEL_CRITICAL,
   PN_SUBSYSTEM_ALL,
-  NULL
 };
 
 void pni_logger_init(pn_logger_t *logger)
