@@ -177,6 +177,7 @@ endif ()
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
 if(BUILD_STATIC_LIBS)
   add_library(qpid-proton-cpp-static STATIC ${qpid-proton-cpp-source})
+  set(STATIC_LIBS qpid-proton-cpp-static)
 endif(BUILD_STATIC_LIBS)
 
 target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS})
@@ -192,7 +193,7 @@ set_target_properties (
 
 ## Install
 
-install(TARGETS qpid-proton-cpp
+install(TARGETS qpid-proton-cpp ${STATIC_LIBS}
   EXPORT  proton-cpp
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
