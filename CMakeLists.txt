@@ -271,7 +271,7 @@ foreach (LANG ${BINDING_LANGS})
   endif ()
 endforeach()
 
-set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
+set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton)
 # End of variables used during install
 
 # Set result to a native search path - used by examples and binding tests.
