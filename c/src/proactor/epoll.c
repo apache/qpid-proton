@@ -1426,6 +1426,7 @@ static bool pconnection_write(pconnection_t *pc) {
   } else if (errno == EWOULDBLOCK) {
     pc->write_blocked = true;
   } else if (!(errno == EAGAIN || errno == EINTR)) {
+    pc->wbuf_remaining = 0;
     return false;
   }
   return true;
@@ -1595,6 +1596,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
           pc->read_blocked = true;
       }
       else if (n == 0) {
+        pc->read_blocked = true;
         pn_connection_driver_read_close(&pc->driver);
       }
       else if (errno == EWOULDBLOCK)
@@ -1603,6 +1605,8 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
         psocket_error(&pc->psocket, errno, pc->disconnected ? "disconnected" : "on read from");
       }
     }
+  } else {
+    pc->read_blocked = true;
   }
 
   if (tick_required) {
