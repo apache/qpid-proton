@@ -345,13 +345,13 @@ class Reactor(object):
         connection.set_address(host, port)
 
     def get_connection_address(self, connection):
-        """This may be used to retrieve the remote peer address.
+        """*Deprecated* in favor of the property proton.Connection.connected_address.
+        This may be used to retrieve the remote peer address.
         :return: string containing the address in URL format or None if no
         address is available.  Use the proton.Url class to create a Url object
         from the returned value.
         """
-        _url = connection.get_address()
-        return utf82unicode(_url)
+        return connection.connected_address
 
     def selectable(self, handler=None, delegate=None):
         """
