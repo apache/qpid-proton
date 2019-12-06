@@ -54,6 +54,7 @@ extensions = [
     'sphinx_automodapi.automodapi', # needed for the module summaries (.. autosummary::)
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
+    'sphinx.ext.mathjax', # needed for math formulas on some versions of Sphinx
 ]
 
 # Add any paths that contain templates here, relative to this directory.
