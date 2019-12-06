@@ -69,19 +69,14 @@ class ExamplesTest(unittest.TestCase):
     def test_helloworld_blocking(self):
         self.test_helloworld('helloworld_blocking.py')
 
-    def test_helloworld_tornado(self):
-        self.test_helloworld('helloworld_tornado.py')
-
-    def test_helloworld_direct_tornado(self):
-        self.test_helloworld('helloworld_direct_tornado.py')
-
     def test_simple_send_recv(self, recv='simple_recv.py', send='simple_send.py'):
         with Popen([recv]) as r:
             with Popen([send]):
                 pass
             actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
-            expected = ["{'sequence': %i}" % (i+1,) for i in range(100)]
-            self.assertEqual(actual, expected)
+            expected_py2 = ["{'sequence': int32(%i)}" % (i+1,) for i in range(100)]
+            expected_py3 = ["{'sequence': %i}" % (i+1,) for i in range(100)]
+            self.assertIn(actual,[expected_py2, expected_py3])
 
     def test_client_server(self, client=['client.py'], server=['server.py'], sleep=0):
         with Popen(server) as s:
@@ -151,8 +146,9 @@ class ExamplesTest(unittest.TestCase):
                 pass
             r.wait()
             actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
-            expected = ["{'sequence': %i}" % (i+1,) for i in range(100)]
-            self.assertEqual(actual, expected)
+            expected_py2 = ["{'sequence': int32(%i)}" % (i+1,) for i in range(100)]
+            expected_py3 = ["{'sequence': %i}" % (i+1,) for i in range(100)]
+            self.assertIn(actual,[expected_py2, expected_py3])
 
     def test_direct_send_simple_recv(self):
         with Popen(['direct_send.py', '-a', 'localhost:8888']):
@@ -160,8 +156,9 @@ class ExamplesTest(unittest.TestCase):
             with Popen(['simple_recv.py', '-a', 'localhost:8888']) as r:
                 r.wait()
                 actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
-                expected = ["{'sequence': %i}" % (i+1,) for i in range(100)]
-                self.assertEqual(actual, expected)
+                expected_py2 = ["{'sequence': int32(%i)}" % (i + 1,) for i in range(100)]
+                expected_py3 = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
+                self.assertIn(actual, [expected_py2, expected_py3])
 
     def test_selected_recv(self):
         with Popen(['colour_send.py']):
