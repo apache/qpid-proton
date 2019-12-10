@@ -25,35 +25,35 @@ to react to various events. This reactive style is particularly suited
 to messaging applications.
 
 To be notified of a particular event, you define a class with the
-appropriately name method on it. That method is then called by the
+appropriately named method on it. That method is then called by the
 event loop when the event occurs.
 
 We define a class here, ``HelloWorld``, which handles the key events of
 interest in sending and receiving a message.
 
 The ``on_start()`` method is called when the event loop first
-starts. We handle that by establishing our connection (line 12), a
-sender over which to send the message (line 13) and a receiver over
+starts. We handle that by establishing our connection (line 13), a
+sender over which to send the message (line 15) and a receiver over
 which to receive it back again (line 14).
 
 The ``on_sendable()`` method is called when message can be transferred
 over the associated sender link to the remote peer. We send out our
-``Hello World!`` message (line 17), then close the sender (line 18) as
+``Hello World!`` message (line 18), then close the sender (line 19) as
 we only want to send one message. The closing of the sender will
 prevent further calls to ``on_sendable()``.
 
 The ``on_message()`` method is called when a message is
 received. Within that we simply print the body of the message (line
-21) and then close the connection (line 22).
+22) and then close the connection (line 23).
 
 Now that we have defined the logic for handling these events, we
 create an instance of a :py:class:`~proton.reactor.Container`, pass it
 our handler and then enter the event loop by calling
-:py:meth:`~proton.reactor.Container.run()`. At this point control
+:py:meth:`~proton.reactor.Container.run()`. At this point, control
 passes to the container instance, which will make the appropriate
 callbacks to any defined handlers.
 
-To run the example you will need to have a broker (or similar)
+To run the example, you will need to have a broker (or similar)
 accepting connections on that url either with a queue (or topic)
 matching the given address or else configured to create such a queue
 (or topic) dynamically. There is a simple broker.py script included
@@ -66,17 +66,17 @@ Hello World, Direct!
 ====================
 
 Though often used in conjunction with a broker, AMQP does not
-*require* this. It also allows senders and receivers can communicate
+*require* this. It also allows senders and receivers to communicate
 directly if desired.
 
 Let's modify our example to demonstrate this.
 
 .. literalinclude:: ../examples/helloworld_direct.py
    :lines: 21-
-   :emphasize-lines: 11,21-22,24-25
+   :emphasize-lines: 12,22-23,25-26
    :linenos:
 
-The first difference, on line 11, is that rather than creating a
+The first difference, on line 12, is that rather than creating a
 receiver on the same connection as our sender, we listen for incoming
 connections by invoking the
 :py:meth:`~proton.reactor.Container.listen()` method on the
@@ -92,11 +92,11 @@ exactly as before.
 
 However we also handle two new events. We now close the connection
 from the senders side once the message has been accepted (line
-22). The acceptance of the message is an indication of successful
+23). The acceptance of the message is an indication of successful
 transfer to the peer. We are notified of that event through the
 ``on_accepted()`` callback. Then, once the connection has been closed,
 of which we are notified through the ``on_closed()`` callback, we stop
-accepting incoming connections (line 25) at which point there is no
+accepting incoming connections (line 26) at which point there is no
 work to be done and the event loop exits, and the run() method will
 return.
 
@@ -141,8 +141,8 @@ In the ``on_sendable()`` callback, we check that our sender has credit
 before sending messages. We also check that we haven't already sent
 the required number of messages.
 
-The ``send()`` call on line 20 is of course asynchronous. When it
-returns the message has not yet actually been transferred across the
+The ``send()`` call on line 21 is of course asynchronous. When it
+returns, the message has not yet actually been transferred across the
 network to the receiver. By handling the ``on_accepted()`` event, we
 can get notified when the receiver has received and accepted the
 message. In our example we use this event to track the confirmation of
@@ -170,26 +170,25 @@ Now let's look at the corresponding receiver:
 Here we handle the ``on_start()`` by creating our receiver, much like
 we did for the sender. We also handle the ``on_message()`` event for
 received messages and print the message out as in the ``Hello World!``
-examples. However we add some logic to allow the receiver to wait for
-a given number of messages, then to close the connection and exit. We
+examples. However, we add some logic to allow the receiver to wait for
+a given number of messages, then close the connection and exit. We
 also add some logic to check for and ignore duplicates, using a simple
 sequential id scheme.
 
 Again, though sending between these two examples requires some sort of
 intermediary process (e.g. a broker), AMQP allows us to send messages
 directly between two processes without this if we so wish. In that
-case one or other of the processes needs to accept incoming socket
-connections. Let's create a modified version of the receiving example
-that does this:
+case, one of the processes needs to accept incoming socket connections.
+Let's create a modified version of the receiving example that does this:
 
 .. literalinclude:: ../examples/direct_recv.py
    :lines: 21-
-   :emphasize-lines: 13,25
+   :emphasize-lines: 14,26
    :linenos:
 
-There are only two differences here. On line 13, instead of initiating
+There are only two differences here. On line 14, instead of initiating
 a link (and implicitly a connection), we listen for incoming
-connections. On line 25, when we have received all the expected
+connections. On line 26, when we have received all the expected
 messages, we then stop listening for incoming connections by closing
 the listener object.
 
@@ -198,17 +197,17 @@ directly. (Note: you will need to stop any broker that is listening on
 the 5672 port, or else change the port used by specifying a different
 address to each example via the -a command line switch).
 
-We could equally well modify the original sender to allow the original
-receiver to connect to it. Again that just requires two modifications:
+We could also modify the original sender to allow the original
+receiver to connect to it. Again, that just requires two modifications:
 
 .. literalinclude:: ../examples/direct_send.py
    :lines: 21-
-   :emphasize-lines: 15,28
+   :emphasize-lines: 16,29
    :linenos:
 
 As with the modified receiver, instead of initiating establishment of
-a link, we listen for incoming connections on line 15 and then on line
-28, when we have received confirmation of all the messages we sent, we
+a link, we listen for incoming connections on line 16 and then on line
+29, when we have received confirmation of all the messages we sent, we
 can close the listener in order to exit. The symmetry in the
 underlying AMQP that enables this is quite unique and elegant, and in
 reflecting this the proton API provides a flexible toolkit for
@@ -249,17 +248,16 @@ Now let's create a simple client to test this service out.
    :linenos:
 
 As well as sending requests, we need to be able to get back the
-responses. We create a receiver for that (see line 14), but we don't
+responses. We create a receiver for that (see line 15), but we don't
 specify an address, we set the dynamic option which tells the broker
-we are connected to to create a temporary address over which we can
-receive our responses.
+to create a temporary address over which we can receive our responses.
 
 We need to use the address allocated by the broker as the reply_to
 address of our requests, so we can't send them until the broker has
 confirmed our receiving link has been set up (at which point we will
 have our allocated address). To do that, we add an
 ``on_link_opened()`` method to our handler class, and if the link
-associated with event is the receiver, we use that as the trigger to
+associated with the event is the receiver, we use that as the trigger to
 send our first request.
 
 Again, we could avoid having any intermediary process here if we
@@ -286,7 +284,7 @@ can be achieved:
 
 .. literalinclude:: ../examples/selected_recv.py
    :lines: 21-
-   :emphasize-lines: 10
+   :emphasize-lines: 16
    :linenos:
 
 When creating the receiver, we specify a Selector object as an
@@ -299,5 +297,5 @@ queues). An example of that is shown next:
 
 .. literalinclude:: ../examples/queue_browser.py
    :lines: 21-
-   :emphasize-lines: 10
+   :emphasize-lines: 11
    :linenos:
