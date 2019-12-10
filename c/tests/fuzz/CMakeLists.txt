@@ -59,7 +59,7 @@ target_link_libraries (fuzz-message-decode qpid-proton-core)
 
 # pn_url_parse is not in proton core and is only used by messenger so compile specially
 set(platform_MSVC ${PN_C_SOURCE_DIR}/compiler/msvc/snprintf.c)
-set(platform ${extra_${CMAKE_C_COMPILER_ID}})
+set(platform ${platform_${CMAKE_C_COMPILER_ID}})
 
 pn_add_fuzz_test (fuzz-url
   fuzz-url.c
