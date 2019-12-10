@@ -32,7 +32,7 @@ add_library (StandaloneFuzzTargetMain STATIC StandaloneFuzzTargetMain.c Standalo
 
 macro (pn_add_fuzz_test test)
   add_executable (${test} ${ARGN})
-  target_link_libraries (${test} qpid-proton-core ${FUZZING_LIBRARY})
+  target_link_libraries (${test} ${FUZZING_LIBRARY})
   list(APPEND fuzz_test_src ${ARGN})
 
   if (FUZZ_REGRESSION_TESTS)
@@ -53,16 +53,18 @@ unset(fuzz_test_src)
 
 # Fuzz tests at the User API level
 pn_add_fuzz_test (fuzz-connection-driver fuzz-connection-driver.c)
+target_link_libraries (fuzz-connection-driver qpid-proton-core)
 pn_add_fuzz_test (fuzz-message-decode fuzz-message-decode.c)
+target_link_libraries (fuzz-message-decode qpid-proton-core)
 
 # pn_url_parse is not in proton core and is only used by messenger so compile specially
-pn_add_fuzz_test (fuzz-url fuzz-url.c ${PN_C_SOURCE_DIR}/extra/url.c  ${PN_C_SOURCE_DIR}/core/util.c ${PN_C_SOURCE_DIR}/core/memory.c)
+pn_add_fuzz_test (fuzz-url fuzz-url.c ${PN_C_SOURCE_DIR}/extra/url.c  ${PN_C_SOURCE_DIR}/core/object/object.c ${PN_C_SOURCE_DIR}/core/object/string.c ${PN_C_SOURCE_DIR}/core/util.c ${PN_C_SOURCE_DIR}/core/memory.c)
 target_compile_definitions(fuzz-url PRIVATE PROTON_DECLARE_STATIC)
 
 # This regression test can take a very long time so don't run by default
 if(HAS_PROACTOR AND FUZZ_LONG_TESTS)
   pn_add_fuzz_test (fuzz-proactor-receive fuzz-proactor-receive.c)
-  target_link_libraries(fuzz-proactor-receive qpid-proton-proactor)
+  target_link_libraries(fuzz-proactor-receive qpid-proton-core qpid-proton-proactor)
 endif()
 
 # Fuzz tests of internals
