@@ -453,8 +453,18 @@ class ApplicationEvent(EventBase):
     :type subject: any
     """
 
+    TYPES = {}
+
     def __init__(self, typename, connection=None, session=None, link=None, delivery=None, subject=None):
-        super(ApplicationEvent, self).__init__(EventType(typename))
+        if isinstance(typename, EventType):
+            eventtype = typename
+        else:
+            try:
+                eventtype = self.TYPES[typename]
+            except KeyError:
+                eventtype =  EventType(typename)
+                self.TYPES[typename] = eventtype
+        super(ApplicationEvent, self).__init__(eventtype)
         self.clazz = PN_PYREF
         self.connection = connection
         self.session = session
