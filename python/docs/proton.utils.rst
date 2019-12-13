@@ -9,11 +9,15 @@ Module Summary
 
 |
 
-.. autosummary::
-    BlockingConnection
-    BlockingSender
-    BlockingReceiver
-    SyncRequestResponse
++------------------------------+-----------------------------------------------------------------------+
+| :class:`BlockingConnection`  | A synchronous style connection wrapper.                               |
++------------------------------+-----------------------------------------------------------------------+
+| :class:`BlockingSender`      | A synchronous sender wrapper.                                         |
++------------------------------+-----------------------------------------------------------------------+
+| :class:`BlockingReceiver`    | A synchronous receiver wrapper.                                       |
++------------------------------+-----------------------------------------------------------------------+
+| :class:`SyncRequestResponse` | Implementation of the synchronous request-response (aka RPC) pattern. |
++------------------------------+-----------------------------------------------------------------------+
 
 |
 
@@ -22,10 +26,15 @@ Exceptions
 
 |
 
-.. autosummary::
-    SendException
-    LinkDetached
-    ConnectionClosed
++---------------------------+---------------------------------------------------------------------------------------------------+
+| :class:`SendException`    | Exception used to indicate an exceptional state/condition on a send request.                      |
++---------------------------+---------------------------------------------------------------------------------------------------+
+| :class:`LinkDetached`     | The exception raised when the remote peer unexpectedly closes a link in a blocking context, or    |
+|                           | an unexpected link error occurs.                                                                  |
++---------------------------+---------------------------------------------------------------------------------------------------+
+| :class:`ConnectionClosed` | The exception raised when the remote peer unexpectedly closes a connection in a blocking context, |
+|                           | or an unexpected connection error occurs.                                                         |
++---------------------------+---------------------------------------------------------------------------------------------------+
 
 |
 

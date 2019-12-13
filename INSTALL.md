@@ -51,7 +51,6 @@ language.
 
     # Dependencies needed to generate documentation
     $ yum install python-sphinx                              # Python
-    $ pip install --user sphinx-automodapi
     $ yum install rubygem-yard                               # Ruby
     $ yum install doxygen                                    # C, C++
 
@@ -74,7 +73,6 @@ language binding you can omit the dev package for that language.
 
     # dependencies needed for python docs
     $ apt-get install python-sphinx
-    $ pip install --user sphinx-automodapi
 
 From the directory where you found this `INSTALL.md` file:
 

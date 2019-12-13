@@ -120,8 +120,7 @@ py_compile(${CMAKE_CURRENT_SOURCE_DIR} "${pysrc}" PROTON_ARTIFACTS)
 
 # Sphinx documentation
 check_python_module("sphinx" SPHINX_MODULE_FOUND)
-check_python_module("sphinx_automodapi" SPHINX_AUTOMODAPI_MODULE_FOUND)
-if (NOT SPHINX_MODULE_FOUND OR NOT SPHINX_AUTOMODAPI_MODULE_FOUND)
+if (NOT SPHINX_MODULE_FOUND)
     message(STATUS "Sphinx modules not found; doc generation disabled.")
 else ()
     add_custom_target(docs-py

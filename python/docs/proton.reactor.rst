@@ -9,12 +9,20 @@ Module Summary
 
 |
 
-.. autosummary::
-    Container
-    ApplicationEvent
-    EventInjector
-    Backoff
-    Transaction
++---------------------------+----------------------------------------------------------------------------------------------------+
+| :class:`Container`        | A representation of the AMQP concept of a ‘container’, which loosely speaking is something that    |
+|                           | establishes links to or from another container, over which messages are transfered.                |
++---------------------------+----------------------------------------------------------------------------------------------------+
+| :class:`ApplicationEvent` | Application defined event, which can optionally be associated with an engine object and or an      |
+|                           | arbitrary subject.                                                                                 |
++---------------------------+----------------------------------------------------------------------------------------------------+
+| :class:`EventInjector`    | Can be added to a :class:`Container` to allow events to be triggered by an external thread but     |
+|                           | handled on the event thread associated with the container.                                         |
++---------------------------+----------------------------------------------------------------------------------------------------+
+| :class:`Backoff`          | A reconnect strategy involving an increasing delay between retries, up to a maximum or 10 seconds. |
++---------------------------+----------------------------------------------------------------------------------------------------+
+| :class:`Transaction`      | Tracks the state of an AMQP 1.0 local transaction.                                                 |
++---------------------------+----------------------------------------------------------------------------------------------------+
 
 |
 
@@ -25,18 +33,29 @@ Link Options
 
 The methods :meth:`Container.create_receiver` and :meth:`Container.create_sender` take one or more link options to allow the details of the links to be customized.
 
-.. autosummary::
-    LinkOption
-    ReceiverOption
-    SenderOption
-    AtLeastOnce
-    AtMostOnce
-    DynamicNodeProperties
-    Filter
-    Selector
-    DurableSubscription
-    Copy
-    Move
++--------------------------------+----------------------------------------------------------------------------------+
+| :class:`LinkOption`            | Abstract interface for link configuration options.                               |
++--------------------------------+----------------------------------------------------------------------------------+
+| :class:`ReceiverOption`        | Abstract class for receiver options.                                             |
++--------------------------------+----------------------------------------------------------------------------------+
+| :class:`SenderOption`          | Abstract class for sender options.                                               |
++--------------------------------+----------------------------------------------------------------------------------+
+| :class:`AtLeastOnce`           | Set at-least-once delivery semantics for message delivery.                       |
++--------------------------------+----------------------------------------------------------------------------------+
+| :class:`AtMostOnce`            | Set at-most-once delivery semantics for message delivery.                        |
++--------------------------------+----------------------------------------------------------------------------------+
+| :class:`DynamicNodeProperties` | Allows a map of link properties to be set on a link.                             |
++--------------------------------+----------------------------------------------------------------------------------+
+| :class:`Filter`                | Receiver option which allows incoming messages to be filtered.                   |
++--------------------------------+----------------------------------------------------------------------------------+
+| :class:`Selector`              | Configures a receiver with a message selector filter.                            |
++--------------------------------+----------------------------------------------------------------------------------+
+| :class:`DurableSubscription`   | Receiver option which sets both the configuration and delivery state to durable. |
++--------------------------------+----------------------------------------------------------------------------------+
+| :class:`Copy`                  | Receiver option which copies messages to the receiver.                           |
++--------------------------------+----------------------------------------------------------------------------------+
+| :class:`Move`                  | Receiver option which moves messages to the receiver (rather than copying).      |
++--------------------------------+----------------------------------------------------------------------------------+
 
 |
 

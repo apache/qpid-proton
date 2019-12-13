@@ -51,7 +51,6 @@ except IOError:
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx_automodapi.automodapi', # needed for the module summaries (.. autosummary::)
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
     'sphinx.ext.mathjax', # needed for math formulas on some versions of Sphinx

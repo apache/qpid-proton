@@ -9,11 +9,15 @@ Module Summary
 
 |
 
-.. autosummary::
-
-    MessagingHandler
-    TransactionHandler
-    TransactionalClientHandler
++-------------------------------------+----------------------------------------------------------------------------------------+
+| :class:`MessagingHandler`           | A general purpose handler that makes the proton-c events somewhat simpler to deal with |
+|                                     | and/or avoids repetitive tasks for common use cases.                                   |
++-------------------------------------+----------------------------------------------------------------------------------------+
+| :class:`TransactionHandler`         | The interface for transaction handlers - ie objects that want to be notified of state  |
+|                                     | changes related to a transaction.                                                      |
++-------------------------------------+----------------------------------------------------------------------------------------+
+| :class:`TransactionalClientHandler` | An extension to the MessagingHandler for applications using transactions.              |
++-------------------------------------+----------------------------------------------------------------------------------------+
 
 |
 
@@ -22,10 +26,11 @@ Exceptions
 
 |
 
-.. autosummary::
-
-    Reject
-    Release
++------------------+-----------------------------------------------------------+
+| :class:`Reject`  | An exception that indicates a message should be rejected. |
++------------------+-----------------------------------------------------------+
+| :class:`Release` | An exception that indicates a message should be released. |
++------------------+-----------------------------------------------------------+
 
 |
 
