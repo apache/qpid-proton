@@ -22,6 +22,15 @@ add_definitions(${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS})
 option(FUZZ_REGRESSION_TESTS "Run fuzz tests with regression test driver" ON)
 option(FUZZ_LONG_TESTS "Run fuzz tests that take a long time" OFF)
 
+# prefer static lib for the fuzzer, if available
+if (BUILD_STATIC_LIBS)
+  set(FUZZING_QPID_PROTON_CORE_LIBRARY qpid-proton-core-static)
+  set(FUZZING_QPID_PROTON_PROACTOR_LIBRARY qpid-proton-proactor-static)
+else()
+  set(FUZZING_QPID_PROTON_CORE_LIBRARY qpid-proton-core)
+  set(FUZZING_QPID_PROTON_PROACTOR_LIBRARY qpid-proton-proactor)
+endif()
+
 if (FUZZ_REGRESSION_TESTS)
   set(FUZZING_LIBRARY StandaloneFuzzTargetMain)
 else ()
@@ -56,9 +65,9 @@ unset(fuzz_test_src)
 
 # Fuzz tests at the User API level
 pn_add_fuzz_test (fuzz-connection-driver fuzz-connection-driver.c)
-target_link_libraries (fuzz-connection-driver qpid-proton-core)
+target_link_libraries (fuzz-connection-driver ${FUZZING_QPID_PROTON_CORE_LIBRARY})
 pn_add_fuzz_test (fuzz-message-decode fuzz-message-decode.c)
-target_link_libraries (fuzz-message-decode qpid-proton-core)
+target_link_libraries (fuzz-message-decode ${FUZZING_QPID_PROTON_CORE_LIBRARY})
 
 # pn_url_parse is not in proton core and is only used by messenger so compile specially
 set(platform_MSVC ${PN_C_SOURCE_DIR}/compiler/msvc/snprintf.c)
@@ -77,7 +86,7 @@ target_compile_definitions(fuzz-url PRIVATE PROTON_DECLARE_STATIC)
 # This regression test can take a very long time so don't run by default
 if(HAS_PROACTOR AND FUZZ_LONG_TESTS)
   pn_add_fuzz_test (fuzz-proactor-receive fuzz-proactor-receive.c)
-  target_link_libraries(fuzz-proactor-receive qpid-proton-core qpid-proton-proactor)
+  target_link_libraries(fuzz-proactor-receive ${FUZZING_QPID_PROTON_CORE_LIBRARY} ${FUZZING_QPID_PROTON_PROACTOR_LIBRARY})
 endif()
 
 # Fuzz tests of internals
