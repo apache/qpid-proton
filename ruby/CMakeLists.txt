@@ -124,21 +124,24 @@ if (result EQUAL 0)  # Have minitest
   set(test_env
     "PATH=${PATH}"
     "RUBYLIB=${RUBYLIB}"
-    "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-    ${TEST_ENV})
+    "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}")
 
   macro(add_ruby_test script)
     get_filename_component(name ${script} NAME_WE)
     string(REPLACE "_" "-" name "ruby-${name}")
-    add_test(
+    pn_add_test(
+      INTERPRETED
       NAME ${name}
-      COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${TEST_WRAP_PREFIX_CMD} ${RUBY_EXECUTABLE} ${script} -v
+      PREPEND_ENVIRONMENT ${test_env}
+      COMMAND ${RUBY_EXECUTABLE} ${script} -v
       ${ARGN})
   endmacro()
 
-  add_test(
+  pn_add_test(
+    UNWRAPPED
     NAME ruby-example-test
-    COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${RUBY_EXECUTABLE} testme -v
+    PREPEND_ENVIRONMENT ${test_env}
+    COMMAND ${RUBY_EXECUTABLE} testme -v
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples)
 
   file(GLOB TESTS tests/test_*.rb)

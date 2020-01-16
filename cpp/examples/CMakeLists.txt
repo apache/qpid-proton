@@ -115,18 +115,21 @@ if (PYTHON_EXECUTABLE)
   set(test_env
     "PATH=${test_path}"
     "PYTHONPATH=../../tests/py"
-    "HAS_CPP11=$<$<BOOL:${HAS_ENOUGH_CPP11}>:1>"
-    ${TEST_ENV})
+    "HAS_CPP11=$<$<BOOL:${HAS_ENOUGH_CPP11}>:1>")
 
-  add_test(
+  pn_add_test(
+    UNWRAPPED
     NAME cpp-example-container
+    PREPEND_ENVIRONMENT "${test_env}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${PYTHON_EXECUTABLE} testme -v ContainerExampleTest)
+    COMMAND ${PYTHON_EXECUTABLE} testme -v ContainerExampleTest)
 
   if (NOT SSL_IMPL STREQUAL none)
-    add_test(
+    pn_add_test(
+      UNWRAPPED
       NAME cpp-example-container-ssl
+      PREPEND_ENVIRONMENT "${test_env}"
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${PYTHON_EXECUTABLE}  testme -v ContainerExampleSSLTest)
+      COMMAND ${PYTHON_EXECUTABLE} testme -v ContainerExampleSSLTest)
   endif()
 endif()

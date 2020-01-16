@@ -24,7 +24,7 @@ include(CTest)
 enable_testing()
 include("tests/RuntimeCheck.cmake")
 
-# ind example sub-directories that contain "CMakeLists.txt" or "testme"
+# find example sub-directories that contain "CMakeLists.txt" or "testme"
 set(ex_dir "${CMAKE_SOURCE_DIR}/examples")
 file(GLOB subs ${ex_dir}/*)
 foreach(dir ${subs})
@@ -34,7 +34,8 @@ foreach(dir ${subs})
     add_subdirectory(${dir})
   elseif(EXISTS ${dir}/testme)
     # Has a "testme" script to run example tests.
-    add_test(
+    pn_add_test(
+      UNWRAPPED
       NAME ${ex}-example-tests
       COMMAND ${dir}/testme
       WORKING_DIRECTORY ${dir})

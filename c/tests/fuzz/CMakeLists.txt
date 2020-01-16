@@ -55,9 +55,16 @@ macro (pn_add_fuzz_test test)
       set(file_lines "${file_lines}${f}\n")
     endforeach()
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${test}-files" "${file_lines}")
-    add_test (NAME ${test} COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}> "@${CMAKE_CURRENT_BINARY_DIR}/${test}-files")
+    pn_add_test(
+      EXECUTABLE
+      NAME ${test}
+      PREPEND_ENVIRONMENT ${test_env}
+      COMMAND $<TARGET_FILE:${test}> "@${CMAKE_CURRENT_BINARY_DIR}/${test}-files")
   else ()
-    add_test (NAME ${test} COMMAND $<TARGET_FILE:${test}> -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test}>)
+    pn_add_test(
+      EXECUTABLE
+      NAME ${test}
+      COMMAND $<TARGET_FILE:${test}> -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test}>)
   endif ()
 endmacro(pn_add_fuzz_test)
 

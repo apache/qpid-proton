@@ -117,7 +117,7 @@ endif()
 if(TEST_EXE_PREFIX)
   # Add TEST_EXE_PREFIX to TEST_ENV so test runner scripts can use it.
   list(APPEND TEST_ENV "TEST_EXE_PREFIX=${TEST_EXE_PREFIX}")
-  # Make a CMake-list form of TEST_EXE_PREFIX for add_test() commands
+  # Make a CMake-list form of TEST_EXE_PREFIX for (pn_)add_test() commands
   separate_arguments(TEST_EXE_PREFIX_CMD UNIX_COMMAND "${TEST_EXE_PREFIX}")
 endif()
 separate_arguments(TEST_WRAP_PREFIX_CMD UNIX_COMMAND "${TEST_WRAP_PREFIX}")

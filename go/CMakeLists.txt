@@ -58,7 +58,7 @@ if (BUILD_GO)
           COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/../go.mod ${GOPATH}/../go.mod)
 
   # Following are CACHE INTERNAL so examples/CMakeLists.txt can see them.
-  set(GO_ENV ${PN_ENV_SCRIPT} --
+  set(GO_ENV
     "GOPATH=${GOPATH}"
     "CGO_CFLAGS=-I${PN_C_INCLUDE_DIR}"
     "CGO_LDFLAGS=-L${PN_C_LIBRARY_DIR}"
@@ -66,7 +66,7 @@ if (BUILD_GO)
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
     CACHE INTERNAL "Run a command with Go environment variables")
 
-  set(GO ${GO_ENV} ${GO_EXE} CACHE INTERNAL "Run go with environment set")
+  set(GO ${PN_ENV_SCRIPT} -- ${GO_ENV} ${GO_EXE} CACHE INTERNAL "Run go with environment set")
 
   set(GO_BUILD ${GO} build ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} CACHE INTERNAL "Run go build")
   set(GO_INSTALL ${GO} install ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go install" )
@@ -81,7 +81,8 @@ if (BUILD_GO)
     WORKING_DIRECTORY $ENV{PWD})
 
   add_test(
-    NAME go-test COMMAND ${GO_TEST} $ENV{PWD}/go/pkg/...
+    NAME go-test
+    COMMAND ${GO_TEST} $ENV{PWD}/go/pkg/...
     WORKING_DIRECTORY $ENV{PWD})
 
   # Clean up go output directories.
