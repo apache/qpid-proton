@@ -37,6 +37,7 @@ find_package (SWIG)
 find_package (CyrusSASL)
 
 enable_testing ()
+include(tests/PNAddTest.cmake)
 
 # Set up runtime checks (valgrind, sanitizers etc.)
 include(tests/RuntimeCheck.cmake)
@@ -285,17 +286,19 @@ macro(set_search_path result)
 endmacro()
 
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  # No change needed for windows already use correct separator
+  # CMake uses semicolon as list separator. Change ';'->'\;'
   function(to_native_path path result)
     file (TO_NATIVE_PATH "${path}" path)
-    set (${result} ${path} PARENT_SCOPE)
+    string (REPLACE ";" "\;" path "${path}")
+    # without this, ...;last\dir\ would later combine with list separator ; into \;
+    set (${result} "${path}\;" PARENT_SCOPE)
   endfunction()
 else (CMAKE_SYSTEM_NAME STREQUAL Windows)
   # Just change ';'->':'
   function(to_native_path path result)
     file (TO_NATIVE_PATH "${path}" path)
-    string (REGEX REPLACE ";" ":" path "${path}")
-    set (${result} ${path} PARENT_SCOPE)
+    string (REPLACE ";" ":" path "${path}")
+    set (${result} "${path}" PARENT_SCOPE)
   endfunction()
 endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 

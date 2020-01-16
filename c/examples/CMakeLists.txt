@@ -45,11 +45,12 @@ if (PYTHON_EXECUTABLE)
 
   set(test_env
     "PATH=${test_path}"
-    "PYTHONPATH=../../tests/py"
-    ${TEST_ENV})
+    "PYTHONPATH=../../tests/py")
 
-  add_test(
+  pn_add_test(
+    UNWRAPPED
     NAME c-example-tests
+    PREPEND_ENVIRONMENT "${test_env}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${PYTHON_EXECUTABLE} testme -v)
+    COMMAND ${PYTHON_EXECUTABLE} testme -v)
 endif()
