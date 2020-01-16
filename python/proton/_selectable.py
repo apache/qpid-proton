@@ -21,6 +21,8 @@ from __future__ import absolute_import
 
 
 from ._events import Event
+from ._io import PN_INVALID_SOCKET
+
 
 class Selectable(object):
 
@@ -30,19 +32,23 @@ class Selectable(object):
         self.writing = False
         self._deadline = 0
         self._terminal = False
+        self._released = False
         self._terminated = False
-        self._collector = None
         self._reactor = reactor
+        self.push_event(self, Event.SELECTABLE_INIT)
 
-    def release(self):
-        if self._delegate:
+    def close(self):
+        if self._delegate and not self._released:
             self._delegate.close()
 
-    def __getattr__(self, name):
+    def fileno(self):
         if self._delegate:
-            return getattr(self._delegate, name)
+            return self._delegate.fileno()
         else:
-            return None
+            return PN_INVALID_SOCKET
+
+    def __getattr__(self, name):
+        return getattr(self._delegate, name)
 
     def _get_deadline(self):
         tstamp = self._deadline
@@ -59,12 +65,8 @@ class Selectable(object):
 
     deadline = property(_get_deadline, _set_deadline)
 
-    def collect(self, collector):
-        self._collector = collector
-
-    def push_event(self, context, type):
-        if self._collector:
-            self._collector.put(context, type)
+    def push_event(self, context, etype):
+        self._reactor.push_event(context, etype)
 
     def update(self):
         if not self._terminated:
@@ -89,3 +91,6 @@ class Selectable(object):
 
     def terminate(self):
         self._terminal = True
+
+    def release(self):
+        self._released = True

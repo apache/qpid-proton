@@ -85,7 +85,7 @@ class TornadoLoopHandler:
         sel = event.context
         if sel.fileno() >= 0:
             self.loop.remove_handler(sel.fileno())
-        sel.release()
+        sel.close()
         self.count -= 1
         if self.count == 0:
             self.loop.add_callback(self._stop)

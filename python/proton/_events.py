@@ -399,7 +399,6 @@ class Event(EventBase):
     reactor.
     """
 
-
     SELECTABLE_INIT = _internal("selectable_init")
     SELECTABLE_UPDATED = _internal("selectable_updated")
     SELECTABLE_READABLE = _internal("selectable_readable")

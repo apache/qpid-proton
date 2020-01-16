@@ -1136,7 +1136,7 @@ class PythonIO:
         sel = event.context
         if sel.is_terminal:
             self.selectables.remove(sel)
-            sel.release()
+            sel.close()
 
     def on_reactor_quiesced(self, event):
         reactor = event.reactor
@@ -1198,7 +1198,7 @@ class IOHandler(Handler):
         s = event.selectable
         self._selector.remove(s)
         s._reactor._selectables -= 1
-        s.release()
+        s.close()
 
     def on_reactor_quiesced(self, event):
         r = event.reactor
@@ -1337,10 +1337,7 @@ class IOHandler(Handler):
         sock = IO.connect(addrs[0])
 
         # At this point we need to arrange to be called back when the socket is writable
-        connector = ConnectSelectable(sock, reactor, addrs[1:], t, self)
-        connector.collect(reactor._collector)
-        connector.writing = True
-        connector.push_event(connector, Event.SELECTABLE_INIT)
+        ConnectSelectable(sock, reactor, addrs[1:], t, self)
 
         # TODO: Don't understand why we need this now - how can we get PN_TRANSPORT until the connection succeeds?
         t._selectable = None
@@ -1388,6 +1385,7 @@ class IOHandler(Handler):
 class ConnectSelectable(Selectable):
     def __init__(self, sock, reactor, addrs, transport, iohandler):
         super(ConnectSelectable, self).__init__(sock, reactor)
+        self.writing = True
         self._addrs = addrs
         self._transport = transport
         self._iohandler = iohandler
