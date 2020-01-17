@@ -21,6 +21,8 @@
 from __future__ import print_function
 import tornado.ioloop
 import tornado.web
+from tornado.gen import coroutine
+from tornado.concurrent import Future
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton_tornado import Container
@@ -51,22 +53,24 @@ class Client(MessagingHandler):
 
     def on_message(self, event):
         if self.sent:
-            request, handler = self.sent.pop(0)
+            request, future = self.sent.pop(0)
             print("%s => %s" % (request, event.message.body))
-            handler(event.message.body)
+            future.set_result(event.message.body)
             self.do_request()
 
     def do_request(self):
         if self.pending and self.reply_address and self.sender.credit:
-            request, handler = self.pending.pop(0)
-            self.sent.append((request, handler))
+            request, future = self.pending.pop(0)
+            self.sent.append((request, future))
             req = Message(reply_to=self.reply_address, body=request)
             self.sender.send(req)
 
-    def request(self, body, handler):
-        self.pending.append((body, handler))
+    def request(self, body):
+        future = Future()
+        self.pending.append((body, future))
         self.do_request()
         self.container.touch()
+        return future
 
 class ExampleHandler(tornado.web.RequestHandler):
     def initialize(self, client):
@@ -77,17 +81,14 @@ class ExampleHandler(tornado.web.RequestHandler):
         self._write_form()
         self._write_close()
 
-    @tornado.web.asynchronous
+    @coroutine
     def post(self):
-        client.request(self.get_body_argument("message"), lambda x: self.on_response(x))
-
-    def on_response(self, body):
+        response = yield self.client.request(self.get_body_argument("message"))
         self.set_header("Content-Type", "text/html")
         self._write_open()
         self._write_form()
-        self.write("Response: " + body)
+        self.write("Response: " + response)
         self._write_close()
-        self.finish()
 
     def _write_open(self):
         self.write('<html><body>')
