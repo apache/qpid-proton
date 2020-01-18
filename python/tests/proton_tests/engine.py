@@ -895,6 +895,35 @@ class TransferTest(Test):
     binary = self.rcv.recv(1024)
     assert binary is None
 
+  def test_multiframe_abort(self):
+    self.rcv.flow(1)
+    sd = self.snd.delivery("tag")
+    msg = b"this is a test"
+    n = self.snd.send(msg)
+    assert n == len(msg)
+
+    self.pump()
+
+    binary = self.rcv.recv(1024)
+    assert binary == msg, (binary, msg)
+
+    msg = b"this is more.  Error if not discarded."
+    n = self.snd.send(msg)
+    assert n == len(msg)
+    sd.abort()
+    assert sd.aborted
+
+    # Confirm abort discards the sender's buffered content, i.e. no data in generated transfer frame.
+    # We want:
+    # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag", message-format=0, settled=true, aborted=true]
+    wanted = b"\x00\x00\x00%\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x15\x00\x00\x00\nR\x00R\x00\xa0\x03tagR\x00A@@@@A"
+    t = self.snd.transport
+    wire_bytes = t.peek(1024)
+    assert wanted == wire_bytes
+
+    self.pump()
+    assert self.rcv.current.aborted
+
   def test_disposition(self):
     self.rcv.flow(1)
 
