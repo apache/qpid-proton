@@ -67,11 +67,15 @@ class FdLimitTest(unittest.TestCase):
                 receiver = test_subprocess.Popen(["receive", "", b.port, str(i)], stdout=self.devnull)
                 receivers.append(receiver)
 
-            # All FDs are now in use, send attempt will (with present implementation) hang
-            with test_subprocess.Popen(["send", "", b.port, "x"],
-                                       stdout=self.devnull, stderr=subprocess.STDOUT) as sender:
-                time.sleep(1)  # polling for None immediately would always succeed, regardless whether send hangs or not
-                self.assertIsNone(sender.poll())
+            try:
+                # All FDs are now in use, send attempt will hang on Ubuntu Trusty
+                # and fail with ecode=1 and error message on Ubuntu Bionic and RHEL 7
+                #   PN_TRANSPORT_CLOSED: amqp:connection:framing-error: Expected AMQP protocol header:
+                #   no protocol header found (connection aborted)
+                sender = test_subprocess.Popen(["send", "", b.port, "x"],
+                                               stdout=self.devnull, stderr=subprocess.STDOUT)
+                time.sleep(1)  # polling immediately would always succeed, regardless whether send hangs or not
+                self.assertIn(sender.poll(), [None, 1])
 
                 # Kill receivers to free up FDs
                 for r in receivers:
@@ -79,8 +83,10 @@ class FdLimitTest(unittest.TestCase):
                 for r in receivers:
                     r.wait()
 
-                # Sender now succeeded and exited
-                self.assertEqual(sender.wait(), 0)
+            finally:
+                # On Ubuntu Trusty, sender now succeeded and exited
+                # On Ubuntu Bionic and el7 sender failed with ecode=1 and message
+                self.assertIn(sender.wait(), [0, 1])
 
             # Additional send/receive should succeed now
             self.assertIn("10 messages sent", test_subprocess.check_output(["send", "", b.port], universal_newlines=True))
