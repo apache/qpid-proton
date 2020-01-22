@@ -1242,6 +1242,60 @@ class MaxFrameTransferTest(Test):
     binary = self.rcv.recv(1024)
     assert binary == None
 
+  def testMaxFrameAbort(self):
+    self.snd, self.rcv = self.link("test-link", max_frame=[0,512])
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
+    self.rcv.flow(1)
+    sndt = self.snd.transport
+    dblfrmbytes = ("0123456789" * 52).encode('utf-8')
+    assert 520 == len(dblfrmbytes)
+    self.pump()
+
+    # Part 1: abort a delivery that would generate two frames - before they are generated.
+    # Expect that no output is generated and credit is unaffected.
+    assert self.snd.credit == 1
+    sd = self.snd.delivery("tag_0")
+    n = self.snd.send(dblfrmbytes)
+    assert n == len(dblfrmbytes)
+    sd.abort()
+    generated = sndt.peek(2048)
+    assert generated == b""
+    assert self.snd.credit == 1
+
+    # Part 2: abort a streaming delivery whose last content would generate two frames.
+    # First send some un-aborted data across the wire.
+    sd = self.snd.delivery("tag_1")
+    n = self.snd.send(dblfrmbytes)
+    assert n == len(dblfrmbytes)
+    self.pump()
+    binary = self.rcv.recv(2048)
+    assert binary == dblfrmbytes, (binary, dblfrmbytes)
+    # Now send more data spanning two frames and immediately abort.
+    # Unlike part 1, an abort frame is required to sync with peer.
+    n = self.snd.send(dblfrmbytes)
+    assert n == len(dblfrmbytes)
+    sd.abort()
+    assert sd.aborted
+    # Expect a single abort transfer frame with no content.  One credit is consumed.
+    # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag_1", message-format=0, settled=true, aborted=true]
+    wanted = b"\x00\x00\x00\x27\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x17\x00\x00\x00\nR\x00R\x00\xa0\x05tag_1R\x00A@@@@A"
+    t = self.snd.transport
+    wire_bytes = t.peek(2048)
+    assert wanted == wire_bytes
+    assert self.snd.credit == 0
+    self.pump()
+    assert self.rcv.current.aborted
+    # Confirm no lingering transfers by closing the link.
+    self.snd.close()
+    # Expect just the detach frame.
+    # @detach(22) [handle=0, closed=true]
+    wanted = b"\x00\x00\x00\x17\x02\x00\x00\x00\x00S\x16\xd0\x00\x00\x00\x07\x00\x00\x00\x02R\x00A"
+    wire_bytes = t.peek(2048)
+    assert wanted == wire_bytes
+
 
 class IdleTimeoutTest(Test):
 
