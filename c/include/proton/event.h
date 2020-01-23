@@ -347,7 +347,120 @@ typedef enum {
    * The listener is listening.
    * Events of this type point to the @ref pn_listener_t.
    */
-  PN_LISTENER_OPEN
+  PN_LISTENER_OPEN,
+
+  /**
+   * The raw connection connected.
+   * Now would be a good time to give the raw connection some buffers
+   * to read bytes from the underlying socket. If you don't do it
+   * now you will get @ref PN_RAW_CONNECTION_NEED_READ_BUFFERS (and
+   * @ref PN_RAW_CONNECTION_NEED_WRITE_BUFFERS) events when the socket is readable
+   * (or writable) but there are not buffers available.
+   *
+   * Events of this type point to a @ref pn_raw_connection_t
+   */
+  PN_RAW_CONNECTION_CONNECTED,
+
+  /**
+   * The remote end of the raw connection closed the connection so
+   * that we can no longer read.
+   *
+   * When both this and @ref PN_RAW_CONNECTION_CLOSED_WRITE event have
+   * occurred then the @ref PN_RAW_CONNECTION_DISCONNECTED event will be
+   * generated.
+   *
+   * Events of this type point to a @ref pn_raw_connection_t
+   */
+  PN_RAW_CONNECTION_CLOSED_READ,
+
+  /**
+   * The remote end of the raw connection closed the connection so
+   * that we can no longer write.
+   *
+   * When both this and @ref PN_RAW_CONNECTION_CLOSED_READ event have
+   * occurred then the @ref PN_RAW_CONNECTION_DISCONNECTED event will be
+   * generated.
+   *
+   * Events of this type point to a @ref pn_raw_connection_t
+   */
+  PN_RAW_CONNECTION_CLOSED_WRITE,
+
+  /**
+   * The raw connection is disconnected.
+   * No more bytes will be read or written on the connection. Every buffer
+   * in use will already either have been returned using a
+   * @ref PN_RAW_CONNECTION_READ or @ref PN_RAW_CONNECTION_WRITTEN event.
+   * This event will always be the last for this raw connection, and so
+   * the application can clean up the raw connection at this point.
+   *
+   * Events of this type point to a @ref pn_raw_connection_t
+   */
+  PN_RAW_CONNECTION_DISCONNECTED,
+
+  /**
+   * The raw connection might need more read buffers.
+   * The connection is readable, but the connection has no buffer to read the
+   * bytes into. If you supply some buffers now maybe you'll get a
+   * @ref PN_RAW_CONNECTION_READ event soon, but no guarantees.
+   *
+   * This event is edge triggered and you will only get it once until you give
+   * the raw connection some more read buffers.
+   *
+   * Events of this type point to a @ref pn_raw_connection_t
+   */
+  PN_RAW_CONNECTION_NEED_READ_BUFFERS,
+
+  /**
+   * The raw connection might need more write buffers.
+   * The connection is writable but has no buffers to write. If you give the
+   * raw connection something to write using @ref pn_raw_connection_write_buffers
+   * the raw connection can write them. It is not necessary to wait for this event
+   * before sending buffers to write, but it can be used to aid in flow control (maybe).
+   *
+   * This event is edge triggered and you will only get it once until you give
+   * the raw connection something more to write.
+   *
+   * Events of this type point to a @ref pn_raw_connection_t
+   */
+  PN_RAW_CONNECTION_NEED_WRITE_BUFFERS,
+
+  /**
+   * The raw connection read bytes: The bytes that were read are
+   * in one of the read buffers given to the raw connection.
+   *
+   * This event will be sent if there are bytes that have been read
+   * in a buffer owned by the raw connection and there is no
+   * @ref PN_RAW_CONNECTION_READ event still queued.
+   *
+   * When a connection closes all read buffers are returned to the
+   * application using @ref PN_RAW_CONNECTION_READ events with empty buffers.
+   *
+   * Events of this type point to a @ref pn_raw_connection_t
+   */
+  PN_RAW_CONNECTION_READ,
+
+  /**
+   * The raw connection has finished a write and the buffers that were
+   * used are no longer in use and can be recycled.
+   *
+   * This event will be sent if there are buffers that have been written still
+   * owned by the raw connection and there is no @ref PN_RAW_CONNECTION_WRITTEN
+   * event currently queued.
+   *
+   * When a connection closes all write buffers are returned using
+   * @ref PN_RAW_CONNECTION_WRITTEN events.
+   *
+   * Events of this type point to a @ref pn_raw_connection_t
+   */
+  PN_RAW_CONNECTION_WRITTEN,
+
+  /**
+   * The raw connection was woken by @ref pn_raw_connection_wake
+   *
+   * Events of this type point to a @ref pn_raw_connection_t
+   */
+  PN_RAW_CONNECTION_WAKE
+
 } pn_event_type_t;
 
 

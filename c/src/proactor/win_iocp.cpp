@@ -29,6 +29,7 @@
 #include <proton/transport.h>
 #include <proton/listener.h>
 #include <proton/proactor.h>
+#include <proton/raw_connection.h>
 
 #include <assert.h>
 #include <stddef.h>

@@ -34,6 +34,7 @@
 #include <proton/message.h>
 #include <proton/netaddr.h>
 #include <proton/proactor.h>
+#include <proton/raw_connection.h>
 #include <proton/transport.h>
 
 #include <uv.h>

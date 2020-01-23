@@ -341,6 +341,29 @@ PNP_EXTERN pn_millis_t pn_proactor_now(void);
 PNP_EXTERN int64_t pn_proactor_now_64(void);
 
 /**
+ * Connect @p addr and bind to @p raw_connection.
+ *
+ * Errors are returned as  @ref PN_RAW_CONNECTION_DISCONNECTED events by pn_proactor_wait().
+ *
+ * @note Thread-safe
+ *
+ * @param[in] proactor the proactor
+ *
+ * @param[in] raw_connection the application must create a raw connection with pn_raw_connection()
+ * this parameter cannot be null.
+ *
+ * @p proactor *takes ownership* of @p raw_connection and will
+ * automatically call pn_raw_connection_free() after the final @ref
+ * PN_RAW_CONNECTION_DISCONNECTED event is handled, or when pn_proactor_free() is
+ * called.
+ *
+ * @param[in] addr the "host:port" network address, constructed by pn_proactor_addr()
+ * An empty host will connect to the local host via the default protocol (IPV6 or IPV4).
+ * An empty port will connect to the standard AMQP port (5672).
+ */
+PNP_EXTERN void pn_proactor_raw_connect(pn_proactor_t *proactor, pn_raw_connection_t *raw_connection, const char *addr);
+
+/**
  * @}
  */
 
@@ -391,6 +414,15 @@ PNP_EXTERN int64_t pn_proactor_now_64(void);
  * @ref PN_PROACTOR_TIMEOUT | @copybrief PN_PROACTOR_TIMEOUT
  * @ref PN_PROACTOR_INACTIVE | @copybrief PN_PROACTOR_INACTIVE
  * @ref PN_CONNECTION_WAKE | @copybrief PN_CONNECTION_WAKE
+ * @ref PN_RAW_CONNECTION_CONNECTED | @copybrief PN_RAW_CONNECTION_CONNECTED
+ * @ref PN_RAW_CONNECTION_CLOSED_READ | @copybrief PN_RAW_CONNECTION_CLOSED_READ
+ * @ref PN_RAW_CONNECTION_CLOSED_WRITE | @copybrief PN_RAW_CONNECTION_CLOSED_WRITE
+ * @ref PN_RAW_CONNECTION_DISCONNECTED | @copybrief PN_RAW_CONNECTION_DISCONNECTED
+ * @ref PN_RAW_CONNECTION_NEED_READ_BUFFERS | @copybrief PN_RAW_CONNECTION_NEED_READ_BUFFERS
+ * @ref PN_RAW_CONNECTION_NEED_WRITE_BUFFERS | @copybrief PN_RAW_CONNECTION_NEED_WRITE_BUFFERS
+ * @ref PN_RAW_CONNECTION_READ | @copybrief PN_RAW_CONNECTION_READ
+ * @ref PN_RAW_CONNECTION_WRITTEN | @copybrief PN_RAW_CONNECTION_WRITTEN
+ * @ref PN_RAW_CONNECTION_WAKE | @copybrief PN_RAW_CONNECTION_WAKE
  *
  * @}
  */

@@ -115,6 +115,10 @@
  * @brief **Unsettled API** - A listener for incoming connections.
  * @ingroup io
  *
+ * @defgroup raw_connection Raw connection
+ * @brief **Unsettled API** - An API allowing raw sockets to be used with proactor
+ * @ingroup io
+ *
  * @defgroup connection_driver Connection driver
  * @brief **Unsettled API** - An API for low-level IO integration.
  * @ingroup io
@@ -436,6 +440,13 @@ typedef struct pn_transport_t pn_transport_t;
  * @ingroup proactor
  */
 typedef struct pn_proactor_t pn_proactor_t;
+
+/**
+ * A raw network connection used with the proactor.
+ *
+ * @ingroup raw_connection
+ */
+typedef struct pn_raw_connection_t pn_raw_connection_t;
 
 /**
  * A batch of events that must be handled in sequence.

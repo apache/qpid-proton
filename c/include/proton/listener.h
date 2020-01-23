@@ -135,6 +135,25 @@ PNP_EXTERN pn_proactor_t *pn_listener_proactor(pn_listener_t *c);
 PNP_EXTERN pn_listener_t *pn_event_listener(pn_event_t *event);
 
 /**
+ * Accept an incoming connection request as a raw connection.
+ *
+ * Call after a @ref PN_LISTENER_ACCEPT event.
+ *
+ * Errors are returned as @ref PN_RAW_CONNECTION_DISCONNECTED by pn_proactor_wait().
+ *
+ * @param[in] listener the listener
+ * @param[in] raw_connection the application must create a raw connection with pn_raw_connection()
+ * this parameter cannot be null.If NULL a new connection is created.
+ *
+ * The proactor that owns the @p listener *takes ownership* of @p raw_connection and will
+ * automatically call pn_raw_connection_free() after the final @ref
+ * PN_RAW_CONNECTION_DISCONNECTED event is handled, or when pn_proactor_free() is
+ * called.
+ *
+ */
+PNP_EXTERN void pn_listener_raw_accept(pn_listener_t *listener, pn_raw_connection_t *raw_connection);
+
+/**
  *@}
  */
 
