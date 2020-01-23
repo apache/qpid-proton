@@ -38,7 +38,7 @@ matrix:
     env:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
     - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
-    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 -DBUILD_GO=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13'
     # python-tox-test segfaults and ruby tests do not start due to dynamic library issues
     - QPID_PROTON_CTEST_ARGS="--exclude-regex 'python-tox-test|ruby.*'"
 
@@ -47,7 +47,7 @@ matrix:
     env:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
     - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
-    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14 -DBUILD_GO=ON'
+    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14'
     # python-tox-test segfaults and ruby tests do not start due to dynamic library issues
     - QPID_PROTON_CTEST_ARGS="--exclude-regex 'python-tox-test|ruby.*'"
 
