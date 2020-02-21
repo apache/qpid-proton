@@ -99,6 +99,9 @@ leak:libpython
 
 # Sasl 2 library
 leak:^_plug_strdup$
+leak:libsasl2.so
+leak:libsasl2.so.2
+leak:sasl2/libanonymous.so
 
 # /usr/sbin/saslpasswd2 binary
 leak:saslpasswd2
