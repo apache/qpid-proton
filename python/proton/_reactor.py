@@ -456,7 +456,7 @@ class ApplicationEvent(EventBase):
             try:
                 eventtype = self.TYPES[typename]
             except KeyError:
-                eventtype =  EventType(typename)
+                eventtype = EventType(typename)
                 self.TYPES[typename] = eventtype
         super(ApplicationEvent, self).__init__(eventtype)
         self.clazz = PN_PYREF

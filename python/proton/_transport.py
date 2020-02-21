@@ -772,7 +772,7 @@ class SSLDomain(object):
         :type key_file: ``str``
         :param password: The password used to sign the key, else ``None`` if key is not
                protected.
-        :type password: ``str`` 
+        :type password: ``str`` or ``None``
         :return: 0 on success
         :rtype: ``int``
         :raise: :exc:`SSLException` if there is any Proton error
