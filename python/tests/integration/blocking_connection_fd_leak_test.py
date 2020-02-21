@@ -24,6 +24,7 @@ from __future__ import print_function
 import contextlib
 import gc
 import os
+import socket
 import subprocess
 import threading
 
@@ -31,6 +32,8 @@ import proton.handlers
 import proton.utils
 import proton.reactor
 from test_unittest import unittest
+
+import cproton
 
 
 def count_fds():
@@ -61,7 +64,14 @@ class Broker(proton.handlers.MessagingHandler):
     def get_acceptor_sockname(self):
         # type: () -> (str, int)
         self._acceptor_opened_event.wait()
-        return self.acceptor._selectable._delegate.getsockname()
+        if hasattr(self.acceptor, '_selectable'):  # proton 0.30.0+
+            sockname = self.acceptor._selectable._delegate.getsockname()
+        else:  # works in proton 0.27.0
+            selectable = cproton.pn_cast_pn_selectable(self.acceptor._impl)
+            fd = cproton.pn_selectable_get_fd(selectable)
+            s = socket.fromfd(fd, socket.AF_INET, socket.SOCK_STREAM)
+            sockname = s.getsockname()
+        return sockname[:2]
 
     def on_start(self, event):
         self.acceptor = event.container.listen(self.acceptor_url)
