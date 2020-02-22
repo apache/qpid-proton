@@ -321,7 +321,7 @@ func TestHeartbeat(t *testing.T) {
 		if amqp.ResourceLimitExceeded != p.client.Error().(amqp.Error).Name {
 			t.Error("bad timeout error:", p.client.Error())
 		}
-	case <-time.After(400 * time.Millisecond):
+	case <-time.After(1400 * time.Millisecond):
 		t.Error("connection failed to time out")
 	}
 
