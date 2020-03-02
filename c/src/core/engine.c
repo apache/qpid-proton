@@ -296,7 +296,7 @@ void *pn_session_get_context(pn_session_t *session)
 
 void pn_session_set_context(pn_session_t *session, void *context)
 {
-  assert(context);
+  assert(session);
   pn_record_set(session->context, PN_LEGCTX, context);
 }
 
