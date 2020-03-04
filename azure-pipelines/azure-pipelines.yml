@@ -33,7 +33,7 @@ jobs:
   - template: steps.yml
 - job: Ubuntu
   pool:
-    vmImage: 'ubuntu-16.04'
+    vmImage: 'ubuntu-18.04'
   steps:
   - script: sudo apt-get install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev
     name: InstallExtraStuff
@@ -43,7 +43,7 @@ jobs:
     PKG_CONFIG_PATH: '/usr/local/opt/openssl@1.1/lib/pkgconfig'
     CmakeConfigExtraArgs: '-DPYTHON_EXECUTABLE=/usr/local/bin/python3 -DBUILD_RUBY=no'
   pool:
-    vmImage: 'macOS-10.13'
+    vmImage: 'macOS-10.15'
   steps:
   - script: |
       brew update
