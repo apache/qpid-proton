@@ -76,14 +76,14 @@ if (BUILD_GO)
   # CMake so just run them every time, they do nothing if nothing needs to be
   # done.
   add_custom_target(go-build ALL
-    COMMAND ${GO_INSTALL} $ENV{PWD}/go/pkg/...
+    COMMAND ${GO_INSTALL} ${CMAKE_CURRENT_BINARY_DIR}/pkg/...
     DEPENDS qpid-proton-core go-pkg-link go-mod-link
-    WORKING_DIRECTORY $ENV{PWD})
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
   add_test(
     NAME go-test
-    COMMAND ${GO_TEST} $ENV{PWD}/go/pkg/...
-    WORKING_DIRECTORY $ENV{PWD})
+    COMMAND ${GO_TEST} ${CMAKE_CURRENT_BINARY_DIR}/pkg/...
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
   # Clean up go output directories.
   list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${GOPATH}/pkg ${GOPATH}/bin)
