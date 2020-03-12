@@ -75,6 +75,10 @@ if (CMAKE_CXX_COMPILER)
     add_c_test(c-proactor-test pn_test_proactor.cpp proactor_test.cpp)
     target_link_libraries(c-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
 
+    list(TRANSFORM qpid-proton-proactor PREPEND "../" OUTPUT_VARIABLE qpid-proton-proactor-src)
+    add_c_test(c-raw-connection-test raw_connection_test.cpp ${qpid-proton-proactor-src})
+    target_link_libraries(c-raw-connection-test qpid-proton-core ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+
     add_c_test(c-ssl-proactor-test pn_test_proactor.cpp ssl_proactor_test.cpp)
     target_link_libraries(c-ssl-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
 
