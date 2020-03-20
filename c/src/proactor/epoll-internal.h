@@ -57,7 +57,6 @@ typedef enum {
 
 // Data to use with epoll.
 typedef struct epoll_extended_t {
-  struct psocket_t *psocket;  // pconnection, listener, or NULL -> proactor
   int fd;
   epoll_type_t type;   // io/timer/wakeup
   uint32_t wanted;     // events to poll for
@@ -67,7 +66,6 @@ typedef struct epoll_extended_t {
 
 typedef struct ptimer_t {
   pmutex mutex;
-  int timerfd;
   epoll_extended_t epoll_io;
   bool timer_active;
   bool in_doubt;  // 0 or 1 callbacks are possible
@@ -130,19 +128,6 @@ struct tslot_t {
   tslot_t *earmark_override;   // on earmark_drain, which thread was unassigned
   unsigned int earmark_override_gen;
 };
-
-/* common to connection and listener */
-typedef struct psocket_t {
-  pn_proactor_t *proactor;
-  // Remaining protected by the pconnection/listener mutex
-  int sockfd;
-  epoll_extended_t epoll_io;
-  pn_listener_t *listener;      /* NULL for a connection socket */
-  char addr_buf[PN_MAX_ADDR];
-  const char *host, *port;
-  uint32_t sched_io_events;
-  uint32_t working_io_events;
-} psocket_t;
 
 struct pn_proactor_t {
   pcontext_t context;
@@ -213,9 +198,21 @@ struct pn_proactor_t {
   bool shutting_down;
 };
 
+/* common to connection and listener */
+typedef struct psocket_t {
+  pn_proactor_t *proactor;
+  // Remaining protected by the pconnection/listener mutex
+  epoll_extended_t epoll_io;
+  uint32_t sched_io_events;
+  uint32_t working_io_events;
+} psocket_t;
+
 typedef struct pconnection_t {
   psocket_t psocket;
   pcontext_t context;
+  ptimer_t timer;  // TODO: review one timerfd per connection
+  char addr_buf[PN_MAX_ADDR];
+  const char *host, *port;
   uint32_t new_events;
   int wake_count;
   bool server;                /* accept, not connect */
@@ -223,7 +220,6 @@ typedef struct pconnection_t {
   bool timer_armed;
   bool queued_disconnect;     /* deferred from pn_proactor_disconnect() */
   pn_condition_t *disconnect_condition;
-  ptimer_t timer;  // TODO: review one timerfd per connection
   // Following values only changed by (sole) working context:
   uint32_t current_arm;  // active epoll io events
   bool connected;
@@ -256,18 +252,21 @@ typedef struct pconnection_t {
 
 struct acceptor_t{
   psocket_t psocket;
+  struct pn_netaddr_t addr;      /* listening address */
+  pn_listener_t *listener;
+  acceptor_t *next;              /* next listener list member */
   int accepted_fd;
   bool armed;
   bool overflowed;
-  acceptor_t *next;              /* next listener list member */
-  struct pn_netaddr_t addr;      /* listening address */
 };
 
 struct pn_listener_t {
+  pcontext_t context;
   acceptor_t *acceptors;          /* Array of listening sockets */
   size_t acceptors_size;
+  char addr_buf[PN_MAX_ADDR];
+  const char *host, *port;
   int active_count;               /* Number of listener sockets registered with epoll */
-  pcontext_t context;
   pn_condition_t *condition;
   pn_collector_t *collector;
   pn_event_batch_t batch;
