@@ -43,11 +43,11 @@ import (
 	"text/template"
 )
 
-// Note last code generation was from 0.27 source, but we should still
+// Note last code generation was from 0.31 source, but we should still
 // be binary compatible back to 0.10. Only change was the type name
 // for pn_proton_tick() from pn_timestamp_t to int64_t, identical type.
 
-var minVersion = "0.27" // The proton-c header version last used to generate code
+var minVersion = "0.31" // The proton-c header version last used to generate code
 
 var include = flag.String("include", "../c/include", "Directory containing proton/*.h include files")
 
@@ -94,10 +94,10 @@ package amqp
 
 // #include <proton/version.h>
 // #if PN_VERSION_MAJOR == %s && PN_VERSION_MINOR < %s
-// #error module github.com/apache/qpid-proton requires Proton-C library version 0.10 or greater
+// #error module github.com/apache/qpid-proton requires Proton-C library version %s.%s or greater
 // #endif
 import "C"
-`, splitVersion[0], splitVersion[1])
+`, splitVersion[0], splitVersion[1], splitVersion[0], splitVersion[1])
 }
 
 func genWrappers() {
@@ -352,15 +352,15 @@ func mapType(ctype string) (g genType) {
 	case "C.int64_t":
 		g.Gotype = "int64"
 	case "C.int32_t":
-		g.Gotype = "int16"
-	case "C.int16_t":
 		g.Gotype = "int32"
+	case "C.int16_t":
+		g.Gotype = "int16"
 	case "C.uint64_t":
 		g.Gotype = "uint64"
 	case "C.uint32_t":
-		g.Gotype = "uint16"
-	case "C.uint16_t":
 		g.Gotype = "uint32"
+	case "C.uint16_t":
+		g.Gotype = "uint16"
 	case "C.const char *":
 		fallthrough
 	case "C.char *":
