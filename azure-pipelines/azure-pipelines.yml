@@ -1,0 +1,53 @@
+# Azure Pipeline build definition
+#
+# Use RelWithDebInfo build configuration so that linking on Windows doesn't require the
+# usually absent python debug dll.
+#
+# Set up the Windows python version to be the x86 (32 bit) version so that we can use the
+# default cmake generator which uses the 32 bit compiler
+#
+variables:
+  Config: 'RelWithDebInfo'
+  PythonVersion: '3.6'
+  PythonArch: 'x64'
+  CmakeConfigExtraArgs: ''
+
+jobs:
+- job: Windows
+  variables:
+    PythonArch: 'x86'
+    CmakeConfigExtraArgs: '-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: $(PythonVersion)
+      addToPath: true
+      architecture: $(PythonArch)
+  - script: |
+      choco install swig
+      vcpkg install jsoncpp
+      vcpkg integrate install
+    name: InstallExtraStuff
+  - template: steps.yml
+- job: Ubuntu
+  pool:
+    vmImage: 'ubuntu-18.04'
+  steps:
+  - script: sudo apt-get install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev
+    name: InstallExtraStuff
+  - template: steps.yml
+- job: MacOS
+  variables:
+    PKG_CONFIG_PATH: '/usr/local/opt/openssl@1.1/lib/pkgconfig'
+    CmakeConfigExtraArgs: '-DPYTHON_EXECUTABLE=/usr/local/bin/python3 -DBUILD_RUBY=no'
+  pool:
+    vmImage: 'macOS-10.15'
+  steps:
+  - script: |
+      brew update
+      brew install libuv swig pkgconfig openssl@1.1 jsoncpp
+      brew upgrade python@3 python@2 || true
+    name: InstallExtraStuff
+  - template: steps.yml

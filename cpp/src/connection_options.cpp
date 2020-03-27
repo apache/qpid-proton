@@ -33,6 +33,8 @@
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
+#include "reconnect_options_impl.hpp"
+#include "ssl_options_impl.hpp"
 
 #include <proton/connection.h>
 #include <proton/proactor.h>
@@ -61,7 +63,9 @@ class connection_options::impl {
     option<std::string> password;
     option<std::vector<symbol> > offered_capabilities;
     option<std::vector<symbol> > desired_capabilities;
-    option<reconnect_options> reconnect;
+    option<reconnect_options_base> reconnect;
+    option<std::string> reconnect_url;
+    option<std::vector<std::string> > failover_urls;
     option<class ssl_client_options> ssl_client_options;
     option<class ssl_server_options> ssl_server_options;
     option<bool> sasl_enabled;
@@ -84,8 +88,14 @@ class connection_options::impl {
         bool uninit = c.uninitialized();
         if (!uninit) return;
 
-        if (reconnect.set)
-            connection_context::get(pnc).reconnect_context_.reset(new reconnect_context(reconnect.value));
+        if (reconnect.set || reconnect_url.set || failover_urls.set) {
+            // Transfer reconnect options from connection options to reconnect contexts
+            // to stop the reconnect context being reset every retry unless there are new options
+            connection_context::get(pnc).reconnect_context_.reset(
+                new reconnect_context(
+                    reconnect.set ? reconnect.value : reconnect_options_base()));
+            reconnect.set = false;
+        }
         if (container_id.set)
             pn_connection_set_container(pnc, container_id.value.c_str());
         if (virtual_host.set)
@@ -98,6 +108,24 @@ class connection_options::impl {
             value(pn_connection_offered_capabilities(pnc)) = offered_capabilities.value;
         if (desired_capabilities.set)
             value(pn_connection_desired_capabilities(pnc)) = desired_capabilities.value;
+    }
+
+    void apply_reconnect_urls(pn_connection_t* pnc) {
+        connection_context& cc = connection_context::get(pnc);
+        // If there no reconnect delay parameters create default
+        if ((reconnect_url.set || failover_urls.set) && !cc.reconnect_context_)
+            cc.reconnect_context_.reset(new reconnect_context(reconnect_options_base()));
+        if (reconnect_url.set) {
+            reconnect_url.set = false;
+            cc.reconnect_url_ = reconnect_url.value;
+            cc.reconnect_context_->current_url_ = -1;
+        }
+        if (failover_urls.set) {
+            failover_urls.set = false;
+            cc.failover_urls_ = failover_urls.value;
+            cc.reconnect_context_->current_url_ = 0;
+        }
+
     }
 
     void apply_transport(pn_transport_t* pnt) {
@@ -116,8 +144,9 @@ class connection_options::impl {
 
         // Skip entirely if SASL explicitly disabled
         if (!sasl_enabled.set || sasl_enabled.value) {
-            if (sasl_enabled.set)  // Explicitly set, not just default behaviour.
-                pn_sasl(pnt);      // Force a sasl instance.  Lazily create one otherwise.
+            // We now default to enabling SASL even without specific SASL configuration
+            // This gives better interoperability and consistency across bindings
+            pn_sasl(pnt);
             if (sasl_allow_insecure_mechs.set)
                 pn_sasl_set_allow_insecure_mechs(pn_sasl(pnt), sasl_allow_insecure_mechs.value);
             if (sasl_allowed_mechs.set)
@@ -140,12 +169,16 @@ class connection_options::impl {
             // hostname to the connection hostname, which has
             // already been adjusted for the virtual_host option.
             pn_ssl_t *ssl = pn_ssl(pnt);
-            if (pn_ssl_init(ssl, ssl_client_options.value.pn_domain(), NULL))
+            pn_ssl_domain_t* ssl_domain = ssl_client_options.value.impl_ ? ssl_client_options.value.impl_->pn_domain() : NULL;
+            if (pn_ssl_init(ssl, ssl_domain, NULL)) {
                 throw error(MSG("client SSL/TLS initialization error"));
+            }
         } else if (!client && ssl_server_options.set) {
-                pn_ssl_t *ssl = pn_ssl(pnt);
-                if (pn_ssl_init(ssl, ssl_server_options.value.pn_domain(), NULL))
-                    throw error(MSG("server SSL/TLS initialization error"));
+            pn_ssl_t *ssl = pn_ssl(pnt);
+            pn_ssl_domain_t* ssl_domain = ssl_server_options.value.impl_ ? ssl_server_options.value.impl_->pn_domain() : pn_ssl_domain(PN_SSL_MODE_SERVER);
+            if (pn_ssl_init(ssl, ssl_domain, NULL)) {
+                throw error(MSG("server SSL/TLS initialization error"));
+            }
         }
 
     }
@@ -162,6 +195,8 @@ class connection_options::impl {
         offered_capabilities.update(x.offered_capabilities);
         desired_capabilities.update(x.desired_capabilities);
         reconnect.update(x.reconnect);
+        reconnect_url.update(x.reconnect_url);
+        failover_urls.update(x.failover_urls);
         ssl_client_options.update(x.ssl_client_options);
         ssl_server_options.update(x.ssl_server_options);
         sasl_enabled.update(x.sasl_enabled);
@@ -203,7 +238,15 @@ connection_options& connection_options::user(const std::string &user) { impl_->u
 connection_options& connection_options::password(const std::string &password) { impl_->password = password; return *this; }
 connection_options& connection_options::offered_capabilities(const std::vector<symbol> &caps) { impl_->offered_capabilities = caps; return *this; }
 connection_options& connection_options::desired_capabilities(const std::vector<symbol> &caps) { impl_->desired_capabilities = caps; return *this; }
-connection_options& connection_options::reconnect(const reconnect_options &r) { impl_->reconnect = r; return *this; }
+connection_options& connection_options::reconnect(const reconnect_options &r) {
+    if (!r.impl_->failover_urls.empty()) {
+        impl_->failover_urls = r.impl_->failover_urls;
+    }
+    impl_->reconnect = *r.impl_;
+    return *this;
+}
+connection_options& connection_options::reconnect_url(const std::string& u) { impl_->reconnect_url = u; return *this; }
+connection_options& connection_options::failover_urls(const std::vector<std::string>& us) { impl_->failover_urls = us; return *this; }
 connection_options& connection_options::ssl_client_options(const class ssl_client_options &c) { impl_->ssl_client_options = c; return *this; }
 connection_options& connection_options::ssl_server_options(const class ssl_server_options &c) { impl_->ssl_server_options = c; return *this; }
 connection_options& connection_options::sasl_enabled(bool b) { impl_->sasl_enabled = b; return *this; }
@@ -213,6 +256,7 @@ connection_options& connection_options::sasl_config_name(const std::string &n) {
 connection_options& connection_options::sasl_config_path(const std::string &p) { impl_->sasl_config_path = p; return *this; }
 
 void connection_options::apply_unbound(connection& c) const { impl_->apply_unbound(c); }
+void connection_options::apply_reconnect_urls(pn_connection_t *c) const { impl_->apply_reconnect_urls(c); }
 void connection_options::apply_unbound_client(pn_transport_t *t) const { impl_->apply_sasl(t); impl_->apply_ssl(t, true); impl_->apply_transport(t); }
 void connection_options::apply_unbound_server(pn_transport_t *t) const { impl_->apply_sasl(t); impl_->apply_ssl(t, false); impl_->apply_transport(t); }
 

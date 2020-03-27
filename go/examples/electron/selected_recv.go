@@ -26,8 +26,8 @@ import (
 	"os"
 	"strings"
 
-	"qpid.apache.org/amqp"
-	"qpid.apache.org/electron"
+	"github.com/apache/qpid-proton/go/pkg/amqp"
+	"github.com/apache/qpid-proton/go/pkg/electron"
 )
 
 // NOTE: this example requires a broker thta supports the APACHE.ORG:SELECTOR filter.

@@ -124,8 +124,10 @@ module Qpid::Proton
           when Delivery::RELEASED then delegate(:on_tracker_release, t)
           when Delivery::MODIFIED then delegate(:on_tracker_modify, t)
           end
-          delegate(:on_tracker_settle, t) if t.settled?
-          t.settle if t.sender.auto_settle
+          if t.settled?
+            delegate(:on_tracker_settle, t)
+            t.settle if t.sender.auto_settle
+          end
         end
       end
 

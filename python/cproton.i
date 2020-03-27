@@ -23,14 +23,11 @@
 #include <winsock2.h>
 #endif
 #include <proton/engine.h>
-#include <proton/url.h>
 #include <proton/message.h>
 #include <proton/object.h>
 #include <proton/sasl.h>
 #include <proton/messenger.h>
 #include <proton/ssl.h>
-#include <proton/reactor.h>
-#include <proton/handlers.h>
 
 /*
 NOTE: According to ccache-swig man page: "Known problems are using
@@ -315,7 +312,7 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_S
 
 %immutable PN_PYREF;
 %inline %{
-  extern const pn_class_t *PN_PYREF;
+  extern const pn_class_t PN_PYREF[];
 
   #define CID_pn_pyref CID_pn_void
   #define pn_pyref_new NULL
@@ -348,8 +345,7 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_S
     return PN_PYREF;
   }
 
-  const pn_class_t PNI_PYREF = PN_METACLASS(pn_pyref);
-  const pn_class_t *PN_PYREF = &PNI_PYREF;
+  const pn_class_t PN_PYREF[] = {PN_METACLASS(pn_pyref)};
 
   void *pn_py2void(PyObject *object) {
     return object;
@@ -369,74 +365,6 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_S
 
   PyObject *pn_cast_pn_void(void *object) {
     return pn_void2py(object);
-  }
-
-  typedef struct {
-    PyObject *handler;
-    PyObject *dispatch;
-    PyObject *exception;
-  } pni_pyh_t;
-
-  static pni_pyh_t *pni_pyh(pn_handler_t *handler) {
-    return (pni_pyh_t *) pn_handler_mem(handler);
-  }
-
-  static void pni_pyh_finalize(pn_handler_t *handler) {
-    pni_pyh_t *pyh = pni_pyh(handler);
-    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
-    Py_DECREF(pyh->handler);
-    Py_DECREF(pyh->dispatch);
-    Py_DECREF(pyh->exception);
-    SWIG_PYTHON_THREAD_END_BLOCK;
-  }
-
-  static void pni_pydispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
-    pni_pyh_t *pyh = pni_pyh(handler);
-    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
-    PyObject *arg = SWIG_NewPointerObj(event, SWIGTYPE_p_pn_event_t, 0);
-    PyObject *pytype = PyInt_FromLong(type);
-    PyObject *result = PyObject_CallMethodObjArgs(pyh->handler, pyh->dispatch, arg, pytype, NULL);
-    if (!result) {
-      PyObject *exc, *val, *tb;
-      PyErr_Fetch(&exc, &val, &tb);
-      PyErr_NormalizeException(&exc, &val, &tb);
-      if (!val) {
-        val = Py_None;
-        Py_INCREF(val);
-      }
-      if (!tb) {
-        tb = Py_None;
-        Py_INCREF(tb);
-      }
-      {
-        PyObject *result2 = PyObject_CallMethodObjArgs(pyh->handler, pyh->exception, exc, val, tb, NULL);
-        if (!result2) {
-          PyErr_PrintEx(true);
-        }
-        Py_XDECREF(result2);
-      }
-      Py_XDECREF(exc);
-      Py_XDECREF(val);
-      Py_XDECREF(tb);
-    }
-    Py_XDECREF(arg);
-    Py_XDECREF(pytype);
-    Py_XDECREF(result);
-    SWIG_PYTHON_THREAD_END_BLOCK;
-  }
-
-  pn_handler_t *pn_pyhandler(PyObject *handler) {
-    pn_handler_t *chandler = pn_handler_new(pni_pydispatch, sizeof(pni_pyh_t), pni_pyh_finalize);
-    pni_pyh_t *phy = pni_pyh(chandler);
-    phy->handler = handler;
-    {
-      SWIG_PYTHON_THREAD_BEGIN_BLOCK;
-      phy->dispatch = PyString_FromString("dispatch");
-      phy->exception = PyString_FromString("exception");
-      Py_INCREF(phy->handler);
-      SWIG_PYTHON_THREAD_END_BLOCK;
-    }
-    return chandler;
   }
 
   void pn_pytracer(pn_transport_t *transport, const char *message) {

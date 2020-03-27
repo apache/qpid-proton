@@ -39,7 +39,7 @@ extern "C" {
  * @{
  */
 
-/**    
+/**
  * API for using SSL with the Transport Layer.
  *
  * A Transport may be configured to use SSL for encryption and/or authentication.  A
@@ -53,23 +53,23 @@ extern "C" {
  * sessions (pn_ssl_domain_t).
  * @li A per-connection SSL session object that performs the encryption/authentication
  * associated with the transport (pn_ssl_t).
- * @li The encryption parameters negotiated for the SSL session (pn_ssl_state_t).
  *
- * A pn_ssl_domain_t object must be created and configured before an SSL session can be
- * established.  The pn_ssl_domain_t is used to construct an SSL session (pn_ssl_t).  The
+ * The pn_ssl_domain_t is used to construct an SSL session (pn_ssl_t).  The
  * session "adopts" its configuration from the pn_ssl_domain_t that was used to create it.
  * For example, pn_ssl_domain_t can be configured as either a "client" or a "server".  SSL
  * sessions constructed from this domain will perform the corresponding role (either
  * client or server).
  *
+ * If an SSL session is created without a pn_ssl_domain_t object then a default will be used
+ * (see ::pn_ssl_init()).
+ *
  * If either an SSL server or client needs to identify itself with the remote node, it
  * must have its SSL certificate configured (see ::pn_ssl_domain_set_credentials()).
  *
  * If either an SSL server or client needs to verify the identity of the remote node, it
- * must have its database of trusted CAs configured (see ::pn_ssl_domain_set_trusted_ca_db()).
- *
- * An SSL server connection may allow the remote client to connect without SSL (eg. "in
- * the clear"), see ::pn_ssl_domain_allow_unsecured_client().
+ * must have its database of trusted CAs configured. By default this will be set up to use
+ * the default system database of trusted CA. But this can be changed
+ * (see ::pn_ssl_domain_set_trusted_ca_db()).
  *
  * The level of verification required of the remote may be configured (see
  * ::pn_ssl_domain_set_peer_authentication)
@@ -169,6 +169,11 @@ PN_EXTERN int  pn_ssl_domain_set_credentials(pn_ssl_domain_t *domain,
  * returns.  pn_ssl_t objects created before invoking this method will use the domain's
  * previous setting.
  *
+ * @note By default the list of trusted CA certificates will be set to the system default.
+ * What this is is depends on the OS and the SSL implementation used: For OpenSSL the default
+ * will depend on how the OS is set up. When using the Windows SChannel implementation the default
+ * will be the users default trusted certificate store.
+ *
  * @param[in] domain the ssl domain that will use the database.
  * @param[in] certificate_db database of trusted CAs, used to authenticate the peer.
  * @return 0 on success
@@ -232,7 +237,7 @@ PN_EXTERN int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
  * @param[in] domain the ssl domain to configure.
  * @param[in] protocols string representing the protocol list.
  * This list is a space separated string of the allowed TLS protocols,
- * The current possibilities are TLSv1 TLSv1.1 TLSv1.2. None of the earlier SSL
+ * The current possibilities are TLSv1 TLSv1.1 TLSv1.2 TLSv1.3. None of the earlier SSL
  * protocols are allowed for security reason.
  *
  * @note If this API not called then all the TLS protocols are allowed. The API only acts to
@@ -254,6 +259,8 @@ PN_EXTERN int pn_ssl_domain_set_protocols(pn_ssl_domain_t *domain, const char *p
 PN_EXTERN int pn_ssl_domain_set_ciphers(pn_ssl_domain_t *domain, const char *ciphers);
 
 /**
+ * **Deprecated** - Use ::pn_transport_require_encrytion()
+ *
  * Permit a server to accept connection requests from non-SSL clients.
  *
  * This configures the server to "sniff" the incoming client data stream, and dynamically
@@ -280,11 +287,21 @@ PN_EXTERN pn_ssl_t *pn_ssl(pn_transport_t *transport);
 /**
  * Initialize an SSL session.
  *
- * This method configures an SSL object using the configuration provided by the given
+ * This method configures an SSL object with defaults or the configuration provided by the given
  * domain.
  *
+ * @note The default client domain is a secure default generally usable. This uses the system default
+ * certificates and requires peer name verification.
+ *
+ * @note However the default server domain is only really useful for test servers. This is because for
+ * a useful server you *need* to set up certificates to identify it so that clients can connect without
+ * being subject to "man-in-the-middle" attacks - see ::pn_ssl_domain_set_credentials() for details.
+ *
  * @param[in] ssl the ssl session to configured.
- * @param[in] domain the ssl domain used to configure the SSL session.
+ * @param[in] domain the ssl domain used to configure the SSL session. If this value is NULL
+ * then use a default domain. This will be a client domain if the ssl object is part of a client transport
+ * and a server domain if the ssl object is part of a server transport.
+ * the transport the pn_ssl_t object
  * @param[in] session_id if supplied, attempt to resume a previous SSL
  * session that used the same session_id.  If no previous SSL session
  * is available, a new session will be created using the session_id

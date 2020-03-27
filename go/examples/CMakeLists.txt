@@ -42,13 +42,16 @@ if(BUILD_GO)
     COMMAND ${GO_TEST} -c -o ${test_exe} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.go
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
-  add_test(
+  pn_add_test(
+    UNWRAPPED
     NAME go-example-electron
-    COMMAND ${GO_ENV} ${test_exe} -dir ${CMAKE_CURRENT_BINARY_DIR}/electron -broker broker)
+    PREPEND_ENVIRONMENT ${GO_ENV}
+    COMMAND ${test_exe} -dir ${CMAKE_CURRENT_BINARY_DIR}/electron -broker broker)
 
-  add_test(
+  pn_add_test(
+    UNWRAPPED
     NAME go-example-proton
-    COMMAND ${GO_ENV} ${test_exe} -dir ${CMAKE_CURRENT_BINARY_DIR}/electron -broker ../proton/broker)
-
+    PREPEND_ENVIRONMENT ${GO_ENV}
+    COMMAND ${test_exe} -dir ${CMAKE_CURRENT_BINARY_DIR}/electron -broker ../proton/broker)
   list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${examples})
 endif()

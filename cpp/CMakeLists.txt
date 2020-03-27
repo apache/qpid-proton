@@ -149,7 +149,7 @@ set(qpid-proton-cpp-source
   src/session_options.cpp
   src/source.cpp
   src/ssl.cpp
-  src/ssl_domain.cpp
+  src/ssl_options.cpp
   src/target.cpp
   src/terminus.cpp
   src/timestamp.cpp
@@ -177,6 +177,7 @@ endif ()
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
 if(BUILD_STATIC_LIBS)
   add_library(qpid-proton-cpp-static STATIC ${qpid-proton-cpp-source})
+  set(STATIC_LIBS qpid-proton-cpp-static)
 endif(BUILD_STATIC_LIBS)
 
 target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS})
@@ -192,7 +193,7 @@ set_target_properties (
 
 ## Install
 
-install(TARGETS qpid-proton-cpp
+install(TARGETS qpid-proton-cpp ${STATIC_LIBS}
   EXPORT  proton-cpp
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
@@ -247,6 +248,7 @@ install (FILES
   DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
 
 set(testdata "${CMAKE_CURRENT_BINARY_DIR}/testdata")
+set(test_env "")
 
 # SASL configuration for tests
 if(CyrusSASL_Saslpasswd_EXECUTABLE)
@@ -270,8 +272,12 @@ endif()
 macro(add_cpp_test test)
   add_executable (${test} src/${test}.cpp)
   target_link_libraries (${test} qpid-proton-cpp ${PLATFORM_LIBS})
-  add_test (NAME cpp-${test}
-    COMMAND ${PN_ENV_SCRIPT} -- ${test_env}  ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}> ${ARGN})
+  pn_add_test(
+    EXECUTABLE
+    NAME cpp-${test}
+    APPEND_ENVIRONMENT ${test_env}
+    COMMAND $<TARGET_FILE:${test}>
+    ${ARGN})
 endmacro(add_cpp_test)
 
 add_cpp_test(codec_test)
@@ -303,11 +309,11 @@ add_executable(cpp-test src/cpp-test.cpp src/url_test.cpp)
 target_link_libraries(cpp-test qpid-proton-cpp ${PLATFORM_LIBS})
 
 macro(add_catch_test tag)
-  add_test (
+  pn_add_test(
+    EXECUTABLE
     NAME cpp-${tag}-test
-    COMMAND ${PN_ENV_SCRIPT} -- ${test_env}
-    ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:cpp-test> "[${tag}]"
-    )
+    APPEND_ENVIRONMENT ${test_env}
+    COMMAND $<TARGET_FILE:cpp-test> "[${tag}]")
 endmacro(add_catch_test)
 
 add_catch_test(url)

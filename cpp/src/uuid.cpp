@@ -45,8 +45,8 @@ struct seed {
     seed() {
         // A hash of time and PID, time alone is a bad seed as programs started
         // within the same second will get the same seed.
-        long secs = time(0);
-        long pid = GETPID();
+        unsigned long secs = time(0);
+        unsigned long pid = GETPID();
         std::srand(((secs*181)*((pid-83)*359))%104729);
     }
 } seed_;

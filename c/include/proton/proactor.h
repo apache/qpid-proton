@@ -299,6 +299,8 @@ PNP_EXTERN pn_proactor_t *pn_connection_proactor(pn_connection_t *connection);
 PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
 
 /**
+ * @deprecated Use ::pn_proactor_now_64()
+ *
  * Get the real elapsed time since an arbitrary point in the past in milliseconds.
  *
  * This may be used as a portable way to get a process-local timestamp for the
@@ -311,6 +313,20 @@ PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
  * @note Thread-safe
  */
 PNP_EXTERN pn_millis_t pn_proactor_now(void);
+
+/**
+ * Get the real elapsed time since an arbitrary point in the past in milliseconds.
+ *
+ * This may be used as a portable way to get a process-local timestamp for the
+ * current time. It is monotonically increasing and will never go backwards.
+ *
+ * Note: this is not a suitable value for an AMQP timestamp to be sent as part
+ * of a message.  Such a timestamp should use the real time in milliseconds
+ * since the epoch.
+ *
+ * @note Thread-safe
+ */
+PNP_EXTERN int64_t pn_proactor_now_64(void);
 
 /**
  * @}

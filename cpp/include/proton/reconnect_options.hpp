@@ -75,8 +75,10 @@ class reconnect_options {
     /// meaning no limit.
     PN_CPP_EXTERN reconnect_options& max_attempts(int);
 
+    /// Deprecated - use connection_options::failover_urls
     /// Alternative connection URLs used for failover.  There are none
     /// by default.
+    PN_CPP_DEPRECATED("use connection_options::failover_urls()")
     PN_CPP_EXTERN reconnect_options& failover_urls(const std::vector<std::string>& conn_urls);
 
   private:
@@ -84,6 +86,7 @@ class reconnect_options {
     internal::pn_unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
+  friend class connection_options;
   friend class container;
     /// @endcond
 };

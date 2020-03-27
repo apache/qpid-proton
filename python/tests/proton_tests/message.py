@@ -119,6 +119,15 @@ class CodecTest(Test):
 
     assert msg2.properties['key'] == 'value', msg2.properties['key']
 
+  def testAnnotationsSymbolicAndUlongKey(self, a={symbol('one'): 1, 'two': 2, ulong(3): 'three'}):
+    self.msg.annotations = a
+    data = self.msg.encode()
+
+    msg2 = Message()
+    msg2.decode(data)
+    # both keys must be symbols
+    assert msg2.annotations == a
+
   def testRoundTrip(self):
     self.msg.id = "asdf"
     self.msg.correlation_id = uuid4()

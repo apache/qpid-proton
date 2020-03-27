@@ -90,7 +90,7 @@ Mailing list
 
 Subscribe to the Qpid mailing lists using details at:
 
-  http://qpid.apache.org/discussion.html
+  https://qpid.apache.org/discussion.html
 
 
 Patches

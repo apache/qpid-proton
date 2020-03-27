@@ -175,11 +175,24 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// execute code safely in the event-handler thread.
     PN_CPP_EXTERN void wake() const;
 
-    /// **Unsettled API** - true if this connection has been automatically
+    /// **Unsettled API** - True if this connection has been automatically
     /// re-connected.
     ///
     /// @see reconnect_options, messaging_handler
     PN_CPP_EXTERN bool reconnected() const;
+
+    /// **Unsettled API** - Update the connection options for this connection
+    ///
+    /// This method can be used to update the connection options used with this
+    /// connection. Usually the connection options are only used during the initial
+    /// connection attempt so this ability is only useful when automatically
+    /// reconnect is enabled and you wish to change the connection options before
+    /// the next reconnect attempt. This would usually be in the handler for the
+    /// `on_transport_error` event @see messaging_handler.
+    ///
+    /// @note Connection options supplied in the parameter will be merged with the
+    /// existing parameters as if `connection_options::update()` was used.
+    PN_CPP_EXTERN void update_options(const connection_options&);
 
     /// @cond INTERNAL
   friend class internal::factory<connection>;

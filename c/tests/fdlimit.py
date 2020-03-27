@@ -16,58 +16,76 @@
 # specific language governing permissions and limitations
 # under the License
 #
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 
-import os, sys
-from subprocess import Popen, PIPE
+import os
+import subprocess
+import time
 
-def wait_listening(p):
-    return re.search(b"listening on ([0-9]+)$", p.stdout.readline()).group(1)
-
-class LimitedBroker(Popen):
-    def __init__(self, fdlimit):
-        super(LimitedBroker, self).__init__(["broker", "", "0"], stdout=PIPE, stderr=open(os.devnull))
-        self.fdlimit = fdlimit
-
-    def __enter__(self):
-        self.port = wait_listening(self)
-        return self
-
-    def __exit__(self, *args):
-        self.kill()
+import test_subprocess
+from test_unittest import unittest
 
 # Check if we can run prlimit to control resources
 try:
-    Proc(["prlimit"]).wait_exit()
-except:
-    print("Skipping test: prlimit not available")
-    sys.exit(0)
+    assert subprocess.check_call(["prlimit"], stdout=open(os.devnull, 'w')) == 0, 'prlimit is present, but broken'
+    prlimit_available = True
+except OSError:
+    prlimit_available = False
 
-class FdLimitTest(ProcTestCase):
 
+class PRLimitedBroker(test_subprocess.Server):
+    def __init__(self, fdlimit, *args, **kwargs):
+        super(PRLimitedBroker, self).__init__(
+            ['prlimit', '-n{0:d}:'.format(fdlimit), "broker", "", "0"],  # `-n 256:` sets only soft limit to 256
+            stdout=subprocess.PIPE, universal_newlines=True, *args, **kwargs)
+        self.fdlimit = fdlimit
+
+
+class FdLimitTest(unittest.TestCase):
+    devnull = open(os.devnull, 'w')
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.devnull:
+            cls.devnull.close()
+
+    @unittest.skipUnless(prlimit_available, "prlimit not available")
     def test_fd_limit_broker(self):
         """Check behaviour when running out of file descriptors on accept"""
         # Not too many FDs but not too few either, some are used for system purposes.
         fdlimit = 256
-        with LimitedBroker(fdlimit) as b:
+        with PRLimitedBroker(fdlimit, kill_me=True) as b:
             receivers = []
-            # Start enough receivers to use all FDs, make sure the broker logs an error
-            for i in range(fdlimit+1):
-                receivers.append(Popen(["receive", "", b.port, str(i)], stdout=PIPE))
 
-            # All FDs are now in use, send attempt should fail or hang
-            self.assertIn(Popen(["send", "", b.port, "x"], stdout=PIPE, stderr=STDOUT).poll(), [1, None])
+            # Start enough receivers to use all FDs
+            # NOTE: broker does not log a file descriptor related error at any point in the test, only
+            #  PN_TRANSPORT_CLOSED: amqp:connection:framing-error: connection aborted
+            #  PN_TRANSPORT_CLOSED: proton:io: Connection reset by peer - disconnected :5672 (connection aborted)
+            for i in range(fdlimit + 1):
+                receiver = test_subprocess.Popen(["receive", "", b.port, str(i)], stdout=self.devnull)
+                receivers.append(receiver)
 
-            # Kill receivers to free up FDs
-            for r in receivers:
-                r.kill()
-            for r in receivers:
-                r.wait()
-            # send/receive should succeed now
-            self.assertIn("10 messages sent", check_output(["send", "", b.port]))
-            self.assertIn("10 messages received", check_output(["receive", "", b.port]))
+            # All FDs are now in use, send attempt will (with present implementation) hang
+            with test_subprocess.Popen(["send", "", b.port, "x"],
+                                       stdout=self.devnull, stderr=subprocess.STDOUT) as sender:
+                time.sleep(1)  # polling for None immediately would always succeed, regardless whether send hangs or not
+                self.assertIsNone(sender.poll())
+
+                # Kill receivers to free up FDs
+                for r in receivers:
+                    r.kill()
+                for r in receivers:
+                    r.wait()
+
+                # Sender now succeeded and exited
+                self.assertEqual(sender.wait(), 0)
+
+            # Additional send/receive should succeed now
+            self.assertIn("10 messages sent", test_subprocess.check_output(["send", "", b.port], universal_newlines=True))
+            self.assertIn("10 messages received", test_subprocess.check_output(["receive", "", b.port], universal_newlines=True))
+
 
 if __name__ == "__main__":
-    main()
-
-
+    unittest.main()

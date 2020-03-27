@@ -154,25 +154,26 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
         }
         credit_topup(lnk);
     } else {
-        tracker t(make_wrapper<tracker>(dlv));
         // sender
         if (pn_delivery_updated(dlv)) {
-            uint64_t rstate = pn_delivery_remote_state(dlv);
-            if (rstate == PN_ACCEPTED) {
+            tracker t(make_wrapper<tracker>(dlv));
+            switch(pn_delivery_remote_state(dlv)) {
+            case PN_ACCEPTED:
                 handler.on_tracker_accept(t);
-            }
-            else if (rstate == PN_REJECTED) {
+                break;
+            case PN_REJECTED:
                 handler.on_tracker_reject(t);
-            }
-            else if (rstate == PN_RELEASED || rstate == PN_MODIFIED) {
+                break;
+            case PN_RELEASED:
+            case PN_MODIFIED:
                 handler.on_tracker_release(t);
+                break;
             }
-
             if (t.settled()) {
                 handler.on_tracker_settle(t);
+                if (lctx.auto_settle)
+                    t.settle();
             }
-            if (lctx.auto_settle)
-                t.settle();
         }
     }
 }

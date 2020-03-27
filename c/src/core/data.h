@@ -50,10 +50,7 @@ typedef struct {
 struct pn_data_t {
   pni_node_t *nodes;
   pn_buffer_t *buf;
-  pn_decoder_t *decoder;
-  pn_encoder_t *encoder;
   pn_error_t *error;
-  pn_string_t *str;
   pni_nid_t capacity;
   pni_nid_t size;
   pni_nid_t parent;

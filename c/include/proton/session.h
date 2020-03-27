@@ -118,6 +118,9 @@ PN_EXTERN pn_state_t pn_session_state(pn_session_t *session);
  * The pointer returned by this operation is valid until the
  * session object is freed.
  *
+ * Deprecation notice: note that this will always return an empty
+ * error object
+ *
  * @param[in] session the session object
  * @return the session's error object
  */

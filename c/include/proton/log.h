@@ -20,6 +20,7 @@
  */
 
 #include <proton/import_export.h>
+#include <proton/logger.h>
 #include <proton/type_compat.h>
 
 #ifdef __cplusplus
@@ -30,18 +31,6 @@ extern "C" {
  * @cond INTERNAL
  */
     
-/**
- * @file
- *
- * Control log messages that are not associated with a transport.
- * See pn_transport_trace for transport-related logging.
- */
-
-/**
- * Callback for customized logging.
- */
-typedef void (*pn_logger_t)(const char *message);
-
 /**
  * Enable/disable global logging.
  *
@@ -58,7 +47,7 @@ PN_EXTERN void pn_log_enable(bool enabled);
  * @param logger is called with each log message if logging is enabled.
  * Passing 0 disables logging regardless of pn_log_enable() or environment settings.
  */
-PN_EXTERN void pn_log_logger(pn_logger_t logger);
+PN_EXTERN void pn_log_logger(void (*logger)(const char *message));
 
 /**
  * @endcond

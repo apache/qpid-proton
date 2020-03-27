@@ -26,8 +26,8 @@
 /* Avoid GNU extensions, in particular the incompatible alternative strerror_r() */
 #undef _GNU_SOURCE
 
-#include "../core/log_private.h"
-#include "./proactor-internal.h"
+#include "core/logger_private.h"
+#include "proactor-internal.h"
 
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
@@ -199,7 +199,7 @@ static void ptimer_set_lh(ptimer_t *pt, uint64_t t_millis) {
     // EPOLLIN is possible but not assured
     pt->in_doubt = true;
   }
-  pt->timer_active = t_millis;
+  pt->timer_active = t_millis != 0;
 }
 
 static void ptimer_set(ptimer_t *pt, uint64_t t_millis) {
@@ -262,13 +262,6 @@ static void ptimer_finalize(ptimer_t *pt) {
   pmutex_finalize(&pt->mutex);
 }
 
-pn_timestamp_t pn_i_now2(void)
-{
-  struct timespec now;
-  clock_gettime(CLOCK_REALTIME, &now);
-  return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_nsec / 1000000);
-}
-
 // ========================================================================
 // Proactor common code
 // ========================================================================
@@ -285,8 +278,8 @@ const char *AMQP_PORT_NAME = "amqp";
 /* pn_proactor_t and pn_listener_t are plain C structs with normal memory management.
    Class definitions are for identification as pn_event_t context only.
 */
-PN_STRUCT_CLASSDEF(pn_proactor, CID_pn_proactor)
-PN_STRUCT_CLASSDEF(pn_listener, CID_pn_listener)
+PN_STRUCT_CLASSDEF(pn_proactor)
+PN_STRUCT_CLASSDEF(pn_listener)
 
 static bool start_polling(epoll_extended_t *ee, int epollfd) {
   if (ee->polling)
@@ -562,7 +555,7 @@ typedef struct pconnection_t {
   epoll_extended_t *rearm_target;    /* main or secondary epollfd */
 } pconnection_t;
 
-/* Protects read/update of pn_connnection_t pointer to it's pconnection_t
+/* Protects read/update of pn_connection_t pointer to it's pconnection_t
  *
  * Global because pn_connection_wake()/pn_connection_proactor() navigate from
  * the pn_connection_t before we know the proactor or driver. Critical sections
@@ -588,7 +581,7 @@ static void set_pconnection(pn_connection_t* c, pconnection_t *pc) {
 }
 
 /*
- * A listener can have mutiple sockets (as specified in the addrinfo).  They
+ * A listener can have multiple sockets (as specified in the addrinfo).  They
  * are armed separately.  The individual psockets can be part of at most one
  * list: the global proactor overflow retry list or the per-listener list of
  * pending accepts (valid inbound socket obtained, but pn_listener_accept not
@@ -684,7 +677,7 @@ static inline bool proactor_has_event(pn_proactor_t *p) {
 
 static pn_event_t *log_event(void* p, pn_event_t *e) {
   if (e) {
-    pn_logf("[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
+    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, "[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
   }
   return e;
 }
@@ -1387,7 +1380,7 @@ void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *
   assert(pc); // TODO: memory safety
   const char *err = pconnection_setup(pc, p, c, t, false, addr);
   if (err) {    /* TODO aconway 2017-09-13: errors must be reported as events */
-    pn_logf("pn_proactor_connect failure: %s", err);
+    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_proactor_connect failure: %s", err);
     return;
   }
   // TODO: check case of proactor shutting down
@@ -1426,7 +1419,7 @@ static void pconnection_tick(pconnection_t *pc) {
   pn_transport_t *t = pc->driver.transport;
   if (pn_transport_get_idle_timeout(t) || pn_transport_get_remote_idle_timeout(t)) {
     ptimer_set(&pc->timer, 0);
-    uint64_t now = pn_i_now2();
+    uint64_t now = pn_proactor_now_64();
     uint64_t next = pn_transport_tick(t, now);
     if (next) {
       ptimer_set(&pc->timer, next - now);
@@ -1467,7 +1460,7 @@ void pn_proactor_release_connection(pn_connection_t *c) {
 // ========================================================================
 
 pn_listener_t *pn_event_listener(pn_event_t *e) {
-  return (pn_event_class(e) == pn_listener__class()) ? (pn_listener_t*)pn_event_context(e) : NULL;
+  return (pn_event_class(e) == PN_CLASSCLASS(pn_listener)) ? (pn_listener_t*)pn_event_context(e) : NULL;
 }
 
 pn_listener_t *pn_listener() {
@@ -1570,7 +1563,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
       psocket_error(&l->acceptors[0].psocket, errno, "listen on");
     }
   } else {
-    pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_OPEN);
+    pn_collector_put(l->collector, PN_CLASSCLASS(pn_listener), l, PN_LISTENER_OPEN);
   }
   proactor_add(&l->context);
   unlock(&l->context.mutex);
@@ -1646,7 +1639,7 @@ static void listener_begin_close(pn_listener_t* l) {
     /* Remove all acceptors from the overflow list.  closing flag prevents re-insertion.*/
     proactor_rearm_overflow(pn_listener_proactor(l));
     lock(&l->context.mutex);
-    pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_CLOSE);
+    pn_collector_put(l->collector, PN_CLASSCLASS(pn_listener), l, PN_LISTENER_CLOSE);
   }
 }
 
@@ -1745,7 +1738,7 @@ static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
   pn_event_t *e = pn_collector_next(l->collector);
   if (!e && l->pending_count && !l->unclaimed) {
     // empty collector means pn_collector_put() will not coalesce
-    pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_ACCEPT);
+    pn_collector_put(l->collector, PN_CLASSCLASS(pn_listener), l, PN_LISTENER_ACCEPT);
     l->unclaimed = true;
     l->pending_count--;
     e = pn_collector_next(l->collector);
@@ -1796,7 +1789,7 @@ void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t
   assert(pc); // TODO: memory safety
   const char *err = pconnection_setup(pc, pn_listener_proactor(l), c, t, true, "");
   if (err) {
-    pn_logf("pn_listener_accept failure: %s", err);
+    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_listener_accept failure: %s", err);
     return;
   }
   // TODO: fuller sanity check on input args
@@ -1935,7 +1928,7 @@ void pn_proactor_free(pn_proactor_t *p) {
 }
 
 pn_proactor_t *pn_event_proactor(pn_event_t *e) {
-  if (pn_event_class(e) == pn_proactor__class()) return (pn_proactor_t*)pn_event_context(e);
+  if (pn_event_class(e) == PN_CLASSCLASS(pn_proactor)) return (pn_proactor_t*)pn_event_context(e);
   pn_listener_t *l = pn_event_listener(e);
   if (l) return l->acceptors[0].psocket.proactor;
   pn_connection_t *c = pn_event_connection(e);
@@ -1944,7 +1937,7 @@ pn_proactor_t *pn_event_proactor(pn_event_t *e) {
 }
 
 static void proactor_add_event(pn_proactor_t *p, pn_event_type_t t) {
-  pn_collector_put(p->collector, pn_proactor__class(), p, t);
+  pn_collector_put(p->collector, PN_CLASSCLASS(pn_proactor), p, t);
 }
 
 // Call with lock held.  Leave unchanged if events pending.
@@ -2051,11 +2044,11 @@ static bool proactor_remove(pcontext_t *ctx) {
   bool can_free = true;
   if (ctx->disconnecting) {
     // No longer on contexts list
-    if (--ctx->disconnect_ops == 0) {
-      --p->disconnects_pending;
+    --p->disconnects_pending;
+    if (--ctx->disconnect_ops != 0) {
+      // procator_disconnect() does the free
+      can_free = false;
     }
-    else                  // procator_disconnect() still processing
-      can_free = false;   // this psocket
   }
   else {
     // normal case
@@ -2262,13 +2255,14 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
     ctx = next;
     next = ctx->next;           /* Save next pointer in case we free ctx */
     bool do_free = false;
-    bool ctx_notify = true;
+    bool ctx_notify = false;
     pmutex *ctx_mutex = NULL;
     pconnection_t *pc = pcontext_pconnection(ctx);
     if (pc) {
       ctx_mutex = &pc->context.mutex;
       lock(ctx_mutex);
       if (!ctx->closing) {
+        ctx_notify = true;
         if (ctx->working) {
           // Must defer
           pc->queued_disconnect = true;
@@ -2292,6 +2286,7 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
       ctx_mutex = &l->context.mutex;
       lock(ctx_mutex);
       if (!ctx->closing) {
+        ctx_notify = true;
         if (cond) {
           pn_condition_copy(pn_listener_condition(l), cond);
         }
@@ -2308,16 +2303,16 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
       // If initiating the close, wake the pcontext to do the free.
       if (ctx_notify)
         ctx_notify = wake(ctx);
+      if (ctx_notify)
+        wake_notify(ctx);
     }
     unlock(&p->context.mutex);
     unlock(ctx_mutex);
 
+    // Unsafe to touch ctx after lock release, except if we are the designated final_free
     if (do_free) {
       if (pc) pconnection_final_free(pc);
       else listener_final_free(pcontext_listener(ctx));
-    } else {
-      if (ctx_notify)
-        wake_notify(ctx);
     }
   }
   if (notify)
@@ -2339,7 +2334,11 @@ const pn_netaddr_t *pn_listener_addr(pn_listener_t *l) {
 }
 
 pn_millis_t pn_proactor_now(void) {
+  return (pn_millis_t) pn_proactor_now_64();
+}
+
+int64_t pn_proactor_now_64(void) {
   struct timespec t;
   clock_gettime(CLOCK_MONOTONIC, &t);
-  return t.tv_sec*1000 + t.tv_nsec/1000000;
+  return t.tv_sec * 1000 + t.tv_nsec / 1000000;
 }

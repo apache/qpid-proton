@@ -25,6 +25,7 @@
 #include "core/dispatch_actions.h"
 #include "core/engine-internal.h"
 #include "core/util.h"
+#include "platform/platform_fmt.h"
 #include "protocol.h"
 
 #include "proton/ssl.h"
@@ -37,7 +38,7 @@
 static const pnx_sasl_implementation *global_sasl_impl = NULL;
 
 // List of SASL mechansms to exclude by default as they cause user pain
-static const char* pni_excluded_mechs = "GSSAPI GSS-SPNEGO";
+static const char pni_excluded_mechs[] = "GSSAPI GSS-SPNEGO GS2-KRB5 GS2-IAKERB";
 
 //-----------------------------------------------------------------------------
 // pnx_sasl: API for SASL implementations to use
@@ -46,8 +47,8 @@ void pnx_sasl_logf(pn_transport_t *logger, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    if (logger->trace & PN_TRACE_DRV)
-        pn_transport_vlogf(logger, fmt, ap);
+    if (PN_SHOULD_LOG(&logger->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_ERROR))
+        pni_logger_vlogf(&logger->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_ERROR, fmt, ap);
     va_end(ap);
 }
 
@@ -149,7 +150,7 @@ void  pnx_sasl_succeed_authentication(pn_transport_t *transport, const char *use
     transport->sasl->outcome = PN_SASL_OK;
     transport->authenticated = true;
 
-    pnx_sasl_logf(transport, "Authenticated user: %s with mechanism %s",
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_INFO, "Authenticated user: %s with mechanism %s",
                   username, transport->sasl->selected_mechanism);
   }
 }
@@ -357,14 +358,11 @@ void pnx_sasl_set_desired_state(pn_transport_t *transport, enum pnx_sasl_state d
 {
   pni_sasl_t *sasl = transport->sasl;
   if (sasl->last_state > desired_state) {
-    if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "Trying to send SASL frame (%d), but illegal: already in later state (%d)", desired_state, sasl->last_state);
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_ERROR, "Trying to send SASL frame (%d), but illegal: already in later state (%d)", desired_state, sasl->last_state);
   } else if (sasl->client && !pni_sasl_is_client_state(desired_state)) {
-    if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "Trying to send server SASL frame (%d) on a client", desired_state);
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_ERROR, "Trying to send server SASL frame (%d) on a client", desired_state);
   } else if (!sasl->client && !pni_sasl_is_server_state(desired_state)) {
-    if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "Trying to send client SASL frame (%d) on a server", desired_state);
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_ERROR, "Trying to send client SASL frame (%d) on a server", desired_state);
   } else {
     // If we need to repeat CHALLENGE or RESPONSE frames adjust current state to seem
     // like they haven't been sent yet
@@ -412,7 +410,7 @@ static bool pni_sasl_server_included_mech(const char *included_mech_list, pn_byt
 
 static bool pni_sasl_client_included_mech(const char *included_mech_list, pn_bytes_t s)
 {
-  if (!included_mech_list && pni_excluded_mechs) return !pni_sasl_included_mech(pni_excluded_mechs, s);
+  if (!included_mech_list) return !pni_sasl_included_mech(pni_excluded_mechs, s);
 
   return pni_sasl_included_mech(included_mech_list, s);
 }
@@ -470,8 +468,8 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       pni_emit(transport);
       break;
     case SASL_POSTED_MECHANISMS: {
-      // TODO: Hardcoded limit of 16 mechanisms
-      char *mechs[16];
+      // TODO(PROTON-2122) Replace magic number 32 with dynamically sized memory
+      char *mechs[32];
       char *mechlist = pn_strdup(pni_sasl_impl_list_mechs(transport));
 
       int count = 0;
@@ -542,16 +540,22 @@ static void pn_error_sasl(pn_transport_t* transport, unsigned int layer)
 static ssize_t pn_input_read_sasl_header(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
 {
   bool eos = transport->tail_closed;
+  if (eos && available==0) {
+    pn_do_error(transport, "amqp:connection:framing-error",
+                "Expected SASL protocol header: no protocol header found (connection aborted)");
+    pn_set_error_layer(transport);
+    return PN_EOS;
+  }
   pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
   switch (protocol) {
   case PNI_PROTOCOL_AMQP_SASL:
+    transport->present_layers |= LAYER_AMQPSASL;
     if (transport->io_layers[layer] == &sasl_read_header_layer) {
         transport->io_layers[layer] = &sasl_layer;
     } else {
         transport->io_layers[layer] = &sasl_write_header_layer;
     }
-    if (transport->trace & PN_TRACE_FRM)
-        pn_transport_logf(transport, "  <- %s", "SASL");
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_FRAME, "  <- %s", "SASL");
     pni_sasl_set_external_security(transport, pn_ssl_get_ssf((pn_ssl_t*)transport), pn_ssl_get_remote_subject((pn_ssl_t*)transport));
     return SASL_HEADER_LEN;
   case PNI_PROTOCOL_INSUFFICIENT:
@@ -563,7 +567,7 @@ static ssize_t pn_input_read_sasl_header(pn_transport_t* transport, unsigned int
   char quoted[1024];
   pn_quote_data(quoted, 1024, bytes, available);
   pn_do_error(transport, "amqp:connection:framing-error",
-              "%s header mismatch: %s ['%s']%s", "SASL", pni_protocol_name(protocol), quoted,
+              "Expected SASL protocol header got: %s ['%s']%s", pni_protocol_name(protocol), quoted,
               !eos ? "" : " (connection aborted)");
   pn_set_error_layer(transport);
   return PN_EOS;
@@ -605,8 +609,7 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
 
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
-    if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "SASL Encryption enabled: buffer=%d", sasl->max_encrypt_size);
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_INFO, "Encryption enabled: buffer=%" PN_ZU, sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
   } else {
     transport->io_layers[layer] = &pni_passthru_layer;
@@ -643,8 +646,7 @@ static ssize_t pn_input_read_sasl_encrypt(pn_transport_t* transport, unsigned in
 
 static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, unsigned int layer, char *bytes, size_t size)
 {
-  if (transport->trace & PN_TRACE_FRM)
-    pn_transport_logf(transport, "  -> %s", "SASL");
+  PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_FRAME, "  -> %s", "SASL");
   assert(size >= SASL_HEADER_LEN);
   memmove(bytes, SASL_HEADER, SASL_HEADER_LEN);
   if (transport->io_layers[layer]==&sasl_write_header_layer) {
@@ -684,8 +686,7 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
   // We know that auth succeeded or we're not in final input state
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
-    if (transport->trace & PN_TRACE_DRV)
-      pn_transport_logf(transport, "SASL Encryption enabled: buffer=%d", sasl->max_encrypt_size);
+    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_INFO, "Encryption enabled: buffer=%" PN_ZU, sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
   } else {
     transport->io_layers[layer] = &pni_passthru_layer;

@@ -53,17 +53,17 @@ endif()
 
 # Deprecated options to enable runtime checks
 macro(deprecated_enable_check old new doc)
-  option(${old} ${doc} OFF)
   if (${old})
     message("WARNING: option ${old} is deprecated, use RUNTIME_CHECK=${new} instead")
     set(RUNTIME_CHECK_DEFAULT ${new})
   endif()
+  unset(${old} CACHE)
 endmacro()
 deprecated_enable_check(ENABLE_VALGRIND memcheck "Use valgrind to detect run-time problems")
 deprecated_enable_check(ENABLE_SANITIZERS asan "Compile with memory sanitizers (asan, ubsan)")
 deprecated_enable_check(ENABLE_TSAN tsan "Compile with thread sanitizer (tsan)")
 
-set(RUNTIME_CHECK ${RUNTIME_CHECK_DEFAULT} CACHE string "Enable runtime checks. Valid values: ${runtime_checks}")
+set(RUNTIME_CHECK ${RUNTIME_CHECK_DEFAULT} CACHE STRING "Enable runtime checks. Valid values: ${runtime_checks}")
 
 if(CMAKE_BUILD_TYPE MATCHES "Coverage" AND RUNTIME_CHECK)
   message(FATAL_ERROR "Cannot set RUNTIME_CHECK with CMAKE_BUILD_TYPE=Coverage")
@@ -117,7 +117,7 @@ endif()
 if(TEST_EXE_PREFIX)
   # Add TEST_EXE_PREFIX to TEST_ENV so test runner scripts can use it.
   list(APPEND TEST_ENV "TEST_EXE_PREFIX=${TEST_EXE_PREFIX}")
-  # Make a CMake-list form of TEST_EXE_PREFIX for add_test() commands
+  # Make a CMake-list form of TEST_EXE_PREFIX for (pn_)add_test() commands
   separate_arguments(TEST_EXE_PREFIX_CMD UNIX_COMMAND "${TEST_EXE_PREFIX}")
 endif()
 separate_arguments(TEST_WRAP_PREFIX_CMD UNIX_COMMAND "${TEST_WRAP_PREFIX}")

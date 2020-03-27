@@ -32,7 +32,7 @@ def write_connect_conf(obj):
         json.dump(obj, outfile)
 
 class Server(MessagingHandler):
-    def __init__(self, expected_user=None, scheme='amqp'):
+    def __init__(self, expected_user=None, scheme='amqps'):
         super(Server, self).__init__()
         self.port = free_tcp_port()
         self.scheme = scheme

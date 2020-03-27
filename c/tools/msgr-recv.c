@@ -258,7 +258,7 @@ int main(int argc, char** argv)
             }
 
         }
-        LOG("Messages received=%llu sent=%llu\n", received, sent);
+        LOG("Messages received=%" PRIu64 " sent=%" PRIu64 "\n", received, sent);
     }
 
     // this will flush any pending sends

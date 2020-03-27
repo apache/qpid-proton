@@ -37,9 +37,10 @@ find_package (SWIG)
 find_package (CyrusSASL)
 
 enable_testing ()
+include(tests/PNAddTest.cmake)
 
 # Set up runtime checks (valgrind, sanitizers etc.)
-include(tests/RuntimeCheck.cmake)  
+include(tests/RuntimeCheck.cmake)
 
 ## Variables used across components
 
@@ -76,7 +77,7 @@ else (CMAKE_CONFIGURATION_TYPES)
   # There is a single build configuration
   # If the build type is not set then set the default
   if (NOT CMAKE_BUILD_TYPE)
-  set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
+  set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
        "Build type: Debug, Release, RelWithDebInfo, MinSizeRel or Coverage (default RelWithDebInfo)" FORCE)
   endif ()
 
@@ -113,11 +114,7 @@ endif()
 # off if building there:
 if (APPLE)
   set (NOENABLE_WARNING_ERROR ON)
-  set (NOENABLE_UNDEFINED_ERROR ON)
 endif (APPLE)
-
-# Make LTO default to off until we can figure out the valgrind issues
-set (NOENABLE_LINKTIME_OPTIMIZATION ON)
 
 # Add options here called <whatever> they will turn into "ENABLE_<whatever" and can be
 # overridden on a platform specific basis above by NOENABLE_<whatever>
@@ -275,7 +272,7 @@ foreach (LANG ${BINDING_LANGS})
   endif ()
 endforeach()
 
-set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
+set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton)
 # End of variables used during install
 
 # Set result to a native search path - used by examples and binding tests.
@@ -289,17 +286,19 @@ macro(set_search_path result)
 endmacro()
 
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  # No change needed for windows already use correct separator
+  # CMake uses semicolon as list separator. Change ';'->'\;'
   function(to_native_path path result)
     file (TO_NATIVE_PATH "${path}" path)
-    set (${result} ${path} PARENT_SCOPE)
+    string (REPLACE ";" "\;" path "${path}")
+    # without this, ...;last\dir\ would later combine with list separator ; into \;
+    set (${result} "${path}\;" PARENT_SCOPE)
   endfunction()
 else (CMAKE_SYSTEM_NAME STREQUAL Windows)
   # Just change ';'->':'
   function(to_native_path path result)
     file (TO_NATIVE_PATH "${path}" path)
-    string (REGEX REPLACE ";" ":" path "${path}")
-    set (${result} ${path} PARENT_SCOPE)
+    string (REPLACE ";" ":" path "${path}")
+    set (${result} "${path}" PARENT_SCOPE)
   endfunction()
 endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
@@ -334,12 +333,19 @@ if(SWIG_FOUND)
   # Add any new swig bindings here - the directory name must be the same as the binding name
   list(APPEND BINDINGS python ruby)
 
+  if (POLICY CMP0078)
+    cmake_policy(SET CMP0078 OLD)
+  endif()
+  if (POLICY CMP0086)
+    cmake_policy(SET CMP0086 OLD)
+  endif()
   include(UseSWIG)
 
   # All swig modules should include ${PROTON_HEADERS} in SWIG_MODULE_<name>_EXTRA_DEPS
   file(GLOB PROTON_HEADERS "${CMAKE_SOURCE_DIR}/c/include/proton/*.h")
-  # All swig modules should include ${BINDING_DEPS} in swig_link_libraries
-  set (BINDING_DEPS qpid-proton)
+  # All swig modules should include ${BINDING_DEPS} or ${BINDING_DEPS_FULL} in swig_link_libraries
+  set (BINDING_DEPS qpid-proton-core)
+  set (BINDING_DEPS_FULL qpid-proton)
 
   # Add a block here to detect the prerequisites to build each language binding:
   #
@@ -348,15 +354,13 @@ if(SWIG_FOUND)
 
   # Prerequisites for Python wrapper:
   find_package (PythonLibs ${PYTHON_VERSION_STRING} EXACT)
-  # TODO aconway 2018-09-07: get python binding tests working with sanitizers
-  if (PYTHONLIBS_FOUND AND NOT SANITIZE_FLAGS)
+  if (PYTHONLIBS_FOUND)
     set (DEFAULT_PYTHON ON)
   endif ()
 
   # Prerequisites for Ruby:
   find_package(Ruby)
-  # TODO aconway 2018-09-07: get ruby binding tests working with sanitizers
-  if (RUBY_FOUND AND NOT SANITIZE_FLAGS)
+  if (RUBY_FOUND)
     set (DEFAULT_RUBY ON)
   endif ()
 endif()

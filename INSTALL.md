@@ -50,9 +50,10 @@ language.
     $ yum install jsoncpp-devel                              # C++ optional config file
 
     # Dependencies needed to generate documentation
-    $ yum install epydoc                                     # Python
+    $ yum install python-sphinx                              # Python
     $ yum install rubygem-yard                               # Ruby
     $ yum install doxygen                                    # C, C++
+
 
 The following prerequisites are required to do a full build on
 Debian-based systems (Ubuntu).  If you do not wish to build a given
@@ -71,7 +72,7 @@ language binding you can omit the dev package for that language.
     $ apt-get install swig python-dev ruby-dev
 
     # dependencies needed for python docs
-    $ apt-get install python-epydoc
+    $ apt-get install python-sphinx
 
 From the directory where you found this `INSTALL.md` file:
 

@@ -40,8 +40,8 @@ typedef enum {
   CID_pn_collector,
   CID_pn_event,
 
-  CID_pn_encoder,
-  CID_pn_decoder,
+  CID_pn_buffer,
+  CID_pn_error,
   CID_pn_data,
 
   CID_pn_connection,
@@ -62,6 +62,7 @@ typedef enum {
   CID_pn_selectable,
 
   CID_pn_url,
+  CID_pn_strdup,
 
   CID_pn_listener,
   CID_pn_proactor,

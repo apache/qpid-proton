@@ -85,14 +85,17 @@ class TornadoLoopHandler:
         sel = event.context
         if sel.fileno() >= 0:
             self.loop.remove_handler(sel.fileno())
-        sel.release()
+        sel.close()
         self.count -= 1
         if self.count == 0:
             self.loop.add_callback(self._stop)
 
     def _stop(self):
-        self.reactor.stop()
-        self.loop.stop()
+        # We could have received a new selectable since we sent the stop
+        if self.count == 0:
+            self.reactor.stop()
+            self.loop.stop()
+
 
 class Container(object):
     def __init__(self, *handlers, **kwargs):

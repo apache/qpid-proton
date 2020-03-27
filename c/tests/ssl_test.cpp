@@ -41,11 +41,23 @@ TEST_CASE("ssl_protocols") {
   CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.1") == 0);
   CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.2") == 0);
 
+  // Check whether TLS 1.3 is supported
+  bool tls1_3 = (pn_ssl_domain_set_protocols(sd, "TLSv1.3") == 0);
+
   // Multiple protocols
   CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.1 TLSv1.2") == 0);
   CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.1") == 0);
   CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.1 TLSv1.2") == 0);
   CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.2") == 0);
+
+  // Can only do these if we have tls 1.3
+  if (tls1_3) {
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.1 TLSv1.2 TLSv1.3") == 0);
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.2 TLSv1.3") == 0);
+  } else {
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1 TLSv1.1 TLSv1.2 TLSv1.3") == PN_ARG_ERR);
+    CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1.2 TLSv1.3") == PN_ARG_ERR);
+  }
 
   // Illegal separators
   CHECK(pn_ssl_domain_set_protocols(sd, "TLSv1/TLSv1.1 TLSv1.2") == PN_ARG_ERR);

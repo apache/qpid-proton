@@ -20,7 +20,10 @@
  */
 
 #include <proton/object.h>
-#include <stdlib.h>
+
+#include "core/memory.h"
+
+#include <stddef.h>
 #include <assert.h>
 
 typedef struct {
@@ -50,7 +53,7 @@ static void pn_record_finalize(void *object)
     pni_field_t *v = &record->fields[i];
     pn_class_decref(v->clazz, v->value);
   }
-  free(record->fields);
+  pni_mem_subdeallocate(pn_class(record), record, record->fields);
 }
 
 #define pn_record_hashcode NULL
@@ -78,7 +81,7 @@ static pni_field_t *pni_record_find(pn_record_t *record, pn_handle_t key) {
 static pni_field_t *pni_record_create(pn_record_t *record) {
   record->size++;
   if (record->size > record->capacity) {
-    record->fields = (pni_field_t *) realloc(record->fields, record->size * sizeof(pni_field_t));
+    record->fields = (pni_field_t *) pni_mem_subreallocate(pn_class(record), record, record->fields, record->size * sizeof(pni_field_t));
     record->capacity = record->size;
   }
   pni_field_t *field = &record->fields[record->size - 1];

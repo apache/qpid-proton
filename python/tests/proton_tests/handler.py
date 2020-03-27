@@ -98,7 +98,7 @@ class HandlerTest(common.Test):
     reactor.handler.handlers.append(root)
 
   def event_root(self, event):
-    return event.root
+    return event.handler
 
   def event_reactor_handler(self, event):
     return event.reactor.handler

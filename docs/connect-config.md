@@ -35,8 +35,8 @@ values, all properties are optional.
       // Note: it is an error to have a "tls" object unless scheme="amqps"
       "tls": {
         "cert": null,   // [string] name of client certificate or database
-        "key": null     // [string] private key or identity for client certificate
+        "key": null,    // [string] private key or identity for client certificate
         "ca": null,     // [string] name of CA certificate or database
-        "verify": true, // [bool] if true, require a valid cert with matching host name
+        "verify": true  // [bool] if true, require a valid cert with matching host name
       }
     }

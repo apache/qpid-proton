@@ -301,6 +301,7 @@ static bool handle(broker_t* b, pn_event_t* e) {
      pn_sasl_allowed_mechs(pn_sasl(t), "ANONYMOUS");
      if (b->ssl_domain) {
        pn_ssl_init(pn_ssl(t), b->ssl_domain, NULL);
+       pn_transport_require_encryption(t, false); /* Must call this after pn_ssl_init */
      }
      pn_listener_accept2(pn_event_listener(e), NULL, t);
      break;
@@ -443,6 +444,7 @@ static void* broker_thread(void *void_broker) {
 int main(int argc, char **argv) {
   const char *host = (argc > 1) ? argv[1] : "";
   const char *port = (argc > 2) ? argv[2] : "amqp";
+  int err;
 
   broker_t b = {0};
   b.proactor = pn_proactor();
@@ -450,8 +452,10 @@ int main(int argc, char **argv) {
   b.container_id = argv[0];
   b.threads = 4;
   b.ssl_domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
-  SET_CREDENTIALS(b.ssl_domain, "tserver");
-  pn_ssl_domain_allow_unsecured_client(b.ssl_domain); /* Allow SSL and plain connections */
+  err = SET_CREDENTIALS(b.ssl_domain, "tserver");
+  if (err) {
+    printf("Failed to set up server certificate: %s, private key: %s\n", CERTIFICATE("tserver"), SSL_FILE("tserver-private-key.pem"));
+  }
   {
   /* Listen on addr */
   char addr[PN_MAX_ADDR];

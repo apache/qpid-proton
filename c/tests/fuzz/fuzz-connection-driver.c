@@ -26,7 +26,7 @@
 
 #include "proton/connection_driver.h"
 #include "proton/engine.h"
-#include "proton/log.h"
+#include "proton/logger.h"
 #include "proton/message.h"
 
 #include "libFuzzingEngine.h"
@@ -56,7 +56,7 @@ const bool VERBOSE = false;
 const bool ERRORS = false;
 
 // I could not get rid of the error messages on stderr in any other way
-void devnull(pn_transport_t *transport, const char *message) {}
+void devnull(intptr_t context, pn_log_subsystem_t sub,  pn_log_level_t sev, const char *message) {}
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (VERBOSE)
@@ -71,10 +71,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     exit(1);
   }
 
-  pn_log_enable(false);
-  pn_log_logger(NULL);
-  pn_transport_trace(driver.transport, PN_TRACE_OFF);
-  pn_transport_set_tracer(driver.transport, devnull);
+  pn_logger_set_log_sink(pn_default_logger(), devnull, 0);
 
   uint8_t *data = (uint8_t *)Data;
   size_t size = Size;
@@ -93,7 +90,6 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     fcd_read(&driver, &data, &size);
     if (VERBOSE)
       printf("size is %d, data is %p\n", (int)size, (void *)data);
-    pn_event_t *event;
     while ((event = pn_connection_driver_next_event(&driver)) != NULL) {
       handle(&app, event);
     }
@@ -203,7 +199,11 @@ size_t fcd_read(pn_connection_driver_t *driver, uint8_t **data, size_t *size) {
   pn_rwbytes_t buf = pn_connection_driver_read_buffer(driver);
   size_t s = (*size < buf.size) ? *size : buf.size;
   if (buf.start == NULL) {
-    exit(1);
+    // The engine offered a null buffer for further input.
+    // This is legit, because it is just that the "socket" was closed
+    //  for further input, after reading the invalid header.
+    *size = 0;
+    return *size;
   }
   memcpy(buf.start, *data, s);
 

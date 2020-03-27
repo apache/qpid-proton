@@ -122,7 +122,7 @@ pni_protocol_type_t pni_sniff_header(const char *buf, size_t len)
 
 const char* pni_protocol_name(pni_protocol_type_t p)
 {
-  static const char* names[] = {
+  static const char * const names[] = {
   "Insufficient data to determine protocol",
   "Unknown protocol",
   "SSL/TLS connection",

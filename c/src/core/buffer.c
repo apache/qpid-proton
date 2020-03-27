@@ -20,14 +20,17 @@
  */
 
 #include <proton/error.h>
+#include <proton/object.h>
+
 #ifndef __cplusplus
 #include <stdbool.h>
 #endif
-#include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <stdio.h>
 
 #include "buffer.h"
+#include "memory.h"
 #include "util.h"
 
 struct pn_buffer_t {
@@ -37,17 +40,19 @@ struct pn_buffer_t {
   char *bytes;
 };
 
+PN_STRUCT_CLASSDEF(pn_buffer)
+
 pn_buffer_t *pn_buffer(size_t capacity)
 {
-  pn_buffer_t *buf = (pn_buffer_t *) malloc(sizeof(pn_buffer_t));
+  pn_buffer_t *buf = (pn_buffer_t *) pni_mem_allocate(PN_CLASSCLASS(pn_buffer), sizeof(pn_buffer_t));
   if (buf != NULL) {
     buf->capacity = capacity;
     buf->start = 0;
     buf->size = 0;
     if (capacity > 0) {
-        buf->bytes = (char *)malloc(capacity);
+        buf->bytes = (char *) pni_mem_suballocate(PN_CLASSCLASS(pn_buffer), buf, capacity);
         if (buf->bytes == NULL) {
-            free(buf);
+            pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), buf);
             buf = NULL;
         }
     }
@@ -61,8 +66,8 @@ pn_buffer_t *pn_buffer(size_t capacity)
 void pn_buffer_free(pn_buffer_t *buf)
 {
   if (buf) {
-    free(buf->bytes);
-    free(buf);
+    pni_mem_subdeallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes);
+    pni_mem_deallocate(PN_CLASSCLASS(pn_buffer), buf);
   }
 }
 
@@ -146,7 +151,7 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   }
 
   if (buf->capacity != old_capacity) {
-    char* new_bytes = (char *)realloc(buf->bytes, buf->capacity);
+    char* new_bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes, buf->capacity);
     if (new_bytes) {
       buf->bytes = new_bytes;
 
