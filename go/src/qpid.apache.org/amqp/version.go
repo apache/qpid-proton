@@ -30,6 +30,6 @@ package amqp
 
 // #include <proton/version.h>
 // #if PN_VERSION_MAJOR == 0 && PN_VERSION_MINOR < 27
-// #error packages qpid.apache.org/... require Proton-C library version 0.10 or greater
+// #error packages qpid.apache.org/... require Proton-C library version 0.27 or greater
 // #endif
 import "C"
