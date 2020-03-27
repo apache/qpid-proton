@@ -94,10 +94,10 @@ package amqp
 
 // #include <proton/version.h>
 // #if PN_VERSION_MAJOR == %s && PN_VERSION_MINOR < %s
-// #error packages qpid.apache.org/... require Proton-C library version %s.%s or greater
+// #error packages qpid.apache.org/... require Proton-C library version 0.10 or greater
 // #endif
 import "C"
-`, splitVersion[0], splitVersion[1], splitVersion[0], splitVersion[1])
+`, splitVersion[0], splitVersion[1])
 }
 
 func genWrappers() {
