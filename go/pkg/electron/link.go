@@ -21,9 +21,10 @@ package electron
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/apache/qpid-proton/go/pkg/amqp"
 	"github.com/apache/qpid-proton/go/pkg/proton"
-	"time"
 )
 
 // Settings associated with a link
@@ -183,6 +184,7 @@ type TerminusSettings struct {
 	Expiry     proton.ExpiryPolicy
 	Timeout    time.Duration
 	Dynamic    bool
+	Properties map[string]interface{}
 }
 
 func makeTerminusSettings(t proton.Terminus) TerminusSettings {
@@ -191,6 +193,7 @@ func makeTerminusSettings(t proton.Terminus) TerminusSettings {
 		Expiry:     t.ExpiryPolicy(),
 		Timeout:    t.Timeout(),
 		Dynamic:    t.IsDynamic(),
+		Properties: t.GetProperties(),
 	}
 }
 
@@ -248,12 +251,14 @@ func makeLocalLink(sn *session, isSender bool, setting ...LinkOption) (linkSetti
 	l.pLink.Source().SetExpiryPolicy(l.sourceSettings.Expiry)
 	l.pLink.Source().SetTimeout(l.sourceSettings.Timeout)
 	l.pLink.Source().SetDynamic(l.sourceSettings.Dynamic)
+	l.pLink.Source().SetProperties(l.sourceSettings.Properties)
 
 	l.pLink.Target().SetAddress(l.target)
 	l.pLink.Target().SetDurability(l.targetSettings.Durability)
 	l.pLink.Target().SetExpiryPolicy(l.targetSettings.Expiry)
 	l.pLink.Target().SetTimeout(l.targetSettings.Timeout)
 	l.pLink.Target().SetDynamic(l.targetSettings.Dynamic)
+	l.pLink.Target().SetProperties(l.targetSettings.Properties)
 
 	l.pLink.SetSndSettleMode(proton.SndSettleMode(l.sndSettle))
 	l.pLink.SetRcvSettleMode(proton.RcvSettleMode(l.rcvSettle))

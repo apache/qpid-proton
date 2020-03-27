@@ -453,3 +453,85 @@ func (t Transport) SASL() SASL {
 func SASLExtended() bool {
 	return bool(C.pn_sasl_extended())
 }
+
+// GetProperties returns the map of dynamic-node-properties for the terminus
+// See section 3.5.9 in AMQP Specification v1.0 revision 1350 for more information
+func (t Terminus) GetProperties() map[string]interface{} {
+	properties := map[string]interface{}{}
+	pn_data := C.pn_terminus_properties(t.pn)
+	size := int(C.pn_data_get_map(pn_data))
+	if size <= 0 {
+		return nil
+	}
+	C.pn_data_enter(pn_data)
+	for i := 0; i < size/2; i++ {
+		key := "empty"
+		// read key (Must be a symbol keyed map)
+		if C.pn_data_next(pn_data) {
+			switch C.pn_data_type(pn_data) {
+			case C.PN_SYMBOL:
+				csymbol := C.pn_data_get_symbol(pn_data)
+				key = C.GoString(csymbol.start)
+			default:
+
+			}
+		}
+		// read value
+		if C.pn_data_next(pn_data) {
+			switch C.pn_data_type(pn_data) {
+			case C.PN_INT:
+				value := int(C.pn_data_get_int(pn_data))
+				properties[key] = value
+			case C.PN_SYMBOL:
+				csymbol := C.pn_data_get_symbol(pn_data)
+				value := C.GoString(csymbol.start)
+				properties[key] = value
+			case C.PN_STRING:
+				value := C.pn_data_get_string(pn_data)
+				properties[key] = value
+			}
+		}
+	}
+	C.pn_data_exit(pn_data)
+	return properties
+}
+
+// SetProperties sets the map of dynamic-node-properties for the terminus
+// See section 3.5.9 in AMQP Specification v1.0 revision 1350 for more information
+func (t Terminus) SetProperties(properties map[string]interface{}) {
+	pn_data := C.pn_terminus_properties(t.pn)
+	if properties == nil || len(properties) <= 0 {
+		return
+	}
+	C.pn_data_clear(pn_data)
+	C.pn_data_put_map(pn_data)
+	C.pn_data_enter(pn_data)
+	for key, val := range properties {
+		// Put the key in the map
+		keyCStr := C.CString(key)
+		defer C.free(unsafe.Pointer(keyCStr))
+		keyCStrLen := C.size_t(len(key))
+		keyCStrBytes := C.pn_bytes(keyCStrLen, keyCStr)
+		C.pn_data_put_symbol(pn_data, keyCStrBytes)
+
+		// Put the value in the map
+		switch val.(type) {
+		case int:
+			C.pn_data_put_int(pn_data, C.int(val.(int)))
+		case string:
+			valCStr := C.CString(val.(string))
+			defer C.free(unsafe.Pointer(valCStr))
+			valCStrLen := C.size_t(len(val.(string)))
+			valCStrBytes := C.pn_bytes(valCStrLen, valCStr)
+			C.pn_data_put_symbol(pn_data, valCStrBytes)
+		default:
+			unknown := "unknown"
+			valCStr := C.CString(unknown)
+			defer C.free(unsafe.Pointer(valCStr))
+			valCStrLen := C.size_t(len(unknown))
+			valCStrBytes := C.pn_bytes(valCStrLen, valCStr)
+			C.pn_data_put_string(pn_data, valCStrBytes)
+		}
+	}
+	C.pn_data_exit(pn_data)
+}
