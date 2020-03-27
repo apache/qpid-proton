@@ -72,26 +72,35 @@ set (pysrc
     proton/_endpoints.py
     proton/_events.py
     proton/_exceptions.py
+    proton/_io.py
     proton/_message.py
+    proton/_tracing.py
     proton/_transport.py
     proton/_url.py
     proton/_wrapper.py
 
     proton/handlers.py
     proton/reactor.py
+    proton/tracing.py
     proton/utils.py
 
     proton/_handlers.py
     proton/_reactor.py
-    proton/_reactor_impl.py
+    proton/_selectable.py
     proton/_utils.py
     )
 # extra files included in the source distribution
 set(py_dist_files
     cproton.i
     MANIFEST.in
-    setuputils
-    docs
+    setuputils/__init__.py
+    setuputils/log.py
+    setuputils/misc.py
+    setuputils/PYZMQ_LICENSE.BSD
+    docs/conf.py
+    docs/index.rst
+    docs/overview.rst
+    docs/tutorial.rst
     )
 
 macro (py_compile directory files artifacts)
@@ -109,35 +118,22 @@ endmacro(py_compile)
 py_compile(${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated} CPROTON_ARTIFACTS)
 py_compile(${CMAKE_CURRENT_SOURCE_DIR} "${pysrc}" PROTON_ARTIFACTS)
 
-find_program(EPYDOC_EXE epydoc)
-mark_as_advanced (EPYDOC_EXE)
-if (EPYDOC_EXE)
-   foreach (py_src_doc ${pysrc})
-     list(APPEND PY_DOC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${py_src_doc}")
-   endforeach(py_src_doc)
-   add_custom_target(docs-py
-     COMMAND ${PN_ENV_SCRIPT} -- PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
-             ${EPYDOC_EXE} -v --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html ${PY_DOC_FILES}
-     DEPENDS ${SWIG_MODULE_${cproton}_REAL_NAME})
-   add_dependencies(docs docs-py)
-   install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
-           DESTINATION "${PROTON_SHARE}/docs/api-py"
-           COMPONENT documentation
-           OPTIONAL)
-endif (EPYDOC_EXE)
-
-find_program(SPHINX_EXE sphinx-build)
-mark_as_advanced (SPHINX_EXE)
-if (SPHINX_EXE)
-   add_custom_target(tutorial-py
-     COMMAND ${PN_ENV_SCRIPT} -- PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
-     ${SPHINX_EXE} -b html ${CMAKE_CURRENT_SOURCE_DIR}/docs ${CMAKE_CURRENT_BINARY_DIR}/tutorial)
-   add_dependencies(docs tutorial-py)
-   install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tutorial/"
-           DESTINATION "${PROTON_SHARE}/docs/tutorial-py"
-           COMPONENT documentation
-           OPTIONAL)
-endif (SPHINX_EXE)
+# Sphinx documentation
+check_python_module("sphinx" SPHINX_MODULE_FOUND)
+if (NOT SPHINX_MODULE_FOUND)
+    message(STATUS "Sphinx modules not found; doc generation disabled.")
+else ()
+    add_custom_target(docs-py
+        COMMAND ${PN_ENV_SCRIPT} --
+        PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
+        LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/c"
+        ${PYTHON_EXECUTABLE} -m sphinx "${CMAKE_CURRENT_SOURCE_DIR}/docs" "${CMAKE_CURRENT_BINARY_DIR}/docs")
+    add_dependencies(docs docs-py)
+    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/docs/"
+            DESTINATION "${PROTON_SHARE}/docs/api-py"
+            COMPONENT documentation
+            OPTIONAL)
+endif ()
 
 install(FILES ${CPROTON_ARTIFACTS}
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
@@ -153,7 +149,7 @@ install(DIRECTORY examples/
         COMPONENT Python
         USE_SOURCE_PERMISSIONS)
 
-set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "html;tutorial")
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES docs)
 
 #
 # Set up the directory 'dist' for building the python native package
@@ -162,34 +158,74 @@ set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "html;tutorial")
 
 set(py_dist_dir ${CMAKE_CURRENT_BINARY_DIR}/dist)
 
-file(COPY ${py_dist_files} DESTINATION ${py_dist_dir})
-
-file(MAKE_DIRECTORY ${py_dist_dir}/proton)
-file(COPY ${pysrc} DESTINATION ${py_dist_dir}/proton)
-
 add_custom_target(py_src_dist ALL)
 add_dependencies(py_src_dist generated_c_files)
 
-file(MAKE_DIRECTORY ${py_dist_dir})
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
+               ${CMAKE_CURRENT_BINARY_DIR}/README.rst
+)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/setup.py
+)
 
 add_custom_command(TARGET py_src_dist
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_INCLUDE_DIR} "${py_dist_dir}/include")
 
 add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR} "${py_dist_dir}/src")
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/core "${py_dist_dir}/src/core")
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
-               ${py_dist_dir}/setup.py
-)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
-               ${py_dist_dir}/README.rst
-)
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/compiler "${py_dist_dir}/src/compiler")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/platform "${py_dist_dir}/src/platform")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/ssl "${py_dist_dir}/src/ssl")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/sasl "${py_dist_dir}/src/sasl")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/encodings.h "${py_dist_dir}/src")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/protocol.h "${py_dist_dir}/src")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/README.rst "${py_dist_dir}")
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/setup.py "${py_dist_dir}")
+
+foreach(file IN LISTS py_dist_files pysrc)
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${file} "${py_dist_dir}/${file}")
+endforeach()
+
+# Make python source and binary packages if we have prerequisistes
+check_python_module("setuptools" SETUPTOOLS_MODULE_FOUND)
+check_python_module("wheel" WHEEL_MODULE_FOUND)
+if (SETUPTOOLS_MODULE_FOUND)
+  add_custom_target(py_pkg_src ALL
+                     WORKING_DIRECTORY dist
+                     DEPENDS py_src_dist
+		     COMMAND ${PN_ENV_SCRIPT} "SWIG=${SWIG_EXECUTABLE}" --
+		      ${PYTHON_EXECUTABLE} setup.py sdist --dist-dir ${CMAKE_CURRENT_BINARY_DIR}/pkgs)
+  if (WHEEL_MODULE_FOUND)
+    add_custom_target(py_pkg_wheel ALL
+                       WORKING_DIRECTORY dist
+                       DEPENDS py_pkg_src
+                       COMMAND ${PYTHON_EXECUTABLE} setup.py bdist_wheel --dist-dir ${CMAKE_CURRENT_BINARY_DIR}/pkgs)
+  endif ()
+endif ()
 
 # python test: python/tests/proton-test
 set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
 set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
 set (py_dll "$<TARGET_FILE_DIR:_cproton>")
-set (py_bld "$<TARGET_FILE_DIR:qpid-proton>") # For windows
+set (py_bld "$<TARGET_FILE_DIR:qpid-proton-core>") # For windows
 set (py_tests "${py_src}/tests")
 
 set (py_path ${CMAKE_BINARY_DIR}/c/tools ${py_bld} $ENV{PATH})
@@ -201,12 +237,14 @@ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
   set (python_coverage_options -m coverage run)
 endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
-add_test (NAME python-test
-  COMMAND ${PN_ENV_SCRIPT}
-  "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}"
-  "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-  ${TEST_ENV}
-  ${TEST_WRAP_PREFIX_CMD} ${PYTHON_EXECUTABLE} -- ${python_coverage_options} "${py_tests}/proton-test")
+pn_add_test(
+  INTERPRETED
+  NAME python-test
+  PREPEND_ENVIRONMENT
+    "PATH=${py_path}"
+    "PYTHONPATH=${py_pythonpath}"
+    "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+  COMMAND ${PYTHON_EXECUTABLE} ${python_coverage_options} -- "${py_tests}/proton-test")
 set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
 check_python_module("tox" TOX_MODULE_FOUND)
@@ -215,12 +253,12 @@ if (NOT TOX_MODULE_FOUND)
 else ()
   option(ENABLE_TOX_TEST "Enable multi-version python testing with TOX" ON)
 
-  set(tox_default "py26,py27,py34,py35,py36")
-  set(TOX_ENVLIST ${tox_default} CACHE STRING "List of python environments for TOX tests" )
+  set(tox_default "py26,py27,py35,py36,py37,py38")
+  set(TOX_ENVLIST "" CACHE STRING "List of python environments for TOX tests" )
   mark_as_advanced(TOX_ENVLIST)
 
-  if (NOT (TOX_ENVLIST STREQUAL tox_default))
-    message(WARNING "non-default TOX test set '${TOX_ENVLIST}' (default '${tox_default}')")
+  if (NOT TOX_ENVLIST)
+    set (TOX_ENVLIST ${tox_default})
   endif()
   if (ENABLE_TOX_TEST)
     if (CMAKE_BUILD_TYPE MATCHES "Coverage")
@@ -229,13 +267,14 @@ else ()
       configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
         "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
-      add_test (NAME python-tox-test
-        COMMAND ${PN_ENV_SCRIPT}
-        "PATH=${py_path}"
-        "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-        "SWIG=${SWIG_EXECUTABLE}"
-        ${TEST_ENV} --
-        ${TEST_WRAP_PREFIX_CMD} ${PYTHON_EXECUTABLE} -m tox)
+      pn_add_test(
+        INTERPRETED
+        NAME python-tox-test
+        PREPEND_ENVIRONMENT
+          "PATH=${py_path}"
+          "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+          "SWIG=${SWIG_EXECUTABLE}"
+        COMMAND ${PYTHON_EXECUTABLE} -m tox)
       set_tests_properties(python-tox-test
         PROPERTIES
         PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"

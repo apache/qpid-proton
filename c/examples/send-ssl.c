@@ -26,6 +26,7 @@
 #include <proton/message.h>
 #include <proton/proactor.h>
 #include <proton/session.h>
+#include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/transport.h>
 
@@ -36,32 +37,17 @@ typedef struct app_data_t {
   const char *host, *port;
   const char *amqp_address;
   const char *container_id;
+  const char *user;
+  const char *pass;
   int message_count;
 
   pn_proactor_t *proactor;
   pn_rwbytes_t message_buffer;
   int sent;
   int acknowledged;
-  pn_ssl_domain_t *ssl_domain;
 } app_data_t;
 
 static int exit_code = 0;
-
-/* Note must be run in the current directory to find certificate files */
-#define SSL_FILE(NAME) CMAKE_CURRENT_SOURCE_DIR "/ssl-certs/" NAME
-#define SSL_PW "tclientpw"
-/* Windows vs. OpenSSL certificates */
-#if defined(_WIN32)
-#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
-#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, SSL_FILE(NAME "-full.p12"), "", SSL_PW)
-#else
-#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem")
-#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME), SSL_FILE(NAME "-private-key.pem"), SSL_PW)
-#endif
-
-
 static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   if (pn_condition_is_set(cond)) {
     fprintf(stderr, "%s: %s: %s\n", pn_event_type_name(pn_event_type(e)),
@@ -76,7 +62,7 @@ static pn_bytes_t encode_message(app_data_t* app) {
   /* Construct a message with the map { "sequence": app.sent } */
   pn_message_t* message = pn_message();
   pn_data_t* body = pn_message_body(message);
-  pn_data_put_int(pn_message_id(message), app->sent); /* Set the message_id also */
+  pn_data_put_ulong(pn_message_id(message), app->sent); /* Set the message_id also */
   pn_data_put_map(body);
   pn_data_enter(body);
   pn_data_put_string(body, pn_bytes(sizeof("sequence")-1, "sequence"));
@@ -116,6 +102,9 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      pn_connection_t* c = pn_event_connection(event);
      pn_session_t* s = pn_session(pn_event_connection(event));
      pn_connection_set_container(c, app->container_id);
+     pn_connection_set_hostname(c, app->host);
+     pn_connection_set_user(c, app->user);
+     pn_connection_set_password(c, app->pass);
      pn_connection_open(c);
      pn_session_open(s);
      {
@@ -131,9 +120,17 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      if (ssl) {
        char name[1024];
        pn_ssl_get_protocol_name(ssl, name, sizeof(name));
-       printf("secure connection: %s\n", name);
+       {
+       const char *subject = pn_ssl_get_remote_subject(ssl);
+       if (subject) {
+         printf("secure connection: to %s using %s\n", subject, name);
+       } else {
+         printf("anonymous connection: using %s\n", name);
+       }
        fflush(stdout);
+       }
      }
+     break;
    }
 
    case PN_LINK_FLOW: {
@@ -223,14 +220,26 @@ int main(int argc, char **argv) {
   app.port = (argc > 2) ? argv[2] : "amqp";
   app.amqp_address = (argc > 3) ? argv[3] : "examples";
   app.message_count = (argc > 4) ? atoi(argv[4]) : 10;
-  app.ssl_domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
+  app.user = (argc > 5) ? argv[5] : 0 ;
+  app.pass = (argc > 6) ? argv[6] : 0 ;
 
   app.proactor = pn_proactor();
   pn_proactor_addr(addr, sizeof(addr), app.host, app.port);
 
   /* Configure a transport for SSL. The transport will be freed by the proactor. */
   t = pn_transport();
-  err =  pn_ssl_init(pn_ssl(t), app.ssl_domain, NULL);
+  /* If we got a username/password on the command line set up for authentication, else allow anonymous ssl */
+  if (app.user && app.pass) {
+    err =  pn_ssl_init(pn_ssl(t), NULL, NULL);
+    pn_sasl_allowed_mechs(pn_sasl(t), "PLAIN");
+  } else {
+    pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
+    err = pn_ssl_domain_set_peer_authentication(domain, PN_SSL_ANONYMOUS_PEER, NULL);
+    if (!err) {
+      err = pn_ssl_init(pn_ssl(t), domain, NULL);
+    }
+    pn_ssl_domain_free(domain);
+  }
   if (err) {
     fprintf(stderr, "error initializing SSL: %s\n", pn_code(err));
     return 1;
@@ -239,7 +248,6 @@ int main(int argc, char **argv) {
 
   run(&app);
 
-  pn_ssl_domain_free(app.ssl_domain);
   pn_proactor_free(app.proactor);
   free(app.message_buffer.start);
   return exit_code;

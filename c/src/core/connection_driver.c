@@ -49,10 +49,10 @@ static pn_event_t *batch_next(pn_event_batch_t *batch) {
   }
   /* Log the next event that will be processed */
   pn_event_t *next = pn_collector_next(d->collector);
-  if (next && d->transport->trace & PN_TRACE_EVT) {
+  if (next && PN_SHOULD_LOG(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG)) {
     pn_string_clear(d->transport->scratch);
     pn_inspect(next, d->transport->scratch);
-    pn_transport_log(d->transport, pn_string_get(d->transport->scratch));
+    pni_logger_log(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, pn_string_get(d->transport->scratch));
   }
   return next;
 }
@@ -77,12 +77,13 @@ int pn_connection_driver_bind(pn_connection_driver_t *d) {
 
 pn_connection_t *pn_connection_driver_release_connection(pn_connection_driver_t *d) {
   if (d->transport) {           /* Make sure transport is closed and unbound */
-      pn_connection_driver_close(d);
-      pn_transport_unbind(d->transport);
+    pn_connection_driver_close(d);
+    pn_transport_unbind(d->transport);
   }
   pn_connection_t *c = d->connection;
   if (c) {
     d->connection = NULL;
+    pn_connection_reset(c);
     pn_connection_collect(c, NULL); /* Disconnect from the collector */
   }
   return c;
@@ -168,18 +169,18 @@ void pn_connection_driver_errorf(pn_connection_driver_t *d, const char *name, co
 }
 
 void pn_connection_driver_log(pn_connection_driver_t *d, const char *msg) {
-  pn_transport_log(d->transport, msg);
+  pni_logger_log(&d->transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_TRACE, msg);
 }
 
 void pn_connection_driver_logf(pn_connection_driver_t *d, const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
-  pn_transport_vlogf(d->transport, fmt, ap);
+  pni_logger_vlogf(&d->transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_TRACE, fmt, ap);
   va_end(ap);
 }
 
 void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_list ap) {
-  pn_transport_vlogf(d->transport, fmt, ap);
+  pni_logger_vlogf(&d->transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_TRACE, fmt, ap);
 }
 
 pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batch_t *batch) {

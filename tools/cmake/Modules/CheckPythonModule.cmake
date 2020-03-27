@@ -37,7 +37,7 @@
 #   macro, usually by using find_package(PythonInterp).
 
 macro (CHECK_PYTHON_MODULE MODULE VARIABLE)
-  if (NOT DEFINED "${VARIABLE}" AND DEFINED "PYTHON_EXECUTABLE")
+  if (NOT ${VARIABLE} AND PYTHON_EXECUTABLE)
     execute_process(
       COMMAND ${PYTHON_EXECUTABLE} -c "import sys, pkgutil; sys.exit(0 if pkgutil.find_loader('${MODULE}') else 1)"
       RESULT_VARIABLE RESULT)

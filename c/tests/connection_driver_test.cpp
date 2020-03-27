@@ -302,6 +302,7 @@ TEST_CASE("driver_message_abort") {
   /* Aborted delivery consumes no credit */
   CHECK(1 == pn_link_credit(rcv));
   CHECK(1 == pn_link_credit(snd));
+  CHECK(0 == pn_session_outgoing_bytes(pn_link_session(snd)));
 }
 
 void send_receive_message(const std::string &tag, pn_test::driver_pair &d) {

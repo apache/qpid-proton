@@ -20,7 +20,10 @@
  */
 
 #include <proton/object.h>
-#include <stdlib.h>
+
+#include "core/memory.h"
+
+#include <stddef.h>
 #include <assert.h>
 
 #define PNI_ENTRY_FREE (0)
@@ -57,7 +60,7 @@ static void pn_map_finalize(void *object)
     }
   }
 
-  free(map->entries);
+  pni_mem_subdeallocate(pn_class(map), map, map->entries);
 }
 
 static uintptr_t pn_map_hashcode(void *object)
@@ -79,7 +82,7 @@ static uintptr_t pn_map_hashcode(void *object)
 
 static void pni_map_allocate(pn_map_t *map)
 {
-  map->entries = (pni_entry_t *) malloc(map->capacity * sizeof (pni_entry_t));
+  map->entries = (pni_entry_t *) pni_mem_suballocate(pn_class(map), map, map->capacity * sizeof (pni_entry_t));
   if (map->entries != NULL) {
     for (size_t i = 0; i < map->capacity; i++) {
       map->entries[i].key = NULL;
@@ -183,7 +186,7 @@ static bool pni_map_ensure(pn_map_t *map, size_t capacity)
     }
   }
 
-  free(entries);
+  pni_mem_subdeallocate(pn_class(map), map, entries);
   return true;
 }
 

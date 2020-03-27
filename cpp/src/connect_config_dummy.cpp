@@ -18,12 +18,20 @@
  */
 
 #include <proton/connect_config.hpp>
+#include "connect_config.hpp"
+
 #include <proton/error.hpp>
 
 namespace proton {
-namespace connect_config {
-namespace { const error nope("connection configuration is not supported"); }
+namespace {
+const error nope("connection configuration is not supported");
+}
 
+class connection_options;
+
+std::string apply_config(connection_options&) { throw nope; }
+
+namespace connect_config {
 std::string default_file() { throw nope; }
 std::string parse(std::istream& is, connection_options& opts)  { throw nope; }
 std::string parse_default(proton::connection_options&)  { throw nope; }

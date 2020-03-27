@@ -28,6 +28,7 @@
 
 #include "buffer.h"
 #include "dispatcher.h"
+#include "logger_private.h"
 #include "util.h"
 
 typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER} pn_endpoint_type_t;
@@ -41,9 +42,6 @@ struct pn_condition_t {
 };
 
 struct pn_endpoint_t {
-  pn_endpoint_type_t type;
-  pn_state_t state;
-  pn_error_t *error;
   pn_condition_t condition;
   pn_condition_t remote_condition;
   pn_endpoint_t *endpoint_next;
@@ -51,6 +49,8 @@ struct pn_endpoint_t {
   pn_endpoint_t *transport_next;
   pn_endpoint_t *transport_prev;
   int refcount; // when this hits zero we generate a final event
+  uint8_t state;
+  uint8_t type;
   bool modified;
   bool freed;
   bool referenced;
@@ -77,33 +77,32 @@ typedef struct {
 } pn_link_state_t;
 
 typedef struct {
-  // XXX: stop using negative numbers
-  uint16_t local_channel;
-  uint16_t remote_channel;
-  bool incoming_init;
   pn_delivery_map_t incoming;
   pn_delivery_map_t outgoing;
+  pn_hash_t *local_handles;
+  pn_hash_t *remote_handles;
+  uint64_t disp_code;
   pn_sequence_t incoming_transfer_count;
   pn_sequence_t incoming_window;
   pn_sequence_t remote_incoming_window;
   pn_sequence_t outgoing_transfer_count;
   pn_sequence_t outgoing_window;
-  pn_hash_t *local_handles;
-  pn_hash_t *remote_handles;
-
-  uint64_t disp_code;
-  bool disp_settled;
-  bool disp_type;
   pn_sequence_t disp_first;
   pn_sequence_t disp_last;
+  // XXX: stop using negative numbers
+  uint16_t local_channel;
+  uint16_t remote_channel;
+  bool incoming_init;
   bool disp;
+  bool disp_settled;
+  bool disp_type;
 } pn_session_state_t;
 
 typedef struct pn_io_layer_t {
   ssize_t (*process_input)(struct pn_transport_t *transport, unsigned int layer, const char *, size_t);
   ssize_t (*process_output)(struct pn_transport_t *transport, unsigned int layer, char *, size_t);
   void (*handle_error)(struct pn_transport_t* transport, unsigned int layer);
-  pn_timestamp_t (*process_tick)(struct pn_transport_t *transport, unsigned int layer, pn_timestamp_t);
+  int64_t (*process_tick)(struct pn_transport_t *transport, unsigned int layer, int64_t);
   size_t (*buffered_output)(struct pn_transport_t *transport);  // how much output is held
 } pn_io_layer_t;
 
@@ -124,6 +123,7 @@ typedef struct pni_sasl_t pni_sasl_t;
 typedef struct pni_ssl_t pni_ssl_t;
 
 struct pn_transport_t {
+  pn_logger_t logger;
   pn_tracer_t tracer;
   pni_sasl_t *sasl;
   pni_ssl_t *ssl;
@@ -176,7 +176,7 @@ struct pn_transport_t {
   uint64_t input_frames_ct;
 
   /* output buffered for send */
-  #define PN_TRANSPORT_INITIAL_BUFFER_SIZE (16*1024)
+  #define PN_TRANSPORT_INITIAL_BUFFER_SIZE (8*1024)
   size_t output_size;
   size_t output_pending;
   char *output_buf;
@@ -187,8 +187,6 @@ struct pn_transport_t {
   char *input_buf;
 
   pn_record_t *context;
-
-  pn_trace_t trace;
 
   /*
    * The maximum channel number can be constrained in several ways:
@@ -253,6 +251,7 @@ struct pn_connection_t {
 
 struct pn_session_t {
   pn_endpoint_t endpoint;
+  pn_session_state_t state;
   pn_connection_t *connection;  // reference counted
   pn_list_t *links;
   pn_list_t *freed;
@@ -263,7 +262,6 @@ struct pn_session_t {
   pn_sequence_t incoming_deliveries;
   pn_sequence_t outgoing_deliveries;
   pn_sequence_t outgoing_window;
-  pn_session_state_t state;
 };
 
 struct pn_terminus_t {
@@ -272,12 +270,12 @@ struct pn_terminus_t {
   pn_data_t *capabilities;
   pn_data_t *outcomes;
   pn_data_t *filter;
-  pn_durability_t durability;
-  pn_expiry_policy_t expiry_policy;
-  bool has_expiry_policy;
   pn_seconds_t timeout;
-  pn_terminus_type_t type;
-  pn_distribution_mode_t distribution_mode;
+  uint8_t durability;
+  uint8_t expiry_policy;
+  uint8_t type;
+  uint8_t distribution_mode;
+  bool has_expiry_policy;
   bool dynamic;
 };
 

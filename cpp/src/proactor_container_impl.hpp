@@ -103,10 +103,8 @@ class container::impl {
     class container_work_queue;
     pn_listener_t* listen_common_lh(const std::string&);
     pn_connection_t* make_connection_lh(const url& url, const connection_options&);
-    void setup_connection_lh(const url& url, pn_connection_t *pnc);
     void start_connection(const url& url, pn_connection_t* c);
     void reconnect(pn_connection_t* pnc);
-    duration next_delay(reconnect_context& rc);
     bool can_reconnect(pn_connection_t* pnc);
     void setup_reconnect(pn_connection_t* pnc);
     void reset_reconnect(pn_connection_t* pnc);

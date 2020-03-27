@@ -920,8 +920,6 @@ typedef unsigned long int uintptr_t;
 
 %include "proton/sasl.h"
 
-%include "proton/selectable.h"
-
 %include "proton/ssl.h"
 
 %ignore pn_decode_atoms;
@@ -951,9 +949,6 @@ typedef unsigned long int uintptr_t;
   pn_link_t *pn_cast_pn_link(void *x) { return (pn_link_t *) x; }
   pn_delivery_t *pn_cast_pn_delivery(void *x) { return (pn_delivery_t *) x; }
   pn_transport_t *pn_cast_pn_transport(void *x) { return (pn_transport_t *) x; }
-  pn_reactor_t *pn_cast_pn_reactor(void *x) { return (pn_reactor_t *) x; }
-  pn_task_t *pn_cast_pn_task(void *x) { return (pn_task_t *) x; }
-  pn_selectable_t *pn_cast_pn_selectable(void *x) { return (pn_selectable_t *) x; }
 %}
 
 /* Connection driver */
@@ -967,7 +962,4 @@ typedef unsigned long int uintptr_t;
 %ignore pn_connection_driver_vlogf;
 %include "proton/connection_driver.h"
 
-
-%include "proton/reactor.h"
-%include "proton/handlers.h"
 %include "proton/cid.h"

@@ -22,6 +22,15 @@ add_definitions(${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS})
 option(FUZZ_REGRESSION_TESTS "Run fuzz tests with regression test driver" ON)
 option(FUZZ_LONG_TESTS "Run fuzz tests that take a long time" OFF)
 
+# prefer static lib for the fuzzer, if available
+if (BUILD_STATIC_LIBS)
+  set(FUZZING_QPID_PROTON_CORE_LIBRARY qpid-proton-core-static)
+  set(FUZZING_QPID_PROTON_PROACTOR_LIBRARY qpid-proton-proactor-static)
+else()
+  set(FUZZING_QPID_PROTON_CORE_LIBRARY qpid-proton-core)
+  set(FUZZING_QPID_PROTON_PROACTOR_LIBRARY qpid-proton-proactor)
+endif()
+
 if (FUZZ_REGRESSION_TESTS)
   set(FUZZING_LIBRARY StandaloneFuzzTargetMain)
 else ()
@@ -32,7 +41,10 @@ add_library (StandaloneFuzzTargetMain STATIC StandaloneFuzzTargetMain.c Standalo
 
 macro (pn_add_fuzz_test test)
   add_executable (${test} ${ARGN})
-  target_link_libraries (${test} qpid-proton-core ${FUZZING_LIBRARY})
+  target_link_libraries (${test} ${FUZZING_LIBRARY})
+  # -lFuzzingEngine is a C++ library, which needs c++ std lib
+  set_target_properties(${test} PROPERTIES LINKER_LANGUAGE CXX)
+
   list(APPEND fuzz_test_src ${ARGN})
 
   if (FUZZ_REGRESSION_TESTS)
@@ -43,9 +55,16 @@ macro (pn_add_fuzz_test test)
       set(file_lines "${file_lines}${f}\n")
     endforeach()
     file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${test}-files" "${file_lines}")
-    add_test (NAME ${test} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}> "@${CMAKE_CURRENT_BINARY_DIR}/${test}-files")
+    pn_add_test(
+      EXECUTABLE
+      NAME ${test}
+      PREPEND_ENVIRONMENT ${test_env}
+      COMMAND $<TARGET_FILE:${test}> "@${CMAKE_CURRENT_BINARY_DIR}/${test}-files")
   else ()
-    add_test (NAME ${test} COMMAND $<TARGET_FILE:${test}> -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test}>)
+    pn_add_test(
+      EXECUTABLE
+      NAME ${test}
+      COMMAND $<TARGET_FILE:${test}> -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test}>)
   endif ()
 endmacro(pn_add_fuzz_test)
 
@@ -53,15 +72,28 @@ unset(fuzz_test_src)
 
 # Fuzz tests at the User API level
 pn_add_fuzz_test (fuzz-connection-driver fuzz-connection-driver.c)
+target_link_libraries (fuzz-connection-driver ${FUZZING_QPID_PROTON_CORE_LIBRARY})
 pn_add_fuzz_test (fuzz-message-decode fuzz-message-decode.c)
+target_link_libraries (fuzz-message-decode ${FUZZING_QPID_PROTON_CORE_LIBRARY})
 
 # pn_url_parse is not in proton core and is only used by messenger so compile specially
-pn_add_fuzz_test (fuzz-url fuzz-url.c ${PN_C_SOURCE_DIR}/extra/url.c  ${PN_C_SOURCE_DIR}/core/util.c)
+set(platform_MSVC ${PN_C_SOURCE_DIR}/compiler/msvc/snprintf.c)
+set(platform ${platform_${CMAKE_C_COMPILER_ID}})
+
+pn_add_fuzz_test (fuzz-url
+  fuzz-url.c
+  ${PN_C_SOURCE_DIR}/extra/url.c
+  ${PN_C_SOURCE_DIR}/core/object/object.c
+  ${PN_C_SOURCE_DIR}/core/object/string.c
+  ${PN_C_SOURCE_DIR}/core/util.c
+  ${PN_C_SOURCE_DIR}/core/memory.c
+  ${platform})
+target_compile_definitions(fuzz-url PRIVATE PROTON_DECLARE_STATIC)
 
 # This regression test can take a very long time so don't run by default
 if(HAS_PROACTOR AND FUZZ_LONG_TESTS)
   pn_add_fuzz_test (fuzz-proactor-receive fuzz-proactor-receive.c)
-  target_link_libraries(fuzz-proactor-receive qpid-proton-proactor)
+  target_link_libraries(fuzz-proactor-receive ${FUZZING_QPID_PROTON_CORE_LIBRARY} ${FUZZING_QPID_PROTON_PROACTOR_LIBRARY})
 endif()
 
 # Fuzz tests of internals

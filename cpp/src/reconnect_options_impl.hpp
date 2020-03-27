@@ -23,20 +23,25 @@
  */
 
 #include "proton/duration.hpp"
+#include "proton/internal/pn_unique_ptr.hpp"
+#include "proton/reconnect_options.hpp"
 
 #include <string>
 #include <vector>
 
 namespace proton {
-
-class reconnect_options::impl {
+class reconnect_options_base {
   public:
-    impl() : delay(10), delay_multiplier(2.0), max_delay(duration::FOREVER), max_attempts(0) {}
+    reconnect_options_base() : delay(10), delay_multiplier(2.0), max_delay(duration::FOREVER), max_attempts(0) {}
 
     duration delay;
     float    delay_multiplier;
     duration max_delay;
     int      max_attempts;
+};
+
+class reconnect_options::impl : public reconnect_options_base {
+  public:
     std::vector<std::string> failover_urls;
 };
 

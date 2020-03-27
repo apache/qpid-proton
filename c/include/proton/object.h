@@ -71,6 +71,8 @@ PN_EXTERN extern const pn_class_t PN_OBJECT[];
 PN_EXTERN extern const pn_class_t PN_VOID[];
 PN_EXTERN extern const pn_class_t PN_WEAKREF[];
 
+#define PN_CLASSCLASS(PREFIX) PREFIX ## __class
+
 #define PN_CLASSDEF(PREFIX)                                               \
 static void PREFIX ## _initialize_cast(void *object) {                    \
   PREFIX ## _initialize((PREFIX ## _t *) object);                         \
@@ -107,8 +109,7 @@ static int PREFIX ## _inspect_cast(void *object, pn_string_t *str) {      \
   }                                                                       \
 }                                                                         \
                                                                           \
-const pn_class_t *PREFIX ## __class(void) {                               \
-  static const pn_class_t clazz = {                                       \
+const pn_class_t PN_CLASSCLASS(PREFIX)[] = {{                             \
     #PREFIX,                                                              \
     CID_ ## PREFIX,                                                       \
     pn_object_new,                                                        \
@@ -122,12 +123,10 @@ const pn_class_t *PREFIX ## __class(void) {                               \
     PREFIX ## _hashcode_cast,                                             \
     PREFIX ## _compare_cast,                                              \
     PREFIX ## _inspect_cast                                               \
-  };                                                                      \
-  return &clazz;                                                          \
-}                                                                         \
+}};                                                                       \
                                                                           \
 PREFIX ## _t *PREFIX ## _new(void) {                                      \
-  return (PREFIX ## _t *) pn_class_new(PREFIX ## __class(),               \
+  return (PREFIX ## _t *) pn_class_new(PN_CLASSCLASS(PREFIX),             \
                                        sizeof(PREFIX ## _t));             \
 }
 
@@ -164,27 +163,26 @@ PREFIX ## _t *PREFIX ## _new(void) {                                      \
 }
 
 /* Class to identify a plain C struct in a pn_event_t. No refcounting or memory management. */
-#define PN_STRUCT_CLASSDEF(PREFIX, CID)                                 \
-  const pn_class_t *PREFIX ## __class(void);                            \
-  static const pn_class_t *PREFIX ## _reify(void *p) { return PREFIX ## __class(); } \
-  const pn_class_t *PREFIX  ##  __class(void) {                         \
-  static const pn_class_t clazz = {                                     \
-    #PREFIX,                                                            \
-    CID,                                                                \
-    NULL, /*_new*/                                                      \
-    NULL, /*_initialize*/                                               \
-    pn_void_incref,                                                     \
-    pn_void_decref,                                                     \
-    pn_void_refcount,                                                   \
-    NULL, /* _finalize */                                               \
-    NULL, /* _free */                                                   \
-    PREFIX ## _reify,                                                   \
-    pn_void_hashcode,                                                   \
-    pn_void_compare,                                                    \
-    pn_void_inspect                                                     \
-    };                                                                  \
-  return &clazz;                                                        \
-  }
+#define PN_STRUCT_CLASSDEF(PREFIX)                  \
+static const pn_class_t *PREFIX ## _reify(void *p); \
+const pn_class_t PN_CLASSCLASS(PREFIX)[] = {{       \
+  #PREFIX,                                          \
+  CID_ ## PREFIX,                                   \
+  NULL, /*_new*/                                    \
+  NULL, /*_initialize*/                             \
+  pn_void_incref,                                   \
+  pn_void_decref,                                   \
+  pn_void_refcount,                                 \
+  NULL, /* _finalize */                             \
+  NULL, /* _free */                                 \
+  PREFIX ## _reify,                                 \
+  pn_void_hashcode,                                 \
+  pn_void_compare,                                  \
+  pn_void_inspect                                   \
+}};                                                 \
+const pn_class_t *PREFIX ## _reify(void *p) {       \
+  return PN_CLASSCLASS(PREFIX);                     \
+}
 
 PN_EXTERN pn_cid_t pn_class_id(const pn_class_t *clazz);
 PN_EXTERN const char *pn_class_name(const pn_class_t *clazz);

@@ -29,37 +29,24 @@
 
 #include "data.h"
 
-struct pn_encoder_t {
-  char *output;
-  char *position;
-  pn_error_t *error;
-  size_t size;
-  unsigned null_count;
-};
-
-static void pn_encoder_initialize(void *obj)
+static inline pn_error_t *pni_encoder_error(pn_encoder_t *encoder)
 {
-  pn_encoder_t *encoder = (pn_encoder_t *) obj;
+  if (!encoder->error) encoder->error = pn_error();
+  return encoder->error;
+}
+
+void pn_encoder_initialize(pn_encoder_t *encoder)
+{
   encoder->output = NULL;
   encoder->position = NULL;
-  encoder->error = pn_error();
+  encoder->error = NULL;
   encoder->size = 0;
   encoder->null_count = 0;
 }
 
-static void pn_encoder_finalize(void *obj) {
-  pn_encoder_t *encoder = (pn_encoder_t *) obj;
-  pn_error_free(encoder->error);
-}
-
-#define pn_encoder_hashcode NULL
-#define pn_encoder_compare NULL
-#define pn_encoder_inspect NULL
-
-pn_encoder_t *pn_encoder()
+void pn_encoder_finalize(pn_encoder_t *encoder)
 {
-  static const pn_class_t clazz = PN_CLASS(pn_encoder);
-  return (pn_encoder_t *) pn_class_new(&clazz, sizeof(pn_encoder_t));
+  pn_error_free(encoder->error);
 }
 
 static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
@@ -92,7 +79,7 @@ static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
   case PN_MAP: return PNE_MAP32;
   case PN_DESCRIBED: return PNE_DESCRIPTOR;
   default:
-    return pn_error_format(encoder->error, PN_ERR, "not a value type: %u\n", type);
+    return pn_error_format(pni_encoder_error(encoder), PN_ERR, "not a value type: %u\n", type);
   }
 }
 
@@ -338,7 +325,7 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     pn_encoder_writef32(encoder, node->children);
     return 0;
   default:
-    return pn_error_format(data->error, PN_ERR, "unrecognized encoding: %u", code);
+    return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
   }
 }
 

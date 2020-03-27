@@ -94,19 +94,17 @@ typedef struct {
   pn_link_t *reply_link;
 } connection_context_t;
 
-
+/**
+ * @return buffer of sufficient size, or NULL
+ */
 static char *ensure_buffer(char *buf, size_t needed, size_t *actual)
 {
-  char* new_buf;
   // Make room for the largest message seen so far, plus extra for slight changes in metadata content
   if (needed + 1024 <= *actual)
     return buf;
   needed += 2048;
-  new_buf = (char *) realloc(buf, needed);
-  if (new_buf != NULL) {
-    buf = new_buf;
-    *actual = buf ? needed : 0;
-  }
+  buf = (char *) realloc(buf, needed);
+  *actual = buf ? needed : 0;
   return buf;
 }
 

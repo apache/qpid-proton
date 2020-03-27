@@ -22,6 +22,7 @@
 #include "contexts.hpp"
 
 #include "msg.hpp"
+#include "reconnect_options_impl.hpp"
 #include "proton_bits.hpp"
 
 #include "proton/connection_options.hpp"
@@ -71,8 +72,8 @@ connection_context::connection_context() :
     container(0), default_session(0), link_gen(0), handler(0), listener_context_(0)
 {}
 
-reconnect_context::reconnect_context(const reconnect_options& ro) :
-    reconnect_options_(new reconnect_options(ro)), retries_(0), current_url_(-1), reconnected_(false)
+reconnect_context::reconnect_context(const reconnect_options_base& ro) :
+    reconnect_options_(ro), retries_(0), current_url_(-1), reconnected_(false)
 {}
 
 listener_context::listener_context() : listen_handler_(0) {}

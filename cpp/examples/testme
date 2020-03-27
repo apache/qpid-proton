@@ -50,7 +50,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
         f.write(t.substitute(db=db))
     cmd_template = Template("echo password | ${saslpasswd} -c -p -f ${db} -u proton user")
     cmd = cmd_template.substitute(db=db, saslpasswd=saslpasswd)
-    check_output(args=cmd, shell=True)
+    check_output(cmd, shell=True)
     os.environ['PN_SASL_CONFIG_PATH'] = abs_conf_dir
 
 # Globally initialize Cyrus SASL configuration

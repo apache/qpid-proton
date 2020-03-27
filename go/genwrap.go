@@ -81,7 +81,7 @@ func genVersion() {
 	if minVersion != version {
 		panic(fmt.Errorf("Found proton-c version %v, expected %v. Update minVersion in genwrap.go if you want to increase the minimum required proton-c version.", version, minVersion))
 	}
-	out, err := os.Create("src/qpid.apache.org/amqp/version.go")
+	out, err := os.Create("pkg/amqp/version.go")
 	panicIf(err)
 	defer out.Close()
 	splitVersion := strings.Split(minVersion, ".")
@@ -94,14 +94,14 @@ package amqp
 
 // #include <proton/version.h>
 // #if PN_VERSION_MAJOR == %s && PN_VERSION_MINOR < %s
-// #error packages qpid.apache.org/... require Proton-C library version 0.10 or greater
+// #error module github.com/apache/qpid-proton requires Proton-C library version 0.10 or greater
 // #endif
 import "C"
 `, splitVersion[0], splitVersion[1])
 }
 
 func genWrappers() {
-	outPath := "src/qpid.apache.org/proton/wrappers_gen.go"
+	outPath := "pkg/proton/wrappers_gen.go"
 	out, err := os.Create(outPath)
 	panicIf(err)
 	defer out.Close()

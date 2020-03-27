@@ -216,18 +216,18 @@ class SslTest(common.Test):
         self.assertEqual("O=Server,CN=A1.Good.Server.domain.com", client.ssl.get_cert_subject())
         self.assertEqual("O=Client,CN=127.0.0.1,C=US,ST=ST,L=City,OU=Dev", server.ssl.get_cert_subject())
 
-        self.assertEqual("f78f03ec31317c213dcf607c095242adbf067824", server.ssl.get_cert_fingerprint_sha1())
-        self.assertEqual("3836fd0d7bbc155158997ff336de29545cc1ce4137f8419062ceb8b50fd7a6f9", server.ssl.get_cert_fingerprint_sha256())
-        self.assertEqual("a8390634eb10c7a12ba3ce0837001bc6ae78c7690984f4788cf4430acdb496d5d9e02c8ec39219f5c4dcd908c34861d09481c2faf53b4ccc95dac60e623165c4",
+        self.assertEqual("1762688fb3c1c7908690efa158e89924a8e739b6", server.ssl.get_cert_fingerprint_sha1())
+        self.assertEqual("f5890052d5ad3f38f68eae9027b30fc4c3f09758d59d8f19e3f192e29e41708d", server.ssl.get_cert_fingerprint_sha256())
+        self.assertEqual("5d2b1bff39df99d101040348be015970e3da1d0ad610902dc78bba24555aae16395fd1342e26b89b422c304c32b48913000b485933720773d033aaffc561b3e9",
                          server.ssl.get_cert_fingerprint_sha512())
-        self.assertEqual("32b7bc119f61c71d368caaf9a6bf58b2", server.ssl.get_cert_fingerprint_md5())
+        self.assertEqual("246ea13c8a549e8c0b0cc6490d81b34b", server.ssl.get_cert_fingerprint_md5())
 
         # Test the various fingerprint algorithms
-        self.assertEqual("0aab5922c8657a7fb78402b79379506d3d7806ce", client.ssl.get_cert_fingerprint_sha1())
-        self.assertEqual("de5e0c4097f841815a769ce1a30dbe912b83711438a5aaf50001da23cee5a8a8", client.ssl.get_cert_fingerprint_sha256())
-        self.assertEqual("d0aceeb68ab9de57c9e1c21a43a4511c54ec94011e770a523a6352b1374f59c8b58adc93d5cad6f25aa125b5934309a61a25e74a5d5e0cb40b07c7468615944c",
+        self.assertEqual("d28c0ae17c370c269bd680ea3bcc523ea5da544e", client.ssl.get_cert_fingerprint_sha1())
+        self.assertEqual("c460a601f77b77ec59480955574a227c309805dd36dbf866f42d2dce3fd4757c", client.ssl.get_cert_fingerprint_sha256())
+        self.assertEqual("37c28f451105b1979e2ea62d4a38c86e158ad345894b5016662bdd1913f48764bd71deb4b4de4ce22559828634357dcaea1832dd58327dfe5b0bc368ecbeee4c",
                          client.ssl.get_cert_fingerprint_sha512())
-        self.assertEqual("ae0ebcebc1f970fb696ef9f56e3235da", client.ssl.get_cert_fingerprint_md5())
+        self.assertEqual("16b075688b82c40ce5b03c984f20286b", client.ssl.get_cert_fingerprint_md5())
 
         self.assertEqual(None, client.ssl.get_cert_fingerprint(21, SSL.SHA1)) # Should be at least 41
         self.assertEqual(None, client.ssl.get_cert_fingerprint(50, SSL.SHA256)) # Should be at least 65

@@ -18,5 +18,5 @@ concurrently in a multithreaded framework. The driver is written in
 portable C++98-compatible code.
 
 For examples of use, see
-[the proton source code](qpid.apache.org/proton), in particular the
+[the proton source code](https://qpid.apache.org/proton), in particular the
 C++ `proton::container`.
