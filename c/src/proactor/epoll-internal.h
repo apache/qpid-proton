@@ -40,9 +40,6 @@
 extern "C" {
 #endif
 
-//typedef struct pn_proactor_t pn_proactor_t;
-//typedef struct pn_listener_t pn_listener_t;
-//typedef struct pn_connection_driver_t pn_connection_driver_t;
 typedef struct acceptor_t acceptor_t;
 typedef struct tslot_t tslot_t;
 typedef pthread_mutex_t pmutex;
@@ -82,7 +79,6 @@ typedef enum {
 typedef struct pcontext_t {
   pmutex mutex;
   pn_proactor_t *proactor;  /* Immutable */
-  void *owner;              /* Instance governed by the context */
   pcontext_type_t type;
   bool working;
   bool on_wake_list;
@@ -255,10 +251,13 @@ struct acceptor_t{
   struct pn_netaddr_t addr;      /* listening address */
   pn_listener_t *listener;
   acceptor_t *next;              /* next listener list member */
-  int accepted_fd;
   bool armed;
   bool overflowed;
 };
+
+typedef struct accepted_t{
+  int accepted_fd;
+} accepted_t;
 
 struct pn_listener_t {
   pcontext_t context;
@@ -272,10 +271,10 @@ struct pn_listener_t {
   pn_event_batch_t batch;
   pn_record_t *attachments;
   void *listener_context;
-  acceptor_t *pending_acceptors;  /* list of those with a valid inbound fd*/
-  int pending_count;
-  bool unclaimed;                 /* attach event dispatched but no pn_listener_attach() call yet */
-  size_t backlog;
+  accepted_t *pending_accepteds;  /* array of accepted connections */
+  size_t pending_first;              /* index of first pending connection */
+  size_t pending_count;              /* number of pending accepted connections */
+  size_t backlog;                 /* size of pending accepted array */
   bool close_dispatched;
   pmutex rearm_mutex;             /* orders rearms/disarms, nothing else */
   uint32_t sched_io_events;

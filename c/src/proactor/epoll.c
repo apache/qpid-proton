@@ -337,11 +337,10 @@ static void stop_polling(epoll_extended_t *ee, int epollfd) {
 // Fake thread for temporarily disabling the scheduling of a context.
 static struct tslot_t *REWAKE_PLACEHOLDER = (struct tslot_t*) -1;
 
-static void pcontext_init(pcontext_t *ctx, pcontext_type_t t, pn_proactor_t *p, void *o) {
+static void pcontext_init(pcontext_t *ctx, pcontext_type_t t, pn_proactor_t *p) {
   memset(ctx, 0, sizeof(*ctx));
   pmutex_init(&ctx->mutex);
   ctx->proactor = p;
-  ctx->owner = o;
   ctx->type = t;
 }
 
@@ -659,10 +658,10 @@ static void make_runnable(pcontext_t *ctx) {
 
 
 
-static void psocket_init(psocket_t* ps, pn_proactor_t* p, pn_listener_t *listener)
+static void psocket_init(psocket_t* ps, pn_proactor_t* p, epoll_type_t type)
 {
   ps->epoll_io.fd = -1;
-  ps->epoll_io.type = listener ? LISTENER_IO : PCONNECTION_IO;
+  ps->epoll_io.type = type;
   ps->epoll_io.wanted = 0;
   ps->epoll_io.polling = false;
   ps->proactor = p;
@@ -748,7 +747,7 @@ static inline bool pconnection_has_event(pconnection_t *pc) {
 }
 
 static inline bool listener_has_event(pn_listener_t *l) {
-  return pn_collector_peek(l->collector) || (l->pending_count && !l->unclaimed);
+  return pn_collector_peek(l->collector) || (l->pending_count);
 }
 
 static inline bool proactor_has_event(pn_proactor_t *p) {
@@ -791,7 +790,21 @@ static void rearm(pn_proactor_t *p, epoll_extended_t *ee) {
     EPOLL_FATAL("arming polled file descriptor", errno);
 }
 
-static void listener_list_append(acceptor_t **start, acceptor_t *item) {
+static void listener_accepted_append(pn_listener_t *listener, accepted_t item) {
+  if (listener->pending_first+listener->pending_count >= listener->backlog) return;
+
+  listener->pending_accepteds[listener->pending_first+listener->pending_count] = item;
+  listener->pending_count++;
+}
+
+static accepted_t *listener_accepted_next(pn_listener_t *listener) {
+  if (!listener->pending_count) return NULL;
+
+  listener->pending_count--;
+  return &listener->pending_accepteds[listener->pending_first++];
+}
+
+static void acceptor_list_append(acceptor_t **start, acceptor_t *item) {
   assert(item->next == NULL);
   if (*start) {
     acceptor_t *end = *start;
@@ -802,19 +815,19 @@ static void listener_list_append(acceptor_t **start, acceptor_t *item) {
   else *start = item;
 }
 
-static acceptor_t *listener_list_next(acceptor_t **start) {
+static acceptor_t *acceptor_list_next(acceptor_t **start) {
   acceptor_t *item = *start;
   if (*start) *start = (*start)->next;
   if (item) item->next = NULL;
   return item;
 }
 
-// Add an overflowing listener to the overflow list. Called with listener context lock held.
-static void listener_set_overflow(acceptor_t *a) {
+// Add an overflowing acceptor to the overflow list. Called with listener context lock held.
+static void acceptor_set_overflow(acceptor_t *a) {
   a->overflowed = true;
   pn_proactor_t *p = a->psocket.proactor;
   lock(&p->overflow_mutex);
-  listener_list_append(&p->overflow, a);
+  acceptor_list_append(&p->overflow, a);
   unlock(&p->overflow_mutex);
 }
 
@@ -828,7 +841,7 @@ static void proactor_rearm_overflow(pn_proactor_t *p) {
   acceptor_t* ovflw = p->overflow;
   p->overflow = NULL;
   unlock(&p->overflow_mutex);
-  acceptor_t *a = listener_list_next(&ovflw);
+  acceptor_t *a = acceptor_list_next(&ovflw);
   while (a) {
     pn_listener_t *l = a->listener;
     lock(&l->context.mutex);
@@ -848,7 +861,7 @@ static void proactor_rearm_overflow(pn_proactor_t *p) {
       unlock(&l->rearm_mutex);
     }
     if (notify) wake_notify(&l->context);
-    a = listener_list_next(&ovflw);
+    a = acceptor_list_next(&ovflw);
   }
 }
 
@@ -875,8 +888,8 @@ static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_con
     return "pn_connection_driver_init failure";
   }
 
-  pcontext_init(&pc->context, PCONNECTION, p, pc);
-  psocket_init(&pc->psocket, p, NULL);
+  pcontext_init(&pc->context, PCONNECTION, p);
+  psocket_init(&pc->psocket, p, PCONNECTION_IO);
   pni_parse_addr(addr, pc->addr_buf, addrlen+1, &pc->host, &pc->port);
   pc->new_events = 0;
   pc->wake_count = 0;
@@ -1631,7 +1644,7 @@ pn_listener_t *pn_listener() {
       return NULL;
     }
     pn_proactor_t *unknown = NULL;  // won't know until pn_proactor_listen
-    pcontext_init(&l->context, LISTENER, unknown, l);
+    pcontext_init(&l->context, LISTENER, unknown);
     pmutex_init(&l->rearm_mutex);
   }
   return l;
@@ -1641,7 +1654,10 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
 {
   // TODO: check listener not already listening for this or another proactor
   lock(&l->context.mutex);
-  l->context.proactor = p;;
+  l->context.proactor = p;
+
+  l->pending_accepteds = (accepted_t*)calloc(backlog, sizeof(accepted_t));
+  assert(l->pending_accepteds);
   l->backlog = backlog;
 
   pni_parse_addr(addr, l->addr_buf, sizeof(l->addr_buf), &l->host, &l->port);
@@ -1665,6 +1681,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
       int fd = socket(ai->ai_family, SOCK_STREAM, ai->ai_protocol);
       static int on = 1;
       if (fd >= 0) {
+        configure_socket(fd);
         if (!setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) &&
             /* We listen to v4/v6 on separate sockets, don't let v6 listen for v4 */
             (ai->ai_family != AF_INET6 ||
@@ -1682,10 +1699,9 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
             (acceptor-1)->addr.next = &acceptor->addr;
           }
 
-          acceptor->accepted_fd = -1;
           acceptor->listener = l;
           psocket_t *ps = &acceptor->psocket;
-          psocket_init(ps, p, l);
+          psocket_init(ps, p, LISTENER_IO);
           ps->epoll_io.fd = fd;
           ps->epoll_io.wanted = EPOLLIN;
           ps->epoll_io.polling = false;
@@ -1709,8 +1725,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
     l->acceptors = (acceptor_t*)realloc(l->acceptors, sizeof(acceptor_t));
     l->acceptors_size = 1;
     memset(l->acceptors, 0, sizeof(acceptor_t));
-    psocket_init(&l->acceptors[0].psocket, p, l);
-    l->acceptors[0].accepted_fd = -1;
+    psocket_init(&l->acceptors[0].psocket, p, LISTENER_IO);
     l->acceptors[0].listener = l;
     if (gai_err) {
       psocket_gai_error(&l->acceptors[0].psocket, gai_err, "listen on");
@@ -1735,6 +1750,7 @@ static inline void listener_final_free(pn_listener_t *l) {
   pcontext_finalize(&l->context);
   pmutex_finalize(&l->rearm_mutex);
   free(l->acceptors);
+  free(l->pending_accepteds);
   free(l);
 }
 
@@ -1780,13 +1796,11 @@ static void listener_begin_close(pn_listener_t* l) {
       }
     }
     /* Close all sockets waiting for a pn_listener_accept2() */
-    if (l->unclaimed) l->pending_count++;
-    acceptor_t *a = listener_list_next(&l->pending_acceptors);
+    accepted_t *a = listener_accepted_next(l);
     while (a) {
       close(a->accepted_fd);
       a->accepted_fd = -1;
-      l->pending_count--;
-      a = listener_list_next(&l->pending_acceptors);
+      a = listener_accepted_next(l);
     }
     assert(!l->pending_count);
 
@@ -1823,21 +1837,23 @@ static void listener_forced_shutdown(pn_listener_t *l) {
 }
 
 /* Accept a connection as part of listener_process(). Called with listener context lock held. */
+/* Keep on accepting until we fill the backlog, would block or get an error */
 static void listener_accept_lh(psocket_t *ps) {
   pn_listener_t *l = psocket_listener(ps);
-  acceptor_t *acceptor = psocket_acceptor(ps);
-  assert(acceptor->accepted_fd < 0); /* Shouldn't already have an accepted_fd */
-  acceptor->accepted_fd = accept(ps->epoll_io.fd, NULL, 0);
-  if (acceptor->accepted_fd >= 0) {
-    //    acceptor_t *acceptor = listener_list_next(pending_acceptors);
-    listener_list_append(&l->pending_acceptors, acceptor);
-    l->pending_count++;
-  } else {
-    int err = errno;
-    if (err == ENFILE || err == EMFILE) {
-      listener_set_overflow(acceptor);
+  while (l->pending_first+l->pending_count < l->backlog) {
+    int fd = accept(ps->epoll_io.fd, NULL, 0);
+    if (fd >= 0) {
+      accepted_t accepted = {.accepted_fd = fd} ;
+      listener_accepted_append(l, accepted);
     } else {
-      psocket_error(ps, err, "accept");
+      int err = errno;
+      if (err == ENFILE || err == EMFILE) {
+        acceptor_t *acceptor = psocket_acceptor(ps);
+        acceptor_set_overflow(acceptor);
+      } else if (err != EWOULDBLOCK) {
+        psocket_error(ps, err, "accept");
+      }
+      return;
     }
   }
 }
@@ -1855,16 +1871,18 @@ static pn_event_batch_t *listener_process(pn_listener_t *l, int n_events, bool w
       if (ps->working_io_events) {
         uint32_t events = ps->working_io_events;
         ps->working_io_events = 0;
-        l->acceptors[i].armed = false;
         if (l->context.closing) {
           lock(&l->rearm_mutex);
+          l->acceptors[i].armed = false;
           stop_polling(&ps->epoll_io, ps->proactor->epollfd);
           unlock(&l->rearm_mutex);
           close(ps->epoll_io.fd);
           ps->epoll_io.fd = -1;
           l->active_count--;
-        }
-        else {
+        } else {
+          lock(&l->rearm_mutex);
+          l->acceptors[i].armed = false;
+          unlock(&l->rearm_mutex);
           if (events & EPOLLRDHUP) {
             /* Calls listener_begin_close which closes all the listener's sockets */
             psocket_error(ps, errno, "listener epoll");
@@ -1900,11 +1918,9 @@ static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
   pn_listener_t *l = batch_listener(batch);
   lock(&l->context.mutex);
   pn_event_t *e = pn_collector_next(l->collector);
-  if (!e && l->pending_count && !l->unclaimed) {
+  if (!e && l->pending_count) {
     // empty collector means pn_collector_put() will not coalesce
     pn_collector_put(l->collector, PN_CLASSCLASS(pn_listener), l, PN_LISTENER_ACCEPT);
-    l->unclaimed = true;
-    l->pending_count--;
     e = pn_collector_next(l->collector);
   }
   if (e && pn_event_type(e) == PN_LISTENER_CLOSE)
@@ -1916,6 +1932,27 @@ static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
 static void listener_done(pn_listener_t *l) {
   pn_proactor_t *p = l->context.proactor;
   tslot_t *ts = l->context.runner;
+
+  // Just in case the app didn't accept all the pending accepts
+  // Shuffle the list back to start at 0
+  memmove(&l->pending_accepteds[0], &l->pending_accepteds[l->pending_first], l->pending_count * sizeof(accepted_t));
+  l->pending_first = 0;
+
+  for (size_t i = 0; i < l->acceptors_size; i++) {
+    acceptor_t *a = &l->acceptors[i];
+    psocket_t *ps = &a->psocket;
+
+    // Rearm acceptor when appropriate
+    if (ps->epoll_io.polling && l->pending_count==0) {
+      lock(&l->rearm_mutex);
+      if (!a->armed) {
+        rearm(ps->proactor, &ps->epoll_io);
+        a->armed = true;
+      }
+      unlock(&l->rearm_mutex);
+    }
+  }
+
   bool notify = false;
   lock(&l->context.mutex);
   l->context.working = false;
@@ -1931,6 +1968,7 @@ static void listener_done(pn_listener_t *l) {
     if (ps->working_io_events)
       n_events++;
   }
+
   if (l->context.sched_wake) {
     l->context.sched_wake = false;
     wake_done(&l->context);
@@ -1989,23 +2027,18 @@ void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t
 
   int err2 = 0;
   int fd = -1;
-  psocket_t *rearming_ps = NULL;
   bool notify = false;
   lock(&l->context.mutex);
   if (l->context.closing)
     err2 = EBADF;
-  else if (l->unclaimed) {
-    l->unclaimed = false;
-    acceptor_t *a = listener_list_next(&l->pending_acceptors);
-    assert(a);
-    assert(!a->armed);
-    fd = a->accepted_fd;
-    a->accepted_fd = -1;
-    lock(&l->rearm_mutex);
-    rearming_ps = &a->psocket;
-    a->armed = true;
+  else {
+    accepted_t *a = listener_accepted_next(l);
+    if (a) {
+      fd = a->accepted_fd;
+      a->accepted_fd = -1;
+    }
+    else err2 = EWOULDBLOCK;
   }
-  else err2 = EWOULDBLOCK;
 
   proactor_add(&pc->context);
   lock(&pc->context.mutex);
@@ -2020,10 +2053,6 @@ void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t
     notify = wake(&l->context);
   unlock(&pc->context.mutex);
   unlock(&l->context.mutex);
-  if (rearming_ps) {
-    rearm(rearming_ps->proactor, &rearming_ps->epoll_io);
-    unlock(&l->rearm_mutex);
-  }
   if (notify) wake_notify(&l->context);
 }
 
@@ -2083,7 +2112,7 @@ pn_proactor_t *pn_proactor() {
   pn_proactor_t *p = (pn_proactor_t*)calloc(1, sizeof(*p));
   if (!p) return NULL;
   p->epollfd = p->eventfd = -1;
-  pcontext_init(&p->context, PROACTOR, p, p);
+  pcontext_init(&p->context, PROACTOR, p);
   pmutex_init(&p->eventfd_mutex);
   pmutex_init(&p->sched_mutex);
   pmutex_init(&p->tslot_mutex);
