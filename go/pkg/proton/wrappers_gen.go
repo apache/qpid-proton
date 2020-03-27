@@ -467,10 +467,10 @@ func (d Disposition) Condition() Condition {
 func (d Disposition) Data() Data {
 	return Data{C.pn_disposition_data(d.pn)}
 }
-func (d Disposition) SectionNumber() uint16 {
-	return uint16(C.pn_disposition_get_section_number(d.pn))
+func (d Disposition) SectionNumber() uint32 {
+	return uint32(C.pn_disposition_get_section_number(d.pn))
 }
-func (d Disposition) SetSectionNumber(section_number uint16) {
+func (d Disposition) SetSectionNumber(section_number uint32) {
 	C.pn_disposition_set_section_number(d.pn, C.uint32_t(section_number))
 }
 func (d Disposition) SectionOffset() uint64 {
@@ -828,23 +828,23 @@ func (t Transport) Log(message string) {
 
 	C.pn_transport_log(t.pn, messageC)
 }
-func (t Transport) ChannelMax() uint32 {
-	return uint32(C.pn_transport_get_channel_max(t.pn))
+func (t Transport) ChannelMax() uint16 {
+	return uint16(C.pn_transport_get_channel_max(t.pn))
 }
-func (t Transport) SetChannelMax(channel_max uint32) int {
+func (t Transport) SetChannelMax(channel_max uint16) int {
 	return int(C.pn_transport_set_channel_max(t.pn, C.uint16_t(channel_max)))
 }
-func (t Transport) RemoteChannelMax() uint32 {
-	return uint32(C.pn_transport_remote_channel_max(t.pn))
+func (t Transport) RemoteChannelMax() uint16 {
+	return uint16(C.pn_transport_remote_channel_max(t.pn))
 }
-func (t Transport) MaxFrame() uint16 {
-	return uint16(C.pn_transport_get_max_frame(t.pn))
+func (t Transport) MaxFrame() uint32 {
+	return uint32(C.pn_transport_get_max_frame(t.pn))
 }
-func (t Transport) SetMaxFrame(size uint16) {
+func (t Transport) SetMaxFrame(size uint32) {
 	C.pn_transport_set_max_frame(t.pn, C.uint32_t(size))
 }
-func (t Transport) RemoteMaxFrame() uint16 {
-	return uint16(C.pn_transport_get_remote_max_frame(t.pn))
+func (t Transport) RemoteMaxFrame() uint32 {
+	return uint32(C.pn_transport_get_remote_max_frame(t.pn))
 }
 func (t Transport) IdleTimeout() time.Duration {
 	return (time.Duration(C.pn_transport_get_idle_timeout(t.pn)) * time.Millisecond)

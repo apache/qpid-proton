@@ -94,7 +94,7 @@ package amqp
 
 // #include <proton/version.h>
 // #if PN_VERSION_MAJOR == %s && PN_VERSION_MINOR < %s
-// #error module github.com/apache/qpid-proton requires Proton-C library version 0.10 or greater
+// #error packages qpid.apache.org/... require Proton-C library version 0.10 or greater
 // #endif
 import "C"
 `, splitVersion[0], splitVersion[1])
@@ -352,15 +352,15 @@ func mapType(ctype string) (g genType) {
 	case "C.int64_t":
 		g.Gotype = "int64"
 	case "C.int32_t":
-		g.Gotype = "int16"
-	case "C.int16_t":
 		g.Gotype = "int32"
+	case "C.int16_t":
+		g.Gotype = "int16"
 	case "C.uint64_t":
 		g.Gotype = "uint64"
 	case "C.uint32_t":
-		g.Gotype = "uint16"
-	case "C.uint16_t":
 		g.Gotype = "uint32"
+	case "C.uint16_t":
+		g.Gotype = "uint16"
 	case "C.const char *":
 		fallthrough
 	case "C.char *":

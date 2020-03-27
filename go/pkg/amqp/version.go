@@ -22,16 +22,14 @@ under the License.
 // Update the generator and re-run if you need to modify this code.
 //
 
+
 package amqp
 
-// Version check for compatible proton-c library.
-//
-// NOTE: the required version should NOT be increased unless the Go
-// library is modified to require some new proton-c API. That hasn't
-// happened for a long time.
+// Version check for proton library.
+// Done here because this is the lowest-level dependency for all the proton Go packages.
 
 // #include <proton/version.h>
-// #if PN_VERSION_MAJOR == 0 && PN_VERSION_MINOR < 10
+// #if PN_VERSION_MAJOR == 0 && PN_VERSION_MINOR < 27
 // #error packages qpid.apache.org/... require Proton-C library version 0.10 or greater
 // #endif
 import "C"
