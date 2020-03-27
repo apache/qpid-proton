@@ -1337,10 +1337,7 @@ class IOHandler(Handler):
         sock = IO.connect(addrs[0])
 
         # At this point we need to arrange to be called back when the socket is writable
-        ConnectSelectable(sock, reactor, addrs[1:], t, self)
-
-        # TODO: Don't understand why we need this now - how can we get PN_TRANSPORT until the connection succeeds?
-        t._selectable = None
+        t._selectable = ConnectSelectable(sock, reactor, addrs[1:], t, self)
 
     @staticmethod
     def update(transport, selectable, now):
@@ -1389,6 +1386,7 @@ class ConnectSelectable(Selectable):
         self._addrs = addrs
         self._transport = transport
         self._iohandler = iohandler
+        transport._connecting = True
 
     def readable(self):
         pass
@@ -1396,6 +1394,8 @@ class ConnectSelectable(Selectable):
     def writable(self):
         e = self._delegate.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         t = self._transport
+        t._connecting = False
+        t._selectable = None
 
         # Always cleanup this ConnectSelectable: either we failed or created a new one
         # Do it first to ensure the socket gets deregistered before being registered again
@@ -1422,7 +1422,7 @@ class ConnectSelectable(Selectable):
 
                 sock = IO.connect(self._addrs[0])
                 # New ConnectSelectable for the new socket with rest of addresses
-                ConnectSelectable(sock, self._reactor, self._addrs[1:], t, self._iohandler)
+                t._selectable = ConnectSelectable(sock, self._reactor, self._addrs[1:], t, self._iohandler)
                 return
             else:
                 log.debug("Connection refused, but tried all transport addresses")

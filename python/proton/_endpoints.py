@@ -393,6 +393,19 @@ class Connection(Wrapper, Endpoint):
         if hasattr(self, '_session_policy'):
             # break circular ref
             del self._session_policy
+        t = self.transport
+        if t and t._connecting:
+            # close() requested before TCP connect handshake completes on socket.
+            # Dismantle connection setup logic.
+            t._connecting = False
+            t.close_head()
+            t.close_tail()
+            s = t._selectable
+            if s:
+                s._transport = None
+                t._selectable = None
+                s.terminate()
+                s.update()
 
     @property
     def state(self):
