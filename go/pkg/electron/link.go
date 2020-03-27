@@ -21,9 +21,10 @@ package electron
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/apache/qpid-proton/go/pkg/amqp"
 	"github.com/apache/qpid-proton/go/pkg/proton"
-	"time"
 )
 
 // Settings associated with a link
@@ -179,18 +180,20 @@ type linkSettings struct {
 // Usually these can be set via a more descriptive LinkOption, e.g. DurableSubscription()
 // and do not need to be set/examined directly.
 type TerminusSettings struct {
-	Durability proton.Durability
-	Expiry     proton.ExpiryPolicy
-	Timeout    time.Duration
-	Dynamic    bool
+	Durability   proton.Durability
+	Expiry       proton.ExpiryPolicy
+	Timeout      time.Duration
+	Dynamic      bool
+	Capabilities []string
 }
 
 func makeTerminusSettings(t proton.Terminus) TerminusSettings {
 	return TerminusSettings{
-		Durability: t.Durability(),
-		Expiry:     t.ExpiryPolicy(),
-		Timeout:    t.Timeout(),
-		Dynamic:    t.IsDynamic(),
+		Durability:   t.Durability(),
+		Expiry:       t.ExpiryPolicy(),
+		Timeout:      t.Timeout(),
+		Dynamic:      t.IsDynamic(),
+		Capabilities: t.GetCapabilities(),
 	}
 }
 
@@ -248,12 +251,14 @@ func makeLocalLink(sn *session, isSender bool, setting ...LinkOption) (linkSetti
 	l.pLink.Source().SetExpiryPolicy(l.sourceSettings.Expiry)
 	l.pLink.Source().SetTimeout(l.sourceSettings.Timeout)
 	l.pLink.Source().SetDynamic(l.sourceSettings.Dynamic)
+	l.pLink.Source().SetCapabilities(l.sourceSettings.Capabilities)
 
 	l.pLink.Target().SetAddress(l.target)
 	l.pLink.Target().SetDurability(l.targetSettings.Durability)
 	l.pLink.Target().SetExpiryPolicy(l.targetSettings.Expiry)
 	l.pLink.Target().SetTimeout(l.targetSettings.Timeout)
 	l.pLink.Target().SetDynamic(l.targetSettings.Dynamic)
+	l.pLink.Target().SetCapabilities(l.targetSettings.Capabilities)
 
 	l.pLink.SetSndSettleMode(proton.SndSettleMode(l.sndSettle))
 	l.pLink.SetRcvSettleMode(proton.RcvSettleMode(l.rcvSettle))

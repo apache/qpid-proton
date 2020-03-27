@@ -453,3 +453,35 @@ func (t Transport) SASL() SASL {
 func SASLExtended() bool {
 	return bool(C.pn_sasl_extended())
 }
+
+// GetCapabilities returns the array of capabilities for the terminus
+func (t Terminus) GetCapabilities() []string {
+	pn_data := C.pn_terminus_capabilities(t.pn)
+	size := int(C.pn_data_get_array(pn_data))
+	capabilities := make([]string, size, size)
+	if size > 0 {
+		C.pn_data_enter(pn_data)
+		for i := 0; i < size; i++ {
+			if C.pn_data_next(pn_data) {
+				csymbol := C.pn_data_get_symbol(pn_data)
+				symbol := C.GoString(csymbol.start)
+				capabilities = append(capabilities, symbol)
+			}
+		}
+	}
+	return capabilities
+}
+
+// SetCapabilities sets the array of capabilities for the terminus
+func (t Terminus) SetCapabilities(capabilities []string) {
+	pn_data_t := C.pn_terminus_capabilities(t.pn)
+	C.pn_data_put_array(pn_data_t, false, C.PN_SYMBOL)
+	C.pn_data_enter(pn_data_t)
+	for _, capability := range capabilities {
+		capabilityCStr := C.CString(capability)
+		defer C.free(unsafe.Pointer(capabilityCStr))
+		capabilityCStrLen := C.size_t(len(capability))
+		capabilityCStrBytes := C.pn_bytes(capabilityCStrLen, capabilityCStr)
+		C.pn_data_put_symbol(pn_data_t, capabilityCStrBytes)
+	}
+}
