@@ -510,7 +510,7 @@ func (t Terminus) SetProperties(properties map[string]interface{}) {
 		// Put the key in the map
 		keyCStr := C.CString(key)
 		defer C.free(unsafe.Pointer(keyCStr))
-		keyCStrLen := C.pn_string_size(key)
+		keyCStrLen := C.size_t(len(key))
 		keyCStrBytes := C.pn_bytes(keyCStrLen, keyCStr)
 		C.pn_data_put_symbol(pn_data, keyCStrBytes)
 
@@ -521,14 +521,14 @@ func (t Terminus) SetProperties(properties map[string]interface{}) {
 		case string:
 			valCStr := C.CString(val.(string))
 			defer C.free(unsafe.Pointer(valCStr))
-			valCStrLen := C.pn_string_size(val.(string))
+			valCStrLen := C.size_t(len(val.(string)))
 			valCStrBytes := C.pn_bytes(valCStrLen, valCStr)
 			C.pn_data_put_symbol(pn_data, valCStrBytes)
 		default:
 			unknown := "unknown"
 			valCStr := C.CString(unknown)
 			defer C.free(unsafe.Pointer(valCStr))
-			valCStrLen := C.pn_string_size(unknown)
+			valCStrLen := C.size_t(len(unknown))
 			valCStrBytes := C.pn_bytes(valCStrLen, valCStr)
 			C.pn_data_put_string(pn_data, valCStrBytes)
 		}
