@@ -64,6 +64,6 @@ class container& listener::container() const {
 listen_handler::~listen_handler() {}
 void listen_handler::on_open(listener&) {}
 connection_options listen_handler::on_accept(listener&) { return connection_options(); }
-void listen_handler::on_error(listener&, const std::string&) {}
+void listen_handler::on_error(listener&, const std::string& what)  { throw proton::error(what); }
 void listen_handler::on_close(listener&) {}
 }

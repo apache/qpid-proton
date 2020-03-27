@@ -23,20 +23,20 @@ protocol.
 
 The proton APIs consist of the following classes:
 
- - L{Message}   -- A class for creating and/or accessing AMQP message content.
- - L{Data}      -- A class for creating and/or accessing arbitrary AMQP encoded
-                  data.
-
+ - :class:`Message`    -- A class for creating and/or accessing AMQP message content.
+ - :class:`Data`       -- A class for creating and/or accessing arbitrary AMQP encoded data.
 """
 from __future__ import absolute_import
 
 import logging
+import logging.config
+import os
 
 from cproton import PN_VERSION_MAJOR, PN_VERSION_MINOR, PN_VERSION_POINT
 
 from ._condition import Condition
 from ._data import UNDESCRIBED, Array, Data, Described, char, symbol, timestamp, ubyte, ushort, uint, ulong, \
-    byte, short, int32, float32, decimal32, decimal64, decimal128
+    byte, short, int32, float32, decimal32, decimal64, decimal128, AnnotationDict, PropertyDict, SymbolList
 from ._delivery import Delivery, Disposition
 from ._endpoints import Endpoint, Connection, Session, Link, Receiver, Sender, Terminus
 from ._events import Collector, Event, EventType, Handler
@@ -50,6 +50,7 @@ __all__ = [
     "API_LANGUAGE",
     "IMPLEMENTATION_LANGUAGE",
     "UNDESCRIBED",
+    "AnnotationDict",
     "Array",
     "Collector",
     "Condition",
@@ -68,6 +69,7 @@ __all__ = [
     "LinkException",
     "Message",
     "MessageException",
+    "PropertyDict",
     "ProtonException",
     "VERSION_MAJOR",
     "VERSION_MINOR",
@@ -81,6 +83,7 @@ __all__ = [
     "SSLSessionDetails",
     "SSLUnavailable",
     "SSLException",
+    "SymbolList",
     "Terminus",
     "Timeout",
     "Interrupt",
@@ -127,5 +130,9 @@ class NullHandler(logging.Handler):
 
 handler = NullHandler()
 
-log = logging.getLogger("proton")
-log.addHandler(handler)
+logconfigfile = os.getenv('PNPY_LOGGER_CONFIG', None)
+if logconfigfile:
+    logging.config.fileConfig(logconfigfile, None, False)
+else:
+    log = logging.getLogger("proton")
+    log.addHandler(handler)

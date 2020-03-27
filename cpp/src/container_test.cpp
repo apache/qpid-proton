@@ -375,7 +375,7 @@ void test_container_mt_stop_empty() {
     } catch (const std::exception &e) {
         std::cerr << FAIL_MSG(e.what()) << std::endl;
         // If join hangs, let the test die by timeout.  We cannot
-        // detach and continue: deleting the container while t is
+        // detach and continue: deleting the container while it is
         // still alive will put the process in an undefined state.
         t.join();
         throw;
@@ -394,6 +394,66 @@ void test_container_mt_stop() {
         ASSERT_EQUAL("start", th.wait());
         c.listen("//:0", lh);       //  Also opens a connection
         ASSERT_EQUAL("open", th.wait());
+        c.stop();
+        t.join();
+    } catch (const std::exception& e) {
+        std::cerr << FAIL_MSG(e.what()) << std::endl;
+        // If join hangs, let the test die by timeout.  We cannot
+        // detach and continue: deleting the container while t is
+        // still alive will put the process in an undefined state.
+        t.join();
+        throw;
+    }
+}
+
+class test_mt_handler_wq : public test_mt_handler {
+public:
+    proton::work_queue *wq_;
+    proton::work call_do_close_;
+    proton::connection connection_;
+    std::mutex wqlock_;
+
+    test_mt_handler_wq() : wq_(0) {}
+
+    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
+        {
+            std::unique_lock<std::mutex> l(wqlock_);
+            // Just record first connection side, inbound or outbound
+            if (!connection_) {
+                connection_ = c;
+                wq_ = &c.work_queue();
+                call_do_close_ = make_work(&test_mt_handler_wq::do_close, this);
+            }
+            else
+                return;
+        }
+        test_mt_handler::on_connection_open(c);
+    }
+    void initiate_close() {
+        std::unique_lock<std::mutex> l(wqlock_);
+        wq_->add(call_do_close_);
+    }
+    void do_close() { connection_.close(); }
+    void on_connection_close(proton::connection &) PN_CPP_OVERRIDE { set("closed"); }
+};
+
+void test_container_mt_close_race() {
+    test_mt_handler_wq th;
+    proton::container c(th);
+    c.auto_stop(false);
+    container_runner runner(c);
+    auto t = std::thread(runner);
+    // Must ensure that thread is joined
+    try {
+        test_listen_handler lh;
+        ASSERT_EQUAL("start", th.wait());
+        c.listen("//:0", lh);       //  Also opens a connection
+        ASSERT_EQUAL("open", th.wait());
+        th.initiate_close();
+        ASSERT_EQUAL("closed", th.wait());
+        // The two sides of the connection are closing, each with its
+        // own connection context.  Start a proactor disconnect to run
+        // competing close cleanup in a third context.  PROTON-2027.
         c.stop();
         t.join();
     } catch (const std::exception& e) {
@@ -426,7 +486,7 @@ int main(int argc, char** argv) {
 #if PN_CPP_SUPPORTS_THREADS
     RUN_ARGV_TEST(failed, test_container_mt_stop_empty());
     RUN_ARGV_TEST(failed, test_container_mt_stop());
+    RUN_ARGV_TEST(failed, test_container_mt_close_race());
 #endif
     return failed;
 }
-

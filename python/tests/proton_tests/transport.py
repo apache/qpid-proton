@@ -392,4 +392,4 @@ class LogTest(Test):
     t.log("one")
     t.log("two")
     t.log("three")
-    assert messages == [(t, "one"), (t, "two"), (t, "three")], messages
+    assert messages == [(t, "TRACE: one"), (t, "TRACE: two"), (t, "TRACE: three")], messages

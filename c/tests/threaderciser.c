@@ -44,6 +44,11 @@
    - sending/receiving/tracking messages
 */
 
+/* Enable POSIX features beyond c99 for modern pthread and standard strerror_r() */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include "thread.h"
 
 #include <proton/connection.h>

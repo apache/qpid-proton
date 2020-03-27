@@ -35,7 +35,7 @@ set(SWIG_OUTFILE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 include_directories(${PN_C_INCLUDE_DIR} ${RUBY_INCLUDE_PATH})
 
 swig_add_library(cproton-ruby LANGUAGE ruby SOURCES cproton.i)
-swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
+swig_link_libraries(cproton-ruby ${BINDING_DEPS_FULL} ${RUBY_LIBRARY})
 
 # Set version-dependent compile flags
 if (RUBY_VERSION VERSION_LESS 1.9.0)
@@ -121,40 +121,34 @@ to_native_path("${bin};${c_lib_dir};$ENV{PATH}" PATH)
 execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
   RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 if (result EQUAL 0)  # Have minitest
-  set(test_env ${PN_ENV_SCRIPT} --
+  set(test_env
     "PATH=${PATH}"
     "RUBYLIB=${RUBYLIB}"
-    "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-    ${TEST_ENV})
+    "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}")
 
   macro(add_ruby_test script)
     get_filename_component(name ${script} NAME_WE)
     string(REPLACE "_" "-" name "ruby-${name}")
-    add_test(
+    pn_add_test(
+      INTERPRETED
       NAME ${name}
-      COMMAND ${test_env} ${TEST_WRAP_PREFIX_CMD} ${RUBY_EXECUTABLE} ${script} -v
+      PREPEND_ENVIRONMENT ${test_env}
+      COMMAND ${RUBY_EXECUTABLE} ${script} -v
       ${ARGN})
   endmacro()
 
-  add_test(
+  pn_add_test(
+    UNWRAPPED
     NAME ruby-example-test
-    COMMAND ${test_env} ${RUBY_EXECUTABLE} testme -v
+    PREPEND_ENVIRONMENT ${test_env}
+    COMMAND ${RUBY_EXECUTABLE} testme -v
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples)
-
-  add_test(
-    NAME ruby-old-example-test
-    COMMAND ${test_env} ${RUBY_EXECUTABLE} old_example_test.rb -v
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/old-examples)
 
   file(GLOB TESTS tests/test_*.rb)
   file(GLOB SPECS spec/*_spec.rb)
   foreach(t ${TESTS} ${SPECS})
     add_ruby_test(${t})
   endforeach()
-  # Suppress deprecation warnings from backward-compatibility tests
-  set_tests_properties(
-    ruby-old-example-test ruby-test-old-adapter
-    PROPERTIES ENVIRONMENT "RUBYOPT=-W0")
 else()
   # No minitest
   message(STATUS "Ruby tests will not run, minitest is not installed")

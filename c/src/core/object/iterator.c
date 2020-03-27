@@ -20,6 +20,9 @@
  */
 
 #include <proton/object.h>
+
+#include "core/memory.h"
+
 #include <stdlib.h>
 #include <assert.h>
 
@@ -40,7 +43,7 @@ static void pn_iterator_initialize(void *object)
 static void pn_iterator_finalize(void *object)
 {
   pn_iterator_t *it = (pn_iterator_t *) object;
-  free(it->state);
+  pni_mem_subdeallocate(pn_class(object), object, it->state);
 }
 
 #define CID_pn_iterator CID_pn_object
@@ -61,7 +64,7 @@ void  *pn_iterator_start(pn_iterator_t *iterator, pn_iterator_next_t next,
   assert(next);
   iterator->next = next;
   if (iterator->size < size) {
-    iterator->state = realloc(iterator->state, size);
+    iterator->state = pni_mem_subreallocate(pn_class(iterator), iterator, iterator->state, size);
   }
   return iterator->state;
 }

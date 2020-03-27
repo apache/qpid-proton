@@ -130,6 +130,9 @@ PN_EXTERN void pn_connection_release(pn_connection_t *connection);
  * The pointer returned by this operation is valid until the
  * connection object is freed.
  *
+ * Deprecation notice: note that this will always return an empty
+ * error object
+ *
  * @param[in] connection the connection object
  * @return the connection's error object
  */

@@ -18,10 +18,9 @@
 # under the License.
 #
 
-from __future__ import absolute_import
 from __future__ import print_function
 
-from .proton_server import Server
+from proton_server import Server
 
 class Application(Server):
     def __init__(self, host, address):

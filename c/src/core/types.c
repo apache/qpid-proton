@@ -21,6 +21,9 @@
 
 #include <proton/types.h>
 
+const pn_bytes_t pn_bytes_null = { 0, NULL };
+const pn_rwbytes_t pn_rwbytes_null = { 0, NULL };
+
 pn_bytes_t pn_bytes(size_t size, const char *start)
 {
   pn_bytes_t bytes = {size, start};

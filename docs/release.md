@@ -4,7 +4,6 @@
 2. Run: "git checkout ${BRANCH}" if needed.
 3. Update the versions:
   - Run: "scripts/version.sh ${VERSION}", e.g: scripts/version.sh 0.18.0
-  - Update the version(s) if needed in file: python/docs/conf.py
 4. Commit the changes, tag them.
   - Run: "git add ."
   - Run: 'git commit -m "update versions for ${TAG}"'

@@ -20,8 +20,9 @@
 configure_file(test_config.h.in test_config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/tests/include)
 if (WIN32)
-  set(test_env ${PN_ENV_SCRIPT} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
+  set(test_env "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
 else()
+  set(test_env "")
   set(platform_test_src ssl_test.cpp)
 endif()
 
@@ -37,11 +38,19 @@ endif()
 # Tests for each library are combined in a single executable.
 
 if (CMAKE_CXX_COMPILER)
+
+  add_library(test_main OBJECT test_main.cpp)
+
   macro(add_c_test exe)
-    add_executable(${exe} test_main.cpp pn_test.cpp ${ARGN})
+    add_executable(${exe} $<TARGET_OBJECTS:test_main> pn_test.cpp ${ARGN})
     set_target_properties(${exe} PROPERTIES
       COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
-    add_test(NAME ${exe} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${exe}>)
+    pn_add_test(
+      EXECUTABLE
+      NAME ${exe}
+      PREPEND_ENVIRONMENT ${test_env}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMAND $<TARGET_FILE:${exe}>)
   endmacro()
 
   ## Tests that depend only on qpid-proton-core
@@ -66,13 +75,23 @@ if (CMAKE_CXX_COMPILER)
     add_c_test(c-proactor-test pn_test_proactor.cpp proactor_test.cpp)
     target_link_libraries(c-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
 
+    add_c_test(c-ssl-proactor-test pn_test_proactor.cpp ssl_proactor_test.cpp)
+    target_link_libraries(c-ssl-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
+
     # Thread race test.
     #
     # TODO aconway 2018-11-14: enable by default when races and xcode
     # problems are cleared up
     option(THREADERCISER "Run the threaderciser concurrency tests" OFF)
     if (THREADERCISER)
-      add_c_test(c-threaderciser threaderciser.c)
+      add_executable(c-threaderciser threaderciser.c)
+      set_target_properties(c-threaderciser PROPERTIES COMPILE_FLAGS "${CMAKE_C_FLAGS} ${C_WARNING_FLAGS}")
+      pn_add_test(
+        EXECUTABLE
+        NAME c-threaderciser
+        PREPEND_ENVIRONMENT ${test_env}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND $<TARGET_FILE:c-threaderciser>)
       target_link_libraries (c-threaderciser qpid-proton-proactor)
       find_library(Pthread_LIBRARY pthread)
       if (Pthread_LIBRARY)
@@ -86,7 +105,16 @@ if (CMAKE_CXX_COMPILER)
       set(path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
     endif(WIN32)
 
-    add_test(NAME c-fdlimit-tests COMMAND ${PN_ENV_SCRIPT} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
+    set(pypath "${CMAKE_SOURCE_DIR}/tests/py")
+
+    # unset TEST_EXE_PREFIX as valgrind does not run successfully when fds are limited
+    pn_add_test(
+      UNWRAPPED
+      NAME c-fdlimit-tests
+      PREPEND_ENVIRONMENT "PATH=${path}" "PYTHONPATH=${pypath}" "${test_env}"
+      APPEND_ENVIRONMENT "TEST_EXE_PREFIX="
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
   endif(HAS_PROACTOR)
 else (CMAKE_CXX_COMPILER)
   message(WARNING "No C++ compiler, some C library tests were not built")

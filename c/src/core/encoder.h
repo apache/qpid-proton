@@ -22,9 +22,16 @@
  *
  */
 
-typedef struct pn_encoder_t pn_encoder_t;
+typedef struct pn_encoder_t {
+  char *output;
+  char *position;
+  pn_error_t *error;
+  size_t size;
+  unsigned null_count;
+} pn_encoder_t;
 
-pn_encoder_t *pn_encoder(void);
+void pn_encoder_initialize(pn_encoder_t *encoder);
+void pn_encoder_finalize(pn_encoder_t *encoder);
 ssize_t pn_encoder_encode(pn_encoder_t *encoder, pn_data_t *src, char *dst, size_t size);
 ssize_t pn_encoder_size(pn_encoder_t *encoder, pn_data_t *src);
 

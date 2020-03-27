@@ -176,6 +176,9 @@ PN_EXTERN pn_error_t *pn_link_error(pn_link_t *link);
  * The pointer returned by this operation is valid until the link
  * object is freed.
  *
+ * Deprecation notice: note that this will always return an empty
+ * error object
+ *
  * @param[in] link the link object
  * @return the link's local condition object
  */

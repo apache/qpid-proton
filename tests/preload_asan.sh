@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -37,14 +37,16 @@ case $EXE in
 
         # Disable link order check to run with limited sanitizing
         # Still seeing problems.
-        export ASAN_OPTIONS=verify_asan_link_order=0
+        ASAN_OPTIONS=verify_asan_link_order=0
+        export ASAN_OPTIONS
         ;;
     *)
         # Preload the asan library linked to LIB. Note we need to
         # check the actual linkage, there may be multiple asan lib
         # versions installed and we must use the same one.
         libasan=$(ldd $LIB | awk "/(libasan\\.so[.0-9]*)/ { print \$1 }")
-        export LD_PRELOAD="$libasan:$LD_PRELOAD"
+        LD_PRELOAD="$libasan:$LD_PRELOAD"
+        export LD_PRELOAD
         ;;
 esac
 

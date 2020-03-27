@@ -18,17 +18,13 @@
  */
 
 #include "log_private.h"
+#include "logger_private.h"
 #include "util.h"
 
 #include <proton/error.h>
 #include <proton/log.h>
 #include <proton/object.h>
 
-static void stderr_logger(const char *message) {
-    fprintf(stderr, "%s\n", message);
-}
-
-static pn_logger_t logger = stderr_logger;
 static int enabled_env  = -1;   /* Set from environment variable. */
 static int enabled_call = -1;   /* set by pn_log_enable */
 
@@ -43,15 +39,12 @@ bool pni_log_enabled(void) {
     return enabled_env;
 }
 
-void pn_log_logger(pn_logger_t new_logger) {
-    logger = new_logger;
-    if (!logger) pn_log_enable(false);
+void pn_log_logger(void (*new_logger)(const char* message)) {
+  if (!new_logger) pn_log_enable(false);
 }
 
 void pni_vlogf_impl(const char *fmt, va_list ap) {
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    fflush(stderr);
+  pni_logger_vlogf(pn_default_logger(), PN_SUBSYSTEM_ALL, PN_LEVEL_TRACE, fmt, ap);
 }
 
 /**@internal
@@ -71,13 +64,15 @@ void pni_logf_impl(const char *fmt, ...) {
 
 void pn_log_data(const char *msg, const char *bytes, size_t size)
 {
+  if (!pni_log_enabled()) return;
+
   char buf[256];
   ssize_t n = pn_quote_data(buf, 256, bytes, size);
   if (n >= 0) {
-    pn_logf("%s: %s", msg, buf);
+    pni_logf_impl("%s: %s", msg, buf);
   } else if (n == PN_OVERFLOW) {
-    pn_logf("%s: %s (truncated)", msg, buf);
+    pni_logf_impl("%s: %s (truncated)", msg, buf);
   } else {
-    pn_logf("%s: cannot log data: %s", msg, pn_code(n));
+    pni_logf_impl("%s: cannot log data: %s", msg, pn_code(n));
   }
 }

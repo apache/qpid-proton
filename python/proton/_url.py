@@ -26,35 +26,54 @@ from ._compat import urlparse, urlunparse, quote, unquote
 
 class Url(object):
     """
-    Simple URL parser/constructor, handles URLs of the form:
+    **DEPRECATED** Simple URL parser/constructor.
 
-    <scheme>://<user>:<password>@<host>:<port>/<path>
+    .. deprecated:: 0.27
+        Use a ``str`` containing the URL instead.
 
-    All components can be None if not specified in the URL string.
+    Handles URLs of the form:
+
+        ``<scheme>://<user>:<password>@<host>:<port>/<path>``
+
+    All components can be ``None`` if not specified in the URL string.
 
     The port can be specified as a service name, e.g. 'amqp' in the
-    URL string but Url.port always gives the integer value.
+    URL string but :class:`Url.Port` always gives the integer value.
 
-    Warning: The placement of user and password in URLs is not
-    recommended.  It can result in credentials leaking out in program
-    logs.  Use connection configuration attributes instead.
+    .. warning:: The placement of user and password in URLs is not
+        recommended.  It can result in credentials leaking out in program
+        logs.  Use connection configuration attributes instead.
 
-    @ivar scheme: Url scheme e.g. 'amqp' or 'amqps'
-    @ivar user: Username
-    @ivar password: Password
-    @ivar host: Host name, ipv6 literal or ipv4 dotted quad.
-    @ivar port: Integer port.
-    @ivar host_port: Returns host:port
+    :ivar scheme: Url scheme e.g. 'amqp' or 'amqps'
+    :ivar username: Username
+    :ivar ~.password: Password
+    :ivar ~.host: Host name, ipv6 literal or ipv4 dotted quad.
+    :ivar ~.port: Integer port.
+    :ivar host_port: Returns host:port
+    
+    :param url: URL string to parse.
+    :type url: ``str``
+    :param defaults: If ``True``, fill in missing default values in the URL.
+        If ``False``, you can fill them in later by calling self.defaults()
+    :type defaults: ``bool``
+    :param kwargs: scheme, user, password, host, port, path.
+        If specified, replaces corresponding part in url string.
     """
 
     AMQPS = "amqps"
+    """URL scheme for the AMQP protocol secured with SSL."""
+
     AMQP = "amqp"
+    """URL scheme for the AMQP protocol."""
+
 
     class Port(int):
         """An integer port number that can be constructed from a service name string"""
 
         def __new__(cls, value):
-            """@param value: integer port number or string service name."""
+            """
+            :param value: integer port number or string service name.
+            """
             port = super(Url.Port, cls).__new__(cls, cls._port_int(value))
             setattr(port, 'name', str(value))
             return port
@@ -86,13 +105,6 @@ class Url(object):
                         raise ValueError("Not a valid port number or service name: '%s'" % value)
 
     def __init__(self, url=None, defaults=True, **kwargs):
-        """
-        @param url: URL string to parse.
-        @param defaults: If true, fill in missing default values in the URL.
-            If false, you can fill them in later by calling self.defaults()
-        @param kwargs: scheme, user, password, host, port, path.
-          If specified, replaces corresponding part in url string.
-        """
         if isinstance(url, Url):
             self.scheme = url.scheme
             self.username = url.username
@@ -159,6 +171,11 @@ class Url(object):
 
     @property
     def path(self):
+        """
+        The path segment of a URL
+
+        :type: ``str``
+        """
         return self._path if not self._path or self._path[0] != '/' else self._path[1:]
 
     @path.setter
@@ -171,6 +188,11 @@ class Url(object):
 
     @property
     def host(self):
+        """
+        The host segment of a URL
+
+        :type: ``str``
+        """
         if self._host and self._ipv6literal(self._host):
             return self._host[1:-1]
         else:
@@ -185,6 +207,11 @@ class Url(object):
 
     @property
     def port(self):
+        """
+        The port number segment of a URL.
+
+        :type: :class:`Url.Port`
+        """
         return self._port and Url.Port(self._port)
 
     @port.setter
@@ -229,7 +256,7 @@ class Url(object):
     def defaults(self):
         """
         Fill in missing values (scheme, host or port) with defaults
-        @return: self
+        :return: self
         """
         self.scheme = self.scheme or self.AMQP
         self._host = self._host or '0.0.0.0'

@@ -163,7 +163,7 @@ typedef enum {
 
   /**
    * The local session endpoint has been opened. Events of this type
-   * point ot the relevant session.
+   * point to the relevant session.
    */
   PN_SESSION_LOCAL_OPEN,
 
@@ -212,7 +212,7 @@ typedef enum {
 
   /**
    * The local link endpoint has been closed. Events of this type
-   * point ot the relevant link.
+   * point to the relevant link.
    */
   PN_LINK_LOCAL_CLOSE,
 

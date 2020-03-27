@@ -1999,7 +1999,7 @@ int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
     } else if (err) {
       pni_restore(messenger, msg);
       return pn_error_format(messenger->error, err, "encode error: %s",
-                             pn_message_error(msg));
+                             pn_error_text(pn_message_error(msg)));
     } else {
       pni_restore(messenger, msg);
       pn_buffer_append(buf, encoded, size); // XXX
@@ -2253,7 +2253,7 @@ int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
     pni_entry_free(entry);
     if (err) {
       return pn_error_format(messenger->error, err, "error decoding message: %s",
-                             pn_message_error(msg));
+                             pn_error_text(pn_message_error(msg)));
     } else {
       return 0;
     }

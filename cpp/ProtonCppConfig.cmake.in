@@ -27,4 +27,14 @@ set (ProtonCpp_VERSION       @PN_VERSION@)
 set (ProtonCpp_INCLUDE_DIRS  @INCLUDEDIR@)
 set (ProtonCpp_LIBRARIES     optimized @LIBDIR@/@PROTONCPPLIB@ debug @LIBDIR@/@PROTONCPPLIBDEBUG@)
 
+if (NOT TARGET Proton::cpp)
+  # Sigh.. have to make this compat with cmake 2.8.12
+  add_library(Proton::cpp UNKNOWN IMPORTED)
+  set_target_properties(Proton::cpp
+    PROPERTIES
+      IMPORTED_LOCATION "@LIBDIR@/@PROTONCPPLIB@"
+      IMPORTED_LOCATION_DEBUG "@LIBDIR@/@PROTONCPPLIBDEBUG@"
+      INTERFACE_INCLUDE_DIRECTORIES "${ProtonCpp_INCLUDE_DIRS}")
+endif()
+
 set (ProtonCpp_FOUND True)

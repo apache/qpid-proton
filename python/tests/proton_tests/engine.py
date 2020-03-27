@@ -175,7 +175,7 @@ class ConnectionTest(Test):
     assert self.c1.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
     assert self.c2.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
 
-  def test_capabilities(self):
+  def test_capabilities_array(self):
     self.c1.offered_capabilities = Array(UNDESCRIBED, Data.SYMBOL,
                                          symbol("O_one"),
                                          symbol("O_two"),
@@ -185,6 +185,21 @@ class ConnectionTest(Test):
                                          symbol("D_one"),
                                          symbol("D_two"),
                                          symbol("D_three"))
+    self.c1.open()
+
+    assert self.c2.remote_offered_capabilities is None
+    assert self.c2.remote_desired_capabilities is None
+
+    self.pump()
+
+    assert self.c2.remote_offered_capabilities == self.c1.offered_capabilities, \
+        (self.c2.remote_offered_capabilities, self.c1.offered_capabilities)
+    assert self.c2.remote_desired_capabilities == self.c1.desired_capabilities, \
+        (self.c2.remote_desired_capabilities, self.c1.desired_capabilities)
+
+  def test_capabilities_symbol_list(self):
+    self.c1.offered_capabilities = SymbolList(['O_one', 'O_two', symbol('O_three')])
+    self.c1.desired_capabilities = SymbolList([symbol('D_one'), 'D_two', 'D_three'])
     self.c1.open()
 
     assert self.c2.remote_offered_capabilities is None
@@ -216,7 +231,7 @@ class ConnectionTest(Test):
     rcond = self.c2.remote_condition
     assert rcond == cond, (rcond, cond)
 
-  def test_properties(self, p1={symbol("key"): symbol("value")}, p2=None):
+  def test_properties(self, p1=PropertyDict(key=symbol("value")), p2=None):
     self.c1.properties = p1
     self.c2.properties = p2
     self.c1.open()
@@ -224,7 +239,7 @@ class ConnectionTest(Test):
     self.pump()
 
     assert self.c2.remote_properties == p1, (self.c2.remote_properties, p1)
-    assert self.c1.remote_properties == p2, (self.c2.remote_properties, p2)
+    assert self.c1.remote_properties == p2, (self.c1.remote_properties, p2)
 
   # The proton implementation limits channel_max to 32767.
   # If I set the application's limit lower than that, I should
@@ -680,7 +695,9 @@ class LinkTest(Test):
     self._test_source_target(None, TerminusConfig(address="target"))
 
   def test_coordinator(self):
-    self._test_source_target(None, TerminusConfig(type=Terminus.COORDINATOR))
+    caps = Array(UNDESCRIBED, Data.SYMBOL, symbol("amqp:local-transactions"))
+    self._test_source_target(None, TerminusConfig(type=Terminus.COORDINATOR,
+                                                  capabilities=caps))
 
   def test_source_target_full(self):
     self._test_source_target(TerminusConfig(address="source",
@@ -877,6 +894,35 @@ class TransferTest(Test):
 
     binary = self.rcv.recv(1024)
     assert binary is None
+
+  def test_multiframe_abort(self):
+    self.rcv.flow(1)
+    sd = self.snd.delivery("tag")
+    msg = b"this is a test"
+    n = self.snd.send(msg)
+    assert n == len(msg)
+
+    self.pump()
+
+    binary = self.rcv.recv(1024)
+    assert binary == msg, (binary, msg)
+
+    msg = b"this is more.  Error if not discarded."
+    n = self.snd.send(msg)
+    assert n == len(msg)
+    sd.abort()
+    assert sd.aborted
+
+    # Confirm abort discards the sender's buffered content, i.e. no data in generated transfer frame.
+    # We want:
+    # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag", message-format=0, settled=true, aborted=true]
+    wanted = b"\x00\x00\x00%\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x15\x00\x00\x00\nR\x00R\x00\xa0\x03tagR\x00A@@@@A"
+    t = self.snd.transport
+    wire_bytes = t.peek(1024)
+    assert wanted == wire_bytes
+
+    self.pump()
+    assert self.rcv.current.aborted
 
   def test_disposition(self):
     self.rcv.flow(1)
@@ -1195,6 +1241,60 @@ class MaxFrameTransferTest(Test):
 
     binary = self.rcv.recv(1024)
     assert binary == None
+
+  def testMaxFrameAbort(self):
+    self.snd, self.rcv = self.link("test-link", max_frame=[0,512])
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
+    self.rcv.flow(1)
+    sndt = self.snd.transport
+    dblfrmbytes = ("0123456789" * 52).encode('utf-8')
+    assert 520 == len(dblfrmbytes)
+    self.pump()
+
+    # Part 1: abort a delivery that would generate two frames - before they are generated.
+    # Expect that no output is generated and credit is unaffected.
+    assert self.snd.credit == 1
+    sd = self.snd.delivery("tag_0")
+    n = self.snd.send(dblfrmbytes)
+    assert n == len(dblfrmbytes)
+    sd.abort()
+    generated = sndt.peek(2048)
+    assert generated == b""
+    assert self.snd.credit == 1
+
+    # Part 2: abort a streaming delivery whose last content would generate two frames.
+    # First send some un-aborted data across the wire.
+    sd = self.snd.delivery("tag_1")
+    n = self.snd.send(dblfrmbytes)
+    assert n == len(dblfrmbytes)
+    self.pump()
+    binary = self.rcv.recv(2048)
+    assert binary == dblfrmbytes, (binary, dblfrmbytes)
+    # Now send more data spanning two frames and immediately abort.
+    # Unlike part 1, an abort frame is required to sync with peer.
+    n = self.snd.send(dblfrmbytes)
+    assert n == len(dblfrmbytes)
+    sd.abort()
+    assert sd.aborted
+    # Expect a single abort transfer frame with no content.  One credit is consumed.
+    # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag_1", message-format=0, settled=true, aborted=true]
+    wanted = b"\x00\x00\x00\x27\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x17\x00\x00\x00\nR\x00R\x00\xa0\x05tag_1R\x00A@@@@A"
+    t = self.snd.transport
+    wire_bytes = t.peek(2048)
+    assert wanted == wire_bytes
+    assert self.snd.credit == 0
+    self.pump()
+    assert self.rcv.current.aborted
+    # Confirm no lingering transfers by closing the link.
+    self.snd.close()
+    # Expect just the detach frame.
+    # @detach(22) [handle=0, closed=true]
+    wanted = b"\x00\x00\x00\x17\x02\x00\x00\x00\x00S\x16\xd0\x00\x00\x00\x07\x00\x00\x00\x02R\x00A"
+    wire_bytes = t.peek(2048)
+    assert wanted == wire_bytes
 
 
 class IdleTimeoutTest(Test):
@@ -2453,7 +2553,7 @@ class EventTest(CollectorTest):
     self.expect(Event.TRANSPORT_ERROR, Event.TRANSPORT_TAIL_CLOSED)
     assert t.condition is not None
     assert t.condition.name == "amqp:connection:framing-error"
-    assert "AMQP header mismatch" in t.condition.description
+    assert "AMQP protocol header" in t.condition.description
     p = t.pending()
     assert p > 0
     t.pop(p)

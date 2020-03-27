@@ -21,9 +21,9 @@ from __future__ import absolute_import
 
 import time
 
-from proton.reactor import Container, ApplicationEvent, EventInjector
+from proton.reactor import Container, ApplicationEvent, EventInjector, Selector
 from proton.handlers import Handshaker, MessagingHandler
-from proton import Handler, Url
+from proton import Handler, Url, symbol
 
 from .common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
 
@@ -191,6 +191,20 @@ class ExceptionTest(Test):
         except Barf:
             pass
 
+    def test_schedule_event(self):
+        class Nothing:
+            def __init__(self, p):
+                self.parent = p
+
+            results = []
+            def on_timer_task(self, event):
+                self.parent.triggered = True
+                assert event.context == self.parent.task
+                assert event.container == self.parent.container
+        self.task = self.container.schedule(0, Nothing(self))
+        self.container.run()
+        assert self.triggered == True
+
     def test_schedule_many_nothings(self):
         class Nothing:
             results = []
@@ -229,7 +243,7 @@ class ExceptionTest(Test):
         assert len(Nothing.results) == 0
 
     def test_schedule_cancel(self):
-        barf = self.container.schedule(60, BarfOnTask())
+        barf = self.container.schedule(10, BarfOnTask())
         class CancelBarf:
             def __init__(self, barf):
                 self.barf = barf
@@ -237,11 +251,11 @@ class ExceptionTest(Test):
                 self.barf.cancel()
                 pass
         self.container.schedule(0, CancelBarf(barf))
-        now = self.container.mark()
+        start = time.time()
         try:
             self.container.run()
-            elapsed = self.container.mark() - now
-            assert elapsed < 60, "should have cancelled immediately, took %ss" % elapsed
+            elapsed = time.time() - start
+            assert elapsed < 10, "should have cancelled immediately, took %ss" % elapsed
         except Barf:
             assert False, "expected barf to be cancelled"
 
@@ -259,10 +273,10 @@ class ExceptionTest(Test):
                     pass
             self.container.schedule(0, CancelBarf(barf))
             barfs.add(barf)
-        now = self.container.mark()
+        start = time.time()
         try:
             self.container.run()
-            elapsed = self.container.mark() - now
+            elapsed = time.time() - start
             assert elapsed < num, "expected cancelled task to not delay the reactor by %s" % elapsed
             assert not barfs, "expected all barfs to be discarded"
         except Barf:
@@ -291,11 +305,11 @@ class ApplicationEventTest(Test):
     def setUp(self):
         import os
         if not hasattr(os, 'pipe'):
-          # KAG: seems like Jython doesn't have an os.pipe() method
-          raise SkipTest()
+            # KAG: seems like Jython doesn't have an os.pipe() method
+            raise SkipTest()
         if os.name=="nt":
-          # Correct implementation on Windows is complicated
-          raise SkipTest("PROTON-1071")
+            # Correct implementation on Windows is complicated
+            raise SkipTest("PROTON-1071")
         self.server = ApplicationEventTest.MyTestServer()
         self.server.reactor.handler.add(ApplicationEventTest.MyHandler(self))
         self.event_injector = EventInjector()
@@ -374,8 +388,8 @@ class ContainerTest(Test):
 
             def on_connection_opened(self, event):
                 event.connection.close()
-                assert event.container == event.reactor
-                assert event.container == container
+                assert event.container is event.reactor
+                assert event.container is container
         container.connect(test_handler.url, handler=ConnectionHandler())
         container.run()
 
@@ -409,7 +423,6 @@ class ContainerTest(Test):
         def __init__(self, host):
             super(ContainerTest._ServerHandler, self).__init__()
             self.host = host
-            port = free_tcp_port()
             self.port = free_tcp_port()
             self.client_addr = None
             self.peer_hostname = None
@@ -418,7 +431,7 @@ class ContainerTest(Test):
             self.listener = event.container.listen("%s:%s" % (self.host, self.port))
 
         def on_connection_opened(self, event):
-            self.client_addr = event.reactor.get_connection_address(event.connection)
+            self.client_addr = event.connected_address
             self.peer_hostname = event.connection.remote_hostname
 
         def on_connection_closing(self, event):
@@ -431,7 +444,7 @@ class ContainerTest(Test):
             self.server_addr = None
 
         def on_connection_opened(self, event):
-            self.server_addr = event.reactor.get_connection_address(event.connection)
+            self.server_addr = event.connected_address
             event.connection.close()
 
     def test_numeric_hostname(self):
@@ -485,3 +498,72 @@ class ContainerTest(Test):
                                  virtual_host="")
         container.run()
         assert server_handler.peer_hostname is None, server_handler.peer_hostname
+
+    class _ReconnectServerHandler(MessagingHandler):
+        def __init__(self, host, listen_on_error=True):
+            super(ContainerTest._ReconnectServerHandler, self).__init__()
+            self.host = host
+            self.port = free_tcp_port()
+            self.client_addr = None
+            self.peer_hostname = None
+            self.listen_on_error = listen_on_error
+
+        def on_connection_opened(self, event):
+            self.client_addr = event.connected_address
+            self.peer_hostname = event.connection.remote_hostname
+            self.listener.close()
+
+        def on_connection_closing(self, event):
+            event.connection.close()
+
+        def listen(self, container):
+            if self.listen_on_error:
+                self.listener = container.listen("%s:%s" % (self.host, self.port))
+
+    class _ReconnectClientHandler(MessagingHandler):
+        def __init__(self, server_handler):
+            super(ContainerTest._ReconnectClientHandler, self).__init__()
+            self.connect_failed = False
+            self.server_addr = None
+            self.server_handler = server_handler
+
+        def on_connection_opened(self, event):
+            self.server_addr = event.connected_address
+            event.connection.close()
+
+        def on_transport_error(self, event):
+            assert self.connect_failed == False
+            self.connect_failed = True
+            self.server_handler.listen(event.container)
+
+    def test_reconnect(self):
+        server_handler = ContainerTest._ReconnectServerHandler("localhost", listen_on_error=True)
+        client_handler = ContainerTest._ReconnectClientHandler(server_handler)
+        container = Container(server_handler)
+        container.connect(url=Url(host="localhost", port=server_handler.port),
+                          handler=client_handler)
+        container.run()
+        assert server_handler.peer_hostname == 'localhost', server_handler.peer_hostname
+        assert client_handler.connect_failed
+        assert client_handler.server_addr == Url(host='localhost', port=server_handler.port), client_handler.server_addr
+
+    def test_not_reconnecting(self):
+        server_handler = ContainerTest._ReconnectServerHandler("localhost", listen_on_error=False)
+        client_handler = ContainerTest._ReconnectClientHandler(server_handler)
+        container = Container(server_handler)
+        container.connect(url=Url(host="localhost", port=server_handler.port),
+                          handler=client_handler, reconnect=False)
+        container.run()
+        assert server_handler.peer_hostname == None, server_handler.peer_hostname
+        assert client_handler.connect_failed
+        assert client_handler.server_addr == None, client_handler.server_addr
+
+
+class SelectorTest(Test):
+    """Test the Selector"""
+
+    def test_unicode_selector(self):
+        assert Selector(u"Hello").filter_set[symbol('selector')].value == u"Hello"
+
+    def test_non_unicode_selector(self):
+        assert Selector(b"Hello").filter_set[symbol('selector')].value == u"Hello"

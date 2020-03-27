@@ -27,35 +27,23 @@
 
 #include <string.h>
 
-struct pn_decoder_t {
-  const char *input;
-  size_t size;
-  const char *position;
-  pn_error_t *error;
-};
-
-static void pn_decoder_initialize(void *obj)
+static inline pn_error_t *pni_decoder_error(pn_decoder_t *decoder)
 {
-  pn_decoder_t *decoder = (pn_decoder_t *) obj;
+  if (!decoder->error) decoder->error = pn_error();
+  return decoder->error;
+}
+
+void pn_decoder_initialize(pn_decoder_t *decoder)
+{
   decoder->input = NULL;
   decoder->size = 0;
   decoder->position = NULL;
-  decoder->error = pn_error();
+  decoder->error = NULL;
 }
 
-static void pn_decoder_finalize(void *obj) {
-  pn_decoder_t *decoder = (pn_decoder_t *) obj;
-  pn_error_free(decoder->error);
-}
-
-#define pn_decoder_hashcode NULL
-#define pn_decoder_compare NULL
-#define pn_decoder_inspect NULL
-
-pn_decoder_t *pn_decoder()
+void pn_decoder_finalize(pn_decoder_t *decoder)
 {
-  static const pn_class_t clazz = PN_CLASS(pn_decoder);
-  return (pn_decoder_t *) pn_class_new(&clazz, sizeof(pn_decoder_t));
+  pn_error_free(decoder->error);
 }
 
 static inline uint8_t pn_decoder_readf8(pn_decoder_t *decoder)
@@ -443,7 +431,7 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
     return 0;
   }
   default:
-    return pn_error_format(decoder->error, PN_ARG_ERR, "unrecognized typecode: %u", code);
+    return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
 
   return err;

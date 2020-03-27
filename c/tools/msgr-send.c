@@ -289,7 +289,7 @@ int main(int argc, char** argv)
         check_messenger(messenger);
     }
 
-    LOG("Messages received=%llu sent=%llu\n", received, sent);
+    LOG("Messages received=%" PRIu64 " sent=%" PRIu64 "\n", received, sent);
 
     if (get_replies) {
         // wait for the last of the replies
@@ -299,7 +299,7 @@ int main(int argc, char** argv)
             check( count > 0 || (opts.timeout == 0),
                    "Error: timed out waiting for reply messages\n");
             received += count;
-            LOG("Messages received=%llu sent=%llu\n", received, sent);
+            LOG("Messages received=%" PRIu64 " sent=%" PRIu64 "\n", received, sent);
         }
     } else if (pn_messenger_outgoing(messenger) > 0) {
         LOG("Calling pn_messenger_send()\n");

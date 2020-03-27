@@ -19,8 +19,10 @@
  *
  */
 
-#include "buffer.h"
 #include "util.h"
+
+#include "buffer.h"
+#include "memory.h"
 
 #include <proton/error.h>
 #include <proton/types.h>
@@ -28,7 +30,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <stddef.h>
 #include <ctype.h>
 #include <string.h>
 
@@ -38,7 +40,8 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
   for (unsigned i = 0; i < size; i++)
   {
     uint8_t c = src[i];
-    if (isprint(c)) {
+    // output printable ASCII, ensure '\' always introduces hex escape
+    if (c < 128 && c != '\\' && isprint(c)) {
       if (idx < (int) (capacity - 1)) {
         dst[idx++] = c;
       } else {
@@ -111,10 +114,12 @@ bool pn_env_bool(const char *name)
                !pn_strcasecmp(v, "yes")  || !pn_strcasecmp(v, "on"));
 }
 
+PN_STRUCT_CLASSDEF(pn_strdup)
+
 char *pn_strdup(const char *src)
 {
   if (!src) return NULL;
-  char *dest = (char *) malloc(strlen(src)+1);
+  char *dest = (char *) pni_mem_allocate(PN_CLASSCLASS(pn_strdup), strlen(src)+1);
   if (!dest) return NULL;
   return strcpy(dest, src);
 }
@@ -127,7 +132,7 @@ char *pn_strndup(const char *src, size_t n)
       size++;
     }
 
-    char *dest = (char *) malloc(size + 1);
+    char *dest = (char *) pni_mem_allocate(PN_CLASSCLASS(pn_strdup), size + 1);
     if (!dest) return NULL;
     strncpy(dest, src, pn_min(n, size));
     dest[size] = '\0';

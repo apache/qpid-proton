@@ -30,12 +30,33 @@ set (Proton_FOUND True)
 
 set (Proton_Core_INCLUDE_DIRS  @INCLUDEDIR@)
 set (Proton_Core_LIBRARIES     optimized @LIBDIR@/@PROTONCORELIB@ debug @LIBDIR@/@PROTONCORELIBDEBUG@)
+
+# Add modular target in a way compatible with cmake 2.8.12
+if (NOT TARGET Proton::core)
+  add_library(Proton::core UNKNOWN IMPORTED)
+  set_target_properties(Proton::core
+    PROPERTIES
+      IMPORTED_LOCATION "@LIBDIR@/@PROTONCORELIB@"
+      IMPORTED_LOCATION_DEBUG "@LIBDIR@/@PROTONCORELIBDEBUG@"
+      INTERFACE_INCLUDE_DIRECTORIES "${Proton_Core_INCLUDE_DIRS}")
+endif()
+
 set (Proton_Core_FOUND True)
 
 set (HAS_PROACTOR @HAS_PROACTOR@)
 if (HAS_PROACTOR)
   set (Proton_Proactor_INCLUDE_DIRS  @INCLUDEDIR@)
   set (Proton_Proactor_LIBRARIES     optimized @LIBDIR@/@PROTONPROACTORLIB@ debug @LIBDIR@/@PROTONPROACTORLIBDEBUG@)
+  # Add modular target in a way compatible with cmake 2.8.12
+  if (NOT TARGET Proton::proactor)
+    add_library(Proton::proactor UNKNOWN IMPORTED)
+    set_target_properties(Proton::proactor
+      PROPERTIES
+        IMPORTED_LOCATION "@LIBDIR@/@PROTONPROACTORLIB@"
+        IMPORTED_LOCATION_DEBUG "@LIBDIR@/@PROTONPROACTORLIBDEBUG@"
+        INTERFACE_INCLUDE_DIRECTORIES "${Proton_Proactor_INCLUDE_DIRS}")
+  endif()
+
   set (Proton_Proactor_FOUND True)
 endif()
 
