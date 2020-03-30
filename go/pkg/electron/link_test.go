@@ -33,7 +33,7 @@ import (
 func TestLinkSettings(t *testing.T) {
 	cConn, sConn := net.Pipe()
 	done := make(chan error)
-	settings := TerminusSettings{Durability: 1, Expiry: 2, Timeout: 42 * time.Second, Dynamic: true}
+	settings := TerminusSettings{Durability: 1, Expiry: 2, Timeout: 42 * time.Second, Dynamic: true, Capabilities: []string{}}
 	filterMap := map[amqp.Symbol]interface{}{"int": int32(33), "str": "hello"}
 	go func() { // Server
 		close(done)
@@ -45,13 +45,13 @@ func TestLinkSettings(t *testing.T) {
 			switch ep := ep.(type) {
 			case Receiver:
 				test.ErrorIf(t, test.Differ("one.source", ep.Source()))
-				test.ErrorIf(t, test.Differ(TerminusSettings{}, ep.SourceSettings()))
+				test.ErrorIf(t, test.Differ(TerminusSettings{Capabilities: []string{}}, ep.SourceSettings()))
 				test.ErrorIf(t, test.Differ("one.target", ep.Target()))
 				test.ErrorIf(t, test.Differ(settings, ep.TargetSettings()))
 			case Sender:
 				test.ErrorIf(t, test.Differ("two", ep.LinkName()))
 				test.ErrorIf(t, test.Differ("two.source", ep.Source()))
-				test.ErrorIf(t, test.Differ(TerminusSettings{Durability: proton.Deliveries, Expiry: proton.ExpireNever}, ep.SourceSettings()))
+				test.ErrorIf(t, test.Differ(TerminusSettings{Durability: proton.Deliveries, Expiry: proton.ExpireNever, Capabilities: []string{}}, ep.SourceSettings()))
 				test.ErrorIf(t, test.Differ(filterMap, ep.Filter()))
 			}
 		}
