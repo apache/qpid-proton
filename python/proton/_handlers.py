@@ -1389,6 +1389,7 @@ class ConnectSelectable(Selectable):
         self._addrs = addrs
         self._transport = transport
         self._iohandler = iohandler
+        transport._connect_selectable = self
 
     def readable(self):
         pass
@@ -1396,6 +1397,7 @@ class ConnectSelectable(Selectable):
     def writable(self):
         e = self._delegate.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
         t = self._transport
+        t._connect_selectable = None
 
         # Always cleanup this ConnectSelectable: either we failed or created a new one
         # Do it first to ensure the socket gets deregistered before being registered again

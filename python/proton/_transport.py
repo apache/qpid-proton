@@ -102,6 +102,7 @@ class Transport(Wrapper):
         self._sasl = None
         self._ssl = None
         self._reactor = None
+        self._connect_selectable = None
 
     def _check(self, err):
         if err < 0:
