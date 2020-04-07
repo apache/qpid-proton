@@ -211,7 +211,6 @@ typedef struct pconnection_t {
   psocket_t psocket;
   pcontext_t context;
   ptimer_t timer;  // TODO: review one timerfd per connection
-  char addr_buf[PN_MAX_ADDR];
   const char *host, *port;
   uint32_t new_events;
   int wake_count;
@@ -239,6 +238,7 @@ typedef struct pconnection_t {
   pmutex rearm_mutex;                /* protects pconnection_rearm from out of order arming*/
   bool io_doublecheck;               /* callbacks made and new IO may have arrived */
   bool sched_timeout;
+  char addr_buf[1];
 } pconnection_t;
 
 /*

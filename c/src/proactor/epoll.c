@@ -866,7 +866,7 @@ static int pclosefd(pn_proactor_t *p, int fd) {
 
 static void pconnection_tick(pconnection_t *pc);
 
-static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, bool server, const char *addr)
+static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, bool server, const char *addr, size_t addrlen)
 {
   memset(pc, 0, sizeof(*pc));
 
@@ -877,7 +877,7 @@ static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_con
 
   pcontext_init(&pc->context, PCONNECTION, p, pc);
   psocket_init(&pc->psocket, p, NULL);
-  pni_parse_addr(addr, pc->addr_buf, sizeof(pc->addr_buf), &pc->host, &pc->port);
+  pni_parse_addr(addr, pc->addr_buf, addrlen+1, &pc->host, &pc->port);
   pc->new_events = 0;
   pc->wake_count = 0;
   pc->tick_pending = false;
@@ -1531,9 +1531,10 @@ static bool wake_if_inactive(pn_proactor_t *p) {
 }
 
 void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
-  pconnection_t *pc = (pconnection_t*) calloc(1, sizeof(pconnection_t));
+  size_t addrlen = strlen(addr);
+  pconnection_t *pc = (pconnection_t*) malloc(sizeof(pconnection_t)+addrlen);
   assert(pc); // TODO: memory safety
-  const char *err = pconnection_setup(pc, p, c, t, false, addr);
+  const char *err = pconnection_setup(pc, p, c, t, false, addr, addrlen);
   if (err) {    /* TODO aconway 2017-09-13: errors must be reported as events */
     PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_proactor_connect failure: %s", err);
     return;
@@ -1977,9 +1978,9 @@ pn_record_t *pn_listener_attachments(pn_listener_t *l) {
 }
 
 void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t) {
-  pconnection_t *pc = (pconnection_t*) calloc(1, sizeof(pconnection_t));
+  pconnection_t *pc = (pconnection_t*) malloc(sizeof(pconnection_t));
   assert(pc); // TODO: memory safety
-  const char *err = pconnection_setup(pc, pn_listener_proactor(l), c, t, true, "");
+  const char *err = pconnection_setup(pc, pn_listener_proactor(l), c, t, true, "", 0);
   if (err) {
     PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_listener_accept failure: %s", err);
     return;
