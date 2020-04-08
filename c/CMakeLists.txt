@@ -341,11 +341,16 @@ set (qpid-proton-include-extra
 set(PROACTOR "" CACHE STRING "Override default proactor, one of: epoll, libuv, iocp, none")
 string(TOLOWER "${PROACTOR}" PROACTOR)
 
+set (qpid-proton-proactor-common
+  src/proactor/proactor-internal.c
+  src/proactor/netaddr-internal.c
+  )
+
 if (PROACTOR STREQUAL "epoll" OR (NOT PROACTOR AND NOT BUILD_PROACTOR))
   check_symbol_exists(epoll_wait "sys/epoll.h" HAVE_EPOLL)
   if (HAVE_EPOLL)
     set (PROACTOR_OK epoll)
-    set (qpid-proton-proactor src/proactor/epoll.c src/proactor/proactor-internal.c)
+    set (qpid-proton-proactor src/proactor/epoll.c ${qpid-proton-proactor-common})
     set (PROACTOR_LIBS Threads::Threads)
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
@@ -356,7 +361,7 @@ endif()
 if (PROACTOR STREQUAL "iocp" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   if(WIN32 AND NOT CYGWIN)
     set (PROACTOR_OK iocp)
-    set (qpid-proton-proactor src/proactor/win_iocp.cpp src/proactor/proactor-internal.c)
+    set (qpid-proton-proactor src/proactor/win_iocp.cpp ${qpid-proton-proactor-common})
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS} ${LTO}"
       COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
@@ -368,7 +373,7 @@ if (PROACTOR STREQUAL "libuv" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   find_package(Libuv)
   if (Libuv_FOUND)
     set (PROACTOR_OK libuv)
-    set (qpid-proton-proactor src/proactor/libuv.c src/proactor/proactor-internal.c)
+    set (qpid-proton-proactor src/proactor/libuv.c ${qpid-proton-proactor-common})
     set (PROACTOR_LIBS Libuv::Libuv)
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"

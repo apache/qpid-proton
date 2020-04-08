@@ -32,6 +32,7 @@
 #include <proton/engine.h>
 #include <proton/listener.h>
 #include <proton/message.h>
+#include <proton/netaddr.h>
 #include <proton/proactor.h>
 #include <proton/transport.h>
 

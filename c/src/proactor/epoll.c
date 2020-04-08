@@ -69,6 +69,7 @@
 #include <proton/proactor.h>
 #include <proton/transport.h>
 #include <proton/listener.h>
+#include <proton/netaddr.h>
 
 #include <assert.h>
 #include <stddef.h>
