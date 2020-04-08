@@ -188,17 +188,17 @@ int test_container_bad_address() {
 
     proton::container c;
     // Default fixed-option listener. Valgrind for leaks.
-    try { c.listen("999.666.999.666:0"); } catch (const proton::error&) {}
+    c.listen("999.666.999.666:0");
     c.run();
     // Dummy listener.
     test_listen_handler l;
     test_handler h2("999.999.999.666", proton::connection_options());
-    try { c.listen("999.666.999.666:0", l); } catch (const proton::error&) {}
+    c.listen("999.666.999.666:0", l);
     c.run();
     ASSERT(!l.on_open_);
     ASSERT(!l.on_accept_);
     ASSERT(l.on_close_);
-    ASSERT(!l.on_error_.empty());
+    ASSERT(!l.on_error_.empty()); // proton:io: Name or service not known
     return 0;
 }
 
