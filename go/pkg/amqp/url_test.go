@@ -65,7 +65,7 @@ func TestParseValidURL(t *testing.T) {
 		path   string
 	}{
 		{"amqp://username:password@host:1234/path",
-			"amqp", url.UserPassword("username", "password"),"host:1234", "1234", "/path"},
+			"amqp", url.UserPassword("username", "password"), "host:1234", "1234", "/path"},
 		//{"[::1]",
 		//	"amqp", &url2.Userinfo{}, "[::]:amqp", "amqp", ""}, // this used to be valid example; does not parse in go 1.13
 		//	                                                    //  parse [::1]: first path segment in URL cannot contain colon
@@ -100,7 +100,7 @@ func TestParseInvalidURL(t *testing.T) {
 		// expected
 		inError string
 	}{
-	    // proton errors
+		// proton errors
 		{"http://seznam.cz", "invalid amqp scheme"},
 		// go errors
 		{":1234", "missing protocol scheme"},
