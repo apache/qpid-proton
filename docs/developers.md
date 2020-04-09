@@ -26,15 +26,14 @@ language bindings and implementations are present.
 
 ### Running tests
 
-To test Proton you should use the CMake build. By default this will invoke the
-maven tests as well, so the maven prerequisites will additionally be required.
+To test Proton you should use the CMake build.
 
 By default the unit tests are run using the system's default Python
 interpreter.  However, Proton's Python language bindings support both
 versions of the python language (Python 2.x and Python 3.x).  These
 bindings should be tested using both versions of the Python
 interpreter.  CMake makes this possible by automatically running the
-python unit tests under all versions of python installed on the
+Python unit tests under all versions of Python installed on the
 system.
 
 Developers can ensure that Proton remains compatible with both
@@ -53,7 +52,7 @@ parallel.
 
    $ yum install python-tox
 
-   For newer fedora:
+   For newer Fedora:
 
    $ dnf install python3-tox redhat-rpm-config
 
@@ -101,4 +100,10 @@ on the project's JIRA instance:
 
   http://issues.apache.org/jira/browse/PROTON
 
-You can attach any patch(es) to the report/request there
+You can attach any patch(es) to the report/request there, or create a Pull Request
+on the project's GitHub mirror:
+
+  https://github.com/apache/qpid-proton
+
+When creating a Pull Request, reference the associated JIRA by number
+at the beginning of the commit message.

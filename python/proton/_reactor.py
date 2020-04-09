@@ -1178,7 +1178,7 @@ class Container(Reactor):
                 configuration, with two exceptions: ``GSSAPI`` and ``GSS-SPNEGO``
                 are disabled by default; to enable them, you must explicitly add
                 them using this option; clients must set the allowed mechanisms
-                before the the outgoing connection is attempted; servers must set
+                before the outgoing connection is attempted; servers must set
                 them before the listening connection is setup.
             *   ``allow_insecure_mechs`` (``bool``), a flag indicating whether insecure
                 mechanisms, such as PLAIN over a non-encrypted socket, are
