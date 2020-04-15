@@ -2075,7 +2075,7 @@ static bool server_name_matches(const char *server_name, CERT_EXTENSION *alt_nam
         }
       }
     }
-    LocalFree(&alt_name_info);
+    LocalFree(alt_name_info);
   }
 
   if (!matched) {
