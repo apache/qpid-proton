@@ -160,6 +160,7 @@ typedef struct pconnection_t {
 
   /* Only used by owner thread */
   pn_connection_driver_t driver;
+  pn_event_batch_t batch;
 
   /* Only used by leader */
   uv_tcp_t tcp;
@@ -324,12 +325,15 @@ static void set_pconnection(pn_connection_t* c, pconnection_t *pc) {
   uv_mutex_unlock(&driver_ptr_mutex);
 }
 
+static pn_event_t *pconnection_batch_next(pn_event_batch_t *batch);
+
 static pconnection_t *pconnection(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, bool server) {
   pconnection_t *pc = (pconnection_t*)calloc(1, sizeof(*pc));
   if (!pc || pn_connection_driver_init(&pc->driver, c, t) != 0) {
     return NULL;
   }
   work_init(&pc->work, p,  T_CONNECTION);
+  pc->batch.next_event = pconnection_batch_next;
   pc->next = pconnection_unqueued;
   pc->write.data = &pc->work;
   uv_mutex_init(&pc->lock);
@@ -365,8 +369,8 @@ static inline pn_listener_t *batch_listener(pn_event_batch_t *batch) {
 }
 
 static inline pconnection_t *batch_pconnection(pn_event_batch_t *batch) {
-  pn_connection_driver_t *d = pn_event_batch_connection_driver(batch);
-  return d ? (pconnection_t*)((char*)d - offsetof(pconnection_t, driver)) : NULL;
+  return (batch->next_event == pconnection_batch_next) ?
+    (pconnection_t*)((char*)batch - offsetof(pconnection_t, batch)) : NULL;
 }
 
 static inline work_t *batch_work(pn_event_batch_t *batch) {
@@ -840,6 +844,11 @@ static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
   return log_event(p, pn_collector_next(p->collector));
 }
 
+static pn_event_t *pconnection_batch_next(pn_event_batch_t *batch) {
+  pconnection_t *pc = batch_pconnection(batch);
+  return pn_connection_driver_next_event(&pc->driver);
+}
+
 /* Return the next event batch or NULL if no events are available */
 static pn_event_batch_t *get_batch_lh(pn_proactor_t *p) {
   if (!p->batch_working) {       /* Can generate proactor events */
@@ -861,7 +870,7 @@ static pn_event_batch_t *get_batch_lh(pn_proactor_t *p) {
     assert(w->working);
     switch (w->type) {
      case T_CONNECTION:
-      return &((pconnection_t*)w)->driver.batch;
+      return &((pconnection_t*)w)->batch;
      case T_LISTENER:
       return &((pn_listener_t*)w)->batch;
      default:

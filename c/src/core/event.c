@@ -404,7 +404,3 @@ const char *pn_event_type_name(pn_event_type_t type)
   }
   return NULL;
 }
-
-pn_event_t *pn_event_batch_next(pn_event_batch_t *batch) {
-  return batch->next_event(batch);
-}

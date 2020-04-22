@@ -91,7 +91,6 @@ typedef struct pn_connection_driver_t {
   pn_connection_t *connection;
   pn_transport_t *transport;
   pn_collector_t *collector;
-  pn_event_batch_t batch;
 } pn_connection_driver_t;
 
 /**
@@ -232,12 +231,6 @@ PN_EXTERN void pn_connection_driver_errorf(pn_connection_driver_t *d, const char
  * Set transport error via a va_list, see pn_connection_driver_errorf()
  */
 PN_EXTERN void pn_connection_driver_verrorf(pn_connection_driver_t *d, const char *name, const char *fmt, va_list);
-
-/**
- * If batch is part of a connection_driver, return the connection_driver address,
- * else return NULL
- */
-PN_EXTERN pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batch_t *batch);
 
 /**
  * The write side of the transport is closed, it will no longer produce bytes to write to

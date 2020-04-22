@@ -25,14 +25,7 @@
 #include <proton/transport.h>
 #include <string.h>
 
-struct driver_batch {
-  pn_event_batch_t batch;
-  pn_collector_t *collector;
-};
-
-static pn_event_t *batch_next(pn_event_batch_t *batch) {
-  pn_connection_driver_t *d =
-    (pn_connection_driver_t*)((char*)batch - offsetof(pn_connection_driver_t, batch));
+static pn_event_t *batch_next(pn_connection_driver_t *d) {
   if (!d->collector) return NULL;
   pn_event_t *handled = pn_collector_prev(d->collector);
   if (handled) {
@@ -59,7 +52,6 @@ static pn_event_t *batch_next(pn_event_batch_t *batch) {
 
 int pn_connection_driver_init(pn_connection_driver_t* d, pn_connection_t *c, pn_transport_t *t) {
   memset(d, 0, sizeof(*d));
-  d->batch.next_event = &batch_next;
   d->connection = c ? c : pn_connection();
   d->transport = t ? t : pn_transport();
   d->collector = pn_collector();
@@ -142,7 +134,7 @@ void pn_connection_driver_close(pn_connection_driver_t *d) {
 }
 
 pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
-  return pn_event_batch_next(&d->batch);
+  return batch_next(d);
 }
 
 bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
@@ -181,12 +173,6 @@ void pn_connection_driver_logf(pn_connection_driver_t *d, const char *fmt, ...) 
 
 void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_list ap) {
   pni_logger_vlogf(&d->transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_TRACE, fmt, ap);
-}
-
-pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batch_t *batch) {
-  return (batch->next_event == batch_next) ?
-    (pn_connection_driver_t*)((char*)batch - offsetof(pn_connection_driver_t, batch)) :
-    NULL;
 }
 
 pn_connection_driver_t** pn_connection_driver_ptr(pn_connection_t *c) { return &c->driver; }

@@ -206,6 +206,18 @@ PNP_EXTERN pn_event_batch_t *pn_proactor_wait(pn_proactor_t *proactor);
 PNP_EXTERN pn_event_batch_t *pn_proactor_get(pn_proactor_t *proactor);
 
 /**
+ * Remove the next event from the batch and return
+ * it. NULL means the batch is empty. The returned event pointer is
+ * valid until pn_event_batch_next() is called again on the same
+ * batch.
+ *
+ * @note there is deliberately no peek(), more() or other look-ahead on an event
+ * batch. We want to know exactly which events have been handled, next() only
+ * allows the user to get each event exactly once, in order.
+ */
+PNP_EXTERN pn_event_t *pn_event_batch_next(pn_event_batch_t *batch);
+
+/**
  * Call when finished handling a batch of events.
  *
  * Must be called exactly once to match each call to pn_proactor_wait().

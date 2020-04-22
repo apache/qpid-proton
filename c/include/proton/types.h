@@ -438,6 +438,19 @@ typedef struct pn_transport_t pn_transport_t;
 typedef struct pn_proactor_t pn_proactor_t;
 
 /**
+ * A batch of events that must be handled in sequence.
+ *
+ * A pn_event_batch_t encapsulates potentially multiple events that relate
+ * to an individual proactor related source that must be handled in sequence.
+ *
+ * Call pn_event_batch_next() in a loop until it returns NULL to extract
+ * the batch's events.
+ *
+ * @ingroup proactor
+ */
+typedef struct pn_event_batch_t pn_event_batch_t;
+
+/**
  * @cond INTERNAL
  *
  * An event handler

@@ -21,6 +21,7 @@
  */
 
 #include <proton/condition.h>
+#include <proton/event.h>
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
 
@@ -51,6 +52,13 @@ extern const char *PNI_IO_CONDITION;
  */
 void pni_proactor_set_cond(
   pn_condition_t *cond, const char *what, const char *host, const char *port, const char *msg);
+
+/**
+ * pn_event_batch_next() can be re-implemented for different behaviors in different contexts.
+ */
+struct pn_event_batch_t {
+  pn_event_t *(*next_event)(pn_event_batch_t *batch);
+};
 
 #ifdef __cplusplus
 }

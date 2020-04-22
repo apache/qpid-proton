@@ -87,6 +87,10 @@ void pni_proactor_set_cond(
   }
 }
 
+pn_event_t *pn_event_batch_next(pn_event_batch_t *batch) {
+  return batch->next_event(batch);
+}
+
 // Backwards compatibility signatures.
 
 void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
