@@ -2375,7 +2375,8 @@ static pn_event_batch_t *process(pcontext_t *ctx) {
     ctx_wake = true;
   }
 
-  if (ctx->type == PROACTOR) {
+  switch (ctx->type) {
+  case PROACTOR: {
     pn_proactor_t *p = ctx->proactor;
     bool timeout = p->sched_timeout;
     if (timeout) p->sched_timeout = false;
@@ -2384,8 +2385,8 @@ static pn_event_batch_t *process(pcontext_t *ctx) {
     unlock(&p->sched_mutex);
     return proactor_process(p, timeout, intr, ctx_wake);
   }
-  pconnection_t *pc = pcontext_pconnection(ctx);
-  if (pc) {
+  case PCONNECTION: {
+    pconnection_t *pc = pcontext_pconnection(ctx);
     uint32_t events = pc->psocket.sched_io_events;
     if (events) pc->psocket.sched_io_events = 0;
     bool timeout = pc->sched_timeout;
@@ -2393,19 +2394,25 @@ static pn_event_batch_t *process(pcontext_t *ctx) {
     unlock(&ctx->proactor->sched_mutex);
     return pconnection_process(pc, events, timeout, ctx_wake, false);
   }
-  pn_listener_t *l = pcontext_listener(ctx);
-  int n_events = 0;
-  for (size_t i = 0; i < l->acceptors_size; i++) {
-    psocket_t *ps = &l->acceptors[i].psocket;
-    if (ps->sched_io_events) {
-      ps->working_io_events = ps->sched_io_events;
-      ps->sched_io_events = 0;
+  case LISTENER: {
+    pn_listener_t *l = pcontext_listener(ctx);
+    int n_events = 0;
+    for (size_t i = 0; i < l->acceptors_size; i++) {
+      psocket_t *ps = &l->acceptors[i].psocket;
+      if (ps->sched_io_events) {
+        ps->working_io_events = ps->sched_io_events;
+        ps->sched_io_events = 0;
+      }
+      if (ps->working_io_events)
+        n_events++;
     }
-    if (ps->working_io_events)
-      n_events++;
+    unlock(&ctx->proactor->sched_mutex);
+    return listener_process(l, n_events, ctx_wake);
   }
-  unlock(&ctx->proactor->sched_mutex);
-  return listener_process(l, n_events, ctx_wake);
+  default:
+    assert(NULL);
+  }
+  return NULL;
 }
 
 

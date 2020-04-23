@@ -72,8 +72,7 @@ typedef struct ptimer_t {
 typedef enum {
   PROACTOR,
   PCONNECTION,
-  LISTENER,
-  WAKEABLE
+  LISTENER
 } pcontext_type_t;
 
 typedef struct pcontext_t {
