@@ -57,8 +57,8 @@
 /* Avoid GNU extensions, in particular the incompatible alternative strerror_r() */
 #undef _GNU_SOURCE
 
-#include "proactor-internal.h"
 #include "epoll-internal.h"
+#include "proactor-internal.h"
 #include "core/engine-internal.h"
 #include "core/logger_private.h"
 #include "core/util.h"

@@ -35,6 +35,7 @@
 #include <proton/proactor.h>
 
 #include "netaddr-internal.h"
+#include "proactor-internal.h"
 
 #ifdef __cplusplus
 extern "C" {
