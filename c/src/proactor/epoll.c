@@ -43,8 +43,8 @@
  already running.  The context will know if it needs to put itself back on the wake list
  to be runnable later to process the pending events.
 
- Lock ordering - never add locks right to left: 
-    context -> sched -> wake  
+ Lock ordering - never add locks right to left:
+    context -> sched -> wake
     non-proactor-context -> proactor-context
     tslot -> sched
  */
@@ -57,8 +57,8 @@
 /* Avoid GNU extensions, in particular the incompatible alternative strerror_r() */
 #undef _GNU_SOURCE
 
-#include "epoll-internal.h"
 #include "proactor-internal.h"
+#include "epoll-internal.h"
 #include "core/engine-internal.h"
 #include "core/logger_private.h"
 #include "core/util.h"
@@ -699,9 +699,6 @@ static void listener_begin_close(pn_listener_t* l);
 static void proactor_add(pcontext_t *ctx);
 static bool proactor_remove(pcontext_t *ctx);
 static void poller_done(struct pn_proactor_t* p, tslot_t *ts);
-
-// Type safe version of containerof
-#define containerof(ptr, type, member) ((type *)((char *)(1 ? (ptr) : &((type *)0)->member) - offsetof(type, member)))
 
 static inline pconnection_t *psocket_pconnection(psocket_t* ps) {
   return ps->epoll_io.type == PCONNECTION_IO ? containerof(ps, pconnection_t, psocket) : NULL;
@@ -2815,7 +2812,6 @@ pn_event_batch_t *pn_proactor_get(struct pn_proactor_t* p) {
 
 // Call with no locks
 static inline void check_earmark_override(pn_proactor_t *p, tslot_t *ts) {
-  
   if (!ts || !ts->earmark_override)
     return;
   if (ts->earmark_override->generation == ts->earmark_override_gen) {
