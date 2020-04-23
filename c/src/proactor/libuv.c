@@ -316,7 +316,7 @@ static pconnection_t *get_pconnection(pn_connection_t* c) {
   pn_connection_driver_t *d = *pn_connection_driver_ptr(c);
   uv_mutex_unlock(&driver_ptr_mutex);
   if (!d) return NULL;
-  return (pconnection_t*)((char*)d-offsetof(pconnection_t, driver));
+  return containerof(d, pconnection_t, driver);
 }
 
 static void set_pconnection(pn_connection_t* c, pconnection_t *pc) {
@@ -360,17 +360,17 @@ static pn_event_t *proactor_batch_next(pn_event_batch_t *batch);
 
 static inline pn_proactor_t *batch_proactor(pn_event_batch_t *batch) {
   return (batch->next_event == proactor_batch_next) ?
-    (pn_proactor_t*)((char*)batch - offsetof(pn_proactor_t, batch)) : NULL;
+    containerof(batch, pn_proactor_t, batch) : NULL;
 }
 
 static inline pn_listener_t *batch_listener(pn_event_batch_t *batch) {
   return (batch->next_event == listener_batch_next) ?
-    (pn_listener_t*)((char*)batch - offsetof(pn_listener_t, batch)) : NULL;
+    containerof(batch, pn_listener_t, batch) : NULL;
 }
 
 static inline pconnection_t *batch_pconnection(pn_event_batch_t *batch) {
   return (batch->next_event == pconnection_batch_next) ?
-    (pconnection_t*)((char*)batch - offsetof(pconnection_t, batch)) : NULL;
+    containerof(batch, pconnection_t, batch) : NULL;
 }
 
 static inline work_t *batch_work(pn_event_batch_t *batch) {

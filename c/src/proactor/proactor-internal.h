@@ -27,6 +27,9 @@
 
 #include "core/logger_private.h"
 
+// Type safe version of containerof used to find parent structs from contained structs
+#define containerof(ptr, type, member) ((type *)((char *)(1 ? (ptr) : &((type *)0)->member) - offsetof(type, member)))
+
 #ifdef __cplusplus
 extern "C" {
 #endif

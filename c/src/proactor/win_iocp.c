@@ -1832,11 +1832,11 @@ static inline pn_listener_t *as_listener(psocket_t* ps) {
 
 static inline pconnection_t *pcontext_pconnection(pcontext_t *c) {
   return c->type == PCONNECTION ?
-    (pconnection_t*)((char*)c - offsetof(pconnection_t, context)) : NULL;
+    containerof(c, pconnection_t, context) : NULL;
 }
 static inline pn_listener_t *pcontext_listener(pcontext_t *c) {
   return c->type == LISTENER ?
-    (pn_listener_t*)((char*)c - offsetof(pn_listener_t, context)) : NULL;
+    containerof(c, pn_listener_t, context) : NULL;
 }
 
 static pcontext_t *psocket_context(psocket_t *ps) {
@@ -1992,17 +1992,17 @@ static pn_event_t *pconnection_batch_next(pn_event_batch_t *batch);
 
 static inline pn_proactor_t *batch_proactor(pn_event_batch_t *batch) {
   return (batch->next_event == proactor_batch_next) ?
-    (pn_proactor_t*)((char*)batch - offsetof(pn_proactor_t, batch)) : NULL;
+    containerof(batch, pn_proactor_t, batch) : NULL;
 }
 
 static inline pn_listener_t *batch_listener(pn_event_batch_t *batch) {
   return (batch->next_event == listener_batch_next) ?
-    (pn_listener_t*)((char*)batch - offsetof(pn_listener_t, batch)) : NULL;
+    containerof(batch, pn_listener_t, batch) : NULL;
 }
 
 static inline pconnection_t *batch_pconnection(pn_event_batch_t *batch) {
   return (batch->next_event == pconnection_batch_next) ?
-    (pconnection_t*)((char*)batch - offsetof(pconnection_t, batch)) : NULL;
+    containerof(batch, pconnection_t, batch) : NULL;
 }
 
 static inline bool pconnection_has_event(pconnection_t *pc) {
@@ -3034,7 +3034,7 @@ static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
     pn_event_t *e = pn_collector_next(l->collector);
     if (e && pn_event_type(e) == PN_LISTENER_CLOSE)
       l->close_dispatched = true;
-    return log_event(l, e);
+    return pni_log_event(l, e);
   }
 }
 
@@ -3233,7 +3233,7 @@ static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
   }
   if (e && pn_event_type(e) == PN_PROACTOR_TIMEOUT)
     p->timeout_processed = true;
-  return log_event(p, e);
+  return pni_log_event(p, e);
 }
 
 static void proactor_add(pcontext_t *ctx) {
