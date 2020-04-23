@@ -2017,13 +2017,6 @@ static inline bool proactor_has_event(pn_proactor_t *p) {
   return pn_collector_peek(p->collector);
 }
 
-static pn_event_t *log_event(void* p, pn_event_t *e) {
-  if (e) {
-    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, "[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
-  }
-  return e;
-}
-
 static void psocket_error_str(psocket_t *ps, const char *msg, const char* what) {
   if (ps->is_reaper)
     return;

@@ -675,13 +675,6 @@ static inline bool proactor_has_event(pn_proactor_t *p) {
   return pn_collector_peek(p->collector);
 }
 
-static pn_event_t *log_event(void* p, pn_event_t *e) {
-  if (e) {
-    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, "[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
-  }
-  return e;
-}
-
 static void psocket_error_str(psocket_t *ps, const char *msg, const char* what) {
   if (!ps->listener) {
     pn_connection_driver_t *driver = &psocket_pconnection(ps)->driver;
@@ -1746,7 +1739,7 @@ static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
   if (e && pn_event_type(e) == PN_LISTENER_CLOSE)
     l->close_dispatched = true;
   unlock(&l->context.mutex);
-  return log_event(l, e);
+  return pni_log_event(l, e);
 }
 
 static void listener_done(pn_listener_t *l) {
@@ -1974,7 +1967,7 @@ static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
   if (e && pn_event_type(e) == PN_PROACTOR_TIMEOUT)
     p->timeout_processed = true;
   unlock(&p->context.mutex);
-  return log_event(p, e);
+  return pni_log_event(p, e);
 }
 
 static pn_event_batch_t *proactor_process(pn_proactor_t *p, pn_event_type_t event) {

@@ -25,6 +25,8 @@
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
 
+#include "core/logger_private.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -59,6 +61,13 @@ void pni_proactor_set_cond(
 struct pn_event_batch_t {
   pn_event_t *(*next_event)(pn_event_batch_t *batch);
 };
+
+static inline pn_event_t *pni_log_event(void* p, pn_event_t *e) {
+  if (e) {
+    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, "[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
+  }
+  return e;
+}
 
 #ifdef __cplusplus
 }

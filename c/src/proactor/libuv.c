@@ -823,25 +823,18 @@ static pn_event_batch_t *proactor_batch_lh(pn_proactor_t *p, pn_event_type_t t) 
   return &p->batch;
 }
 
-static pn_event_t *log_event(void* p, pn_event_t *e) {
-  if (e) {
-    PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, "[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
-  }
-  return e;
-}
-
 static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
   pn_listener_t *l = batch_listener(batch);
   uv_mutex_lock(&l->lock);
   pn_event_t *e = pn_collector_next(l->collector);
   uv_mutex_unlock(&l->lock);
-  return log_event(l, e);
+  return pni_log_event(l, e);
 }
 
 static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
   pn_proactor_t *p = batch_proactor(batch);
   assert(p->batch_working);
-  return log_event(p, pn_collector_next(p->collector));
+  return pni_log_event(p, pn_collector_next(p->collector));
 }
 
 static pn_event_t *pconnection_batch_next(pn_event_batch_t *batch) {
