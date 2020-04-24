@@ -176,3 +176,6 @@ void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_l
 }
 
 pn_connection_driver_t** pn_connection_driver_ptr(pn_connection_t *c) { return &c->driver; }
+
+/* Backwards ABI compatability hack - this has been removed because it can't be used sanely */
+PN_EXTERN pn_connection_driver_t *pn_event_batch_connection_driver(pn_event_batch_t *b) { return NULL; }
