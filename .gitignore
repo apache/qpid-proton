@@ -1,7 +1,8 @@
 # General
 
-/build/
-/bld/
+/build*/
+/bld*/
+/BLD*/
 *.class
 *.o
 *.d
@@ -48,3 +49,10 @@ testresults
 /.vs
 /.vscode
 /CMakeSettings.json
+
+# Kdevelop config
+.kdev4
+*.kdev4
+
+# Gdb history
+.gdb_history
