@@ -9,10 +9,11 @@ Dependencies
 
 Cross-platform dependencies
 
-  - CMake 2.8.7+
+  - CMake 2.8.12+
   - Swig 1.3+ (for the bindings)
   - Python 2.6+ (for the Python binding)
   - Ruby 1.9+ (for the Ruby binding)
+  - Go 1.11+ (for the Go binding)
 
 Linux dependencies
 
@@ -24,7 +25,7 @@ Linux dependencies
 
 Windows dependencies
 
-  - Visual Studio 2005 or newer (regular or C++ Express)
+  - Visual Studio 2013 or newer (regular or C++ Express)
 
 CMake (Linux)
 -------------
@@ -106,7 +107,7 @@ Studio and used to build the Proton library.
 
 The following packages must be installed:
 
-  - Visual Studio 2005 or newer (regular or C++ Express)
+  - Visual Studio 2013 or newer (regular or C++ Express)
   - Python (www.python.org)
   - CMake (www.cmake.org)
 
@@ -198,6 +199,6 @@ Disabling Language Bindings
 
 To disable any given language bindings, you can use the
 BUILD_[LANGUAGE] option where [LANGUAGE] is one of PYTHON
-or RUBY, for example:
+or RUBY or GO, for example:
 
     $ cmake .. -DBUILD_PYTHON=OFF
