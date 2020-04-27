@@ -180,7 +180,6 @@ static void pni_cyrus_finish(void);
     #include <synchapi.h>
 
     typedef CRITICAL_SECTION pni_mutex_t;
-    static inline void pni_mutex_init(pni_mutex_t *m) { InitializeCriticalSection(m); }
     static inline void pni_mutex_lock(pni_mutex_t *m) { EnterCriticalSection(m); }
     static inline void pni_mutex_unlock(pni_mutex_t *m) { LeaveCriticalSection(m); }
     static pni_mutex_t pni_cyrus_mutex;
@@ -231,7 +230,6 @@ static void pni_cyrus_finish(void);
     #include <pthread.h>
 
     typedef pthread_mutex_t pni_mutex_t;
-    static inline int pni_mutex_init(pni_mutex_t *m) { return pthread_mutex_init(m, NULL); }
     static inline int pni_mutex_lock(pni_mutex_t *m) { return pthread_mutex_lock(m); }
     static inline int pni_mutex_unlock(pni_mutex_t *m) { return pthread_mutex_unlock(m); }
     static pni_mutex_t pni_cyrus_mutex = PTHREAD_MUTEX_INITIALIZER;
