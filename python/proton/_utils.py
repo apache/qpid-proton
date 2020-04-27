@@ -331,8 +331,8 @@ class BlockingConnection(Handler):
     object operations are enclosed in a try block and that close() is
     always executed on exit.
 
-    :param url: Connection URL
-    :type url: :class:`proton.Url` or ``str``
+    :param url: The connection URL.
+    :type url: ``str``
     :param timeout: Connection timeout in seconds. If ``None``, defaults to 60 seconds.
     :type timeout: ``None`` or float
     :param container: Container to process the events on the connection. If ``None``,
@@ -341,23 +341,29 @@ class BlockingConnection(Handler):
     :param heartbeat: A value in seconds indicating the desired frequency of
         heartbeats used to test the underlying socket is alive.
     :type heartbeat: ``float``
+    :param urls: A list of connection URLs to try to connect to.
+    :type urls: ``list``[``str``]
     :param kwargs: Container keyword arguments. See :class:`proton.reactor.Container`
         for a list of the valid kwargs.
     """
 
-    def __init__(self, url, timeout=None, container=None, ssl_domain=None, heartbeat=None, **kwargs):
+    def __init__(self, url=None, timeout=None, container=None, ssl_domain=None, heartbeat=None, urls=None,
+                 reconnect=None, **kwargs):
         self.disconnected = False
         self.timeout = timeout or 60
         self.container = container or Container()
         self.container.timeout = self.timeout
         self.container.start()
-        self.url = Url(url).defaults()
         self.conn = None
         self.closing = False
+        # Preserve previous behaviour if neither reconnect nor urls are supplied
+        if url is not None and urls is None and reconnect is None:
+            reconnect = False
+            url = Url(url).defaults()
         failed = True
         try:
-            self.conn = self.container.connect(url=self.url, handler=self, ssl_domain=ssl_domain, reconnect=False,
-                                               heartbeat=heartbeat, **kwargs)
+            self.conn = self.container.connect(url=url, handler=self, ssl_domain=ssl_domain, reconnect=reconnect,
+                                               heartbeat=heartbeat, urls=urls, **kwargs)
             self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
                       msg="Opening connection")
             failed = False
@@ -436,6 +442,15 @@ class BlockingConnection(Handler):
             self.container.global_handler = None  # break circular ref: container to cadapter.on_error
             self.container.stop_events()
             self.container = None
+
+    @property
+    def url(self):
+        """
+        The address for this connection.
+
+        :type: ``str``
+        """
+        return self.conn and self.conn.connected_address
 
     def _is_closed(self):
         return self.conn.state & (Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED)
