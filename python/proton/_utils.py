@@ -331,7 +331,7 @@ class BlockingConnection(Handler):
     object operations are enclosed in a try block and that close() is
     always executed on exit.
 
-    :param url: Connection URL
+    :param url: The connection URL. This should be set if ``urls`` is not set.
     :type url: :class:`proton.Url` or ``str``
     :param timeout: Connection timeout in seconds. If ``None``, defaults to 60 seconds.
     :type timeout: ``None`` or float
@@ -341,23 +341,27 @@ class BlockingConnection(Handler):
     :param heartbeat: A value in seconds indicating the desired frequency of
         heartbeats used to test the underlying socket is alive.
     :type heartbeat: ``float``
+    :param urls: A list of connection URLs to try to connect to.
+    :type urls: ``list``
     :param kwargs: Container keyword arguments. See :class:`proton.reactor.Container`
         for a list of the valid kwargs.
     """
 
-    def __init__(self, url, timeout=None, container=None, ssl_domain=None, heartbeat=None, **kwargs):
+    def __init__(self, url=None, timeout=None, container=None, ssl_domain=None, heartbeat=None, urls=None, **kwargs):
         self.disconnected = False
         self.timeout = timeout or 60
         self.container = container or Container()
         self.container.timeout = self.timeout
         self.container.start()
-        self.url = Url(url).defaults()
         self.conn = None
         self.closing = False
+        # If multiple URLs are provided, allow a reconnect to occur if the
+        # connection to one of the previous URLs fails.
+        reconnect = None if urls and not url else False
         failed = True
         try:
-            self.conn = self.container.connect(url=self.url, handler=self, ssl_domain=ssl_domain, reconnect=False,
-                                               heartbeat=heartbeat, **kwargs)
+            self.conn = self.container.connect(url=url, handler=self, ssl_domain=ssl_domain, reconnect=reconnect,
+                                               heartbeat=heartbeat, urls=urls, **kwargs)
             self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
                       msg="Opening connection")
             failed = False
@@ -437,6 +441,15 @@ class BlockingConnection(Handler):
             self.container.stop_events()
             self.container = None
 
+    @property
+    def url(self):
+        """
+        The address for this connection.
+
+        :type: ``str``
+        """
+        return self.conn and self.conn.connected_address
+
     def _is_closed(self):
         return self.conn.state & (Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED)
 
@@ -471,12 +484,22 @@ class BlockingConnection(Handler):
             self.container.timeout = timeout
             try:
                 deadline = time.time() + timeout
+                first_url = self.conn._overrides.address.values[0]
                 while not condition() and not self.disconnected:
                     self.container.process()
                     if deadline < time.time():
                         txt = "Connection %s timed out" % self.url
                         if msg: txt += ": " + msg
                         raise Timeout(txt)
+
+                    # If multiple URLs are provided and a disconnect occurs,
+                    # self.conn.url is set to the next URL. In this case,
+                    # set self.disconnected to False so the next URL is tried.
+                    # If self.conn.url is set to the first URL after a
+                    # disconnect, that means all URLs have been attempted and
+                    # the loop will exit.
+                    if self.disconnected and self.conn.url != first_url:
+                        self.disconnected = False
             finally:
                 self.container.timeout = container_timeout
         if self.disconnected or self._is_closed():
