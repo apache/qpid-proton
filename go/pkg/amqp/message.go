@@ -326,6 +326,7 @@ func (m *message) Marshal(v interface{}) { m.body = v }
 
 func (m *message) Unmarshal(v interface{}) {
 	pnData := C.pn_data(2)
+	defer C.pn_data_free(pnData)
 	marshal(m.body, pnData)
 	unmarshal(v, pnData)
 }
