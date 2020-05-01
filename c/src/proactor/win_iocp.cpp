@@ -34,15 +34,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <queue>
+
+#include <iostream>
 #include <list>
+#include <queue>
+#include <sstream>
 
 #include <winsock2.h>
 #include <mswsock.h>
-#include <Ws2tcpip.h>
-
-#include <iostream>
-#include <sstream>
+#include <ws2tcpip.h>
 
 #include "netaddr-internal.h" /* Include after socket/inet headers */
 #include "core/logger_private.h"

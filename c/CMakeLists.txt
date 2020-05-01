@@ -356,7 +356,7 @@ endif()
 if (PROACTOR STREQUAL "iocp" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   if(WIN32 AND NOT CYGWIN)
     set (PROACTOR_OK iocp)
-    set (qpid-proton-proactor src/proactor/win_iocp.c src/proactor/proactor-internal.c)
+    set (qpid-proton-proactor src/proactor/win_iocp.cpp src/proactor/proactor-internal.c)
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS} ${LTO}"
       COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
