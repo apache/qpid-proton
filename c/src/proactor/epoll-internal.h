@@ -276,7 +276,6 @@ struct pn_listener_t {
   size_t pending_count;              /* number of pending accepted connections */
   size_t backlog;                 /* size of pending accepted array */
   bool close_dispatched;
-  pmutex rearm_mutex;             /* orders rearms/disarms, nothing else */
   uint32_t sched_io_events;
 };
 
