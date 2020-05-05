@@ -306,7 +306,7 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t listen_sock, char *name, size_t s
     return INVALID_SOCKET;
   } else {
     pn_configure_sock(io, accept_sock);
-    pni_snprintf(name, size, "%s:%s", io->host, io->serv);
+    snprintf(name, size, "%s:%s", io->host, io->serv);
     if (listend) {
       pni_iocpdesc_start(pni_iocpdesc_map_get(io->iocp, accept_sock));
     }

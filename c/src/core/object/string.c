@@ -230,7 +230,7 @@ int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
 
   while (true) {
     va_copy(copy, ap);
-    int err = pni_vsnprintf(string->bytes + string->size, string->capacity - string->size, format, copy);
+    int err = vsnprintf(string->bytes + string->size, string->capacity - string->size, format, copy);
     va_end(copy);
     if (err < 0) {
       return err;

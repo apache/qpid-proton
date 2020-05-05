@@ -1114,7 +1114,7 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   char buf[1024];
   if (fmt) {
     // XXX: result
-    pni_vsnprintf(buf, 1024, fmt, ap);
+    vsnprintf(buf, 1024, fmt, ap);
   } else {
     buf[0] = '\0';
   }
@@ -1129,7 +1129,7 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
     const char *first = pn_condition_get_description(cond);
     if (first && fmt) {
       char extended[2048];
-      pni_snprintf(extended, 2048, "%s (%s)", first, buf);
+      snprintf(extended, 2048, "%s (%s)", first, buf);
       pn_condition_set_description(cond, extended);
     } else if (fmt) {
       pn_condition_set_description(cond, buf);

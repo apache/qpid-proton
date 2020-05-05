@@ -39,7 +39,7 @@
 
 #include "core/log_private.h"
 #include "core/util.h"
-#include "platform/platform.h" // pn_i_getpid, pn_i_now, pni_snprintf
+#include "platform/platform.h" // pn_i_getpid, pn_i_now
 #include "platform/platform_fmt.h"
 #include "store.h"
 #include "subscription.h"
@@ -983,7 +983,7 @@ static void pn_condition_report(const char *pfx, pn_condition_t *condition)
             pn_condition_redirect_port(condition));
   } else if (pn_condition_is_set(condition)) {
     char error[1024];
-    pni_snprintf(error, 1024, "(%s) %s",
+    snprintf(error, 1024, "(%s) %s",
              pn_condition_get_name(condition),
              pn_condition_get_description(condition));
     pn_error_report(pfx, error);

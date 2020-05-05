@@ -2171,7 +2171,7 @@ int pn_condition_vformat(pn_condition_t *condition, const char *name, const char
       return err;
 
   char text[1024];
-  size_t n = pni_vsnprintf(text, 1024, fmt, ap);
+  size_t n = vsnprintf(text, 1024, fmt, ap);
   if (n >= sizeof(text))
       text[sizeof(text)-1] = '\0';
   err = pn_condition_set_description(condition, text);

@@ -197,7 +197,7 @@ set(C_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}")
 
 set(qpid-proton-platform_GNU src/compiler/gcc/start.c)
 set(qpid-proton-platform_Clang src/compiler/gcc/start.c)
-set(qpid-proton-platform_MSVC src/compiler/msvc/snprintf.c src/compiler/msvc/start.c)
+set(qpid-proton-platform_MSVC src/compiler/msvc/start.c)
 
 set(qpid-proton-platform ${qpid-proton-platform_${CMAKE_C_COMPILER_ID}})
 

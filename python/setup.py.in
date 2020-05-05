@@ -137,7 +137,6 @@ class Configure(build_ext):
 
         if self.compiler_type=='msvc':
             sources += [
-                os.path.join(proton_src, 'compiler', 'msvc', 'snprintf.c'),
                 os.path.join(proton_src, 'compiler', 'msvc', 'start.c')
             ]
         elif self.compiler_type=='unix':
