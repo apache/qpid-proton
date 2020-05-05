@@ -31,6 +31,7 @@
 #include <proton/session.h>
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <assert.h>
 
@@ -83,7 +84,7 @@ int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap)
 {
   assert(error);
   char text[1024];
-  int n = pni_vsnprintf(text, 1024, fmt, ap);
+  int n = vsnprintf(text, 1024, fmt, ap);
   if (n >= 1024) {
     text[1023] = '\0';
   }

@@ -218,7 +218,7 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
       return PN_INVALID_SOCKET;
     } else {
       pn_configure_sock(io, sock);
-      pni_snprintf(name, size, "%s:%s", io->host, io->serv);
+      snprintf(name, size, "%s:%s", io->host, io->serv);
       return sock;
     }
   }

@@ -43,6 +43,7 @@
 #include <proton/engine.h>
 
 #include <assert.h>
+#include <stdio.h>
 
 // security.h needs to see this to distinguish from kernel use.
 #include <windows.h>
@@ -758,7 +759,7 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl0, char *buffer, size_t size )
   SecPkgContext_ConnectionInfo info;
   if (QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_CONNECTION_INFO, &info) == SEC_E_OK) {
     // TODO: come up with string for all permutations?
-    pni_snprintf( buffer, size, "%x_%x:%x_%x:%x_%x",
+    snprintf( buffer, size, "%x_%x:%x_%x:%x_%x",
               info.aiExch, info.dwExchStrength,
               info.aiCipher, info.dwCipherStrength,
               info.aiHash, info.dwHashStrength);
@@ -776,12 +777,12 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl0, char *buffer, size_t size )
   SecPkgContext_ConnectionInfo info;
   if (QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_CONNECTION_INFO, &info) == SEC_E_OK) {
     if (info.dwProtocol & (SP_PROT_TLS1_CLIENT | SP_PROT_TLS1_SERVER))
-      pni_snprintf(buffer, size, "%s", "TLSv1");
+      snprintf(buffer, size, "%s", "TLSv1");
     // TLSV1.1 and TLSV1.2 are supported as of XP-SP3, but not defined until VS2010
     else if ((info.dwProtocol & 0x300))
-      pni_snprintf(buffer, size, "%s", "TLSv1.1");
+      snprintf(buffer, size, "%s", "TLSv1.1");
     else if ((info.dwProtocol & 0xC00))
-      pni_snprintf(buffer, size, "%s", "TLSv1.2");
+      snprintf(buffer, size, "%s", "TLSv1.2");
     else {
       ssl_log_error("unexpected protocol %x", info.dwProtocol);
       return false;
