@@ -953,7 +953,11 @@ static void pconnection_cleanup(pconnection_t *pc) {
   stop_polling(&pc->psocket.epoll_io, pc->psocket.proactor->epollfd);
   if (fd != -1)
     pclosefd(pc->psocket.proactor, fd);
+
+  fd = pc->timer.epoll_io.fd;
   stop_polling(&pc->timer.epoll_io, pc->psocket.proactor->epollfd);
+  if (fd != -1)
+    pclosefd(pc->psocket.proactor, fd);
   ptimer_finalize(&pc->timer);
 
   lock(&pc->context.mutex);
