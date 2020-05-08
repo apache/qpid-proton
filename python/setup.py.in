@@ -40,6 +40,9 @@ From the Python side, this scripts overrides 1 command - build_ext - and it adds
 new one. The latter - Configure - is called from the former to setup/discover what's
 in the system. The rest of the commands and steps are done normally without any kind
 of monkey patching.
+
+TODO: On windows we now only support VS2015 and above and python 3, we should check
+for this and produce an appropriate error if the requirements are not met.
 """
 
 import os
@@ -151,7 +154,7 @@ class Configure(build_ext):
             sources.append(os.path.join(proton_src, 'ssl', 'openssl.c'))
         elif os.name=='nt':
             libraries += ['crypt32', 'secur32']
-            sources.append(os.path.join(proton_src, 'ssl', 'schannel.c'))
+            sources.append(os.path.join(proton_src, 'ssl', 'schannel.cpp'))
         else:
             sources.append(os.path.join(proton_src, 'ssl', 'ssl_stub.c'))
             log.warn("OpenSSL not installed - disabling SSL support!")
@@ -182,36 +185,6 @@ class Configure(build_ext):
         else:
             log.warn("Windows - only the ANONYMOUS and PLAIN mechanisms will be supported!")
             sources.append(os.path.join(proton_src, 'sasl', 'cyrus_stub.c'))
-
-        # Hack for Windows/msvc: We need to compile proton as C++, but it seems the only way to
-        # force this in setup.py is to use a .cpp extension! So copy all the source files to .cpp
-        # and use these as the compile sources
-        if self.compiler_type=='msvc':
-            targets = []
-            target_base = os.path.join(self.build_temp, 'srcs')
-            try:
-                # Might need to make intermediate directories use os.makedirs() not os.mkdir()
-                os.makedirs(target_base)
-            except OSError:
-                pass
-
-            for f in sources:
-                # We know each file ends in '.c' as we filtered on that above so just add 'pp' to end
-                target = os.path.join(target_base, os.path.basename(f) + 'pp')
-                shutil.copy(f, target)
-                targets.append(target)
-
-            # Copy .h files into temp tree too as we need them to compile
-            for root, _, files in os.walk(proton_core_src):
-                for file_ in files:
-                    if file_.endswith('.h'):
-                        shutil.copy(os.path.join(root, file_), os.path.join(target_base, file_))
-
-            # Copy ssl/sasl .h files
-            shutil.copy(os.path.join(proton_src, 'sasl', 'sasl-internal.h'), os.path.join(target_base, 'sasl-internal.h'))
-            shutil.copy(os.path.join(proton_src, 'ssl', 'ssl-internal.h'), os.path.join(target_base, 'ssl-internal.h'))
-
-            sources = targets
 
         # compile all the proton sources.  We'll add the resulting list of
         # objects to the _cproton extension as 'extra objects'.  We do this

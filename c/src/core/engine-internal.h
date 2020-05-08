@@ -31,6 +31,10 @@
 #include "logger_private.h"
 #include "util.h"
 
+#if __cplusplus
+extern "C" {
+#endif
+
 typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER} pn_endpoint_type_t;
 
 typedef struct pn_endpoint_t pn_endpoint_t;
@@ -376,5 +380,9 @@ typedef enum {IN, OUT} pn_dir_t;
 
 void pn_do_trace(pn_transport_t *transport, uint16_t ch, pn_dir_t dir,
                  pn_data_t *args, const char *payload, size_t size);
+
+#if __cplusplus
+}
+#endif
 
 #endif /* engine-internal.h */

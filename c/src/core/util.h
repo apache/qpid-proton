@@ -34,6 +34,10 @@
 #include <proton/types.h>
 #include <proton/object.h>
 
+#if __cplusplus
+extern "C" {
+#endif
+
 ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size);
 int pn_quote(pn_string_t *dst, const char *src, size_t size);
 bool pn_env_bool(const char *name);
@@ -118,5 +122,9 @@ static inline pn_bytes_t pn_string_bytes(pn_string_t *s) {
 
 #define pn_min(X,Y) ((X) > (Y) ? (Y) : (X))
 #define pn_max(X,Y) ((X) < (Y) ? (Y) : (X))
+
+#if __cplusplus
+}
+#endif
 
 #endif /* util.h */

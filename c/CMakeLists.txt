@@ -80,7 +80,7 @@ add_custom_target(
   DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
   )
 
-file (GLOB_RECURSE source_files "src/*.[ch]")
+file (GLOB_RECURSE source_files "src/*.h" "src/*.c" "src/*.cpp")
 
 foreach (sfile ${source_files})
   file (RELATIVE_PATH rfile ${CMAKE_CURRENT_SOURCE_DIR} ${sfile})
@@ -118,7 +118,7 @@ if (SSL_IMPL STREQUAL openssl)
   set (pn_ssl_impl src/ssl/openssl.c)
   set (SSL_LIB OpenSSL::SSL Threads::Threads)
 elseif (SSL_IMPL STREQUAL schannel)
-  set (pn_ssl_impl src/ssl/schannel.c)
+  set (pn_ssl_impl src/ssl/schannel.cpp)
   set (SSL_LIB Crypt32.lib Secur32.lib)
 else ()
   set (pn_ssl_impl src/ssl/ssl_stub.c)
@@ -226,7 +226,7 @@ set (qpid-proton-layers-all
   src/sasl/cyrus_sasl.c
   src/sasl/cyrus_stub.c
   src/ssl/openssl.c
-  src/ssl/schannel.c
+  src/ssl/schannel.cpp
   src/ssl/ssl_stub.c
   )
 

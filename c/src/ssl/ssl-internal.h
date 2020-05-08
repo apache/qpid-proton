@@ -30,7 +30,15 @@
  *
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // release the SSL context
 void pn_ssl_free(pn_transport_t *transport);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* ssl-internal.h */

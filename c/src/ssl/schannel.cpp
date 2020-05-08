@@ -52,6 +52,7 @@
 #include <WinInet.h>
 #undef SECURITY_WIN32
 
+extern "C" {
 
 /** @file
  * SSL/TLS support API.
@@ -2339,4 +2340,6 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
     CertFreeCertificateChain(chain_context);
   free(nameUCS2);
   return error;
+}
+
 }

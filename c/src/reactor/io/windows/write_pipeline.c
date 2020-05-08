@@ -146,6 +146,7 @@ struct write_pipeline_t {
   bool is_writer;
 };
 
+#define CID_write_pipeline CID_pn_void
 #define write_pipeline_compare NULL
 #define write_pipeline_inspect NULL
 #define write_pipeline_hashcode NULL
@@ -169,7 +170,6 @@ static void write_pipeline_finalize(void *object)
 
 write_pipeline_t *pni_write_pipeline(iocpdesc_t *iocpd)
 {
-  static const pn_cid_t CID_write_pipeline = CID_pn_void;
   static const pn_class_t clazz = PN_CLASS(write_pipeline);
   write_pipeline_t *pipeline = (write_pipeline_t *) pn_class_new(&clazz, sizeof(write_pipeline_t));
   pipeline->iocpd = iocpd;
@@ -205,13 +205,13 @@ static void remove_as_writer(write_pipeline_t *pl)
 static void set_depth(write_pipeline_t *pl)
 {
   pl->depth = 1;
-  sockaddr_storage sa;
+  struct sockaddr_storage sa;
   socklen_t salen = sizeof(sa);
   char buf[INET6_ADDRSTRLEN];
   DWORD buflen = sizeof(buf);
 
-  if (getsockname(pl->iocpd->socket,(sockaddr*) &sa, &salen) == 0 &&
-      getnameinfo((sockaddr*) &sa, salen, buf, buflen, NULL, 0, NI_NUMERICHOST) == 0) {
+  if (getsockname(pl->iocpd->socket,(struct sockaddr*) &sa, &salen) == 0 &&
+      getnameinfo((struct sockaddr*) &sa, salen, buf, buflen, NULL, 0, NI_NUMERICHOST) == 0) {
     if ((sa.ss_family == AF_INET6 && strcmp(buf, "::1")) ||
         (sa.ss_family == AF_INET && strncmp(buf, "127.", 4))) {
       // not loopback

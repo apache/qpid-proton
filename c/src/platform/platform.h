@@ -25,6 +25,10 @@
 #include "proton/types.h"
 #include "proton/error.h"
 
+#if __cplusplus
+extern "C" {
+#endif
+
 /** Get the current PID
  *
  * @return process id
@@ -85,6 +89,10 @@ int pni_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap);
 #if !defined(va_copy)
 #define va_copy(d,s) ((d) = (s))
 #endif
+#endif
+
+#if __cplusplus
+}
 #endif
 
 #endif /* platform.h */

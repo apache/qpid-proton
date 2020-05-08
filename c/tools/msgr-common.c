@@ -64,7 +64,7 @@ void addresses_free( Addresses_t *a )
     int i;
     for (i = 0; i < a->count; i++)
       if (a->addresses[i]) free( (void *)a->addresses[i] );
-    free( a->addresses );
+    free( (void *) a->addresses );
     a->addresses = NULL;
   }
 }
@@ -158,15 +158,15 @@ void parse_password( const char *input, char **password )
     }
 }
 
-static int log = 0;
+static int dolog = 0;
 void enable_logging()
 {
-    log = 1;
+    dolog = 1;
 }
 
 void LOG( const char *fmt, ... )
 {
-    if (log) {
+    if (dolog) {
         va_list ap;
         va_start(ap, fmt);
         vfprintf( stdout, fmt, ap );

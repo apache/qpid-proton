@@ -21,6 +21,10 @@
 
 #include <proton/logger.h>
 
+#if __cplusplus
+extern "C" {
+#endif
+
 struct pn_logger_t {
     pn_log_sink_t sink;
     intptr_t      sink_context;
@@ -55,5 +59,9 @@ void pni_logger_log_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_l
         if (PN_SHOULD_LOG(logger, subsys, sev)) \
             pni_logger_log_data(logger, (pn_log_subsystem_t) (subsys), (pn_log_level_t) (sev), __VA_ARGS__); \
     } while(0)
+
+#if __cplusplus
+}
+#endif
 
 #endif

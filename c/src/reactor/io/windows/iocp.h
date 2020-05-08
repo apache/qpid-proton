@@ -30,6 +30,7 @@ typedef struct pni_acceptor_t pni_acceptor_t;
 typedef struct write_result_t write_result_t;
 typedef struct read_result_t read_result_t;
 typedef struct write_pipeline_t write_pipeline_t;
+typedef struct iocp_t iocp_t;
 typedef struct iocpdesc_t iocpdesc_t;
 
 
@@ -81,7 +82,7 @@ struct iocpdesc_t {
   iocpdesc_t *triggered_list_prev;
   iocpdesc_t *deadlines_next;
   iocpdesc_t *deadlines_prev;
-  pn_timestamp_t reap_time;;
+  pn_timestamp_t reap_time;
 };
 
 typedef enum { IOCP_ACCEPT, IOCP_CONNECT, IOCP_READ, IOCP_WRITE } iocp_type_t;
@@ -109,7 +110,7 @@ void pni_iocpdesc_start(iocpdesc_t *iocpd);
 void pni_iocp_drain_completions(iocp_t *);
 int pni_iocp_wait_one(iocp_t *, int timeout, pn_error_t *);
 void pni_iocp_start_accepting(iocpdesc_t *iocpd);
-pn_socket_t pni_iocp_end_accept(iocpdesc_t *ld, sockaddr *addr, socklen_t *addrlen, bool *would_block, pn_error_t *error);
+pn_socket_t pni_iocp_end_accept(iocpdesc_t *ld, struct sockaddr *addr, socklen_t *addrlen, bool *would_block, pn_error_t *error);
 pn_socket_t pni_iocp_begin_connect(iocp_t *, pn_socket_t sock, struct addrinfo *addr, pn_error_t *error);
 ssize_t pni_iocp_begin_write(iocpdesc_t *, const void *, size_t, bool *, pn_error_t *);
 ssize_t pni_iocp_recv(iocpdesc_t *iocpd, void *buf, size_t size, bool *would_block, pn_error_t *error);

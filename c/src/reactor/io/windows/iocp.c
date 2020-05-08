@@ -66,7 +66,7 @@
 // all together when accepting the connection. Reserve enough for
 // IPv6 addresses, even if the socket is IPv4. The 16 bytes padding
 // per address is required by AcceptEx.
-#define IOCP_SOCKADDRMAXLEN (sizeof(sockaddr_in6) + 16)
+#define IOCP_SOCKADDRMAXLEN (sizeof(struct sockaddr_in6) + 16)
 #define IOCP_SOCKADDRBUFLEN (2 * IOCP_SOCKADDRMAXLEN)
 
 static void iocp_log(const char *fmt, ...)
@@ -145,9 +145,9 @@ static LPFN_GETACCEPTEXSOCKADDRS lookup_get_accept_ex_sockaddrs(SOCKET s)
 // match accept socket to listener socket
 static iocpdesc_t *create_same_type_socket(iocpdesc_t *iocpd)
 {
-  sockaddr_storage sa;
+  struct sockaddr_storage sa;
   socklen_t salen = sizeof(sa);
-  if (getsockname(iocpd->socket, (sockaddr*)&sa, &salen) == -1)
+  if (getsockname(iocpd->socket, (struct sockaddr*)&sa, &salen) == -1)
     return NULL;
   SOCKET s = socket(sa.ss_family, SOCK_STREAM, 0); // Currently only work with SOCK_STREAM
   if (s == INVALID_SOCKET)
@@ -192,6 +192,7 @@ struct pni_acceptor_t {
   LPFN_GETACCEPTEXSOCKADDRS fn_get_accept_ex_sockaddrs;
 };
 
+#define CID_pni_acceptor CID_pn_void
 #define pni_acceptor_compare NULL
 #define pni_acceptor_inspect NULL
 #define pni_acceptor_hashcode NULL
@@ -213,7 +214,6 @@ static void pni_acceptor_finalize(void *object)
 
 static pni_acceptor_t *pni_acceptor(iocpdesc_t *iocpd)
 {
-  static const pn_cid_t CID_pni_acceptor = CID_pn_void;
   static const pn_class_t clazz = PN_CLASS(pni_acceptor);
   pni_acceptor_t *acceptor = (pni_acceptor_t *) pn_class_new(&clazz, sizeof(pni_acceptor_t));
   acceptor->listen_sock = iocpd;
@@ -289,7 +289,7 @@ static void complete_accept(accept_result_t *result, HRESULT status)
   }
 }
 
-pn_socket_t pni_iocp_end_accept(iocpdesc_t *ld, sockaddr *addr, socklen_t *addrlen, bool *would_block, pn_error_t *error)
+pn_socket_t pni_iocp_end_accept(iocpdesc_t *ld, struct sockaddr *addr, socklen_t *addrlen, bool *would_block, pn_error_t *error)
 {
   if (!is_listener(ld)) {
     set_iocp_error_status(error, PN_ERR, WSAEOPNOTSUPP);
@@ -325,8 +325,8 @@ pn_socket_t pni_iocp_end_accept(iocpdesc_t *ld, sockaddr *addr, socklen_t *addrl
     setsockopt(accept_sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*)&ld->socket,
                   sizeof (SOCKET));
     if (addr && addrlen && *addrlen > 0) {
-      sockaddr_storage *local_addr = NULL;
-      sockaddr_storage *remote_addr = NULL;
+      struct sockaddr_storage *local_addr = NULL;
+      struct sockaddr_storage *remote_addr = NULL;
       int local_addrlen, remote_addrlen;
       LPFN_GETACCEPTEXSOCKADDRS fn = ld->acceptor->fn_get_accept_ex_sockaddrs;
       fn(result->address_buffer, 0, IOCP_SOCKADDRMAXLEN, IOCP_SOCKADDRMAXLEN,
@@ -358,6 +358,7 @@ typedef struct {
   struct addrinfo *addrinfo;
 } connect_result_t;
 
+#define CID_connect_result CID_pn_void
 #define connect_result_initialize NULL
 #define connect_result_compare NULL
 #define connect_result_inspect NULL
@@ -372,7 +373,6 @@ static void connect_result_finalize(void *object)
 }
 
 static connect_result_t *connect_result(iocpdesc_t *iocpd, struct addrinfo *addr) {
-  static const pn_cid_t CID_connect_result = CID_pn_void;
   static const pn_class_t clazz = PN_CLASS(connect_result);
   connect_result_t *result = (connect_result_t *) pn_class_new(&clazz, sizeof(connect_result_t));
   if (result) {
@@ -389,7 +389,7 @@ pn_socket_t pni_iocp_begin_connect(iocp_t *iocp, pn_socket_t sock, struct addrin
   // addr lives for the duration of the async connect.  Caller has passed ownership here.
   // See connect_result_finalize().
   // Use of Windows-specific ConnectEx() requires our socket to be "loosely" pre-bound:
-  sockaddr_storage sa;
+  struct sockaddr_storage sa;
   memset(&sa, 0, sizeof(sa));
   sa.ss_family = addr->ai_family;
   if (bind(sock, (SOCKADDR *) &sa, addr->ai_addrlen)) {
@@ -747,13 +747,13 @@ static uintptr_t pni_iocpdesc_hashcode(void *object)
   return iocpd->socket;
 }
 
+#define CID_pni_iocpdesc CID_pn_void
 #define pni_iocpdesc_compare NULL
 #define pni_iocpdesc_inspect NULL
 
 // Reference counted in the iocpdesc map, zombie_list, selector.
 static iocpdesc_t *pni_iocpdesc(pn_socket_t s)
 {
-  static const pn_cid_t CID_pni_iocpdesc = CID_pn_void;
   static pn_class_t clazz = PN_CLASS(pni_iocpdesc);
   iocpdesc_t *iocpd = (iocpdesc_t *) pn_class_new(&clazz, sizeof(iocpdesc_t));
   assert(iocpd);
@@ -1130,6 +1130,7 @@ void pni_iocp_begin_close(iocpdesc_t *iocpd)
 
 // === iocp_t
 
+#define CID_pni_iocp CID_pn_void
 #define pni_iocp_hashcode NULL
 #define pni_iocp_compare NULL
 #define pni_iocp_inspect NULL
@@ -1172,7 +1173,6 @@ void pni_iocp_finalize(void *obj)
 
 iocp_t *pni_iocp()
 {
-  static const pn_cid_t CID_pni_iocp = CID_pn_void;
   static const pn_class_t clazz = PN_CLASS(pni_iocp);
   iocp_t *iocp = (iocp_t *) pn_class_new(&clazz, sizeof(iocp_t));
   return iocp;
