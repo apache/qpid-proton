@@ -17,26 +17,32 @@
  * under the License.
  */
 
-#include "proton/internal/object.hpp"
-#include <proton/object.h>
+#include <catch.hpp>
+#include <proton/internal/object.hpp>
+// for pn_data
+#include <proton/codec.h>
 
-namespace proton {
-namespace internal {
+namespace {
 
-void pn_ptr_base::incref(void *p) {
-    if (p) ::pn_incref(const_cast<void*>(p));
+TEST_CASE("pn_ptr_base(pn_data)", "[object]") {
+    SECTION("incref and decref in constructor") {
+        pn_data_t *o = pn_data(0);
+        CHECK(pn_refcount(o) == 1);
+        {
+            proton::internal::pn_ptr<pn_data_t> ptr = proton::internal::pn_ptr<pn_data_t>(o);
+            CHECK(pn_refcount(o) == 2);
+        }
+        CHECK(pn_refcount(o) == 1);
+        pn_data_free(o);
+    }
+    SECTION("inspect") {
+        pn_data_t *o = pn_data(0);
+        {
+            proton::internal::pn_ptr<pn_data_t> ptr = proton::internal::pn_ptr<pn_data_t>(o);
+            CHECK(ptr.inspect().empty());
+        }
+        pn_data_free(o);
+    }
 }
 
-void pn_ptr_base::decref(void *p) {
-    if (p) ::pn_decref(const_cast<void*>(p));
-}
-
-std::string pn_ptr_base::inspect(void* p) {
-    if (!p) return std::string();
-    ::pn_string_t* s = ::pn_string(NULL);
-    (void) ::pn_inspect(p, s);
-    std::string tmp = std::string(pn_string_get(s));
-    pn_free(s);
-    return tmp;
-}
-}}
+}// namespace

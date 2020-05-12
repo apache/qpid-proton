@@ -307,6 +307,9 @@ endif()
 include_directories(${CMAKE_SOURCE_DIR}/tests/include)
 add_executable(cpp-test src/cpp-test.cpp src/url_test.cpp)
 target_link_libraries(cpp-test qpid-proton-cpp ${PLATFORM_LIBS})
+# tests that require access to pn_ functions in qpid-proton-core
+add_executable(cpp-core-test src/cpp-test.cpp src/object_test.cpp)
+target_link_libraries(cpp-core-test qpid-proton-cpp qpid-proton-core ${PLATFORM_LIBS})
 
 macro(add_catch_test tag)
   pn_add_test(
@@ -314,6 +317,17 @@ macro(add_catch_test tag)
     NAME cpp-${tag}-test
     APPEND_ENVIRONMENT ${test_env}
     COMMAND $<TARGET_FILE:cpp-test> "[${tag}]")
+  set_tests_properties(cpp-${tag}-test PROPERTIES  FAIL_REGULAR_EXPRESSION ".*No tests ran.*")
 endmacro(add_catch_test)
 
+macro(add_core_catch_test tag)
+  pn_add_test(
+          EXECUTABLE
+          NAME cpp-${tag}-test
+          APPEND_ENVIRONMENT ${test_env}
+          COMMAND $<TARGET_FILE:cpp-core-test> "[${tag}]")
+  set_tests_properties(cpp-${tag}-test PROPERTIES  FAIL_REGULAR_EXPRESSION ".*No tests ran.*")
+endmacro(add_core_catch_test)
+
 add_catch_test(url)
+add_core_catch_test(object)
