@@ -576,6 +576,10 @@ install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake
   DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
 
+if (ENABLE_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif (ENABLE_BENCHMARKS)
+
 add_subdirectory(docs)
 add_subdirectory(examples)
 add_subdirectory(tests)

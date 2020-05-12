@@ -29,6 +29,15 @@ matrix:
   include:
   - os: linux
     dist: bionic
+    sudo: true
+    compiler:
+    - gcc
+    env:
+    - QPID_PROTON_CMAKE_ARGS='-DENABLE_BENCHMARKS=ON -DRUNTIME_CHECK=OFF'
+    before_install:
+    - sudo apt-get install -y libbenchmark-dev
+  - os: linux
+    dist: bionic
     compiler: gcc
     env:
     # python-tox-test fails and ruby tests segfault
@@ -96,7 +105,7 @@ addons:
       - swig
 # update:true workaround as of Feb. 22/20 as per
 # https://travis-ci.community/t/macos-build-fails-because-of-homebrew-bundle-unknown-command/7296/10
-    update: true 
+    update: true
 
 install:
 - python -m pip install --user --upgrade pip

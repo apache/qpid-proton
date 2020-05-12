@@ -331,3 +331,7 @@ endmacro(add_core_catch_test)
 
 add_catch_test(url)
 add_core_catch_test(object)
+
+if (ENABLE_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif (ENABLE_BENCHMARKS)
