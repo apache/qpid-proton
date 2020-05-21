@@ -174,5 +174,6 @@
    Memcheck:Leak
    ...
    fun:connection_ctx_new
-   src:threaderciser.c
+   ...
+   fun:proactor_thread
 }
