@@ -1779,9 +1779,9 @@ static void listener_begin_close(pn_listener_t* l) {
         if (a->armed) {
           shutdown(ps->epoll_io.fd, SHUT_RD);  // Force epoll event and callback
         } else {
+          int fd = ps->epoll_io.fd;
           stop_polling(&ps->epoll_io, ps->proactor->epollfd);
-          close(ps->epoll_io.fd);
-          ps->epoll_io.fd = -1;
+          close(fd);
           l->active_count--;
         }
       }
@@ -1864,9 +1864,9 @@ static pn_event_batch_t *listener_process(pn_listener_t *l, int n_events, bool w
         ps->working_io_events = 0;
         if (l->context.closing) {
           l->acceptors[i].armed = false;
+          int fd = ps->epoll_io.fd;
           stop_polling(&ps->epoll_io, ps->proactor->epollfd);
-          close(ps->epoll_io.fd);
-          ps->epoll_io.fd = -1;
+          close(fd);
           l->active_count--;
         } else {
           l->acceptors[i].armed = false;
