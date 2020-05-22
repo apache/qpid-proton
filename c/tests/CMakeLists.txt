@@ -79,10 +79,13 @@ if (CMAKE_CXX_COMPILER)
     target_link_libraries(c-ssl-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
 
     # Thread race test.
-    #
-    # TODO aconway 2018-11-14: enable by default when races and xcode
-    # problems are cleared up
-    option(THREADERCISER "Run the threaderciser concurrency tests" OFF)
+    if (MSVC)
+      # test does not compile on Windows
+      set(DEFAULT_THREADERCISER OFF)
+    else (MSVC)
+      set(DEFAULT_THREADERCISER ON)
+    endif (MSVC)
+    option(THREADERCISER "Run the threaderciser concurrency tests" ${DEFAULT_THREADERCISER})
     if (THREADERCISER)
       add_executable(c-threaderciser threaderciser.c)
       set_target_properties(c-threaderciser PROPERTIES COMPILE_FLAGS "${CMAKE_C_FLAGS} ${C_WARNING_FLAGS}")
