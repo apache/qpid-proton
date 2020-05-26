@@ -89,7 +89,7 @@ if (CMAKE_CXX_COMPILER)
     if (THREADERCISER)
       add_executable(c-threaderciser threaderciser.c)
       set_target_properties(c-threaderciser
-              PROPERTIES COMPILE_FLAGS "${COMPILE_LANGUAGE_FLAGS} ${CMAKE_C_FLAGS} ${C_WARNING_FLAGS}")
+        PROPERTIES COMPILE_FLAGS "${COMPILE_LANGUAGE_FLAGS} ${CMAKE_C_FLAGS} ${C_WARNING_FLAGS}")
       pn_add_test(
         EXECUTABLE
         NAME c-threaderciser
