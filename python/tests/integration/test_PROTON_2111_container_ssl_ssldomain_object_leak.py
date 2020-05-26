@@ -141,8 +141,6 @@ class Proton2111Test(unittest.TestCase):
         client_ssl_domain.set_trusted_ca_db(certificate_db)
         client_ssl_domain.set_peer_authentication(proton.SSLDomain.VERIFY_PEER)
 
-        # client_ssl_domain.set_peer_authentication(proton.SSLDomain.VERIFY_PEER_NAME)
-
         def send_msg(msg_id, urls):
             container = proton.reactor.Container(SampleSender(msg_id, urls, client_ssl_domain))
             container.run()
@@ -165,4 +163,4 @@ class Proton2111Test(unittest.TestCase):
         diffs = [c - object_counts[0] for c in object_counts]
         for diff in diffs:
             # allow for random variation from initial value on some systems, but prohibit linear growth
-            self.assertTrue(diff <= 30, "Object counts should not be increasing: {0}".format(diffs))
+            self.assertTrue(diff <= 50, "Object counts should not be increasing: {0}".format(diffs))

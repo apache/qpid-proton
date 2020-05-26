@@ -31,6 +31,7 @@ import gc
 import os
 import subprocess
 import threading
+import warnings
 
 import cproton
 
@@ -49,12 +50,16 @@ def count_fds():
 @contextlib.contextmanager
 def no_fd_leaks(test):
     # type: (unittest.TestCase) -> None
-    before = count_fds()
-    yield
-    delta = count_fds() - before
-    if delta != 0:
-        subprocess.check_call("ls -lF /proc/{0}/fd/".format(os.getpid()), shell=True)
-        test.assertEqual(0, delta, "Found {0} new fd(s) after the test".format(delta))
+    with warnings.catch_warnings(record=True) as ws:
+        before = count_fds()
+        yield
+        delta = count_fds() - before
+        if delta != 0:
+            subprocess.check_call("ls -lF /proc/{0}/fd/".format(os.getpid()), shell=True)
+            test.assertEqual(0, delta, "Found {0} new fd(s) after the test".format(delta))
+
+        if len(ws) > 0:
+            test.fail([w.message for w in ws])
 
 
 class Broker(proton.handlers.MessagingHandler):
