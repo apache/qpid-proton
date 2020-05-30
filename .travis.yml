@@ -19,11 +19,14 @@
 
 sudo: false
 language: cpp
+env:
+  global:
+  # PROTON-2125 suppress annoying deprecation warning from Minitest in Ruby tests
+  - RUBYOPT='-W0'  # ruby 2.7.0 introduced a more targeted -W:no-deprecated
 
 matrix:
   include:
   - os: linux
-    dist: bionic
     dist: xenial
     sudo: true
     language: cpp
