@@ -1765,6 +1765,12 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
   if (!ssl) return PN_EOS;
   ssl_log( transport, PN_LEVEL_TRACE, "process_output_ssl( max_len=%d )",max_len );
 
+  // This is to match the behaviour of pn_output_write_amqp defined in transport.c.
+  // Without this, the idle_timeout connection option does not work in case of an SSL connection.
+  if (!pn_buffer_size(transport->output_buffer) && transport->close_sent) {
+    return PN_EOS;
+  }
+
   ssize_t written = 0;
   ssize_t total_app_bytes = 0;
   bool work_pending;
