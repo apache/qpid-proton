@@ -117,7 +117,7 @@ def test_broker():
 PROC_SELF_FD_EXISTS = os.path.exists("/proc/self/fd"), "Skipped: Directory /proc/self/fd does not exist"
 
 
-def ignore(reason="AssertionError ignored."):
+def skipOnFailure(reason="AssertionError ignored."):
     """Decorator for test methods that swallows AssertionErrors.
 
     Passing tests are reported unchanged, tests failing with AssertionError are
@@ -129,7 +129,7 @@ def ignore(reason="AssertionError ignored."):
 
     If a test is reliably failing, use unittest.expectedFailure instead."""
 
-    def ignore_assertions(old_test):
+    def skip_on_assertion(old_test):
         def new_test(*args, **kwargs):
             try:
                 old_test(*args, **kwargs)
@@ -139,12 +139,12 @@ def ignore(reason="AssertionError ignored."):
 
         return new_test
 
-    return ignore_assertions
+    return skip_on_assertion
 
 
 class Proton1800Test(unittest.TestCase):
     @unittest.skipUnless(*PROC_SELF_FD_EXISTS)
-    @ignore(reason="PROTON-1800: sut is leaking one fd on Ubuntu Xenial docker image")
+    @skipOnFailure(reason="PROTON-1800: sut is leaking one fd on Ubuntu Xenial docker image")
     def test_sync_request_response_blocking_connection_no_fd_leaks(self):
         with test_broker() as tb:
             sockname = tb.get_acceptor_sockname()
