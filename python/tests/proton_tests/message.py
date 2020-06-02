@@ -20,6 +20,8 @@
 from __future__ import absolute_import
 
 from uuid import uuid4
+from sys import version_info
+from unittest import skipIf
 
 from proton import *
 
@@ -107,6 +109,15 @@ class AccessorsTest(Test):
   def testReplyToGroupId(self):
     self._test_str("reply_to_group_id")
 
+try:
+    long()
+except NameError:
+    long = int
+try:
+    unicode()
+except NameError:
+    unicode = str
+
 class CodecTest(Test):
 
   def testProperties(self):
@@ -118,6 +129,73 @@ class CodecTest(Test):
     msg2.decode(data)
 
     assert msg2.properties['key'] == 'value', msg2.properties['key']
+
+  class MyStringSubclass(unicode):
+    def __repr__(self):
+      return 'MyStringSubclass(%s)' % unicode.__repr__(self)
+
+  def testStringSubclassPropertyKey(self):
+    self.msg.properties = {'abc': 123, CodecTest.MyStringSubclass('def'): 456}
+    data = self.msg.encode()
+
+    msg2 = Message()
+    msg2.decode(data)
+
+    assert msg2.properties == self.msg.properties
+    for k in msg2.properties:
+        assert type(k) is unicode, 'non-string key %s %s' % (k, type(k))
+
+  def _testNonStringPropertyKey(self, k):
+    self.msg.properties = {k: 'abc'}
+    try:
+        self.msg.encode()
+    except MessageException:
+        return
+    self.fail('Non-string property key: %s, key type: %s' % (self.msg, type(k)))
+
+  def testNonSequencePropertyKeys(self):
+    # AMQP non-string types
+    self._testNonStringPropertyKey(None)
+    self._testNonStringPropertyKey(True)
+    self._testNonStringPropertyKey(byte(1))
+    self._testNonStringPropertyKey(ubyte(2))
+    self._testNonStringPropertyKey(short(3))
+    self._testNonStringPropertyKey(ushort(4))
+    self._testNonStringPropertyKey(int32(5))
+    self._testNonStringPropertyKey(uint(6))
+    self._testNonStringPropertyKey(long(7))
+    self._testNonStringPropertyKey(ulong(8))
+    self._testNonStringPropertyKey(float32(9.0))
+    self._testNonStringPropertyKey(10.0)
+    self._testNonStringPropertyKey(decimal32(11))
+    self._testNonStringPropertyKey(decimal64(12))
+    self._testNonStringPropertyKey(timestamp(1234567890))
+    self._testNonStringPropertyKey(uuid4())
+
+  def testCharPropertyKey(self):
+    self._testNonStringPropertyKey(char('A'))
+
+  def testDecimal128PropertyKey(self):
+    self._testNonStringPropertyKey(decimal128(b'12345'))
+
+  def testSymbolPropertyKey(self):
+    self._testNonStringPropertyKey(symbol('abcdef'))
+
+  def testBinaryPropertyKey(self):
+    if version_info[0] > 2:
+      # Py3: Binary conversions not supported
+      self._testNonStringPropertyKey(b'abc123')
+    else:
+      # Py2: Check for correct key conversion
+      self.msg.properties = {'abc': 123, b'def': 456}
+      data = self.msg.encode()
+
+      msg2 = Message()
+      msg2.decode(data)
+
+      assert msg2.properties == self.msg.properties
+      for k in msg2.properties:
+        assert type(k) is unicode, 'non-string key %s %s' % (k, type(k))
 
   def testAnnotationsSymbolicAndUlongKey(self, a={symbol('one'): 1, 'two': 2, ulong(3): 'three'}):
     self.msg.annotations = a
