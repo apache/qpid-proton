@@ -702,7 +702,7 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
   if (!domain) return -1;
 
   // certificates can be either a file or a directory, which determines how it is passed
-  // to SSL_CTX_load_verify_locations()
+  // to SSL_CTX_load_verify_*()
   struct stat sbuf;
   if (stat( certificate_db, &sbuf ) != 0) {
     ssl_log(NULL, PN_LEVEL_ERROR, "stat(%s) failed: %s", certificate_db, strerror(errno));
@@ -719,10 +719,25 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
     file = certificate_db;
   }
 
+  // OpenSSL 3.0.0 deprecates SSL_CTX_load_verify_locations
+#if defined(OPENSSL_VERSION_MAJOR) && OPENSSL_VERSION_MAJOR >= 3
+  if (dir) {
+    if (SSL_CTX_load_verify_dir( domain->ctx, dir ) != 1) {
+      ssl_log_error("SSL_CTX_load_verify_dir( %s ) failed", certificate_db);
+      return -1;
+    }
+  } else {
+    if (SSL_CTX_load_verify_file( domain->ctx, file ) != 1) {
+      ssl_log_error("SSL_CTX_load_verify_file( %s ) failed", certificate_db);
+      return -1;
+    }
+  }
+#else
   if (SSL_CTX_load_verify_locations( domain->ctx, file, dir ) != 1) {
     ssl_log_error("SSL_CTX_load_verify_locations( %s ) failed", certificate_db);
     return -1;
   }
+#endif
 
   return 0;
 }
