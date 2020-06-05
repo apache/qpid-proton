@@ -42,21 +42,21 @@ import proton.reactor
 from test_unittest import unittest
 
 
-def count_fds():
-    # type: () -> int
-    return len(os.listdir('/proc/self/fd/'))
+def get_fd_set():
+    # type: () -> set[str]
+    return set(os.listdir('/proc/self/fd/'))
 
 
 @contextlib.contextmanager
 def no_fd_leaks(test):
     # type: (unittest.TestCase) -> None
     with warnings.catch_warnings(record=True) as ws:
-        before = count_fds()
+        before = get_fd_set()
         yield
-        delta = count_fds() - before
-        if delta != 0:
+        delta = get_fd_set().difference(before)
+        if len(delta) != 0:
             subprocess.check_call("ls -lF /proc/{0}/fd/".format(os.getpid()), shell=True)
-            test.assertEqual(0, delta, "Found {0} new fd(s) after the test".format(delta))
+            test.fail("Found {0} new fd(s) after the test".format(delta))
 
         if len(ws) > 0:
             test.fail([w.message for w in ws])
