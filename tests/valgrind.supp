@@ -173,7 +173,6 @@
    TODO(PROTON-2225) investigate threaderciser test
    Memcheck:Leak
    fun:malloc
-   fun:connection_ctx_new
    ...
    fun:cpool_connect
 }
