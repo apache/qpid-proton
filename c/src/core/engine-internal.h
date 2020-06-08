@@ -296,6 +296,8 @@ struct pn_link_t {
   pn_delivery_t *unsettled_tail;
   pn_delivery_t *current;
   pn_record_t *context;
+  pn_data_t *properties;
+  pn_data_t *remote_properties;
   size_t unsettled_count;
   uint64_t max_message_size;
   uint64_t remote_max_message_size;

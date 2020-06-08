@@ -1335,14 +1335,19 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   bool snd_settle, rcv_settle;
   uint8_t snd_settle_mode, rcv_settle_mode;
   uint64_t max_msgsz;
-  int err = pn_data_scan(args, "D.[SIo?B?BD.[SIsIo.s]D.[SIsIo]..IL]", &name, &handle,
+  bool has_props;
+  pn_data_t *rem_props = pn_data(0);
+  int err = pn_data_scan(args, "D.[SIo?B?BD.[SIsIo.s]D.[SIsIo]..IL..?C]", &name, &handle,
                          &is_sender,
                          &snd_settle, &snd_settle_mode,
                          &rcv_settle, &rcv_settle_mode,
                          &source, &src_dr, &src_exp, &src_timeout, &src_dynamic, &dist_mode,
                          &target, &tgt_dr, &tgt_exp, &tgt_timeout, &tgt_dynamic,
-                         &idc, &max_msgsz);
-  if (err) return err;
+                         &idc, &max_msgsz, &has_props, rem_props);
+  if (err) {
+      pn_free(rem_props);
+      return err;
+  }
   char strbuf[128];      // avoid malloc for most link names
   char *strheap = (name.size >= sizeof(strbuf)) ? (char *) malloc(name.size + 1) : NULL;
   char *strname = strheap ? strheap : strbuf;
@@ -1353,12 +1358,14 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   if (!ssn) {
       pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
       if (strheap) free(strheap);
+      pn_free(rem_props);
       return PN_EOS;
   }
   pn_link_t *link = pni_find_link(ssn, name, is_sender);
   if (link && (int32_t)link->state.remote_handle >= 0) {
     pn_do_error(transport, "amqp:invalid-field", "link name already attached: %s", strname);
     if (strheap) free(strheap);
+    pn_free(rem_props);
     return PN_EOS;
   }
   if (!link) {                  /* Make a new link for the attach */
@@ -1371,6 +1378,12 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   if (strheap) {
     free(strheap);
+  }
+
+  if (has_props) {
+    link->remote_properties = rem_props;
+  } else {
+    pn_free(rem_props);
   }
 
   pni_map_remote_handle(link, handle);
@@ -2078,7 +2091,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
         if (err) return err;
       } else {
         int err = pn_post_frame(transport, AMQP_FRAME_TYPE, ssn_state->local_channel,
-                                "DL[SIoBB?DL[SIsIoC?sCnMM]?DL[SIsIoCM]nnIL]", ATTACH,
+                                "DL[SIoBB?DL[SIsIoC?sCnMM]?DL[SIsIoCM]nnILnnC]", ATTACH,
                                 pn_string_get(link->name),
                                 state->local_handle,
                                 endpoint->type == RECEIVER,
@@ -2106,7 +2119,9 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
                                 link->target.properties,
                                 link->target.capabilities,
 
-                                0, link->max_message_size);
+                                0,
+                                link->max_message_size,
+                                link->properties);
         if (err) return err;
       }
     }

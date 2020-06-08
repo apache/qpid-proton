@@ -23,6 +23,8 @@
 
 #include <proton/engine.h>
 
+using namespace pn_test;
+
 // push data from one transport to another
 static int xfer(pn_transport_t *src, pn_transport_t *dest) {
   ssize_t out = pn_transport_pending(src);
@@ -307,6 +309,54 @@ TEST_CASE("engine_link_name_prefix)") {
   REQUIRE(std::string("lll") == pn_link_name(r));
   r = pn_link_next(r, (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
   REQUIRE(std::string("ll") == pn_link_name(r));
+
+  pn_transport_unbind(t1);
+  pn_transport_free(t1);
+  pn_connection_free(c1);
+
+  pn_transport_unbind(t2);
+  pn_transport_free(t2);
+  pn_connection_free(c2);
+}
+
+
+TEST_CASE("link_properties)") {
+  pn_connection_t *c1 = pn_connection();
+  pn_transport_t *t1 = pn_transport();
+  pn_transport_bind(t1, c1);
+
+  pn_connection_t *c2 = pn_connection();
+  pn_transport_t *t2 = pn_transport();
+  pn_transport_set_server(t2);
+  pn_transport_bind(t2, c2);
+
+  pn_connection_open(c1);
+  pn_connection_open(c2);
+
+  pn_session_t *s1 = pn_session(c1);
+  pn_session_open(s1);
+
+  pn_link_t *rx = pn_receiver(s1, "props");
+  pn_data_t *props = pn_link_properties(rx);
+  REQUIRE(props != NULL);
+
+  pn_data_clear(props);
+  pn_data_fill(props, "{S[iii]SI}", "foo", 1, 987, 3, "bar", 965);
+  pn_link_open(rx);
+
+  while (pump(t1, t2)) {
+    process_endpoints(c1);
+    process_endpoints(c2);
+  }
+
+  // session and link should be up, c2 should have a sender link:
+  REQUIRE(pn_link_state(rx) == (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
+  REQUIRE(pn_link_remote_properties(rx) == NULL);
+
+  pn_link_t *tx = pn_link_head(c2, (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
+
+  REQUIRE(pn_link_remote_properties(tx) != NULL);
+  CHECK("{\"foo\"=[1, 987, 3], \"bar\"=965}" == pn_test::inspect(pn_link_remote_properties(tx)));
 
   pn_transport_unbind(t1);
   pn_transport_free(t1);
