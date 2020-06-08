@@ -681,6 +681,35 @@ PN_EXTERN void pn_link_set_max_message_size(pn_link_t *link, uint64_t size);
 PN_EXTERN uint64_t pn_link_remote_max_message_size(pn_link_t *link);
 
 /**
+ * Access/modify the AMQP properties data for a link object.
+ *
+ * This operation will return a pointer to a ::pn_data_t object that is valid
+ * until the link object is freed. Any data contained by the ::pn_data_t object
+ * will be sent as the AMQP properties for the link object when the link is
+ * opened by calling ::pn_link_open. Note that this MUST take the form of a
+ * symbol keyed map to be valid.
+ *
+ * The ::pn_data_t pointer returned is valid until the link object is freed.
+ *
+ * @param[in] link the link object
+ * @return a pointer to a pn_data_t representing the link properties
+ */
+PN_EXTERN pn_data_t *pn_link_properties(pn_link_t *link);
+
+/**
+ * Access the AMQP link properties supplied by the remote link endpoint.
+ *
+ * This operation will return a pointer to a ::pn_data_t object that
+ * is valid until the link object is freed. This data object
+ * will be empty until the remote link is opened as indicated by
+ * the ::PN_REMOTE_ACTIVE flag.
+ *
+ * @param[in] link the link object
+ * @return the remote link properties
+ */
+PN_EXTERN pn_data_t *pn_link_remote_properties(pn_link_t *link);
+
+/**
  * @}
  */
 

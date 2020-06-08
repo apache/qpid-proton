@@ -765,6 +765,17 @@ class LinkTest(Test):
     self.pump()
     assert self.rcv.remote_max_message_size == 13579
 
+  def test_properties(self):
+      sender_props = {symbol('key1'): 'value1',
+                      symbol('key2'): 'value2'}
+      self.snd.properties = sender_props
+      self.snd.open()
+      self.rcv.open()
+      self.pump()
+
+      assert self.rcv.remote_properties == sender_props, (self.rcv.remote_properties, sender_props)
+      assert self.snd.remote_properties == None, (self.snd.remote_properties, None)
+
   def test_cleanup(self):
     snd, rcv = self.link("test-link")
     snd.open()

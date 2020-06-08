@@ -53,7 +53,8 @@ from cproton import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN_DIST_MOD
     pn_terminus_get_durability, pn_terminus_get_expiry_policy, pn_terminus_get_timeout, pn_terminus_get_type, \
     pn_terminus_is_dynamic, pn_terminus_outcomes, pn_terminus_properties, pn_terminus_set_address, \
     pn_terminus_set_distribution_mode, pn_terminus_set_durability, pn_terminus_set_dynamic, \
-    pn_terminus_set_expiry_policy, pn_terminus_set_timeout, pn_terminus_set_type, pn_work_head
+    pn_terminus_set_expiry_policy, pn_terminus_set_timeout, pn_terminus_set_type, pn_work_head, \
+    pn_link_properties, pn_link_remote_properties
 
 from ._common import unicode2utf8, utf82unicode
 from ._condition import cond2obj, obj2cond
@@ -771,6 +772,10 @@ class Link(Wrapper, Endpoint):
     def __init__(self, impl):
         Wrapper.__init__(self, impl, pn_link_attachments)
 
+    def _init(self):
+        Endpoint._init(self)
+        self.properties = None
+
     def _get_attachments(self):
         return pn_link_attachments(self._impl)
 
@@ -796,6 +801,7 @@ class Link(Wrapper, Endpoint):
         sent to the peer. A link is fully active once both peers have
         attached it.
         """
+        obj2dat(self.properties, pn_link_properties(self._impl))
         pn_link_open(self._impl)
 
     def close(self):
@@ -1199,6 +1205,41 @@ class Link(Wrapper, Endpoint):
         deliveries on the link.
         """
         pn_link_free(self._impl)
+
+    @property
+    def remote_properties(self):
+        """
+        The properties specified by the remote peer for this link.
+
+        This operation will return a :class:`Data` object that
+        is valid until the link object is freed. This :class:`Data`
+        object will be empty until the remote link is opened as
+        indicated by the :const:`REMOTE_ACTIVE` flag.
+
+        :type: :class:`Data`
+        """
+        return dat2obj(pn_link_remote_properties(self._impl))
+
+
+    def _get_properties(self):
+        return self._properties_dict
+
+    def _set_properties(self, properties_dict):
+        if isinstance(properties_dict, dict):
+            self._properties_dict = PropertyDict(properties_dict, raise_on_error=False)
+        else:
+            self._properties_dict = properties_dict
+
+    properties = property(_get_properties, _set_properties, doc="""
+    Link properties as a dictionary of key/values. The AMQP 1.0
+    specification restricts this dictionary to have keys that are only
+    :class:`symbol` types. It is possible to use the special ``dict``
+    subclass :class:`PropertyDict` which will by default enforce this
+    restrictions on construction. In addition, if strings type are used,
+    this will silently convert them into symbols.
+
+    :type: ``dict`` containing :class:`symbol`` keys.
+    """)
 
 
 class Sender(Link):

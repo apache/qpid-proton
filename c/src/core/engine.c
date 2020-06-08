@@ -1125,6 +1125,8 @@ static void pn_link_finalize(void *object)
   if (endpoint->referenced) {
     pn_decref(link->session);
   }
+  pn_free(link->properties);
+  pn_free(link->remote_properties);
 }
 
 #define pn_link_refcount pn_object_refcount
@@ -1168,6 +1170,8 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   link->remote_snd_settle_mode = PN_SND_MIXED;
   link->remote_rcv_settle_mode = PN_RCV_FIRST;
   link->detached = false;
+  link->properties = 0;
+  link->remote_properties = 0;
 
   // begin transport state
   link->state.local_handle = -1;
@@ -1971,6 +1975,21 @@ uint64_t pn_link_remote_max_message_size(pn_link_t *link)
 {
   return link->remote_max_message_size;
 }
+
+pn_data_t *pn_link_properties(pn_link_t *link)
+{
+  assert(link);
+  if (!link->properties)
+      link->properties = pn_data(0);
+  return link->properties;
+}
+
+pn_data_t *pn_link_remote_properties(pn_link_t *link)
+{
+  assert(link);
+  return link->remote_properties;
+}
+
 
 pn_link_t *pn_delivery_link(pn_delivery_t *delivery)
 {
