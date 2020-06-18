@@ -1054,6 +1054,15 @@ static inline bool pconnection_wclosed(pconnection_t  *pc) {
   return pn_connection_driver_write_closed(&pc->driver);
 }
 
+// Call with pc context locked.
+static void pconnection_rearm_timer(pconnection_t *pc) {
+  if (!pc->timer_armed && !pc->timer.shutting_down &&
+      pc->timer.epoll_io.fd >= 0 && pc->timer.epoll_io.polling) {
+    pc->timer_armed = true;
+    rearm(pc->psocket.proactor, &pc->timer.epoll_io);
+  }
+}
+
 /* Call only from working context (no competitor for pc->current_arm or
    connection driver).  If true returned, caller must do
    pconnection_rearm().
@@ -1093,9 +1102,11 @@ static inline void pconnection_rearm(pconnection_t *pc) {
 
 /* Only call when context switch is imminent.  Sched lock is highly contested. */
 // Call with both context and sched locks.
-static bool pconnection_sched_sync(pconnection_t *pc) {
+static bool pconnection_sched_sync(pconnection_t *pc, bool *timerfd_fired) {
+  *timerfd_fired = false;
   if (pc->sched_timeout) {
-    pc->tick_pending = true;
+    *timerfd_fired = true;;
+    pc->timer_armed = false;
     pc->sched_timeout = false;
   }
   if (pc->psocket.sched_io_events) {
@@ -1135,10 +1146,14 @@ static void pconnection_done(pconnection_t *pc) {
                                 // working context while the lock is held.  Need sched_sync too to drain possible stale wake.
   pc->hog_count = 0;
   bool has_event = pconnection_has_event(pc);
+  bool timerfd_fired;
   // Do as little as possible while holding the sched lock
   lock(&p->sched_mutex);
-  pconnection_sched_sync(pc);
+  pconnection_sched_sync(pc, &timerfd_fired);
   unlock(&p->sched_mutex);
+  if (timerfd_fired)
+    if (ptimer_callback(&pc->timer) != 0)
+      pc->tick_pending = true;
 
   if (has_event || pconnection_work_pending(pc)) {
     self_wake = true;
@@ -1159,6 +1174,7 @@ static void pconnection_done(pconnection_t *pc) {
   if (self_wake)
     notify = wake(&pc->context);
 
+  pconnection_rearm_timer(pc);
   bool rearm = pconnection_rearm_check(pc);
   unlock(&pc->context.mutex);
 
@@ -1405,9 +1421,13 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
   }
 
   // Never stop working while work remains.  hog_count exception to this rule is elsewhere.
+  bool timerfd_fired;
   lock(&pc->context.proactor->sched_mutex);
-  bool workers_free = pconnection_sched_sync(pc);
+  bool workers_free = pconnection_sched_sync(pc, &timerfd_fired);
   unlock(&pc->context.proactor->sched_mutex);
+  if (timerfd_fired)
+    if (ptimer_callback(&pc->timer) != 0)
+      pc->tick_pending = true;
 
   if (pconnection_work_pending(pc)) {
     goto retry;  // TODO: get rid of goto without adding more locking
@@ -1433,10 +1453,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
     goto retry;
   }
 
-  if (!pc->timer_armed && !pc->timer.shutting_down && pc->timer.epoll_io.fd >= 0) {
-    pc->timer_armed = true;
-    rearm(pc->psocket.proactor, &pc->timer.epoll_io);
-  }
+  pconnection_rearm_timer(pc);
   bool rearm_pc = pconnection_rearm_check(pc);  // holds rearm_mutex until pconnection_rearm() below
 
   unlock(&pc->context.mutex);
