@@ -22,8 +22,18 @@
  *
  */
 
+/* Enable POSIX features beyond c99 for modern pthread and standard strerror_r() */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+/* Avoid GNU extensions, in particular the incompatible alternative strerror_r() */
+#undef _GNU_SOURCE
+
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include <pthread.h>
 
 #include <netdb.h>
@@ -50,7 +60,8 @@ typedef enum {
   PCONNECTION_IO,
   PCONNECTION_TIMER,
   LISTENER_IO,
-  PROACTOR_TIMER
+  PROACTOR_TIMER,
+  RAW_CONNECTION_IO
 } epoll_type_t;
 
 // Data to use with epoll.
@@ -73,7 +84,8 @@ typedef struct ptimer_t {
 typedef enum {
   PROACTOR,
   PCONNECTION,
-  LISTENER
+  LISTENER,
+  RAW_CONNECTION
 } pcontext_type_t;
 
 typedef struct pcontext_t {
@@ -82,7 +94,7 @@ typedef struct pcontext_t {
   pcontext_type_t type;
   bool working;
   bool on_wake_list;
-  bool wake_pending;             // unprocessed eventfd wake callback (convert to bool?)
+  bool wake_pending;             // unprocessed eventfd wake callback
   struct pcontext_t *wake_next; // wake list, guarded by proactor eventfd_mutex
   bool closing;
   // Next 4 are protected by the proactor mutex
@@ -209,7 +221,7 @@ typedef struct pconnection_t {
   ptimer_t timer;  // TODO: review one timerfd per connection
   const char *host, *port;
   uint32_t new_events;
-  int wake_count;
+  int wake_count; // TODO: protected by context.mutex so should be moved in there (also really bool)
   bool server;                /* accept, not connect */
   bool tick_pending;
   bool timer_armed;
@@ -278,6 +290,70 @@ struct pn_listener_t {
   bool close_dispatched;
   uint32_t sched_io_events;
 };
+
+typedef char strerrorbuf[1024];      /* used for pstrerror message buffer */
+void pstrerror(int err, strerrorbuf msg);
+
+// In general all locks to be held singly and shortly (possibly as spin locks).
+// See above about lock ordering.
+
+static inline void pmutex_init(pthread_mutex_t *pm){
+  pthread_mutexattr_t attr;
+
+  pthread_mutexattr_init(&attr);
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ADAPTIVE_NP);
+  if (pthread_mutex_init(pm, &attr)) {
+    perror("pthread failure");
+    abort();
+  }
+}
+
+static inline void pmutex_finalize(pthread_mutex_t *m) { pthread_mutex_destroy(m); }
+static inline void lock(pmutex *m) { pthread_mutex_lock(m); }
+static inline void unlock(pmutex *m) { pthread_mutex_unlock(m); }
+
+static inline bool pconnection_has_event(pconnection_t *pc) {
+  return pn_connection_driver_has_event(&pc->driver);
+}
+
+static inline bool listener_has_event(pn_listener_t *l) {
+  return pn_collector_peek(l->collector) || (l->pending_count);
+}
+
+static inline bool proactor_has_event(pn_proactor_t *p) {
+  return pn_collector_peek(p->collector);
+}
+
+bool wake_if_inactive(pn_proactor_t *p);
+int pclosefd(pn_proactor_t *p, int fd);
+
+void proactor_add(pcontext_t *ctx);
+bool proactor_remove(pcontext_t *ctx);
+
+bool unassign_thread(tslot_t *ts, tslot_state new_state);
+
+void pcontext_init(pcontext_t *ctx, pcontext_type_t t, pn_proactor_t *p);
+bool wake(pcontext_t *ctx);
+void wake_notify(pcontext_t *ctx);
+void wake_done(pcontext_t *ctx);
+
+void psocket_init(psocket_t* ps, pn_proactor_t* p, epoll_type_t type);
+bool start_polling(epoll_extended_t *ee, int epollfd);
+void stop_polling(epoll_extended_t *ee, int epollfd);
+void rearm_polling(epoll_extended_t *ee, int epollfd);
+
+int pgetaddrinfo(const char *host, const char *port, int flags, struct addrinfo **res);
+void configure_socket(int sock);
+
+accepted_t *listener_accepted_next(pn_listener_t *listener);
+
+pcontext_t *pni_psocket_raw_context(psocket_t *ps);
+pn_event_batch_t *pni_raw_connection_process(pcontext_t *c, bool sched_wake);
+
+typedef struct praw_connection_t praw_connection_t;
+pcontext_t *pni_raw_connection_context(praw_connection_t *rc);
+praw_connection_t *pni_batch_raw_connection(pn_event_batch_t* batch);
+void pni_raw_connection_done(praw_connection_t *rc);
 
 #ifdef __cplusplus
 }

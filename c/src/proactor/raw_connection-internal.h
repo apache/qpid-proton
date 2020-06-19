@@ -83,6 +83,7 @@ struct pn_raw_connection_t {
   bool rdrainpending;
   bool wdrainpending;
   bool disconnectpending;
+  bool wakepending;
 };
 
 /*
