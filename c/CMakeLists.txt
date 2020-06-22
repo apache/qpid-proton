@@ -333,6 +333,7 @@ string(TOLOWER "${PROACTOR}" PROACTOR)
 set (qpid-proton-proactor-common
   src/proactor/proactor-internal.c
   src/proactor/netaddr-internal.c
+  src/proactor/raw_connection.c
   )
 
 if (PROACTOR STREQUAL "epoll" OR (NOT PROACTOR AND NOT BUILD_PROACTOR))

@@ -61,7 +61,7 @@ static struct stats {
   size_t subrequested;
   size_t suballoc;
   size_t subdealloc;
-} stats[CID_pn_listener_socket+1] = {{0}}; // Just happens to be the last CID
+} stats[CID_pn_raw_connection+1] = {{0}}; // Just happens to be the last CID
 
 static bool debug_memory = false;
 

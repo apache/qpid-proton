@@ -3420,3 +3420,11 @@ pn_millis_t pn_proactor_now(void) {
 int64_t pn_proactor_now_64(void) {
   return GetTickCount64();
 }
+
+// Empty stubs for raw connection code
+pn_raw_connection_t *pn_raw_connection(void) { return NULL; }
+void pn_proactor_raw_connect(pn_proactor_t *p, pn_raw_connection_t *rc, const char *addr) {}
+void pn_listener_raw_accept(pn_listener_t *l, pn_raw_connection_t *rc) {}
+void pn_raw_connection_wake(pn_raw_connection_t *conn) {}
+const struct pn_netaddr_t *pn_raw_connection_local_addr(pn_raw_connection_t *connection) { return NULL; }
+const struct pn_netaddr_t *pn_raw_connection_remote_addr(pn_raw_connection_t *connection) { return NULL; }

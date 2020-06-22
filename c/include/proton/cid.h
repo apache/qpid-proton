@@ -67,7 +67,8 @@ typedef enum {
   CID_pn_listener,
   CID_pn_proactor,
 
-  CID_pn_listener_socket
+  CID_pn_listener_socket,
+  CID_pn_raw_connection
 } pn_cid_t;
 
 /**
