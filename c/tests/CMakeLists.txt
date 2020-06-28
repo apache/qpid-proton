@@ -79,28 +79,25 @@ if (CMAKE_CXX_COMPILER)
     target_link_libraries(c-ssl-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
 
     # Thread race test.
-    if (MSVC)
-      # test does not compile on Windows
-      set(DEFAULT_THREADERCISER OFF)
-    else (MSVC)
+    if (CMAKE_USE_PTHREADS_INIT OR CMAKE_HP_PTHREADS_INIT)
+      # test requires pthreads
       set(DEFAULT_THREADERCISER ON)
-    endif (MSVC)
+    else (CMAKE_USE_PTHREADS_INIT OR CMAKE_HP_PTHREADS_INIT)
+      set(DEFAULT_THREADERCISER OFF)
+    endif (CMAKE_USE_PTHREADS_INIT OR CMAKE_HP_PTHREADS_INIT)
     option(THREADERCISER "Run the threaderciser concurrency tests" ${DEFAULT_THREADERCISER})
     if (THREADERCISER)
       add_executable(c-threaderciser threaderciser.c)
       set_target_properties(c-threaderciser
         PROPERTIES COMPILE_FLAGS "${COMPILE_LANGUAGE_FLAGS} ${CMAKE_C_FLAGS} ${C_WARNING_FLAGS}")
+      target_link_libraries (c-threaderciser qpid-proton-proactor ${CMAKE_THREAD_LIBS_INIT})
       pn_add_test(
         EXECUTABLE
         NAME c-threaderciser
         PREPEND_ENVIRONMENT ${test_env}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND $<TARGET_FILE:c-threaderciser>)
-      target_link_libraries (c-threaderciser qpid-proton-proactor)
-      find_library(Pthread_LIBRARY pthread)
-      if (Pthread_LIBRARY)
-        target_link_libraries (c-threaderciser ${Pthread_LIBRARY})
-      endif()
+      set_tests_properties (c-threaderciser PROPERTIES TIMEOUT 120)
     endif()
 
     if(WIN32)
