@@ -173,7 +173,7 @@ class Proton1870Test(unittest.TestCase):
             cert_file = os.path.join(self.cwd, 'certificates', 'localhost_ca1.pem')
             key_file = os.path.join(self.cwd, 'certificates', 'localhost_ca1-key.pem')
 
-            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS)
             context.load_cert_chain(cert_file, key_file)
 
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
