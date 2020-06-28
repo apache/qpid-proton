@@ -29,6 +29,8 @@ import contextlib
 import logging
 
 import os
+import sys
+
 try:
     import queue
 except ImportError:
@@ -159,6 +161,7 @@ class Proton1870Test(unittest.TestCase):
             container = proton.reactor.Container(SampleSender('msg_id', urls, client_ssl_domain))
             container.run()
 
+    @unittest.skipIf(sys.platform.startswith("win32"), "TODO: Gets stuck on Windows")
     def test_broker_cert_shutdown_connection_sslsock(self):
         """When a remote peer drops TCP connection (with established
          SSL+AMQP connection.session on it) and it drops the TCP
