@@ -101,9 +101,10 @@ def test_broker():
     container = proton.reactor.Container(broker)
     threading.Thread(target=container.run).start()
 
-    yield broker
-
-    container.stop()
+    try:
+        yield broker
+    finally:
+        container.stop()
 
 
 PROC_SELF_FD_EXISTS = os.path.exists("/proc/self/fd"), "Skipped: Directory /proc/self/fd does not exist"
