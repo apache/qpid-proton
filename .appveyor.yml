@@ -2,9 +2,11 @@ version: '{branch}.{build}'
 configuration: RelWithDebInfo
 environment:
   matrix:
+    # https://www.appveyor.com/docs/build-environment/
+    # https://www.appveyor.com/docs/windows-images-software
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       CMAKE_GENERATOR: Visual Studio 16 2019
-      PYTHON: "C:\\Python37-x64"
+      PYTHON: "C:\\Python38-x64"
       VCPKG_INTEGRATION: '-DCMAKE_TOOLCHAIN_FILE=C:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64'
       VCPKG_DEFAULT_TRIPLET: x64-windows
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
@@ -14,22 +16,9 @@ environment:
       VCPKG_DEFAULT_TRIPLET: x64-windows
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       CMAKE_GENERATOR: Visual Studio 14 2015
-      PYTHON: "C:\\Python27"
+      PYTHON: "C:\Python36-x64"
       # vcpkg is supported on VS2015, we are just not using it here
       # https://docs.microsoft.com/en-us/cpp/build/vcpkg?view=vs-2015
-
-# https://www.appveyor.com/docs/build-configuration/#specializing-matrix-job-configuration
-for:
--
-  matrix:
-    only:
-    - PYTHON: "C:\\Python27"
-
-  init:
-  # "Microsoft Visual C++ 9.0 is required. Get it from http://aka.ms/vcpython27"
-  # https://github.com/SiLab-Bonn/silab_utils/blob/ee92c0c73e4af7ace256ae2e09d734ed4a82e28d/appveyor.yml
-  - ps: Start-FileDownload 'http://download.microsoft.com/download/7/9/6/796EF2E4-801B-4FC4-AB28-B59FBF6D907B/VCForPython27.msi' C:\VCForPython27.msi
-  - cmd: msiexec /i C:\VCForPython27.msi /quiet /qn
 
 install:
 - cinst -y swig
