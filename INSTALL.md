@@ -10,8 +10,8 @@ Dependencies
 Cross-platform dependencies
 
   - CMake 2.8.12+
+  - Python (required to build core C library, minimum version depends on platform)
   - Swig 1.3+ (for the bindings)
-  - Python 2.6+ (for the Python binding)
   - Ruby 1.9+ (for the Ruby binding)
   - Go 1.11+ (for the Go binding)
 
@@ -22,10 +22,12 @@ Linux dependencies
   - Cyrus SASL 2.1+ (for SASL support)
   - OpenSSL 1.0+ (for SSL support)
   - JsonCpp 1.8+ for C++ connection configuration file support
+  - Python 2.6+ (for the Python binding)
 
 Windows dependencies
 
-  - Visual Studio 2013 or newer (regular or C++ Express)
+  - Visual Studio 2015 or newer (regular or C++ Express)
+  - Python 3.5+ (for the Python binding)
 
 CMake (Linux)
 -------------
@@ -107,7 +109,7 @@ Studio and used to build the Proton library.
 
 The following packages must be installed:
 
-  - Visual Studio 2013 or newer (regular or C++ Express)
+  - Visual Studio 2015 or newer (regular or C++ Express)
   - Python (www.python.org)
   - CMake (www.cmake.org)
 
@@ -117,9 +119,10 @@ Additional packages are required for the language bindings:
   - Development headers and libraries for the language of choice
 
 Notes:
-
   - Be sure to install relevant Microsoft Service Packs and updates
   - python.exe, cmake.exe and swig.exe _must_ all be added to your PATH
+  - Chocolatey is a useful tool that can be used to install cmake, python
+    and swig (see https://chocolatey.org/)
 
 To generate the Visual Studio project files, from the directory where you found
 this `INSTALL.md` file:
