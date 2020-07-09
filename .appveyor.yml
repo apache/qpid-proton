@@ -17,8 +17,6 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       CMAKE_GENERATOR: Visual Studio 14 2015
       PYTHON: "C:\Python36-x64"
-      VCPKG_DEFAULT_TRIPLET: x64-windows
-      VCPKG_PLATFORM_TOOLSET: 'v140'
       # vcpkg is supported on VS2015, we are just not enabling the CMake integration
       # https://docs.microsoft.com/en-us/cpp/build/vcpkg?view=vs-2015
 
