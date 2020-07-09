@@ -17,12 +17,11 @@ environment:
 #      VCPKG_DEFAULT_TRIPLET: x64-windows
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       CMAKE_GENERATOR: Visual Studio 14 2015
-      PYTHON: "C:\Python36-x64"
+      PYTHON: "C:\\Python36-x64"
       # vcpkg is supported on VS2015, we are just not enabling the CMake integration
       # https://docs.microsoft.com/en-us/cpp/build/vcpkg?view=vs-2015
 
 install:
-- dir C:\Python36-x64
 - cinst -y swig
 # https://www.appveyor.com/docs/lang/cpp/#vc-packaging-tool
 - cd C:\Tools\vcpkg
