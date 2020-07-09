@@ -19,7 +19,7 @@ There are several other (less used) environment variables which are supported:
 The last two variables are still supported, but their effect may not be to turn on exactly the same logging messages as
 prior to the introduction of the Logger API.
 
-### Logger control introduced with the @ref logger API
+### Logger control introduced with the logger API
 
 The @ref logger API uses a single environment variable to control the default logging state - `PN_LOG`. This can include
 a number of strings which correspond to log levels to turn on, these are in descending order of importance (case is not significant):
@@ -38,7 +38,7 @@ For example:
 * Frame
 * Raw
 
-These string are equivalent to the frame and raw frame protocol traces from `PN_TRACE_FRM` and `PN_TRACE_RAW`, they will ignore any '+' appended to them. For example:
+These strings are equivalent to the frame and raw frame protocol traces from `PN_TRACE_FRM` and `PN_TRACE_RAW`, they will ignore any '+' appended to them. For example:
 
     PN_LOG='frame' ./proton_program
 
