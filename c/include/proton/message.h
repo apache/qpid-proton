@@ -731,8 +731,8 @@ PN_EXTERN int pn_message_decode(pn_message_t *msg, const char *bytes, size_t siz
  *
  * @param[in] msg a message object
  * @param[in] bytes the start of empty buffer space
- * @param[in] size the amount of empty buffer space
- * @param[out] size the amount of data written
+ * @param[inout] size the amount of empty buffer space.
+ *   On return size holds the amount of data written
  * @return zero on success or an error code on failure
  */
 PN_EXTERN int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size);

@@ -190,7 +190,7 @@ PN_EXTERN void pn_logger_set_mask(pn_logger_t *logger, uint16_t subsystem, uint1
  * @param[in] subsystem bits representing subsystems to turn off trace for
  * @param[in] level bits representing log levels to turn off trace for
  */
-PN_EXTERN void pn_logger_reset_mask(pn_logger_t *logger, uint16_t subsystem, uint16_t severity);
+PN_EXTERN void pn_logger_reset_mask(pn_logger_t *logger, uint16_t subsystem, uint16_t level);
 
 /**
  * Set the tracing function used by a logger.
@@ -228,9 +228,11 @@ PN_EXTERN intptr_t pn_logger_get_log_sink_context(pn_logger_t *logger);
  * be processed the same way.
  *
  * @param[in] logger the logger
+ * @param[in] subsystem the subsystem which is producing this log message
+ * @param[in] level the log level of the log message
  * @param[in] fmt the printf formatted message to be logged
  */
-PN_EXTERN void pn_logger_logf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *fmt, ...);
+PN_EXTERN void pn_logger_logf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t level, const char *fmt, ...);
 
 #ifdef __cplusplus
 }
