@@ -22,7 +22,7 @@ environment:
       # https://docs.microsoft.com/en-us/cpp/build/vcpkg?view=vs-2015
 
 install:
-- dir %PYTHON%
+- dir C:\Python36-x64
 - cinst -y swig
 # https://www.appveyor.com/docs/lang/cpp/#vc-packaging-tool
 - cd C:\Tools\vcpkg
