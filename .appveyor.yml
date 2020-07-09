@@ -6,7 +6,7 @@ environment:
     # https://www.appveyor.com/docs/windows-images-software
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       CMAKE_GENERATOR: Visual Studio 16 2019
-      PYTHON: "C:\\Python37-x64"
+      PYTHON: "C:\\Python38-x64"
       VCPKG_INTEGRATION: '-DCMAKE_TOOLCHAIN_FILE=C:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64'
       VCPKG_DEFAULT_TRIPLET: x64-windows
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
