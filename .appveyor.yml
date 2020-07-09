@@ -2,19 +2,19 @@ version: '{branch}.{build}'
 configuration: RelWithDebInfo
 environment:
   matrix:
-    # https://www.appveyor.com/docs/build-environment/
-    # https://www.appveyor.com/docs/windows-images-software
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      CMAKE_GENERATOR: Visual Studio 16 2019
-      # TODO (jdanek) upgrade to Python 38 when it can be made to work; or whichever is latest at the time
-      PYTHON: "C:\\Python37-x64"
-      VCPKG_INTEGRATION: '-DCMAKE_TOOLCHAIN_FILE=C:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64'
-      VCPKG_DEFAULT_TRIPLET: x64-windows
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      CMAKE_GENERATOR: Visual Studio 14 2015
-      PYTHON: "C:\\Python37-x64"
-      VCPKG_INTEGRATION: '-DCMAKE_TOOLCHAIN_FILE=C:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64'
-      VCPKG_DEFAULT_TRIPLET: x64-windows
+#    # https://www.appveyor.com/docs/build-environment/
+#    # https://www.appveyor.com/docs/windows-images-software
+#    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+#      CMAKE_GENERATOR: Visual Studio 16 2019
+#      # TODO (jdanek) upgrade to Python 38 when it can be made to work; or whichever is latest at the time
+#      PYTHON: "C:\\Python37-x64"
+#      VCPKG_INTEGRATION: '-DCMAKE_TOOLCHAIN_FILE=C:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64'
+#      VCPKG_DEFAULT_TRIPLET: x64-windows
+#    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+#      CMAKE_GENERATOR: Visual Studio 14 2015
+#      PYTHON: "C:\\Python37-x64"
+#      VCPKG_INTEGRATION: '-DCMAKE_TOOLCHAIN_FILE=C:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake -A x64'
+#      VCPKG_DEFAULT_TRIPLET: x64-windows
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       CMAKE_GENERATOR: Visual Studio 14 2015
       PYTHON: "C:\Python36-x64"
@@ -22,6 +22,7 @@ environment:
       # https://docs.microsoft.com/en-us/cpp/build/vcpkg?view=vs-2015
 
 install:
+- dir %PYTHON%
 - cinst -y swig
 # https://www.appveyor.com/docs/lang/cpp/#vc-packaging-tool
 - cd C:\Tools\vcpkg
