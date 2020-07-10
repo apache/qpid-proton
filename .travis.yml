@@ -33,12 +33,6 @@ jobs:
     - OPENSSL_ia32cap='0x00000000'
     # c-threaderciser test hangs on older clang
     - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser'"
-  - os: linux
-    dist: xenial
-    language: cpp
-    compiler: clang
-    env:
-    - OPENSSL_ia32cap='0x00000000'
   - name: benchmarks
     os: linux
     dist: focal
@@ -96,6 +90,7 @@ jobs:
 
   - os: osx
     osx_image: xcode9.4
+    language: cpp
     compiler: clang
     env:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
@@ -107,6 +102,7 @@ jobs:
 
   - os: osx
     osx_image: xcode11.3
+    language: cpp
     compiler: clang
     env:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
@@ -139,6 +135,9 @@ addons:
       - jsoncpp
       - libuv
       - swig
+# update:true workaround as of Feb. 22/20 as per
+# https://travis-ci.community/t/macos-build-fails-because-of-homebrew-bundle-unknown-command/7296/10
+    update: true
 
 install:
 - echo "Using PYTHON=${PYTHON:=python}"
