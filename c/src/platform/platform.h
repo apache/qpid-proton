@@ -60,15 +60,6 @@ pn_timestamp_t pn_i_now(void);
  */
 int pn_i_error_from_errno(pn_error_t *error, const char *msg);
 
-/** Provide C99 atoll functinality.
- *
- * @param[in] num the string representation of the number.
- * @return the integer value.
- *
- * @internal
- */
-int64_t pn_i_atoll(const char* num);
-
 #ifdef _MSC_VER
 
 #if !defined(S_ISDIR)

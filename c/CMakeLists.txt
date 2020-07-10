@@ -160,18 +160,6 @@ else (PN_WINAPI)
   endif (STRERROR_R_IN_LIBC)
 endif (PN_WINAPI)
 
-CHECK_SYMBOL_EXISTS(atoll "stdlib.h" C99_ATOLL)
-if (C99_ATOLL)
-  list(APPEND PLATFORM_DEFINITIONS "USE_ATOLL")
-else (C99_ATOLL)
-  CHECK_SYMBOL_EXISTS(_atoi64 "stdlib.h" WINAPI_ATOI64)
-  if (WINAPI_ATOI64)
-    list(APPEND PLATFORM_DEFINITIONS "USE_ATOI64")
-  else (WINAPI_ATOI64)
-    message(FATAL_ERROR "No atoll API found")
-  endif (WINAPI_ATOI64)
-endif (C99_ATOLL)
-
 if (PN_WINAPI)
   set (PLATFORM_LIBS ws2_32 Rpcrt4)
   list(APPEND PLATFORM_DEFINITIONS "PN_WINAPI")
@@ -187,9 +175,9 @@ if (MSVC)
     )
 endif (MSVC)
 
-# Ensure that examples build with c90 on gcc/clang, to deal with older c++03-as-c compilers.
-set(C_EXAMPLE_FLAGS_GNU "-std=iso9899:1990 -pedantic")
-set(C_EXAMPLE_FLAGS_Clang "-std=iso9899:1990 -pedantic")
+# Ensure that examples build with c99 on gcc/clang
+set(C_EXAMPLE_FLAGS_GNU "-std=c99 -pedantic")
+set(C_EXAMPLE_FLAGS_Clang "-std=c99 -pedantic")
 
 # Flags for example self-test build
 set(C_EXAMPLE_FLAGS "${COMPILE_WARNING_FLAGS} ${C_EXAMPLE_FLAGS_${CMAKE_C_COMPILER_ID}}")
@@ -459,19 +447,6 @@ set_target_properties (qpid-proton
 if (BUILD_STATIC_LIBS)
   add_library(qpid-proton-static STATIC ${qpid-proton-core-src} ${qpid-proton-noncore-src})
 endif(BUILD_STATIC_LIBS)
-
-if (MSVC)
-  # Add a phony dependency for Windows builds to serialize creation
-  # of generated files. See issue PROTON-1376.
-  # When a Windows build creates src/encodings.h and src/protocol.h
-  # only once then this can be removed.
-  add_dependencies(qpid-proton qpid-proton-core)
-endif (MSVC)
-
-if (MSVC)
-  # guard against use of C99 violating functions on Windows
-  include(WindowsC99CheckDef)
-endif(MSVC)
 
 if (qpid-proton-proactor)
   set(HAS_PROACTOR True)
