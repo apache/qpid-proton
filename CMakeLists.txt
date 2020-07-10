@@ -50,21 +50,9 @@ set (PN_C_LIBRARY_DIR "${CMAKE_BINARY_DIR}/c")
 set (PN_C_SOURCE_DIR "${CMAKE_BINARY_DIR}/c/src")
 
 ## C++
-
 check_language (CXX)
-
 if (CMAKE_CXX_COMPILER)
   enable_language(CXX)
-endif()
-
-# TODO - Should change this test to take account of recent MSVC that does support C99
-if (MSVC)
-  # No C99 capability, use C++
-  set(DEFAULT_BUILD_WITH_CXX ON)
-endif (MSVC)
-
-if (CMAKE_CXX_COMPILER)
-  option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
 endif()
 
 # Build static C and C++ libraries in addition to shared libraries.
@@ -145,13 +133,9 @@ if (CMAKE_COMPILER_IS_GNUCC)
   set (COMPILE_WARNING_FLAGS "${WERROR} -Wall -pedantic-errors")
   # C++ allow "%z" format specifier and variadic macros
   set (CXX_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format -Wno-variadic-macros")
-  if (NOT BUILD_WITH_CXX)
-    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wstrict-prototypes -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
-    set (COMPILE_LANGUAGE_FLAGS "-std=c99")
-    set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
-  else (NOT BUILD_WITH_CXX)
-    set (COMPILE_WARNING_FLAGS "${CXX_WARNING_FLAGS}")
-  endif (NOT BUILD_WITH_CXX)
+  set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wstrict-prototypes -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
+  set (COMPILE_LANGUAGE_FLAGS "-std=c99")
+  set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
 
   if (ENABLE_UNDEFINED_ERROR)
     set (CATCH_UNDEFINED "-Wl,--no-undefined")

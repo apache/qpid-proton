@@ -96,12 +96,3 @@ endif()
 
 # pni_sniff_header is internal so it has to be compiled specially
 pn_add_fuzz_test (fuzz-sniff-header fuzz-sniff-header.c ${PN_C_SOURCE_DIR}/core/autodetect.c)
-
-if (BUILD_WITH_CXX)
-  set_source_files_properties (
-    StandaloneFuzzTargetMain.c
-    StandaloneFuzzTargetInit.c
-    ${fuzz_test_src}
-    PROPERTIES LANGUAGE CXX
-  )
-endif (BUILD_WITH_CXX)

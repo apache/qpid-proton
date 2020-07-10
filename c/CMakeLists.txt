@@ -405,18 +405,6 @@ set_source_files_properties (
   COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
   )
 
-if (BUILD_WITH_CXX)
-  set_source_files_properties (
-    ${qpid-proton-core}
-    ${qpid-proton-proactor}
-    ${qpid-proton-layers}
-    ${qpid-proton-extra}
-    ${qpid-proton-platform}
-    ${qpid-proton-platform-io}
-    PROPERTIES LANGUAGE CXX
-    )
-endif (BUILD_WITH_CXX)
-
 set(qpid-proton-core-src
   ${qpid-proton-core}
   ${qpid-proton-layers}
