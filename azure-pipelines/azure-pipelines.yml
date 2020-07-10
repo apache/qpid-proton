@@ -13,7 +13,24 @@ variables:
   CmakeConfigExtraArgs: ''
 
 jobs:
-- job: Windows
+- job: Windows_VS2019
+  variables:
+    CmakeConfigExtraArgs: '-A x64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
+  pool:
+    vmImage: 'windows-2019'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: $(PythonVersion)
+      addToPath: true
+      architecture: $(PythonArch)
+  - script: |
+      choco install swig
+      vcpkg install jsoncpp
+      vcpkg integrate install
+    name: InstallExtraStuff
+  - template: steps.yml
+- job: Windows_VS2017
   variables:
     PythonArch: 'x86'
     CmakeConfigExtraArgs: '-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
