@@ -39,14 +39,7 @@ static const char *AMQPS_PORT_NAME = "amqps";
 const char *PNI_IO_CONDITION = "proton:io";
 
 int pn_proactor_addr(char *buf, size_t len, const char *host, const char *port) {
-  /* Don't use snprintf, Windows is not C99 compliant and snprintf is broken. */
-  if (buf && len > 0) {
-    buf[0] = '\0';
-    if (host) strncat(buf, host, len);
-    strncat(buf, ":", len);
-    if (port) strncat(buf, port, len);
-  }
-  return (host ? strlen(host) : 0) + (port ? strlen(port) : 0) + 1;
+  return snprintf(buf, len, "%s:%s", host ? host : "", port ? port : "");
 }
 
 int pni_parse_addr(const char *addr, char *buf, size_t len, const char **host, const char **port)
