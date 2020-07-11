@@ -66,7 +66,7 @@ jobs:
     - PYTHON=python3
     - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF'
     # otherwise, on Travis ldd gives `libclang_rt.asan-x86_64.so => not found` and binaries don't work
-    - LD_LIBRARY_PATH=/usr/local/clang-10.0.0/lib/clang/10.0.0/lib/linux/
+    - LD_LIBRARY_PATH=/usr/lib/llvm-10/lib/clang/10.0.0/lib/linux/
   - name: gcc tsan
     os: linux
     dist: focal
