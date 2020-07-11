@@ -141,8 +141,9 @@ addons:
 
 install:
 - echo "Using PYTHON=${PYTHON:=python}"
+# use older version of virtualenv to workaround https://github.com/pypa/virtualenv/issues/1873
 - ${PYTHON} -m pip install --user --upgrade pip
-- ${PYTHON} -m pip install --user coverage setuptools wheel tox
+- ${PYTHON} -m pip install --user coverage setuptools wheel tox virtualenv==20.0.23
 - gem install minitest simplecov codecov
 
 before_script:
