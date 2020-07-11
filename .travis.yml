@@ -17,15 +17,10 @@
 # under the License
 #
 
-sudo: false
-language: cpp
-
-matrix:
+jobs:
   include:
   - os: linux
-    dist: bionic
     dist: xenial
-    sudo: true
     language: cpp
     compiler: gcc
     env:
@@ -38,36 +33,56 @@ matrix:
     - OPENSSL_ia32cap='0x00000000'
     # c-threaderciser test hangs on older clang
     - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser'"
-  - os: linux
-    dist: bionic
-    sudo: true
-    compiler:
-    - gcc
+  - name: benchmarks
+    os: linux
+    dist: focal
+    language: cpp
+    compiler: gcc
     env:
+    - PYTHON=python3
     - QPID_PROTON_CMAKE_ARGS='-DENABLE_BENCHMARKS=ON -DRUNTIME_CHECK=OFF'
     before_install:
     - sudo apt-get install -y libbenchmark-dev
-  - os: linux
-    dist: bionic
-    compiler: gcc
+  - name: gcc asan
+    os: linux
+    dist: focal
+    before_install:
+    - sudo apt-get install -y gcc-10 g++-10
     env:
+    - CC=gcc-10
+    - CXX=g++-10
+    - PYTHON=python3
     # python-tox-test fails and ruby tests segfault
     - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF'
     - QPID_PROTON_CTEST_ARGS='-E ^ruby.*'
-  - os: linux
-    dist: bionic
-    compiler: clang
+  - name: clang asan
+    os: linux
+    dist: focal
+    before_install:
+    - sudo apt-get install -y clang-10
     env:
+    - CC=clang-10
+    - CXX=clang++-10
+    - PYTHON=python3
     - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF'
     # otherwise, on Travis ldd gives `libclang_rt.asan-x86_64.so => not found` and binaries don't work
-    - LD_LIBRARY_PATH=/usr/local/clang-7.0.0/lib/clang/7.0.0/lib/linux/
-  - os: linux
-    dist: bionic
+    - LD_LIBRARY_PATH=/usr/lib/llvm-10/lib/clang/10.0.0/lib/linux/
+  - name: gcc tsan
+    os: linux
+    dist: focal
+    before_install:
+    - sudo apt-get install -y gcc-10 g++-10
     env:
+    - CC=gcc-10
+    - CXX=g++-10
+    - PYTHON=python3
     # python-test, python-integration-test, and python-tox-test segfault
     - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=tsan -DENABLE_TOX_TEST=OFF'
     - QPID_PROTON_CTEST_ARGS="-E 'python-test|python-integration-test'"
   - os: linux
+    dist: bionic
+    language: cpp
+    compiler: gcc
     env:
     - QPID_PROTON_CMAKE_ARGS='-DCMAKE_BUILD_TYPE=Coverage'
     after_success:
@@ -75,6 +90,7 @@ matrix:
 
   - os: osx
     osx_image: xcode9.4
+    language: cpp
     compiler: clang
     env:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
@@ -86,6 +102,7 @@ matrix:
 
   - os: osx
     osx_image: xcode11.3
+    language: cpp
     compiler: clang
     env:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
@@ -96,7 +113,7 @@ matrix:
     - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser|python-tox-test|ruby.*'"
 
 addons:
-  # Ubuntu 16.04 APT dependencies, https://packages.ubuntu.com/
+  # Ubuntu APT dependencies, https://packages.ubuntu.com/
   apt:
     packages:
     - cmake
@@ -123,14 +140,16 @@ addons:
     update: true
 
 install:
-- python -m pip install --user --upgrade pip
-- python -m pip install --user coverage setuptools wheel tox
+- echo "Using PYTHON=${PYTHON:=python}"
+# use older version of virtualenv to workaround https://github.com/pypa/virtualenv/issues/1873
+- ${PYTHON} -m pip install --user --upgrade pip
+- ${PYTHON} -m pip install --user coverage setuptools wheel tox virtualenv==20.0.23
 - gem install minitest simplecov codecov
 
 before_script:
 - mkdir build
 - cd build
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install ${QPID_PROTON_CMAKE_ARGS}
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install -DPYTHON_EXECUTABLE="$(which ${PYTHON})" ${QPID_PROTON_CMAKE_ARGS}
 
 script:
 - cmake --build . --target install -- -j$(nproc) && eval ctest -V ${QPID_PROTON_CTEST_ARGS}
