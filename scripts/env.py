@@ -46,15 +46,16 @@ def main(argv=None):
         z = args[0].split("=", 1)
         if len(z) != 2:
             break  # done with env args
-        if len(z[0]) == 0:
-            raise Exception("Error: incorrect format for env var: '%s'" % str(args[x]))
+        name, value = z[0], z[1]
+        if len(name) == 0:
+            raise Exception("Error: incorrect format for env var: '%s'" % str(args[0]))
         del args[0]
-        if len(z[1]) == 0:
+        if len(value) == 0:
             # value is not present, so delete it
-            if z[0] in new_env:
-                del new_env[z[0]]
+            if name in new_env:
+                del new_env[name]
         else:
-            new_env[z[0]] = z[1]
+            new_env[name] = value
 
     if len(args) == 0 or len(args[0]) == 0:
         raise Exception("Error: syntax error in command arguments")
