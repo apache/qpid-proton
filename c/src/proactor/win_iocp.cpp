@@ -23,6 +23,7 @@
 #include <proton/connection_driver.h>
 #include <proton/engine.h>
 #include <proton/message.h>
+#include <proton/netaddr.h>
 #include <proton/object.h>
 #include <proton/proactor.h>
 #include <proton/transport.h>
