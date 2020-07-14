@@ -95,6 +95,11 @@ const char *pnx_sasl_get_username(pn_transport_t *transport)
   return transport->sasl ? transport->sasl->username : NULL;
 }
 
+const char *pnx_sasl_get_authorization(pn_transport_t *transport)
+{
+  return transport->sasl ? transport->sasl->authzid : NULL;
+}
+
 const char *pnx_sasl_get_external_username(pn_transport_t *transport)
 {
   return transport->sasl ? transport->sasl->external_auth : NULL;
@@ -143,15 +148,21 @@ void  pnx_sasl_set_selected_mechanism(pn_transport_t *transport, const char *mec
   }
 }
 
-void  pnx_sasl_succeed_authentication(pn_transport_t *transport, const char *username)
+void  pnx_sasl_succeed_authentication(pn_transport_t *transport, const char *username, const char *authzid)
 {
   if (transport->sasl) {
     transport->sasl->username = username;
+    transport->sasl->authzid = authzid;
     transport->sasl->outcome = PN_SASL_OK;
     transport->authenticated = true;
 
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_INFO, "Authenticated user: %s with mechanism %s",
-                  username, transport->sasl->selected_mechanism);
+    if (authzid) {
+      PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_INFO, "Authenticated user: %s for %s with mechanism %s",
+             username, authzid, transport->sasl->selected_mechanism);
+    } else {
+      PN_LOG(&transport->logger, PN_SUBSYSTEM_SASL, PN_LEVEL_INFO, "Authenticated user: %s with mechanism %s",
+             username, transport->sasl->selected_mechanism);
+    }
   }
 }
 
@@ -729,6 +740,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->selected_mechanism = NULL;
     sasl->included_mechanisms = NULL;
     sasl->username = NULL;
+    sasl->authzid = NULL;
     sasl->password = NULL;
     sasl->remote_fqdn = NULL;
     sasl->local_fqdn = NULL;
@@ -783,10 +795,11 @@ void pnx_sasl_set_local_hostname(pn_transport_t * transport, const char * fqdn)
   sasl->local_fqdn = pn_strdup(fqdn);
 }
 
-void pni_sasl_set_user_password(pn_transport_t *transport, const char *user, const char *password)
+void pni_sasl_set_user_password(pn_transport_t *transport, const char *user, const char *authzid, const char *password)
 {
   pni_sasl_t *sasl = transport->sasl;
   sasl->username = user;
+  sasl->authzid = authzid;
   free(sasl->password);
   sasl->password = password ? pn_strdup(password) : NULL;
 }
@@ -803,6 +816,12 @@ const char *pn_sasl_get_user(pn_sasl_t *sasl0)
 {
     pni_sasl_t *sasl = get_sasl_internal(sasl0);
     return sasl->username;
+}
+
+const char *pn_sasl_get_authorization(pn_sasl_t *sasl0)
+{
+    pni_sasl_t *sasl = get_sasl_internal(sasl0);
+    return sasl->authzid;
 }
 
 const char *pn_sasl_get_mech(pn_sasl_t *sasl0)

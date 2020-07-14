@@ -125,6 +125,26 @@ PN_EXTERN pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl);
 PN_EXTERN const char *pn_sasl_get_user(pn_sasl_t *sasl);
 
 /**
+ * Retrieve the authorization id
+ *
+ * This is usually used at the the server end to find the name of the requested authorization id.
+ * On the client it will merely return whatever was passed in to the
+ * pn_transport_set_authorization() API.
+ *
+ * If pn_sasl_outcome() returns a value other than PN_SASL_OK, then there will be no user to return.
+ * The returned value is only reliable after the PN_TRANSPORT_AUTHENTICATED event has been received.
+ *
+ * @param[in] sasl the sasl layer
+ *
+ * @return
+ * If the SASL layer was not negotiated then 0 is returned
+ * If the ANONYMOUS mechanism is used then 0 is returned
+ * If no authorization id was requested then 0 is returned
+ * Otherwise a string containing the requested authorization id is returned.
+ */
+PN_EXTERN const char *pn_sasl_get_authorization(pn_sasl_t *sasl);
+
+/**
  * Return the selected SASL mechanism
  *
  * The returned value is only reliable after the PN_TRANSPORT_AUTHENTICATED event has been received.

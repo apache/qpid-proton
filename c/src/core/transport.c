@@ -695,9 +695,12 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
   pn_connection_bound(connection);
 
   // set the hostname/user/password
-  if (pn_string_size(connection->auth_user)) {
+  if (pn_string_size(connection->auth_user) || pn_string_size(connection->authzid)) {
     pn_sasl(transport);
-    pni_sasl_set_user_password(transport, pn_string_get(connection->auth_user), pn_string_get(connection->auth_password));
+    pni_sasl_set_user_password(transport,
+                               pn_string_get(connection->auth_user),
+                               pn_string_get(connection->authzid),
+                               pn_string_get(connection->auth_password));
   }
 
   if (pn_string_size(connection->hostname)) {

@@ -243,6 +243,7 @@ struct pn_connection_t {
   pn_string_t *container;
   pn_string_t *hostname;
   pn_string_t *auth_user;
+  pn_string_t *authzid;
   pn_string_t *auth_password;
   pn_data_t *offered_capabilities;
   pn_data_t *desired_capabilities;

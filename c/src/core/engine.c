@@ -499,6 +499,7 @@ static void pn_connection_finalize(void *object)
   pn_free(conn->container);
   pn_free(conn->hostname);
   pn_free(conn->auth_user);
+  pn_free(conn->authzid);
   pn_free(conn->auth_password);
   pn_free(conn->offered_capabilities);
   pn_free(conn->desired_capabilities);
@@ -533,6 +534,7 @@ pn_connection_t *pn_connection()
   conn->container = pn_string(NULL);
   conn->hostname = pn_string(NULL);
   conn->auth_user = pn_string(NULL);
+  conn->authzid = pn_string(NULL);
   conn->auth_password = pn_string(NULL);
   conn->offered_capabilities = pn_data(0);
   conn->desired_capabilities = pn_data(0);
@@ -606,6 +608,18 @@ void pn_connection_set_user(pn_connection_t *connection, const char *user)
 {
     assert(connection);
     pn_string_set(connection->auth_user, user);
+}
+
+const char *pn_connection_get_authorization(pn_connection_t *connection)
+{
+  assert(connection);
+  return pn_string_get(connection->authzid);
+}
+
+void pn_connection_set_authorization(pn_connection_t *connection, const char *authzid)
+{
+  assert(connection);
+  pn_string_set(connection->authzid, authzid);
 }
 
 void pn_connection_set_password(pn_connection_t *connection, const char *password)
