@@ -118,7 +118,12 @@ static void pni_cyrus_interact(pn_transport_t *transport, sasl_interact_t *inter
 {
   for (sasl_interact_t *i = interact; i->id!=SASL_CB_LIST_END; i++) {
     switch (i->id) {
-    case SASL_CB_USER:
+    case SASL_CB_USER: {
+      const char *authzid = pnx_sasl_get_authorization(transport);
+      i->result = authzid;
+      i->len = authzid ? strlen(authzid) : 0;
+      break;
+    }
     case SASL_CB_AUTHNAME: {
       const char *username = pnx_sasl_get_username(transport);
       i->result = username;
@@ -158,8 +163,32 @@ static const sasl_callback_t pni_user_password_callbacks[] = {
 };
 
 static const sasl_callback_t pni_user_callbacks[] = {
-    {SASL_CB_USER, NULL, NULL},
-    {SASL_CB_AUTHNAME, NULL, NULL},
+  {SASL_CB_USER, NULL, NULL},
+  {SASL_CB_AUTHNAME, NULL, NULL},
+  {SASL_CB_LIST_END, NULL, NULL},
+};
+
+static const sasl_callback_t pni_authzid_callbacks[] = {
+  {SASL_CB_USER, NULL, NULL},
+  {SASL_CB_LIST_END, NULL, NULL},
+};
+
+static int pni_authorize(sasl_conn_t *conn,
+    void *context,
+    const char *requested_user, unsigned rlen,
+    const char *auth_identity, unsigned alen,
+    const char *def_realm, unsigned urlen,
+    struct propctx *propctx)
+{
+  PN_LOG_DEFAULT(PN_SUBSYSTEM_SASL, PN_LEVEL_TRACE, "Authorized: userid=%*s by authuser=%*s @ %*s",
+    rlen, requested_user,
+    alen, auth_identity,
+    urlen, def_realm);
+  return SASL_OK;
+}
+
+static const sasl_callback_t pni_server_callbacks[] = {
+    {SASL_CB_PROXY_POLICY, (int(*)(void)) pni_authorize, NULL},
     {SASL_CB_LIST_END, NULL, NULL},
 };
 
@@ -234,7 +263,7 @@ static void pni_cyrus_server_once(void) {
     }
   }
   if (result==SASL_OK) {
-    result = sasl_server_init(NULL, pni_cyrus_config_name ? pni_cyrus_config_name : default_config_name);
+    result = sasl_server_init(pni_server_callbacks, pni_cyrus_config_name ? pni_cyrus_config_name : default_config_name);
   }
   pni_cyrus_server_started = true;
   pni_cyrus_server_init_rc = result;
@@ -263,7 +292,8 @@ bool cyrus_sasl_init_client(pn_transport_t* transport) {
     if (result!=SASL_OK) break;
 
     const sasl_callback_t *callbacks =
-      pnx_sasl_get_username(transport) ? pnx_sasl_get_password(transport) ? pni_user_password_callbacks : pni_user_callbacks : NULL;
+      pnx_sasl_get_username(transport) ? (pnx_sasl_get_password(transport) ? pni_user_password_callbacks : pni_user_callbacks) :
+      pnx_sasl_get_authorization(transport) ? pni_authzid_callbacks : NULL;
     result = sasl_client_new(amqp_service,
                              pnx_sasl_get_remote_fqdn(transport),
                              NULL, NULL,
@@ -466,9 +496,12 @@ static void pni_process_server_result(pn_transport_t *transport, int result)
         case SASL_OK: {
             // Authenticated
             // Get username from SASL
-            const void* value;
-            sasl_getprop(cyrus_conn, SASL_USERNAME, &value);
-            pnx_sasl_succeed_authentication(transport, (const char*) value);
+            const void* authcid;
+            sasl_getprop(cyrus_conn, SASL_AUTHUSER, &authcid);
+            // Get authzid from SASL
+            const void* authzid;
+            sasl_getprop(cyrus_conn, SASL_USERNAME, &authzid);
+            pnx_sasl_succeed_authentication(transport, (const char*) authcid, (const char*) authzid);
             pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
             break;
         }

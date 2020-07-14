@@ -98,6 +98,7 @@ bool default_sasl_process_mechanisms(pn_transport_t *transport, const char *mech
 {
   const char *username = pnx_sasl_get_username(transport);
   const char *password = pnx_sasl_get_password(transport);
+  const char *authzid  = pnx_sasl_get_authorization(transport);
 
   // Check whether offered EXTERNAL, PLAIN or ANONYMOUS
   // Look for "EXTERNAL" in mechs
@@ -105,14 +106,14 @@ bool default_sasl_process_mechanisms(pn_transport_t *transport, const char *mech
   // Make sure that string is separated and terminated
   if (found && (found==mechs || found[-1]==' ') && (found[8]==0 || found[8]==' ')) {
     pnx_sasl_set_selected_mechanism(transport, EXTERNAL);
-    if (username) {
-      size_t size = strlen(username);
+    if (authzid) {
+      size_t size = strlen(authzid);
       char *iresp = (char *) malloc(size);
       if (!iresp) return false;
 
       pnx_sasl_set_context(transport, iresp);
 
-      memmove(iresp, username, size);
+      memmove(iresp, authzid, size);
       pnx_sasl_set_bytes_out(transport, pn_bytes(size, iresp));
     } else {
       static const char empty[] = "";
@@ -130,18 +131,20 @@ bool default_sasl_process_mechanisms(pn_transport_t *transport, const char *mech
       (pnx_sasl_is_transport_encrypted(transport) || pnx_sasl_get_allow_insecure_mechs(transport)) &&
       username && password) {
     pnx_sasl_set_selected_mechanism(transport, PLAIN);
+    size_t zsize = authzid ? strlen(authzid) : 0;
     size_t usize = strlen(username);
     size_t psize = strlen(password);
-    size_t size = usize + psize + 2;
+    size_t size = zsize + usize + psize + 2;
     char *iresp = (char *) malloc(size);
     if (!iresp) return false;
 
     pnx_sasl_set_context(transport, iresp);
 
-    iresp[0] = 0;
-    memmove(&iresp[1], username, usize);
-    iresp[usize + 1] = 0;
-    memmove(&iresp[usize + 2], password, psize);
+    if (authzid) memmove(&iresp[0], authzid, zsize);
+    iresp[zsize] = 0;
+    memmove(&iresp[zsize + 1], username, usize);
+    iresp[zsize + usize + 1] = 0;
+    memmove(&iresp[zsize + usize + 2], password, psize);
     pnx_sasl_set_bytes_out(transport, pn_bytes(size, iresp));
 
     // Zero out password and dealloc
@@ -191,7 +194,7 @@ void default_sasl_process_init(pn_transport_t *transport, const char *mechanism,
 {
   // Check that mechanism is ANONYMOUS
   if (strcmp(mechanism, ANONYMOUS)==0) {
-    pnx_sasl_succeed_authentication(transport, "anonymous");
+    pnx_sasl_succeed_authentication(transport, "anonymous", "anonymous");
     pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
     return;
   }
@@ -199,7 +202,21 @@ void default_sasl_process_init(pn_transport_t *transport, const char *mechanism,
   // Or maybe EXTERNAL
   const char *ext_username = pnx_sasl_get_external_username(transport);
   if (strcmp(mechanism, EXTERNAL)==0 && ext_username) {
-    pnx_sasl_succeed_authentication(transport, ext_username);
+
+    char *authzid = NULL;
+
+    if (recv->size) {
+      authzid = (char *) malloc(recv->size+1);
+      pnx_sasl_set_context(transport, authzid);
+
+      // If we didn't get memory pretend no authzid
+      if (authzid) {
+        memcpy(&authzid[0], recv->start, recv->size);
+        authzid[recv->size] = 0;
+      }
+    }
+
+    pnx_sasl_succeed_authentication(transport, ext_username, authzid ? authzid : ext_username);
     pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
     return;
   }

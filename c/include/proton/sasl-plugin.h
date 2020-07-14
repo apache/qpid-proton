@@ -123,6 +123,7 @@ PN_EXTERN int   pnx_sasl_get_external_ssf(pn_transport_t *transport);
 
 PN_EXTERN const char *pnx_sasl_get_username(pn_transport_t *transport);
 PN_EXTERN const char *pnx_sasl_get_password(pn_transport_t *transport);
+PN_EXTERN const char *pnx_sasl_get_authorization(pn_transport_t *transport);
 PN_EXTERN void  pnx_sasl_clear_password(pn_transport_t *transport);
 PN_EXTERN const char *pnx_sasl_get_remote_fqdn(pn_transport_t *transport);
 PN_EXTERN const char *pnx_sasl_get_selected_mechanism(pn_transport_t *transport);
@@ -131,7 +132,7 @@ PN_EXTERN void  pnx_sasl_set_bytes_out(pn_transport_t *transport, pn_bytes_t byt
 PN_EXTERN void  pnx_sasl_set_desired_state(pn_transport_t *transport, enum pnx_sasl_state desired_state);
 PN_EXTERN void  pnx_sasl_set_selected_mechanism(pn_transport_t *transport, const char *mechanism);
 PN_EXTERN void  pnx_sasl_set_local_hostname(pn_transport_t * transport, const char * fqdn);
-PN_EXTERN void  pnx_sasl_succeed_authentication(pn_transport_t *transport, const char *username);
+PN_EXTERN void  pnx_sasl_succeed_authentication(pn_transport_t *transport, const char *username, const char *authzid);
 PN_EXTERN void  pnx_sasl_fail_authentication(pn_transport_t *transport);
 
 PN_EXTERN void  pnx_sasl_set_implementation(pn_transport_t *transport, const pnx_sasl_implementation *impl, void *context);

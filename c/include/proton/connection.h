@@ -322,12 +322,37 @@ PN_EXTERN void pn_connection_set_user(pn_connection_t *connection, const char *u
 PN_EXTERN void pn_connection_set_password(pn_connection_t *connection, const char *password);
 
 /**
+ * Set the authorization id for a client connection
+ *
+ * It is necessary to set the authorization before binding the connection
+ * to a transport and it isn't allowed to change it after the binding.
+ *
+ * This is only useful if the negotiated sasl mechanism supports transporting an authorization id separate from
+ * the authentication user.
+ *
+ * By default all mechanisms will consider the requested authorization as identical to the authentication if it
+ * is not supplied.
+ *
+ * @param[in] connection the connection
+ * @param[in] authzid the authorization id
+ */
+PN_EXTERN void pn_connection_set_authorization(pn_connection_t *connection, const char *authzid);
+
+/**
  * Get the authentication username for a client connection
  *
  * @param[in] connection the connection
  * @return the username passed into the connection
  */
 PN_EXTERN const char *pn_connection_get_user(pn_connection_t *connection);
+
+/**
+ * Get the authorization id for a client connection
+ *
+ * @param[in] connection the connection
+ * @return the authorization passed into the connection
+ */
+PN_EXTERN const char *pn_connection_get_authorization(pn_connection_t *connection);
 
 /**
  * Get the value of the AMQP Hostname used by a connection object.
