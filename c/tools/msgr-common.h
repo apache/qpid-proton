@@ -20,30 +20,7 @@
 
 #include "pncompat/misc_defs.h"
 
-#if defined(USE_INTTYPES)
-#ifdef __cplusplus
-#define __STDC_FORMAT_MACROS
-#endif
 #include <inttypes.h>
-#endif
-
-#ifdef _MSC_VER
-#if !defined(PRIu64)
-#define PRIu64 "I64u"
-#endif
-#if !defined(SCNu64)
-#define SCNu64 "I64u"
-#endif
-#endif
-
-/* If still not defined, best guess */
-#if !defined(SCNu64)
-#define SCNu64 "ul"
-#endif
-#if !defined(PRIu64)
-#define PRIu64 "ul"
-#endif
-
 
 #include "proton/types.h"
 #include "proton/message.h"

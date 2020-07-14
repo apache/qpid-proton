@@ -21,16 +21,6 @@ include(CheckIncludeFiles)
 
 include_directories (${PN_C_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-CHECK_INCLUDE_FILES("inttypes.h" INTTYPES_AVAILABLE)
-if (INTTYPES_AVAILABLE)
-  list(APPEND PLATFORM_DEFINITIONS "USE_INTTYPES")
-else (INTTYPES_AVAILABLE)
-  if (CMAKE_COMPILER_IS_GNUCC)
-    # since inttypes.h provides portable printf format macros
-    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format")
-  endif (CMAKE_COMPILER_IS_GNUCC)
-endif (INTTYPES_AVAILABLE)
-
 add_executable(msgr-recv msgr-recv.c msgr-common.c)
 add_executable(msgr-send msgr-send.c msgr-common.c)
 add_executable(reactor-recv reactor-recv.c msgr-common.c)

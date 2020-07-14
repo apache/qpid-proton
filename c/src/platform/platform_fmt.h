@@ -30,9 +30,7 @@
  * Visual studio uses "%I" for size_t instead of "%z".
  */
 
-#ifndef __cplusplus
-
-// normal case
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #define PN_ZI "zi"
 #define PN_ZU "zu"
@@ -55,31 +53,5 @@
 #define PRIi64 "lli"
 
 #endif /* _OPENVMS */
-
-#else
-
-#ifdef _MSC_VER
-#define PRIu8 "u"
-#define PRIu16 "u"
-#define PRIu32 "u"
-#define PRIu64 "I64u"
-
-#define PRIi8 "i"
-#define PRIi16 "i"
-#define PRIi32 "i"
-#define PRIi64 "I64i"
-
-#define PN_ZI "Ii"
-#define PN_ZU "Iu"
-#else
-// Normal C++
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
-#define PN_ZI "zi"
-#define PN_ZU "zu"
-
-#endif /* _MSC_VER */
-
-#endif /* __cplusplus */
 
 #endif /* platform_fmt.h */
