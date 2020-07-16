@@ -17,8 +17,6 @@
 # under the License.
 #
 
-include(CheckIncludeFiles)
-
 include_directories (${PN_C_INCLUDE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_executable(msgr-recv msgr-recv.c msgr-common.c)

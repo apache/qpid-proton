@@ -44,7 +44,7 @@ if (CMAKE_CXX_COMPILER)
   macro(add_c_test exe)
     add_executable(${exe} $<TARGET_OBJECTS:test_main> pn_test.cpp ${ARGN})
     set_target_properties(${exe} PROPERTIES
-      COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
+      COMPILE_FLAGS "${CXX_STANDARD} ${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
     pn_add_test(
       EXECUTABLE
       NAME ${exe}

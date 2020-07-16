@@ -49,10 +49,37 @@ set (PN_C_INCLUDE_DIR "${CMAKE_BINARY_DIR}/c/include")
 set (PN_C_LIBRARY_DIR "${CMAKE_BINARY_DIR}/c")
 set (PN_C_SOURCE_DIR "${CMAKE_BINARY_DIR}/c/src")
 
+## C
+if (DEFINED CMAKE_C_COMPILE_FEATURES)
+  set(CMAKE_C_STANDARD 99)
+  set(CMAKE_C_EXTENSIONS OFF)
+  set(CMAKE_C_STANDARD_REQUIRED ON)
+else()
+  set (C_STANDARD_GCC -std=c99)
+endif()
+
 ## C++
 check_language (CXX)
 if (CMAKE_CXX_COMPILER)
   enable_language(CXX)
+
+  # This effectively checks for cmake version 3.1 or later
+  if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
+    set(CMAKE_CXX_STANDARD 11)
+    set(CMAKE_CXX_EXTENSIONS OFF)
+    # Every supported version of Visual Studio (2015 onwards) supports enough C++11 that we
+    # no longer need to run the individual feature tests
+  else ()
+    include(CheckCXXCompilerFlag)
+    # These flags work with GCC/Clang/SunPro compilers
+    check_cxx_compiler_flag("-std=c++11" ACCEPTS_CXX11)
+    check_cxx_compiler_flag("-std=c++0x" ACCEPTS_CXX0X)
+    if (ACCEPTS_CXX11)
+      set(CXX_STANDARD "-std=c++11")
+    elseif(ACCEPTS_CXX0X)
+      set(CXX_STANDARD "-std=c++0x")
+    endif()
+  endif ()
 endif()
 
 # Build static C and C++ libraries in addition to shared libraries.
@@ -131,11 +158,9 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set (WERROR "-Werror")
   endif (ENABLE_WARNING_ERROR)
   set (COMPILE_WARNING_FLAGS "${WERROR} -Wall -pedantic-errors")
-  # C++ allow "%z" format specifier and variadic macros
-  set (CXX_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format -Wno-variadic-macros")
-  set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wstrict-prototypes -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
-  set (COMPILE_LANGUAGE_FLAGS "-std=c99")
-  set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
+  set (CXX_WARNING_FLAGS "${COMPILE_WARNING_FLAGS}")
+  set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wstrict-prototypes -Wvla -Wsign-compare -Wwrite-strings")
+  set (COMPILE_LANGUAGE_FLAGS ${C_STANDARD_GCC})
 
   if (ENABLE_UNDEFINED_ERROR)
     set (CATCH_UNDEFINED "-Wl,--no-undefined")
@@ -159,7 +184,7 @@ endif (CMAKE_COMPILER_IS_GNUCC)
 
 if (CMAKE_C_COMPILER_ID MATCHES "Clang")
   set (COMPILE_WARNING_FLAGS  "-Wall -pedantic")
-  set (COMPILE_LANGUAGE_FLAGS "-std=c99")
+  set (COMPILE_LANGUAGE_FLAGS ${C_STANDARD_GCC})
   if (ENABLE_WARNING_ERROR)
     set (COMPILE_WARNING_FLAGS "-Werror ${COMPILE_WARNING_FLAGS}")
   endif (ENABLE_WARNING_ERROR)

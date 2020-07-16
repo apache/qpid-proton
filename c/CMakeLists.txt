@@ -351,7 +351,7 @@ if (PROACTOR STREQUAL "iocp" OR (NOT PROACTOR AND NOT PROACTOR_OK))
     set (PROACTOR_OK iocp)
     set (qpid-proton-proactor src/proactor/win_iocp.cpp ${qpid-proton-proactor-common})
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
-      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS} ${LTO}"
+      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
       COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
       )
   endif(WIN32 AND NOT CYGWIN)
@@ -389,7 +389,7 @@ set_source_files_properties (
   ${qpid-proton-platform}
   ${qpid-proton-platform-io}
   PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS} ${LTO}"
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
   COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
   )
 
@@ -413,6 +413,16 @@ target_compile_definitions(qpid-proton-core-objects PRIVATE $<TARGET_PROPERTY:qp
 target_compile_options    (qpid-proton-core-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-core,COMPILE_OPTIONS>)
 target_include_directories(qpid-proton-core-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-core,INCLUDE_DIRECTORIES>)
 
+add_library (qpid-proton-platform-io-objects OBJECT ${qpid-proton-platform-io})
+set_target_properties(qpid-proton-platform-io-objects PROPERTIES
+  POSITION_INDEPENDENT_CODE ON
+  C_EXTENSIONS ON)
+target_compile_definitions(qpid-proton-platform-io-objects PRIVATE qpid_proton_core_EXPORTS)
+
+target_compile_definitions(qpid-proton-platform-io-objects PRIVATE $<TARGET_PROPERTY:qpid-proton,COMPILE_DEFINITIONS>)
+target_compile_options    (qpid-proton-platform-io-objects PRIVATE $<TARGET_PROPERTY:qpid-proton,COMPILE_OPTIONS>)
+target_include_directories(qpid-proton-platform-io-objects PRIVATE $<TARGET_PROPERTY:qpid-proton,INCLUDE_DIRECTORIES>)
+
 add_library (qpid-proton-core SHARED $<TARGET_OBJECTS:qpid-proton-core-objects>)
 target_link_libraries (qpid-proton-core ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 set_target_properties (qpid-proton-core
@@ -431,11 +441,10 @@ set(qpid-proton-noncore-src
   ${qpid-proton-proactor}
   # Proton Reactor/Messenger
   ${qpid-proton-extra}
-  ${qpid-proton-platform-io}
   ${qpid-proton-include-extra}
 )
 
-add_library (qpid-proton SHARED $<TARGET_OBJECTS:qpid-proton-core-objects> ${qpid-proton-noncore-src})
+add_library (qpid-proton SHARED $<TARGET_OBJECTS:qpid-proton-core-objects> $<TARGET_OBJECTS:qpid-proton-platform-io-objects> ${qpid-proton-noncore-src})
 target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 set_target_properties (qpid-proton
   PROPERTIES
@@ -445,7 +454,7 @@ set_target_properties (qpid-proton
 )
 
 if (BUILD_STATIC_LIBS)
-  add_library(qpid-proton-static STATIC ${qpid-proton-core-src} ${qpid-proton-noncore-src})
+  add_library(qpid-proton-static STATIC ${qpid-proton-core-src} ${qpid-proton-platform-io} ${qpid-proton-noncore-src})
 endif(BUILD_STATIC_LIBS)
 
 if (qpid-proton-proactor)

@@ -18,6 +18,7 @@
 #
 cmake_minimum_required(VERSION 2.8.12)
 
+include(CMakeDependentOption)
 enable_language(CXX)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
@@ -29,7 +30,8 @@ set (BUILD_CPP_03 OFF CACHE BOOL "Compile the C++ binding as C++03 even when C++
 
 # Check for JSON-CPP support for connection configuration
 find_package(JsonCpp)
-option(ENABLE_JSONCPP "Use jsoncpp parser for connection configuration" ${JsonCpp_FOUND})
+cmake_dependent_option(ENABLE_JSONCPP "Use jsoncpp parser for connection configuration" ${JsonCpp_FOUND}
+  "NOT BUILD_CPP_03" OFF)
 if (ENABLE_JSONCPP)
   include_directories(${JsonCpp_INCLUDE_DIRS})
   set(CONNECT_CONFIG_SRC src/connect_config.cpp)
@@ -41,39 +43,23 @@ endif()
 # This effectively checks for cmake version 3.1 or later
 if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
   if (BUILD_CPP_03)
-    set(STD 98)
+    set(CMAKE_CXX_STANDARD 98)
   else ()
-    set(STD 11)
-    list(APPEND PLATFORM_LIBS Threads::Threads)
-  endif ()
-  set(CMAKE_CXX_STANDARD ${STD})
-  set(CMAKE_CXX_EXTENSIONS OFF)
-  if (MSVC)  # Compiler feature checks only needed for Visual Studio in this case
-    include(cpp.cmake)
-  elseif (STD EQUAL 11)
     set(CPP_DEFINITIONS "HAS_CPP11")
-  endif()
+  endif ()
 else ()
   if (BUILD_CPP_03)
     set(CXX_STANDARD "-std=c++98")
   else ()
-    include(CheckCXXCompilerFlag)
-    # These flags work with GCC/Clang/SunPro compilers
-    check_cxx_compiler_flag("-std=c++11" ACCEPTS_CXX11)
-    check_cxx_compiler_flag("-std=c++0x" ACCEPTS_CXX0X)
     if (ACCEPTS_CXX11)
-      set(CXX_STANDARD "-std=c++11")
       set(CPP_DEFINITIONS "HAS_CPP11")
-      list(APPEND PLATFORM_LIBS Threads::Threads)
-    elseif(ACCEPTS_CXX0X)
-      set(CXX_STANDARD "-std=c++0x")
-      list(APPEND PLATFORM_LIBS Threads::Threads)
-      include(cpp.cmake) # Compiler checks needed for C++0x as not all C++11 may be supported
     else()
-      include(cpp.cmake) # Compiler checks needed as we have no idea whats going on here!
+      include(cpp.cmake) # Compiler checks needed as not all C++11 may be supported
     endif()
   endif()
 endif ()
+
+list(APPEND PLATFORM_LIBS Threads::Threads)
 
 # Construct #define lines to insert in config_presets.hpp
 foreach(d ${CPP_DEFINITIONS})
@@ -167,7 +153,7 @@ set(qpid-proton-cpp-source
 set_source_files_properties (
   ${qpid-proton-cpp-source}
   PROPERTIES
-  COMPILE_FLAGS "${LTO}"
+  COMPILE_OPTIONS "${LTO}"
   )
 
 if (MSVC)

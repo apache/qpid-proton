@@ -41,7 +41,7 @@ list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
 )
 
 swig_add_library(cproton LANGUAGE python SOURCES cproton.i)
-swig_link_libraries(cproton ${BINDING_DEPS} ${PYTHON_LIBRARIES})
+swig_link_libraries(cproton ${BINDING_DEPS} ${PYTHON_LIBRARIES} -lm)
 set_target_properties(${SWIG_MODULE_cproton_REAL_NAME}
     PROPERTIES
     LINK_FLAGS "${CATCH_UNDEFINED}")
