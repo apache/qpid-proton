@@ -373,7 +373,7 @@ set_source_files_properties (
   ${qpid-proton-extra}
   ${qpid-proton-platform}
   PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} $${C_STANDARD_FLAGS} ${LTO}"
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${C_STANDARD_FLAGS} ${LTO}"
   )
 
 set_source_files_properties (
