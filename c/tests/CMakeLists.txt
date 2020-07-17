@@ -89,8 +89,8 @@ if (CMAKE_CXX_COMPILER)
     if (THREADERCISER)
       add_executable(c-threaderciser threaderciser.c)
       set_target_properties(c-threaderciser
-        PROPERTIES COMPILE_FLAGS "${COMPILE_LANGUAGE_FLAGS} ${CMAKE_C_FLAGS} ${C_WARNING_FLAGS}")
-      target_link_libraries (c-threaderciser qpid-proton-proactor ${CMAKE_THREAD_LIBS_INIT})
+        PROPERTIES COMPILE_FLAGS "${C_STANDARD_FLAGS} ${COMPILE_WARNING_FLAGS}")
+      target_link_libraries (c-threaderciser qpid-proton-proactor Threads::Threads)
       pn_add_test(
         EXECUTABLE
         NAME c-threaderciser

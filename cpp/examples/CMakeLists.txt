@@ -98,7 +98,7 @@ if(HAS_ENOUGH_CPP11)
         multithreaded_client
         multithreaded_client_flow_control)
       add_executable(${example} ${example}.cpp)
-      target_link_libraries(${example} ${CMAKE_THREAD_LIBS_INIT})
+      target_link_libraries(${example} Threads::Threads)
     endforeach()
   endif()
 endif()
