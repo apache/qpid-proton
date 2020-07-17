@@ -32,6 +32,5 @@ target_link_libraries(reactor-send qpid-proton)
 set_target_properties (
   msgr-recv msgr-send reactor-recv reactor-send
   PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
-  COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${C_STANDARD_FLAGS}"
 )

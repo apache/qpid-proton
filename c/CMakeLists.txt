@@ -176,11 +176,11 @@ if (MSVC)
 endif (MSVC)
 
 # Ensure that examples build with c99 on gcc/clang
-set(C_EXAMPLE_FLAGS_GNU "-std=c99 -pedantic")
-set(C_EXAMPLE_FLAGS_Clang "-std=c99 -pedantic")
+set(C_EXAMPLE_FLAGS_GNU "-pedantic")
+set(C_EXAMPLE_FLAGS_Clang "-pedantic")
 
 # Flags for example self-test build
-set(C_EXAMPLE_FLAGS "${COMPILE_WARNING_FLAGS} ${C_EXAMPLE_FLAGS_${CMAKE_C_COMPILER_ID}}")
+set(C_EXAMPLE_FLAGS "${C_STANDARD_FLAGS} ${COMPILE_WARNING_FLAGS} ${C_EXAMPLE_FLAGS_${CMAKE_C_COMPILER_ID}}")
 set(C_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}")
 
 set(qpid-proton-platform_GNU src/compiler/gcc/start.c)
@@ -340,9 +340,6 @@ if (PROACTOR STREQUAL "epoll" OR (NOT PROACTOR AND NOT BUILD_PROACTOR))
     set (PROACTOR_OK epoll)
     set (qpid-proton-proactor src/proactor/epoll.c ${qpid-proton-proactor-common})
     set (PROACTOR_LIBS Threads::Threads)
-    set_source_files_properties (${qpid-proton-proactor} PROPERTIES
-      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
-      )
   endif()
 endif()
 
@@ -350,10 +347,6 @@ if (PROACTOR STREQUAL "iocp" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   if(WIN32 AND NOT CYGWIN)
     set (PROACTOR_OK iocp)
     set (qpid-proton-proactor src/proactor/win_iocp.cpp ${qpid-proton-proactor-common})
-    set_source_files_properties (${qpid-proton-proactor} PROPERTIES
-      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
-      COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
-      )
   endif(WIN32 AND NOT CYGWIN)
 endif()
 
@@ -363,9 +356,6 @@ if (PROACTOR STREQUAL "libuv" OR (NOT PROACTOR AND NOT PROACTOR_OK))
     set (PROACTOR_OK libuv)
     set (qpid-proton-proactor src/proactor/libuv.c ${qpid-proton-proactor-common})
     set (PROACTOR_LIBS Libuv::Libuv)
-    set_source_files_properties (${qpid-proton-proactor} PROPERTIES
-      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
-      )
   endif()
 endif()
 
@@ -381,15 +371,15 @@ set_source_files_properties (
   ${qpid-proton-core}
   ${qpid-proton-layers}
   ${qpid-proton-extra}
+  ${qpid-proton-platform}
   PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} $${C_STANDARD_FLAGS} ${LTO}"
   )
 
 set_source_files_properties (
-  ${qpid-proton-platform}
   ${qpid-proton-platform-io}
   PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${C_EXTENDED_FLAGS} ${LTO}"
   COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
   )
 
@@ -417,7 +407,7 @@ add_library (qpid-proton-platform-io-objects OBJECT ${qpid-proton-platform-io})
 set_target_properties(qpid-proton-platform-io-objects PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   C_EXTENSIONS ON)
-target_compile_definitions(qpid-proton-platform-io-objects PRIVATE qpid_proton_core_EXPORTS)
+target_compile_definitions(qpid-proton-platform-io-objects PRIVATE qpid_proton_EXPORTS)
 
 target_compile_definitions(qpid-proton-platform-io-objects PRIVATE $<TARGET_PROPERTY:qpid-proton,COMPILE_DEFINITIONS>)
 target_compile_options    (qpid-proton-platform-io-objects PRIVATE $<TARGET_PROPERTY:qpid-proton,COMPILE_OPTIONS>)
@@ -459,6 +449,9 @@ endif(BUILD_STATIC_LIBS)
 
 if (qpid-proton-proactor)
   set(HAS_PROACTOR True)
+  set_source_files_properties (${qpid-proton-proactor} PROPERTIES
+    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${C_STANDARD_FLAGS} ${LTO}"
+    )
   add_library (qpid-proton-proactor SHARED ${qpid-proton-proactor})
   target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
   target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
@@ -467,7 +460,7 @@ if (qpid-proton-proactor)
     VERSION   "${PN_LIB_PROACTOR_VERSION}"
     SOVERSION "${PN_LIB_PROACTOR_MAJOR_VERSION}"
     LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
-  )
+    )
   if (BUILD_STATIC_LIBS)
     add_library (qpid-proton-proactor-static STATIC ${qpid-proton-proactor})
   endif(BUILD_STATIC_LIBS)

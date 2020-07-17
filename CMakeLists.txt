@@ -55,8 +55,14 @@ if (DEFINED CMAKE_C_COMPILE_FEATURES)
   set(CMAKE_C_EXTENSIONS OFF)
   set(CMAKE_C_STANDARD_REQUIRED ON)
 else()
-  set (C_STANDARD_GCC -std=c99)
+  set (C_STANDARD_GNU -std=c99)
+  set (C_EXTENDED_GNU -std=gnu99)
+  set (C_STANDARD_Clang -std=c99)
+  set (C_EXTENDED_Clang -std=gnu99)
 endif()
+
+set (C_STANDARD_FLAGS ${C_STANDARD_${CMAKE_C_COMPILER_ID}})
+set (C_EXTENDED_FLAGS ${C_EXTENDED_${CMAKE_C_COMPILER_ID}})
 
 ## C++
 check_language (CXX)
