@@ -17,7 +17,7 @@
 # under the License.
 #
 
-add_definitions(${COMPILE_WARNING_FLAGS})
+add_definitions(${C_STANDARD_FLAGS} ${COMPILE_WARNING_FLAGS})
 
 option(FUZZ_REGRESSION_TESTS "Run fuzz tests with regression test driver" ON)
 option(FUZZ_LONG_TESTS "Run fuzz tests that take a long time" OFF)
