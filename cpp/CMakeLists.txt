@@ -150,12 +150,6 @@ set(qpid-proton-cpp-source
   ${CONNECT_CONFIG_SRC}
   )
 
-set_source_files_properties (
-  ${qpid-proton-cpp-source}
-  PROPERTIES
-  COMPILE_OPTIONS "${LTO}"
-  )
-
 if (MSVC)
   set (CMAKE_DEBUG_POSTFIX "d")
 endif ()
@@ -163,6 +157,9 @@ endif ()
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
 if(BUILD_STATIC_LIBS)
   add_library(qpid-proton-cpp-static STATIC ${qpid-proton-cpp-source})
+  target_compile_definitions(qpid-proton-cpp-static
+    PRIVATE PROTON_DECLARE_STATIC
+    PUBLIC PN_CPP_DECLARE_STATIC)
   set(STATIC_LIBS qpid-proton-cpp-static)
 endif(BUILD_STATIC_LIBS)
 
@@ -174,7 +171,8 @@ set_target_properties (
   LINKER_LANGUAGE CXX
   VERSION   "${PN_LIB_CPP_VERSION}"
   SOVERSION "${PN_LIB_CPP_MAJOR_VERSION}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
+  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
+  COMPILE_FLAGS "${LTO}"
   )
 
 ## Install

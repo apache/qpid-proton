@@ -159,6 +159,18 @@ option(ENABLE_FUZZ_TESTING "Enable building fuzzers and regression testing with 
 option(ENABLE_BENCHMARKS "Enable building and running benchmarks with Google Benchmark" ${DEFAULT_BENCHMARKS})
 
 # Set any additional compiler specific flags
+set (LTO_GNU "-flto -fno-fat-lto-objects")
+set (LTO_Clang "-flto=thin")
+set (LTO_MSVC "/GL")
+set (LINK_LTO_GNU "-flto -fno-fat-lto-objects")
+set (LINK_LTO_Clang "-flto=thin")
+set (LINK_LTO_MSVC "/LTCG")
+
+if (ENABLE_LINKTIME_OPTIMIZATION)
+  set (LTO ${LTO_${CMAKE_C_COMPILER_ID}})
+  set (LINK_LTO ${LINK_LTO_${CMAKE_C_COMPILER_ID}})
+endif (ENABLE_LINKTIME_OPTIMIZATION)
+
 if (CMAKE_COMPILER_IS_GNUCC)
   if (ENABLE_WARNING_ERROR)
     set (WERROR "-Werror")
@@ -171,10 +183,6 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set (CATCH_UNDEFINED "-Wl,--no-undefined")
     set (ALLOW_UNDEFINED "-Wl,--allow-shlib-undefined")
   endif (ENABLE_UNDEFINED_ERROR)
-
-  if (ENABLE_LINKTIME_OPTIMIZATION)
-    set (LTO "-flto")
-  endif (ENABLE_LINKTIME_OPTIMIZATION)
 
   if (ENABLE_HIDE_UNEXPORTED_SYMBOLS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")

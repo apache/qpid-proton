@@ -11,6 +11,7 @@ variables:
   PythonVersion: '3.6'
   PythonArch: 'x64'
   CmakeConfigExtraArgs: ''
+  StaticLibs: yes
 
 jobs:
 - job: Windows_VS2019

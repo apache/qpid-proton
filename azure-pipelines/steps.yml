@@ -13,7 +13,7 @@ steps:
   name: CMakeConfigure
   inputs:
     workingDirectory: 'BLD'
-    cmakeArgs: $(Build.SourcesDirectory) $(CmakeConfigExtraArgs)
+    cmakeArgs: $(Build.SourcesDirectory) -DBUILD_STATIC_LIBS=$(StaticLibs) $(CmakeConfigExtraArgs)
 - task: CMake@1
   name: CMakeBuild
   inputs:
