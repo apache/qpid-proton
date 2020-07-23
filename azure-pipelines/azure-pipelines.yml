@@ -8,7 +8,7 @@
 #
 variables:
   Config: 'RelWithDebInfo'
-  PythonVersion: '3.6'
+  PythonVersion: '3.7'
   PythonArch: 'x64'
   CmakeConfigExtraArgs: ''
   StaticLibs: yes
@@ -17,16 +17,13 @@ jobs:
 - job: Windows_VS2019
   variables:
     CmakeConfigExtraArgs: '-A x64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
+    CmakeGenerator: '-G "Visual Studio 16 2019"'
+    VCPKG_DEFAULT_TRIPLET: x64-windows
   pool:
     vmImage: 'windows-2019'
   steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: $(PythonVersion)
-      addToPath: true
-      architecture: $(PythonArch)
   - script: |
-      choco install swig
+      choco install -y swig --version=4.0.1
       vcpkg install jsoncpp
       vcpkg integrate install
     name: InstallExtraStuff
@@ -35,21 +32,20 @@ jobs:
   variables:
     PythonArch: 'x86'
     CmakeConfigExtraArgs: '-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
+    CmakeGenerator: '-G "Visual Studio 15 2017"'
+    VCPKG_DEFAULT_TRIPLET: x86-windows
   pool:
     vmImage: 'vs2017-win2016'
   steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: $(PythonVersion)
-      addToPath: true
-      architecture: $(PythonArch)
   - script: |
-      choco install swig
+      choco install -y swig --version=4.0.1
       vcpkg install jsoncpp
       vcpkg integrate install
     name: InstallExtraStuff
   - template: steps.yml
 - job: Ubuntu
+  variables:
+    PythonVersion: '3.8'
   pool:
     vmImage: 'ubuntu-18.04'
   steps:
@@ -58,14 +54,14 @@ jobs:
   - template: steps.yml
 - job: MacOS
   variables:
+    PythonVersion: '3.6'
     PKG_CONFIG_PATH: '/usr/local/opt/openssl@1.1/lib/pkgconfig'
-    CmakeConfigExtraArgs: '-DPYTHON_EXECUTABLE=/usr/local/bin/python3 -DBUILD_RUBY=no'
+    CmakeConfigExtraArgs: '-DBUILD_RUBY=no'
   pool:
     vmImage: 'macOS-10.15'
   steps:
   - script: |
       brew update
       brew install libuv swig pkgconfig openssl@1.1 jsoncpp
-      brew upgrade python@3 python@2 || true
     name: InstallExtraStuff
   - template: steps.yml
