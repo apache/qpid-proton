@@ -303,7 +303,7 @@ set (qpid-proton-include
   include/proton/object.h
   include/proton/proactor.h
   include/proton/sasl.h
-  include/proton/sasl-plugin.h
+  include/proton/sasl_plugin.h
   include/proton/session.h
   include/proton/ssl.h
   include/proton/terminus.h

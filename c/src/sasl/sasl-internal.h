@@ -27,7 +27,7 @@
 
 #include "proton/types.h"
 #include "proton/sasl.h"
-#include "proton/sasl-plugin.h"
+#include "proton/sasl_plugin.h"
 
 extern const pnx_sasl_implementation default_sasl_impl;
 extern const pnx_sasl_implementation * const cyrus_sasl_impl;
