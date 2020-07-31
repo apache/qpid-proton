@@ -20,7 +20,7 @@
  */
 
 #include "proton/sasl.h"
-#include "proton/sasl-plugin.h"
+#include "proton/sasl_plugin.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +37,7 @@ static void default_sasl_process_response(pn_transport_t *transport, const pn_by
 static bool default_sasl_init_client(pn_transport_t *transport);
 static bool default_sasl_process_mechanisms(pn_transport_t *transport, const char *mechs);
 static void default_sasl_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv);
-static void default_sasl_process_outcome(pn_transport_t *transport);
+static void default_sasl_process_outcome(pn_transport_t *transport, const pn_bytes_t *recv);
 
 static bool default_sasl_impl_can_encrypt(pn_transport_t *transport);
 static ssize_t default_sasl_impl_max_encrypt_size(pn_transport_t *transport);
@@ -128,7 +128,7 @@ bool default_sasl_process_mechanisms(pn_transport_t *transport, const char *mech
   // Make sure that string is separated and terminated, allowed
   // and we have a username and password and connection is encrypted or we allow insecure
   if (found && (found==mechs || found[-1]==' ') && (found[5]==0 || found[5]==' ') &&
-      (pnx_sasl_is_transport_encrypted(transport) || pnx_sasl_get_allow_insecure_mechs(transport)) &&
+      (pnx_sasl_is_transport_encrypted(transport) || pnx_sasl_get_allow_insecure_mechanisms(transport)) &&
       username && password) {
     pnx_sasl_set_selected_mechanism(transport, PLAIN);
     size_t zsize = authzid ? strlen(authzid) : 0;
@@ -194,7 +194,7 @@ void default_sasl_process_init(pn_transport_t *transport, const char *mechanism,
 {
   // Check that mechanism is ANONYMOUS
   if (strcmp(mechanism, ANONYMOUS)==0) {
-    pnx_sasl_succeed_authentication(transport, "anonymous", "anonymous");
+    pnx_sasl_set_succeeded(transport, "anonymous", "anonymous");
     pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
     return;
   }
@@ -216,13 +216,13 @@ void default_sasl_process_init(pn_transport_t *transport, const char *mechanism,
       }
     }
 
-    pnx_sasl_succeed_authentication(transport, ext_username, authzid ? authzid : ext_username);
+    pnx_sasl_set_succeeded(transport, ext_username, authzid ? authzid : ext_username);
     pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
     return;
   }
 
   // Otherwise authentication failed
-  pnx_sasl_fail_authentication(transport);
+  pnx_sasl_set_failed(transport);
   pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
 
 }
@@ -236,7 +236,7 @@ void default_sasl_process_response(pn_transport_t *transport, const pn_bytes_t *
 {
 }
 
-void default_sasl_process_outcome(pn_transport_t* transport)
+void default_sasl_process_outcome(pn_transport_t* transport, const pn_bytes_t *recv)
 {
 }
 

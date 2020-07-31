@@ -66,7 +66,7 @@ EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/c/examples/*.c \
                           @CMAKE_SOURCE_DIR@/c/include/proton/log.h \
                           @CMAKE_SOURCE_DIR@/c/include/proton/object.h \
                           @CMAKE_SOURCE_DIR@/c/include/proton/reactor.h \
-                          @CMAKE_SOURCE_DIR@/c/include/proton/sasl-plugin.h \
+                          @CMAKE_SOURCE_DIR@/c/include/proton/sasl_plugin.h \
                           @CMAKE_SOURCE_DIR@/c/include/proton/selectable.h \
                           @CMAKE_SOURCE_DIR@/c/include/proton/type_compat.h
 FULL_PATH_NAMES         = YES
