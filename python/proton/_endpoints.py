@@ -31,10 +31,12 @@ from cproton import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN_DIST_MOD
     PN_RCV_SECOND, PN_REMOTE_ACTIVE, PN_REMOTE_CLOSED, PN_REMOTE_UNINIT, PN_SND_MIXED, PN_SND_SETTLED, PN_SND_UNSETTLED, \
     PN_SOURCE, PN_TARGET, PN_UNSPECIFIED, pn_connection, pn_connection_attachments, pn_connection_close, \
     pn_connection_collect, pn_connection_condition, pn_connection_desired_capabilities, pn_connection_error, \
-    pn_connection_get_container, pn_connection_get_hostname, pn_connection_get_user, pn_connection_offered_capabilities, \
+    pn_connection_get_authorization, pn_connection_get_container, pn_connection_get_hostname, pn_connection_get_user, \
+    pn_connection_offered_capabilities, \
     pn_connection_open, pn_connection_properties, pn_connection_release, pn_connection_remote_condition, \
     pn_connection_remote_container, pn_connection_remote_desired_capabilities, pn_connection_remote_hostname, \
-    pn_connection_remote_offered_capabilities, pn_connection_remote_properties, pn_connection_set_container, \
+    pn_connection_remote_offered_capabilities, pn_connection_remote_properties, \
+    pn_connection_set_authorization, pn_connection_set_container, \
     pn_connection_set_hostname, pn_connection_set_password, pn_connection_set_user, pn_connection_state, \
     pn_connection_transport, pn_delivery, pn_error_code, pn_error_text, pn_link_advance, pn_link_attachments, \
     pn_link_available, pn_link_close, pn_link_condition, pn_link_credit, pn_link_current, pn_link_detach, pn_link_drain, \
@@ -262,6 +264,25 @@ class Connection(Wrapper, Endpoint):
         client sasl layer is explicitly created (this would be for something
         like Kerberos where the credentials are implicit in the environment,
         or to explicitly use the ``ANONYMOUS`` SASL mechanism)
+
+        :type: ``str``
+        """)
+
+    def _get_authorization(self):
+        return utf82unicode(pn_connection_get_authorization(self._impl))
+
+    def _set_authorization(self, name):
+        pn_connection_set_authorization(self._impl, unicode2utf8(name))
+
+    authorization = property(_get_authorization, _set_authorization, doc="""
+        The authorization username for a client connection.
+
+        It is necessary to set the authorization before binding
+        the connection to a transport and it isn't allowed to change
+        after the binding.
+
+        If not set then implicitly the requested authorization is the same as the
+        authentication user.
 
         :type: ``str``
         """)
