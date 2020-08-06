@@ -40,7 +40,7 @@ def _sslCertpath(file):
     return os.path.join(os.path.dirname(__file__),
                         "ssl_db/%s" % file)
 
-def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', encrypted=False, authenticated=True):
+def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', authzid=None, encrypted=False, authenticated=True):
   self.s1.allowed_mechs(mech)
   self.c1.open()
   self.c2.open()
@@ -51,12 +51,16 @@ def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', 
     assert self.t2.encrypted == encrypted, encrypted
     assert self.t1.encrypted == encrypted, encrypted
 
+  if authzid is None:
+    authzid = authUser
+
   assert self.t2.authenticated == authenticated, authenticated
   assert self.t1.authenticated == authenticated, authenticated
   if authenticated:
     # Server
     assert self.t2.user == authUser
     assert self.s2.user == authUser
+    assert self.s2.authorization == authzid, self.s2.authorization
     assert self.s2.mech == mech.strip()
     assert self.s2.outcome == SASL.OK, self.s2.outcome
     assert self.c2.state & Endpoint.LOCAL_ACTIVE and self.c2.state & Endpoint.REMOTE_ACTIVE,\
@@ -72,6 +76,7 @@ def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', 
     # Server
     assert self.t2.user == None
     assert self.s2.user == None
+    assert self.s2.authorization == None, self.s2.authorization
     assert self.s2.outcome != SASL.OK, self.s2.outcome
     # Client
     assert self.t1.user == clientUser
@@ -401,6 +406,25 @@ class SSLSASLTest(Test):
 
     _testSaslMech(self, mech, encrypted=True)
 
+  def testSSLPlainAuthzid(self):
+    if not SASL.extended():
+      raise Skipped("Simple SASL server does not support PLAIN")
+    common.ensureCanTestExtendedSASL()
+
+    clientUser = 'user@proton'
+    authzid = 'user2'
+    mech = 'PLAIN'
+
+    self.c1.user = clientUser
+    self.c1.authorization = authzid
+    self.c1.password = 'password'
+    self.c1.hostname = 'localhost'
+
+    ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
+    ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
+
+    _testSaslMech(self, mech, authzid=authzid, encrypted=True)
+
   def testSSLPlainSimpleFail(self):
     if not SASL.extended():
       raise Skipped("Simple SASL server does not support PLAIN")
@@ -441,6 +465,33 @@ class SSLSASLTest(Test):
     ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
 
     _testSaslMech(self, mech, clientUser=None, authUser=extUser, encrypted=True)
+
+  def testSSLExternalAuthzid(self):
+    if os.name=="nt":
+      extUser = 'O=Client, CN=127.0.0.1'
+    else:
+      extUser = 'O=Client,CN=127.0.0.1'
+    mech = 'EXTERNAL'
+    authzid = 'user_foo'
+
+    self.c1.authorization = authzid
+
+    self.server_domain.set_credentials(_sslCertpath("server-certificate.pem"),
+                                       _sslCertpath("server-private-key.pem"),
+                                       "server-password")
+    self.server_domain.set_trusted_ca_db(_sslCertpath("ca-certificate.pem"))
+    self.server_domain.set_peer_authentication(SSLDomain.VERIFY_PEER,
+                                               _sslCertpath("ca-certificate.pem") )
+    self.client_domain.set_credentials(_sslCertpath("client-certificate.pem"),
+                                       _sslCertpath("client-private-key.pem"),
+                                       "client-password")
+    self.client_domain.set_trusted_ca_db(_sslCertpath("ca-certificate.pem"))
+    self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
+
+    ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
+    ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
+
+    _testSaslMech(self, mech, clientUser=None, authUser=extUser, authzid=authzid, encrypted=True)
 
   def testSSLExternalSimpleFail(self):
     mech = 'EXTERNAL'

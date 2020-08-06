@@ -26,7 +26,7 @@ from cproton import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SA
     PN_SSL_RESUME_REUSED, PN_SSL_RESUME_UNKNOWN, PN_SSL_SHA1, PN_SSL_SHA256, PN_SSL_SHA512, PN_SSL_VERIFY_PEER, \
     PN_SSL_VERIFY_PEER_NAME, PN_TRACE_DRV, PN_TRACE_FRM, PN_TRACE_OFF, PN_TRACE_RAW, pn_error_text, pn_sasl, \
     pn_sasl_allowed_mechs, pn_sasl_config_name, pn_sasl_config_path, pn_sasl_done, pn_sasl_extended, \
-    pn_sasl_get_allow_insecure_mechs, pn_sasl_get_mech, pn_sasl_get_user, pn_sasl_outcome, \
+    pn_sasl_get_allow_insecure_mechs, pn_sasl_get_mech, pn_sasl_get_user, pn_sasl_get_authorization, pn_sasl_outcome, \
     pn_sasl_set_allow_insecure_mechs, pn_ssl, pn_ssl_domain, pn_ssl_domain_allow_unsecured_client, pn_ssl_domain_free, \
     pn_ssl_domain_set_credentials, pn_ssl_domain_set_peer_authentication, pn_ssl_domain_set_trusted_ca_db, \
     pn_ssl_get_cert_fingerprint, pn_ssl_get_cipher_name, pn_ssl_get_peer_hostname, pn_ssl_get_protocol_name, \
@@ -606,6 +606,31 @@ class SASL(Wrapper):
                   returned.
         """
         return pn_sasl_get_user(self._sasl)
+
+    @property
+    def authorization(self):
+        """
+        Retrieve the requested authorization user. This is usually used at the the
+        server end to find the name of any requested authorization user.
+
+        If the peer has not requested an authorization user or the SASL mechanism has
+        no capability to transport an authorization id this will be the same as the
+        authenticated user.
+
+        Note that it is the role of the server to ensure that the authenticated user is
+        actually allowed to act as the requested authorization user.
+
+        If :meth:`outcome` returns a value other than :const:`OK`, then
+        there will be no user to return. The returned value is only reliable
+        after the ``PN_TRANSPORT_AUTHENTICATED`` event has been received.
+
+        :rtype: * If the SASL layer was not negotiated then ``0`` is returned.
+                * If the ``ANONYMOUS`` mechanism is used then the user will be
+                  ``"anonymous"``.
+                * Otherwise a string containing the user is
+                  returned.
+        """
+        return pn_sasl_get_authorization(self._sasl)
 
     @property
     def mech(self):
