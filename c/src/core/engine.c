@@ -19,6 +19,9 @@
  *
  */
 
+/* for pn_work_head and related deprecations */
+#define PN_USE_DEPRECATED_API 1
+
 #include "engine-internal.h"
 
 #include "framing.h"
@@ -2407,3 +2410,5 @@ const char *pn_disposition_type_name(uint64_t d) {
    default: return "unknown";
   }
 }
+
+#undef PN_USE_DEPRECATED_API

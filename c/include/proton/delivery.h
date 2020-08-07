@@ -328,6 +328,7 @@ PN_EXTERN bool pn_delivery_buffered(pn_delivery_t *delivery);
  * @return the first delivery object that needs to be serviced, else
  * NULL if none
  */
+PN_DEPRECATED("Use the PN_DELIVERY event to track deliveries with pending operations")
 PN_EXTERN pn_delivery_t *pn_work_head(pn_connection_t *connection);
 
 /**
@@ -339,6 +340,7 @@ PN_EXTERN pn_delivery_t *pn_work_head(pn_connection_t *connection);
  * @return the next delivery that has pending operations, else
  * NULL if none
  */
+PN_DEPRECATED("Use the PN_DELIVERY event to track deliveries with pending operations")
 PN_EXTERN pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
 
 /**

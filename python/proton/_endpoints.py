@@ -472,7 +472,9 @@ class Connection(Wrapper, Endpoint):
 
     @property
     def work_head(self):
-        """
+        """Deprecated: use on_message(), on_accepted(), on_rejected(),
+        on_released(), and on_settled() instead.
+
         Extracts the first delivery on the connection that has pending
         operations.
 

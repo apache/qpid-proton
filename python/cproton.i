@@ -22,6 +22,10 @@
 #if defined(_WIN32) && ! defined(__CYGWIN__)
 #include <winsock2.h>
 #endif
+
+/* TODO: Remove once pn_work_head() and related have been removed from Proton */
+#define PN_USE_DEPRECATED_API 1
+
 #include <proton/engine.h>
 #include <proton/message.h>
 #include <proton/object.h>

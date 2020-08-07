@@ -445,7 +445,9 @@ class Delivery(Wrapper):
 
     @property
     def work_next(self):
-        """
+        """Deprecated: use on_message(), on_accepted(), on_rejected(),
+        on_released(), and on_settled() instead.
+
         The next :class:`Delivery` on the connection that has pending
         operations.
 
