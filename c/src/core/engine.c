@@ -686,7 +686,6 @@ static void pni_add_work(pn_connection_t *connection, pn_delivery_t *delivery)
 {
   if (!delivery->work)
   {
-    assert(!delivery->local.settled);   // never allow settled deliveries
     LL_ADD(connection, work, delivery);
     delivery->work = true;
   }
