@@ -397,8 +397,7 @@ add_library (qpid-proton-core-objects OBJECT ${qpid-proton-core-src})
 add_dependencies (qpid-proton-core-objects generated_c_files)
 set_target_properties(qpid-proton-core-objects PROPERTIES
   POSITION_INDEPENDENT_CODE ON
-  COMPILE_FLAGS "${LTO}"
-  LINK_FLAGS "${LINK_LTO}")
+  COMPILE_FLAGS "${LTO}")
 target_compile_definitions(qpid-proton-core-objects PRIVATE qpid_proton_core_EXPORTS)
 
 # Can't use target_link_libraries() because cmake 2.8.12 doesn't allow object libraries as the first param
@@ -412,8 +411,7 @@ add_library (qpid-proton-platform-io-objects OBJECT ${qpid-proton-platform-io})
 set_target_properties(qpid-proton-platform-io-objects PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   C_EXTENSIONS ON
-  COMPILE_FLAGS "${LTO}"
-  LINK_FLAGS "${LINK_LTO}")
+  COMPILE_FLAGS "${LTO}")
 target_compile_definitions(qpid-proton-platform-io-objects PRIVATE qpid_proton_EXPORTS)
 
 target_compile_definitions(qpid-proton-platform-io-objects PRIVATE $<TARGET_PROPERTY:qpid-proton,COMPILE_DEFINITIONS>)
@@ -426,6 +424,7 @@ set_target_properties (qpid-proton-core
   PROPERTIES
   VERSION   "${PN_LIB_CORE_VERSION}"
   SOVERSION "${PN_LIB_CORE_MAJOR_VERSION}"
+  COMPILE_FLAGS "${LTO}"
   LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
 )
 
@@ -435,39 +434,26 @@ if (BUILD_STATIC_LIBS)
   target_link_libraries (qpid-proton-core-static ${SSL_LIB} ${SASL_LIB} ${PLATFORM_LIBS})
 endif(BUILD_STATIC_LIBS)
 
-set(qpid-proton-noncore-src
-  # Proactor
-  ${qpid-proton-proactor}
-  # Proton Reactor/Messenger
-  ${qpid-proton-extra}
-  ${qpid-proton-include-extra}
-)
-
-add_library (qpid-proton SHARED $<TARGET_OBJECTS:qpid-proton-core-objects> $<TARGET_OBJECTS:qpid-proton-platform-io-objects> ${qpid-proton-noncore-src})
-target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
-set_target_properties (qpid-proton
-  PROPERTIES
-  VERSION   "${PN_LIB_LEGACY_VERSION}"
-  SOVERSION "${PN_LIB_LEGACY_MAJOR_VERSION}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
-  COMPILE_FLAGS "${LTO}"
-)
-
-if (BUILD_STATIC_LIBS)
-  add_library (qpid-proton-platform-io-static OBJECT ${qpid-proton-platform-io})
-  set_target_properties(qpid-proton-platform-io-static PROPERTIES
-    C_EXTENSIONS ON)
-  add_library(qpid-proton-static STATIC ${qpid-proton-core-src} $<TARGET_OBJECTS:qpid-proton-platform-io-static> ${qpid-proton-noncore-src})
-  target_compile_definitions(qpid-proton-static PUBLIC PROTON_DECLARE_STATIC)
-  target_link_libraries (qpid-proton-static ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
-endif(BUILD_STATIC_LIBS)
-
 if (qpid-proton-proactor)
   set(HAS_PROACTOR True)
   set_source_files_properties (${qpid-proton-proactor} PROPERTIES
     COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${C_STANDARD_FLAGS}"
     )
-  add_library (qpid-proton-proactor SHARED ${qpid-proton-proactor})
+
+  add_library (qpid-proton-proactor-objects OBJECT ${qpid-proton-proactor})
+  set_target_properties(qpid-proton-proactor-objects PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+  COMPILE_FLAGS "${LTO}")
+  target_compile_definitions(qpid-proton-proactor-objects PRIVATE qpid_proton_proactor_EXPORTS)
+
+  # Can't use target_link_libraries() because cmake 2.8.12 doesn't allow object libraries as the first param
+  # otherwise for cmake 3.9 and on this would be:
+  #   target_link_libraries (qpid-proton-proactor-objects ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+  target_compile_definitions(qpid-proton-proactor-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-proactor,COMPILE_DEFINITIONS>)
+  target_compile_options    (qpid-proton-proactor-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-proactor,COMPILE_OPTIONS>)
+  target_include_directories(qpid-proton-proactor-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-proactor,INCLUDE_DIRECTORIES>)
+
+  add_library (qpid-proton-proactor SHARED $<TARGET_OBJECTS:qpid-proton-proactor-objects>)
   target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
   target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
   set_target_properties (qpid-proton-proactor
@@ -483,6 +469,31 @@ if (qpid-proton-proactor)
     target_link_libraries (qpid-proton-proactor-static ${PLATFORM_LIBS} ${PROACTOR_LIBS})
   endif(BUILD_STATIC_LIBS)
 endif()
+
+set(qpid-proton-noncore-src
+  # Proton Reactor/Messenger
+  ${qpid-proton-extra}
+  ${qpid-proton-include-extra}
+)
+
+add_library (qpid-proton SHARED $<TARGET_OBJECTS:qpid-proton-core-objects> $<TARGET_OBJECTS:qpid-proton-platform-io-objects> $<TARGET_OBJECTS:qpid-proton-proactor-objects> ${qpid-proton-noncore-src})
+target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+set_target_properties (qpid-proton
+  PROPERTIES
+  VERSION   "${PN_LIB_LEGACY_VERSION}"
+  SOVERSION "${PN_LIB_LEGACY_MAJOR_VERSION}"
+  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
+  COMPILE_FLAGS "${LTO}"
+)
+
+if (BUILD_STATIC_LIBS)
+  add_library (qpid-proton-platform-io-static OBJECT ${qpid-proton-platform-io})
+  set_target_properties(qpid-proton-platform-io-static PROPERTIES
+    C_EXTENSIONS ON)
+  add_library(qpid-proton-static STATIC $<TARGET_OBJECTS:qpid-proton-platform-io-static> ${qpid-proton-noncore-src})
+  target_compile_definitions(qpid-proton-static PUBLIC PROTON_DECLARE_STATIC)
+  target_link_libraries (qpid-proton-static qpid-proton-core-static qpid-proton-proactor-static ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+endif(BUILD_STATIC_LIBS)
 
 # Install executables and libraries
 if (BUILD_STATIC_LIBS)

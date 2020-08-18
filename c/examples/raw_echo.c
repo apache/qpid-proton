@@ -119,7 +119,7 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
       pn_raw_buffer_t buffers[READ_BUFFERS] = {{0}};
       if (cd) {
         int i = READ_BUFFERS;
-        printf("**raw connection %ld connected\n", cd-conn_data);
+        printf("**raw connection %tu connected\n", cd-conn_data);
         app->connects++;
         for (; i; --i) {
           pn_raw_buffer_t *buff = &buffers[READ_BUFFERS-i];
@@ -137,14 +137,14 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
     case PN_RAW_CONNECTION_WAKE: {
       pn_raw_connection_t *c = pn_event_raw_connection(event);
       conn_data_t *cd = (conn_data_t *) pn_raw_connection_get_context(c);
-      printf("**raw connection %ld woken\n", cd-conn_data);
+      printf("**raw connection %tu woken\n", cd-conn_data);
     } break;
 
     case PN_RAW_CONNECTION_DISCONNECTED: {
       pn_raw_connection_t *c = pn_event_raw_connection(event);
       conn_data_t *cd = (conn_data_t *) pn_raw_connection_get_context(c);
       if (cd) {
-        printf("**raw connection %ld disconnected: bytes: %d, buffers: %d\n", cd-conn_data, cd->bytes, cd->buffers);
+        printf("**raw connection %tu disconnected: bytes: %d, buffers: %d\n", cd-conn_data, cd->bytes, cd->buffers);
       } else {
         printf("**raw connection disconnected: not connected\n");
       }
