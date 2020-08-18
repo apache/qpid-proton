@@ -33,7 +33,7 @@ jobs:
     - OPENSSL_ia32cap='0x00000000'
     # c-threaderciser test hangs on older clang
     - QPID_PROTON_CMAKE_ARGS='-DENABLE_LINKTIME_OPTIMIZATION=OFF'
-    - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser'"
+    - QPID_PROTON_CTEST_ARGS='--exclude-regex c-threaderciser'
   - name: static libs
     os: linux
     dist: focal
@@ -68,12 +68,12 @@ jobs:
     os: linux
     dist: focal
     before_install:
-    - sudo apt-get install -y clang-10
+    - sudo apt-get install -y clang-10 llvm-10-dev
     env:
     - CC=clang-10
     - CXX=clang++-10
     - PYTHON=python3
-    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_LINKTIME_OPTIMIZATION=OFF -DENABLE_TOX_TEST=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF'
     # otherwise, on Travis ldd gives `libclang_rt.asan-x86_64.so => not found` and binaries don't work
     - LD_LIBRARY_PATH=/usr/lib/llvm-10/lib/clang/10.0.0/lib/linux/
   - name: gcc tsan

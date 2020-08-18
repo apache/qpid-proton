@@ -397,7 +397,8 @@ add_library (qpid-proton-core-objects OBJECT ${qpid-proton-core-src})
 add_dependencies (qpid-proton-core-objects generated_c_files)
 set_target_properties(qpid-proton-core-objects PROPERTIES
   POSITION_INDEPENDENT_CODE ON
-  COMPILE_FLAGS "${LTO}")
+  COMPILE_FLAGS "${LTO}"
+  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
 target_compile_definitions(qpid-proton-core-objects PRIVATE qpid_proton_core_EXPORTS)
 
 # Can't use target_link_libraries() because cmake 2.8.12 doesn't allow object libraries as the first param
@@ -411,7 +412,8 @@ add_library (qpid-proton-platform-io-objects OBJECT ${qpid-proton-platform-io})
 set_target_properties(qpid-proton-platform-io-objects PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   C_EXTENSIONS ON
-  COMPILE_FLAGS "${LTO}")
+  COMPILE_FLAGS "${LTO}"
+  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
 target_compile_definitions(qpid-proton-platform-io-objects PRIVATE qpid_proton_EXPORTS)
 
 target_compile_definitions(qpid-proton-platform-io-objects PRIVATE $<TARGET_PROPERTY:qpid-proton,COMPILE_DEFINITIONS>)
@@ -425,8 +427,7 @@ set_target_properties (qpid-proton-core
   VERSION   "${PN_LIB_CORE_VERSION}"
   SOVERSION "${PN_LIB_CORE_MAJOR_VERSION}"
   COMPILE_FLAGS "${LTO}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
-)
+  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
 
 if (BUILD_STATIC_LIBS)
   add_library (qpid-proton-core-static STATIC ${qpid-proton-core-src})
@@ -443,7 +444,8 @@ if (qpid-proton-proactor)
   add_library (qpid-proton-proactor-objects OBJECT ${qpid-proton-proactor})
   set_target_properties(qpid-proton-proactor-objects PROPERTIES
     POSITION_INDEPENDENT_CODE ON
-  COMPILE_FLAGS "${LTO}")
+    COMPILE_FLAGS "${LTO}"
+    LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
   target_compile_definitions(qpid-proton-proactor-objects PRIVATE qpid_proton_proactor_EXPORTS)
 
   # Can't use target_link_libraries() because cmake 2.8.12 doesn't allow object libraries as the first param
