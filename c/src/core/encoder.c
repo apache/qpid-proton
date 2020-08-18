@@ -336,8 +336,9 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   char *pos;
 
-  // Special case 0 length list
-  if (node->atom.type==PN_LIST && node->children-encoder->null_count==0) {
+  // Special case 0 length list, but not as element in an array
+  pni_node_t *parent = pn_data_node(data, node->parent);
+  if (node->atom.type==PN_LIST && node->children-encoder->null_count==0 && !pn_is_in_array(data, parent, node)) {
     encoder->position = node->start-1; // position of list opcode
     pn_encoder_writef8(encoder, PNE_LIST0);
     encoder->null_count = 0;

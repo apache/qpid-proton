@@ -26,6 +26,8 @@
 #include <proton/codec.h>
 #include <proton/error.h>
 
+#include <cstdarg>
+
 using namespace pn_test;
 
 // Make sure we can grow the capacity of a pn_data_t all the way to the max and
@@ -104,4 +106,53 @@ TEST_CASE("data_multiple") {
   pn_data_clear(data);
   pn_data_fill(data, "{S[iii]SI}", "foo", 1, 987, 3, "bar", 965);
   CHECK("{\"foo\"=[1, 987, 3], \"bar\"=965}" == inspect(data));
+}
+
+
+#define BUFSIZE 1024
+static void check_encode_decode(auto_free<pn_data_t, pn_data_free>& src) {
+	char buf[BUFSIZE];
+	auto_free<pn_data_t, pn_data_free> data(pn_data(1));
+	pn_data_clear(data);
+
+	// Encode src array to buf
+	int enc_size = pn_data_encode(src, buf, BUFSIZE - 1);
+	if (enc_size < 0) {
+		FAIL("pn_data_encode() error " << enc_size << ": " << pn_code(enc_size));
+	}
+
+	// Decode buf to data
+	int dec_size = pn_data_decode(data, buf, BUFSIZE - 1);
+	pn_error_t *dec_err = pn_data_error(data);
+	if (dec_size < 0) {
+		FAIL("pn_data_decode() error " << dec_size << ": " << pn_code(dec_size));
+	}
+
+	// Checks
+	CHECK(enc_size == dec_size);
+	CHECK(inspect(src) == inspect(data));
+}
+
+static void check_array(const char *fmt, ...) {
+	auto_free<pn_data_t, pn_data_free> src(pn_data(1));
+	pn_data_clear(src);
+
+	// Create src array
+	va_list ap;
+	va_start(ap, fmt);
+	pn_data_vfill(src, fmt, ap);
+	va_end(ap);
+
+	check_encode_decode(src);
+}
+
+TEST_CASE("array_list") {
+	check_array("@T[]", PN_LIST);
+	// TODO: PROTON-2248: using S and s reversed
+	// empty list as first array element
+	check_array("@T[[][oo][][iii][Sosid]]", PN_LIST, true, false, 1, 2, 3, "hello", false, "world", 43210, 2.565e-56);
+	// empty list not as first array element
+	check_array("@T[[Sid][oooo][]]", PN_LIST, "aaa", 123, double(3.2415), true, true, false, true);
+	// only empty lists
+	check_array("@T[[][][][][]]", PN_LIST);
 }
