@@ -94,7 +94,7 @@ static void debug_impl(const char *fmt, ...) {
   char msg[256];
   char *i = msg;
   char *end = i + sizeof(msg);
-  i += assert_no_err(snprintf(i, end-i, "(%lx) ", pthread_self()));
+  i += assert_no_err(snprintf(i, end-i, "(%lx) ", (uintptr_t) pthread_self()));
   if (i < end) {
     va_list ap;
     va_start(ap, fmt);
