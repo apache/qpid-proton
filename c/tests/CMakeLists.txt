@@ -101,7 +101,6 @@ if (CMAKE_CXX_COMPILER)
         PREPEND_ENVIRONMENT ${test_env}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND $<TARGET_FILE:c-threaderciser>)
-      set_tests_properties (c-threaderciser PROPERTIES TIMEOUT 120)
     endif()
 
     if(WIN32)
