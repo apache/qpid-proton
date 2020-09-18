@@ -190,6 +190,8 @@ struct pn_proactor_t {
   int earmark_count;
   bool earmark_drain;
   bool sched_wakes_pending;
+  // For debugging help for core dumps with optimized code.
+  pn_event_type_t current_event_type;
 
   // Mostly read only: after init or once thread_count stabilizes
   pn_collector_t *collector  __attribute__((aligned(64)));
@@ -247,6 +249,10 @@ typedef struct pconnection_t {
   bool io_doublecheck;               /* callbacks made and new IO may have arrived */
   bool sched_timeout;
   char addr_buf[1];
+  // For debugging help for core dumps with optimized code.
+  pn_event_type_t current_event_type;
+  uint32_t process_args;
+  uint32_t process_events;
 } pconnection_t;
 
 /*

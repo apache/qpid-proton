@@ -1012,7 +1012,10 @@ static pn_event_t *pconnection_batch_next(pn_event_batch_t *batch) {
       }
     }
   }
-  if (e) pc->output_drained = false;
+  if (e) {
+    pc->output_drained = false;
+    pc->current_event_type = pn_event_type(e);
+  }
 
   return e;
 }
@@ -1074,22 +1077,33 @@ static inline void pconnection_rearm(pconnection_t *pc, int wanted_now) {
 /* Only call when context switch is imminent.  Sched lock is highly contested. */
 // Call with both context and sched locks.
 static bool pconnection_sched_sync(pconnection_t *pc, bool *timerfd_fired) {
+  uint32_t sync_events = 0;
+  uint32_t sync_args = 0;
   *timerfd_fired = false;
   if (pc->sched_timeout) {
     *timerfd_fired = true;;
     pc->timer_armed = false;
     pc->sched_timeout = false;
+    sync_args |= (1 << 1);
   }
   if (pc->psocket.sched_io_events) {
     pc->new_events = pc->psocket.sched_io_events;
     pc->psocket.sched_io_events = 0;
     pc->current_arm = 0;  // or outside lock?
+    sync_events = pc->new_events;
   }
   if (pc->context.sched_wake) {
     pc->context.sched_wake = false;
     wake_done(&pc->context);
+    sync_args |= 1;
   }
   pc->context.sched_pending = false;
+
+  if (sync_args || sync_events) {
+    // Only replace if poller has found new work for us.
+    pc->process_args = sync_args;
+    pc->process_events = sync_events;
+  }
 
   // Indicate if there are free proactor threads
   pn_proactor_t *p = pc->context.proactor;
@@ -1233,7 +1247,10 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
   bool waking = false;
   bool tick_required = false;
   bool immediate_write = false;
-
+  if (!topup) {
+    pc->process_events = events;
+    pc->process_args = (timeout << 1) | sched_wake;
+  }
   // Don't touch data exclusive to working thread (yet).
   if (timeout) {
     rearm_timer = true;
@@ -2206,8 +2223,11 @@ static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
   lock(&p->context.mutex);
   proactor_update_batch(p);
   pn_event_t *e = pn_collector_next(p->collector);
-  if (e && pn_event_type(e) == PN_PROACTOR_TIMEOUT)
-    p->timeout_processed = true;
+  if (e) {
+    p->current_event_type = pn_event_type(e);
+    if (p->current_event_type == PN_PROACTOR_TIMEOUT)
+      p->timeout_processed = true;
+  }
   unlock(&p->context.mutex);
   return pni_log_event(p, e);
 }
