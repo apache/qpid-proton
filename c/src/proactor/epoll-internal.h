@@ -242,6 +242,9 @@ typedef struct pconnection_t {
   const char *wbuf_current;
   size_t wbuf_remaining;
   size_t wbuf_completed;
+  pn_event_type_t current_event_type;
+  uint32_t process_args;
+  uint32_t process_events;
   struct pn_netaddr_t local, remote; /* Actual addresses */
   struct addrinfo *addrinfo;         /* Resolved address list */
   struct addrinfo *ai;               /* Current connect address */
@@ -250,9 +253,6 @@ typedef struct pconnection_t {
   bool sched_timeout;
   char addr_buf[1];
   // For debugging help for core dumps with optimized code.
-  pn_event_type_t current_event_type;
-  uint32_t process_args;
-  uint32_t process_events;
 } pconnection_t;
 
 /*
