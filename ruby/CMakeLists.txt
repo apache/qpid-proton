@@ -113,53 +113,55 @@ install(DIRECTORY examples/
         DESTINATION "${PROTON_SHARE}/examples/ruby"
         COMPONENT Ruby
         USE_SOURCE_PERMISSIONS)
-## Tests
+if (BUILD_TESTING)
+  ## Tests
 
-to_native_path("${src}/lib;${src}/tests;${src}/spec;${bin};${c_lib_dir};$ENV{RUBYLIB}" RUBYLIB)
-to_native_path("${bin};${c_lib_dir};$ENV{PATH}" PATH)
+  to_native_path("${src}/lib;${src}/tests;${src}/spec;${bin};${c_lib_dir};$ENV{RUBYLIB}" RUBYLIB)
+  to_native_path("${bin};${c_lib_dir};$ENV{PATH}" PATH)
 
-if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-  set(COVERAGE "COVERAGE=1")
-endif ()
+  if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+    set(COVERAGE "COVERAGE=1")
+  endif ()
 
-execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
-  RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
-if (result EQUAL 0)  # Have minitest
-  set(test_env
-    "PATH=${PATH}"
-    "RUBYLIB=${RUBYLIB}"
-    "${COVERAGE}"
-    "COVERAGE_DIR=${CMAKE_CURRENT_BINARY_DIR}/coverage"
-    "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}")
+  execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
+    RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
+  if (result EQUAL 0)  # Have minitest
+    set(test_env
+      "PATH=${PATH}"
+      "RUBYLIB=${RUBYLIB}"
+      "${COVERAGE}"
+      "COVERAGE_DIR=${CMAKE_CURRENT_BINARY_DIR}/coverage"
+      "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}")
 
-  macro(add_ruby_test script)
-    get_filename_component(name ${script} NAME_WE)
-    string(REPLACE "_" "-" name "ruby-${name}")
+    macro(add_ruby_test script)
+      get_filename_component(name ${script} NAME_WE)
+      string(REPLACE "_" "-" name "ruby-${name}")
+      pn_add_test(
+        INTERPRETED
+        NAME ${name}
+        PREPEND_ENVIRONMENT ${test_env}
+        COMMAND ${RUBY_EXECUTABLE} -r${CMAKE_CURRENT_SOURCE_DIR}/tests/collect_coverage.rb ${script} -v
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}  # simplecov doesn't report on code not under $CWD
+        ${ARGN})
+    endmacro()
+
     pn_add_test(
       INTERPRETED
-      NAME ${name}
+      NAME ruby-example-test
       PREPEND_ENVIRONMENT ${test_env}
-      COMMAND ${RUBY_EXECUTABLE} -r${CMAKE_CURRENT_SOURCE_DIR}/tests/collect_coverage.rb ${script} -v
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}  # simplecov doesn't report on code not under $CWD
-      ${ARGN})
-  endmacro()
+      COMMAND ${RUBY_EXECUTABLE} testme -v
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples)
 
-  pn_add_test(
-    INTERPRETED
-    NAME ruby-example-test
-    PREPEND_ENVIRONMENT ${test_env}
-    COMMAND ${RUBY_EXECUTABLE} testme -v
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples)
-
-  file(GLOB TESTS tests/test_*.rb)
-  file(GLOB SPECS spec/*_spec.rb)
-  foreach(t ${TESTS} ${SPECS})
-    add_ruby_test(${t})
-  endforeach()
-else()
-  # No minitest
-  message(STATUS "Ruby tests will not run, minitest is not installed")
-endif()
+    file(GLOB TESTS tests/test_*.rb)
+    file(GLOB SPECS spec/*_spec.rb)
+    foreach(t ${TESTS} ${SPECS})
+      add_ruby_test(${t})
+    endforeach()
+  else()
+    # No minitest
+    message(STATUS "Ruby tests will not run, minitest is not installed")
+  endif()
+endif (BUILD_TESTING)
 
 ## Documentation
 
