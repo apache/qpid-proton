@@ -324,6 +324,26 @@ char message[] =
 "And the mome raths outgrabe.\n"
 ;
 
+TEST_CASE("raw connection refused") {
+  auto_free<pn_raw_connection_t, free_raw_connection> p(mk_raw_connection());
+
+  REQUIRE(p);
+  REQUIRE(pni_raw_validate(p));
+  CHECK_FALSE(pn_raw_connection_is_read_closed(p));
+  CHECK_FALSE(pn_raw_connection_is_write_closed(p));
+
+  size_t rbuff_count = pn_raw_connection_read_buffers_capacity(p);
+  CHECK(rbuff_count>0);
+  size_t wbuff_count = pn_raw_connection_write_buffers_capacity(p);
+  CHECK(wbuff_count>0);
+
+  // Simulate connection refused
+  pni_raw_connect_failed(p);
+
+  REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_DISCONNECTED);
+  REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_EVENT_NONE);
+}
+
 TEST_CASE("raw connection") {
   auto_free<pn_raw_connection_t, free_raw_connection> p(mk_raw_connection());
   max_send_size = 0;

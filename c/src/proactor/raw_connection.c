@@ -311,7 +311,7 @@ static inline void pni_raw_release_buffers(pn_raw_connection_t *conn) {
   conn->wdrainpending = (bool)(conn->wbuffer_first_written);
 }
 
-void pni_raw_disconnect(pn_raw_connection_t *conn) {
+static inline void pni_raw_disconnect(pn_raw_connection_t *conn) {
   pni_raw_release_buffers(conn);
   conn->disconnectpending = true;
 }
@@ -319,6 +319,12 @@ void pni_raw_disconnect(pn_raw_connection_t *conn) {
 void pni_raw_connected(pn_raw_connection_t *conn) {
   pn_condition_clear(conn->condition);
   pni_raw_put_event(conn, PN_RAW_CONNECTION_CONNECTED);
+}
+
+void pni_raw_connect_failed(pn_raw_connection_t *conn) {
+  conn->rclosed = true;
+  conn->wclosed = true;
+  pni_raw_disconnect(conn);
 }
 
 void pni_raw_wake(pn_raw_connection_t *conn) {

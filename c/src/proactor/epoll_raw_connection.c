@@ -320,7 +320,7 @@ pn_event_batch_t *pni_raw_connection_process(pcontext_t *c, bool sched_wake) {
       praw_connection_maybe_connect_lh(rc);
     }
     if (rc->disconnected) {
-      pni_raw_disconnect(&rc->raw_connection);
+      pni_raw_connect_failed(&rc->raw_connection);
       return &rc->batch;
     }
     if (events & (EPOLLHUP | EPOLLERR)) {

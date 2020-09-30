@@ -59,13 +59,14 @@ static void close_all(pn_raw_connection_t *c, app_data_t *app) {
   if (app->listener) pn_listener_close(app->listener);
 }
 
-static void check_condition(pn_event_t *e, pn_condition_t *cond, app_data_t *app) {
+static int check_condition(pn_event_t *e, pn_condition_t *cond, app_data_t *app) {
   if (pn_condition_is_set(cond)) {
     fprintf(stderr, "%s: %s: %s\n", pn_event_type_name(pn_event_type(e)),
             pn_condition_get_name(cond), pn_condition_get_description(cond));
     close_all(pn_event_raw_connection(e), app);
-    exit_code = 1;
+    return 1;
   }
+  return 0;
 }
 
 static void send_message(pn_raw_connection_t *c, const char* msg) {
@@ -138,6 +139,7 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
     case PN_RAW_CONNECTION_DISCONNECTED: {
       pn_raw_connection_t *c = pn_event_raw_connection(event);
       connection_data_t *cd = (connection_data_t*) pn_raw_connection_get_context(c);
+      pn_raw_connection_set_context(c, NULL);
       free(cd);
       printf("**raw connection disconnected\n");
       app->disconnects++;
