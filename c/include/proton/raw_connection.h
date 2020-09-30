@@ -59,19 +59,20 @@ typedef struct pn_raw_buffer_t {
   uint32_t offset; /**< First byte in the buffer to be read or written */
 } pn_raw_buffer_t;
 
+
 /**
  * Create a new raw connection for use with the @ref proactor.
  * See @ref pn_proactor_raw_connect and @ref pn_listener_raw_accept.
  *
- * @return A newly allocated pn_connection_t or NULL if there wasn't sufficient memory.
+ * @return A newly allocated pn_raw_connection_t or NULL if there wasn't sufficient memory.
  *
- * @note This is the only pn_connection_t function that allocates memory. So an application that
+ * @note This is the only pn_raw_connection_t function that allocates memory. So an application that
  * wants good control of out of memory conditions should check the return value for NULL.
  *
  * @note It would be a good practice is to create a raw connection and attach application
  * specific context to it before giving it to the proactor.
  *
- * @note There is no way to free a pn_connection_t as once passed to the proactor the proactor owns
+ * @note There is no way to free a pn_raw_connection_t as once passed to the proactor the proactor owns
  * it and controls its lifecycle.
  */
 PNP_EXTERN pn_raw_connection_t *pn_raw_connection(void);
@@ -125,9 +126,9 @@ PNP_EXTERN size_t pn_raw_connection_write_buffers_capacity(pn_raw_connection_t *
  * returned value-1.
  *
  * @note The buffers given to the raw connection are owned by it until the application
- * receives a @ref PN_RAW_CONNECTION_READ event giving them back to the application. They must
+ * receives the buffers back with a @ref pn_raw_connection_take_read_buffers call. They must
  * not be accessed at all (written or even read) from calling @ref pn_raw_connection_give_read_buffers
- * until receiving this event.
+ * until receiving them back.
  *
  * @note The application should not assume that the @ref PN_RAW_CONNECTION_NEED_READ_BUFFERS
  * event signifies that the connection is readable.
@@ -137,9 +138,12 @@ PNP_EXTERN size_t pn_raw_connection_give_read_buffers(pn_raw_connection_t *conne
 /**
  * Fetch buffers with bytes read from the raw socket
  *
+ * The buffers will be placed in the buffers array in the order in which they were read. So the first buffer in the array will contain the
+ * first bytes read; the second buffer the next bytes etc.
+ *
  * @param[out] buffers pointer to an array of @ref pn_raw_buffer_t structures which will be filled in with the read buffer information
  * @param[in] num the number of buffers allocated in the passed in array of buffers
- * @return the number of buffers being returned, if there is are no read bytes then this will be 0. As many buffers will be returned
+ * @return the number of buffers being returned, if there are no read bytes then this will be 0. As many buffers will be returned
  * as can be given the number that are passed in. So if the number returned is less than the number passed in there are no more buffers
  * read. But if the number is the same there may be more read buffers to take.
  *
@@ -151,6 +155,9 @@ PNP_EXTERN size_t pn_raw_connection_take_read_buffers(pn_raw_connection_t *conne
 
 /**
  * Give the raw connection buffers to write to the underlying socket.
+ *
+ * The buffers will be written to the connection in the order that they are passed in. That is the first buffer in the array of buffers
+ * passed will be the first buffer written to the connection; the second buffer passed in will be the second written etc.
  *
  * A @ref PN_RAW_CONNECTION_WRITTEN event will be generated once the buffers have been written to the socket
  * until this point the buffers must not be accessed at all (written or even read).
@@ -180,6 +187,8 @@ PNP_EXTERN size_t pn_raw_connection_write_buffers(pn_raw_connection_t *connectio
  * @note After the application receives @ref PN_RAW_CONNECTION_WRITTEN there should be bytes written to the socket and
  * hence this call should return buffers. It is safe to carry on calling @ref pn_raw_connection_take_written_buffers
  * until it returns 0.
+ *
+ * @note The buffers will be returned in the same order as they were originally passed in.
  */
 PNP_EXTERN size_t pn_raw_connection_take_written_buffers(pn_raw_connection_t *connection, pn_raw_buffer_t *buffers, size_t num);
 
