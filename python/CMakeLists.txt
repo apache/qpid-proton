@@ -221,94 +221,92 @@ if (SETUPTOOLS_MODULE_FOUND)
   endif ()
 endif ()
 
-if (BUILD_TESTING)
-  # python test: python/tests/proton-test
-  set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
-  set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
-  set (py_dll "$<TARGET_FILE_DIR:_cproton>")
-  set (py_bld "$<TARGET_FILE_DIR:qpid-proton-core>") # For windows
-  set (py_tests "${py_src}/tests")
-  set (tests_py "${py_src}/../tests/py")
+# python test: python/tests/proton-test
+set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
+set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
+set (py_dll "$<TARGET_FILE_DIR:_cproton>")
+set (py_bld "$<TARGET_FILE_DIR:qpid-proton-core>") # For windows
+set (py_tests "${py_src}/tests")
+set (tests_py "${py_src}/../tests/py")
 
-  set (py_path ${CMAKE_BINARY_DIR}/c/tools ${py_bld} $ENV{PATH})
-  set (py_pythonpath ${py_tests} ${py_src} ${py_bin} ${py_dll} ${tests_py} $ENV{PYTHONPATH})
-  to_native_path ("${py_pythonpath}" py_pythonpath)
-  to_native_path ("${py_path}" py_path)
+set (py_path ${CMAKE_BINARY_DIR}/c/tools ${py_bld} $ENV{PATH})
+set (py_pythonpath ${py_tests} ${py_src} ${py_bin} ${py_dll} ${tests_py} $ENV{PYTHONPATH})
+to_native_path ("${py_pythonpath}" py_pythonpath)
+to_native_path ("${py_path}" py_path)
 
-  if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-    set (python_coverage_options -m coverage run --parallel-mode)
-  endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
+if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+  set (python_coverage_options -m coverage run --parallel-mode)
+endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
+pn_add_test(
+  INTERPRETED
+  NAME python-test
+  PREPEND_ENVIRONMENT
+    "PATH=${py_path}"
+    "PYTHONPATH=${py_pythonpath}"
+    "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+  COMMAND ${PYTHON_EXECUTABLE} ${python_coverage_options} -- "${py_tests}/proton-test")
+set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+
+if(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
+  execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import unittest2"
+          RESULT_VARIABLE UNITTEST_MISSING
+          ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(UNITTEST_MISSING)
+    message(WARNING "unittest2 is not installed. ***some unit tests cannot be run***\ntry 'pip install unittest2' to install unittest2")
+  else(UNITTEST_MISSING)
+    set(PYTHON_TEST_COMMAND "-m" "unittest2")
+  endif(UNITTEST_MISSING)
+else(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
+  set(PYTHON_TEST_COMMAND "-m" "unittest")
+endif(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
+
+if (PYTHON_TEST_COMMAND)
   pn_add_test(
     INTERPRETED
-    NAME python-test
+    NAME python-integration-test
     PREPEND_ENVIRONMENT
       "PATH=${py_path}"
       "PYTHONPATH=${py_pythonpath}"
       "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-    COMMAND ${PYTHON_EXECUTABLE} ${python_coverage_options} -- "${py_tests}/proton-test")
-  set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+    COMMAND
+      ${PYTHON_EXECUTABLE}
+        ${python_coverage_options}
+        ${PYTHON_TEST_COMMAND} discover -v -s "${py_tests}/integration")
+endif(PYTHON_TEST_COMMAND)
 
-  if(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
-    execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import unittest2"
-            RESULT_VARIABLE UNITTEST_MISSING
-            ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(UNITTEST_MISSING)
-      message(WARNING "unittest2 is not installed. ***some unit tests cannot be run***\ntry 'pip install unittest2' to install unittest2")
-    else(UNITTEST_MISSING)
-      set(PYTHON_TEST_COMMAND "-m" "unittest2")
-    endif(UNITTEST_MISSING)
-  else(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
-    set(PYTHON_TEST_COMMAND "-m" "unittest")
-  endif(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
+check_python_module("tox" TOX_MODULE_FOUND)
+if (NOT TOX_MODULE_FOUND)
+  message(STATUS "The tox tool is not available; skipping the python-tox-tests")
+else ()
+  option(ENABLE_TOX_TEST "Enable multi-version python testing with TOX" ON)
 
-  if (PYTHON_TEST_COMMAND)
-    pn_add_test(
-      INTERPRETED
-      NAME python-integration-test
-      PREPEND_ENVIRONMENT
-        "PATH=${py_path}"
-        "PYTHONPATH=${py_pythonpath}"
-        "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-      COMMAND
-        ${PYTHON_EXECUTABLE}
-          ${python_coverage_options}
-          ${PYTHON_TEST_COMMAND} discover -v -s "${py_tests}/integration")
-  endif(PYTHON_TEST_COMMAND)
+  set(tox_default "py26,py27,py35,py36,py37,py38")
+  set(TOX_ENVLIST "" CACHE STRING "List of python environments for TOX tests" )
+  mark_as_advanced(TOX_ENVLIST)
 
-  check_python_module("tox" TOX_MODULE_FOUND)
-  if (NOT TOX_MODULE_FOUND)
-    message(STATUS "The tox tool is not available; skipping the python-tox-tests")
-  else ()
-    option(ENABLE_TOX_TEST "Enable multi-version python testing with TOX" ON)
-
-    set(tox_default "py26,py27,py35,py36,py37,py38")
-    set(TOX_ENVLIST "" CACHE STRING "List of python environments for TOX tests" )
-    mark_as_advanced(TOX_ENVLIST)
-
-    if (NOT TOX_ENVLIST)
-      set (TOX_ENVLIST ${tox_default})
-    endif()
-    if (ENABLE_TOX_TEST)
-      if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-        message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
-      else ()
-        configure_file(
-          "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
-          "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
-        pn_add_test(
-          INTERPRETED
-          NAME python-tox-test
-          PREPEND_ENVIRONMENT
-            "PATH=${py_path}"
-            "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-            "SWIG=${SWIG_EXECUTABLE}"
-          COMMAND ${PYTHON_EXECUTABLE} -m tox)
-        set_tests_properties(python-tox-test
-          PROPERTIES
-          PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
-          FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
-      endif ()
-    endif (ENABLE_TOX_TEST)
-  endif (NOT TOX_MODULE_FOUND)
-endif (BUILD_TESTING)
+  if (NOT TOX_ENVLIST)
+    set (TOX_ENVLIST ${tox_default})
+  endif()
+  if (ENABLE_TOX_TEST)
+    if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+      message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
+    else ()
+      configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
+      pn_add_test(
+        INTERPRETED
+        NAME python-tox-test
+        PREPEND_ENVIRONMENT
+          "PATH=${py_path}"
+          "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+          "SWIG=${SWIG_EXECUTABLE}"
+        COMMAND ${PYTHON_EXECUTABLE} -m tox)
+      set_tests_properties(python-tox-test
+        PROPERTIES
+        PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
+        FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
+    endif ()
+  endif (ENABLE_TOX_TEST)
+endif (NOT TOX_MODULE_FOUND)
