@@ -589,4 +589,5 @@ add_subdirectory(tools)
 install (DIRECTORY examples/
          DESTINATION "${PROTON_SHARE}/examples/c"
          USE_SOURCE_PERMISSIONS
-         PATTERN ProtonConfig.cmake EXCLUDE)
+         PATTERN "ProtonConfig.cmake" EXCLUDE
+         PATTERN "testme" EXCLUDE)

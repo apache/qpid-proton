@@ -30,25 +30,3 @@ foreach (name broker send receive direct send-abort send-ssl raw_echo raw_connec
   set_target_properties(c-${name} PROPERTIES
     OUTPUT_NAME ${name})
 endforeach()
-
-
-find_package (PythonInterp)     # For test-driver script
-if (PYTHON_EXECUTABLE)
-  if(WIN32)
-    # NOTE: need to escape semicolons as cmake uses them as list separators.
-    set(test_path "$<TARGET_FILE_DIR:c-broker>\;$<TARGET_FILE_DIR:qpid-proton-core>\;$<TARGET_FILE_DIR:qpid-proton-proactor>")
-  else()
-    set(test_path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
-  endif()
-
-  set(test_env
-    "PATH=${test_path}"
-    "PYTHONPATH=../../tests/py")
-
-  pn_add_test(
-    UNWRAPPED
-    NAME c-example-tests
-    PREPEND_ENVIRONMENT "${test_env}"
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND ${PYTHON_EXECUTABLE} testme -v)
-endif()
