@@ -18,17 +18,11 @@
 #
 cmake_minimum_required (VERSION 2.8.12)
 
-enable_language(CXX)
+project(ProtonCppExamples C CXX)
 
-set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(ProtonCpp REQUIRED)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
-
-include_directories(${ProtonCpp_INCLUDE_DIRS})
-link_libraries(${ProtonCpp_LIBRARIES})
-add_definitions(${ProtonCpp_DEFINITIONS})
-
 
 macro (has_cxx_features result)
 set(${result} OFF)
@@ -82,6 +76,7 @@ foreach(example
     ssl_client_cert
     encode_decode)
   add_executable(${example} ${example}.cpp)
+  target_link_libraries(${example} Proton::cpp)
 endforeach()
 
 if(HAS_ENOUGH_CPP11)
@@ -90,6 +85,7 @@ if(HAS_ENOUGH_CPP11)
       scheduled_send
       service_bus)
     add_executable(${example} ${example}.cpp)
+    target_link_libraries(${example} Proton::cpp)
   endforeach()
 
   # Examples that use threads directly
@@ -98,7 +94,7 @@ if(HAS_ENOUGH_CPP11)
         multithreaded_client
         multithreaded_client_flow_control)
       add_executable(${example} ${example}.cpp)
-      target_link_libraries(${example} Threads::Threads)
+      target_link_libraries(${example} Proton::cpp Threads::Threads)
     endforeach()
   endif()
 endif()

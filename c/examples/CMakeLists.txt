@@ -18,17 +18,15 @@
 #
 cmake_minimum_required (VERSION 2.8.12)
 
-set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+project(ProtonCExamples C)
+
 find_package(Proton REQUIRED Core Proactor)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 
-include_directories(${Proton_INCLUDE_DIRS})
-add_definitions(${Proton_DEFINITIONS})
-
 foreach (name broker send receive direct send-abort send-ssl raw_echo raw_connect)
   add_executable(c-${name} ${name}.c)
-  target_link_libraries(c-${name} ${Proton_Proactor_LIBRARIES} ${Proton_Core_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+  target_link_libraries(c-${name} Proton::core Proton::proactor Threads::Threads)
   set_target_properties(c-${name} PROPERTIES
     OUTPUT_NAME ${name})
 endforeach()

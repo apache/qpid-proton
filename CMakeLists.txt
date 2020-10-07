@@ -42,6 +42,10 @@ include(tests/PNAddTest.cmake)
 # Set up runtime checks (valgrind, sanitizers etc.)
 include(tests/RuntimeCheck.cmake)
 
+## Set up so that find_package(Proton) & find_package(ProtonCpp) work in the build tree
+set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/config)
+set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/config)
+
 ## Variables used across components
 
 set (PN_ENV_SCRIPT "${PYTHON_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/env.py")
