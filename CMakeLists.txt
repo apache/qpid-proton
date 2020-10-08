@@ -431,4 +431,6 @@ configure_file(${CMAKE_SOURCE_DIR}/misc/config.sh.in
 configure_file(${CMAKE_SOURCE_DIR}/misc/config.bat.in
                ${CMAKE_BINARY_DIR}/config.bat @ONLY)
 
-add_subdirectory(tests/examples)
+if (BUILD_EXAMPLES)
+  add_subdirectory(tests/examples)
+endif (BUILD_EXAMPLES)
