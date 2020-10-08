@@ -88,7 +88,9 @@ if (BUILD_GO)
   # Clean up go output directories.
   list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${GOPATH}/pkg ${GOPATH}/bin)
 
-  add_subdirectory(examples)
+  if (BUILD_EXAMPLES)
+    add_subdirectory(examples)
+  endif (BUILD_EXAMPLES)
 
   # Install go sources.
   set (GO_INSTALL_DIR ${SHARE_INSTALL_DIR}/gocode/pkg CACHE PATH "Installation directory for Go code")

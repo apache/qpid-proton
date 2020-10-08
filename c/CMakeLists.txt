@@ -582,8 +582,9 @@ if (ENABLE_BENCHMARKS)
 endif (ENABLE_BENCHMARKS)
 
 add_subdirectory(docs)
-add_subdirectory(examples)
-add_subdirectory(tests)
+if (BUILD_EXAMPLES)
+  add_subdirectory(examples)
+endif (BUILD_EXAMPLES)
 add_subdirectory(tools)
 
 install (DIRECTORY examples/

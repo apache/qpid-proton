@@ -162,6 +162,8 @@ option(ENABLE_HIDE_UNEXPORTED_SYMBOLS "Only export library symbols that are expl
 option(ENABLE_FUZZ_TESTING "Enable building fuzzers and regression testing with libFuzzer" ${DEFAULT_FUZZ_TESTING})
 option(ENABLE_BENCHMARKS "Enable building and running benchmarks with Google Benchmark" ${DEFAULT_BENCHMARKS})
 
+option(BUILD_EXAMPLES "Enable building example programs" ON)
+
 # Set any additional compiler specific flags
 set (LTO_GNU "-flto -fno-fat-lto-objects")
 set (LTO_Clang "-flto=thin")
@@ -429,4 +431,6 @@ configure_file(${CMAKE_SOURCE_DIR}/misc/config.sh.in
 configure_file(${CMAKE_SOURCE_DIR}/misc/config.bat.in
                ${CMAKE_BINARY_DIR}/config.bat @ONLY)
 
-add_subdirectory(tests/examples)
+if (BUILD_EXAMPLES)
+  add_subdirectory(tests/examples)
+endif (BUILD_EXAMPLES)
