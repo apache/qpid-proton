@@ -585,6 +585,7 @@ add_subdirectory(docs)
 if (BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif (BUILD_EXAMPLES)
+add_subdirectory(tests)
 add_subdirectory(tools)
 
 install (DIRECTORY examples/
