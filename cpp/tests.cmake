@@ -22,32 +22,32 @@ set(test_env "")
 
 # SASL configuration for tests
 if(CyrusSASL_Saslpasswd_EXECUTABLE)
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/testdata/sasl-conf/proton-server.conf.in"
-            "${testdata}/sasl-conf/proton-server.conf")
-    execute_process(
-            COMMAND echo password
-            COMMAND ${CyrusSASL_Saslpasswd_EXECUTABLE} -c -p -f "${testdata}/sasl-conf/proton.sasldb" -u proton user
-            RESULT_VARIABLE ret)
-    if(ret)
-        message(WARNING "${CyrusSASL_Saslpasswd_EXECUTABLE}: error ${ret} - some SASL tests will be skipped")
-    else()
-        set(test_env ${test_env} "PN_SASL_CONFIG_PATH=${testdata}/sasl-conf")
-    endif()
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/testdata/sasl-conf/proton-server.conf.in"
+    "${testdata}/sasl-conf/proton-server.conf")
+  execute_process(
+    COMMAND echo password
+    COMMAND ${CyrusSASL_Saslpasswd_EXECUTABLE} -c -p -f "${testdata}/sasl-conf/proton.sasldb" -u proton user
+    RESULT_VARIABLE ret)
+  if(ret)
+    message(WARNING "${CyrusSASL_Saslpasswd_EXECUTABLE}: error ${ret} - some SASL tests will be skipped")
+  else()
+    set(test_env ${test_env} "PN_SASL_CONFIG_PATH=${testdata}/sasl-conf")
+  endif()
 endif()
 
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-    set(test_env ${test_env} "PATH=$<TARGET_FILE_DIR:qpid-proton>")
+  set(test_env ${test_env} "PATH=$<TARGET_FILE_DIR:qpid-proton>")
 endif()
 
 macro(add_cpp_test test)
-    add_executable (${test} src/${test}.cpp)
-    target_link_libraries (${test} qpid-proton-cpp ${PLATFORM_LIBS})
-    pn_add_test(
-            EXECUTABLE
-            NAME cpp-${test}
-            APPEND_ENVIRONMENT ${test_env}
-            COMMAND $<TARGET_FILE:${test}>
-            ${ARGN})
+  add_executable (${test} src/${test}.cpp)
+  target_link_libraries (${test} qpid-proton-cpp ${PLATFORM_LIBS})
+  pn_add_test(
+    EXECUTABLE
+    NAME cpp-${test}
+    APPEND_ENVIRONMENT ${test_env}
+    COMMAND $<TARGET_FILE:${test}>
+    ${ARGN})
 endmacro(add_cpp_test)
 
 add_cpp_test(codec_test)
@@ -62,11 +62,11 @@ add_cpp_test(reconnect_test)
 add_cpp_test(link_test)
 add_cpp_test(credit_test)
 if (ENABLE_JSONCPP)
-    add_cpp_test(connect_config_test)
-    target_link_libraries(connect_config_test qpid-proton-core) # For pn_sasl_enabled
-    set_tests_properties(cpp-connect_config_test PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-    # Test data and output directories for connect_config_test
-    file(COPY  "${CMAKE_CURRENT_SOURCE_DIR}/testdata" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+  add_cpp_test(connect_config_test)
+  target_link_libraries(connect_config_test qpid-proton-core) # For pn_sasl_enabled
+  set_tests_properties(cpp-connect_config_test PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  # Test data and output directories for connect_config_test
+  file(COPY  "${CMAKE_CURRENT_SOURCE_DIR}/testdata" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 # TODO aconway 2018-10-31: Catch2 tests
@@ -82,21 +82,21 @@ add_executable(cpp-core-test src/cpp-test.cpp src/object_test.cpp)
 target_link_libraries(cpp-core-test qpid-proton-cpp qpid-proton-core ${PLATFORM_LIBS})
 
 macro(add_catch_test tag)
-    pn_add_test(
-            EXECUTABLE
-            NAME cpp-${tag}-test
-            APPEND_ENVIRONMENT ${test_env}
-            COMMAND $<TARGET_FILE:cpp-test> "[${tag}]")
-    set_tests_properties(cpp-${tag}-test PROPERTIES  FAIL_REGULAR_EXPRESSION ".*No tests ran.*")
+  pn_add_test(
+    EXECUTABLE
+    NAME cpp-${tag}-test
+    APPEND_ENVIRONMENT ${test_env}
+    COMMAND $<TARGET_FILE:cpp-test> "[${tag}]")
+  set_tests_properties(cpp-${tag}-test PROPERTIES  FAIL_REGULAR_EXPRESSION ".*No tests ran.*")
 endmacro(add_catch_test)
 
 macro(add_core_catch_test tag)
-    pn_add_test(
-            EXECUTABLE
-            NAME cpp-${tag}-test
-            APPEND_ENVIRONMENT ${test_env}
-            COMMAND $<TARGET_FILE:cpp-core-test> "[${tag}]")
-    set_tests_properties(cpp-${tag}-test PROPERTIES  FAIL_REGULAR_EXPRESSION ".*No tests ran.*")
+  pn_add_test(
+          EXECUTABLE
+          NAME cpp-${tag}-test
+          APPEND_ENVIRONMENT ${test_env}
+          COMMAND $<TARGET_FILE:cpp-core-test> "[${tag}]")
+  set_tests_properties(cpp-${tag}-test PROPERTIES  FAIL_REGULAR_EXPRESSION ".*No tests ran.*")
 endmacro(add_core_catch_test)
 
 add_catch_test(url)
