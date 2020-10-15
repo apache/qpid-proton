@@ -268,19 +268,35 @@ const pn_netaddr_t *pn_raw_connection_remote_addr(pn_raw_connection_t *rc) {
 void pn_raw_connection_wake(pn_raw_connection_t *rc) {
   bool notify = false;
   praw_connection_t *prc = containerof(rc, praw_connection_t, raw_connection);
-  if (prc) {
-    lock(&prc->context.mutex);
-    if (!prc->context.closing) {
-      prc->waking = true;
-      notify = wake(&prc->context);
-    }
-    unlock(&prc->context.mutex);
+  lock(&prc->context.mutex);
+  if (!prc->context.closing) {
+    prc->waking = true;
+    notify = wake(&prc->context);
   }
+  unlock(&prc->context.mutex);
   if (notify) wake_notify(&prc->context);
 }
 
+void pn_raw_connection_close(pn_raw_connection_t *rc) {
+  praw_connection_t *prc = containerof(rc, praw_connection_t, raw_connection);
+  lock(&prc->context.mutex);
+  prc->context.closing = true;
+  unlock(&prc->context.mutex);
+  pni_raw_close(rc);
+}
+
 static pn_event_t *pni_raw_batch_next(pn_event_batch_t *batch) {
-  pn_raw_connection_t *raw = &containerof(batch, praw_connection_t, batch)->raw_connection;
+  praw_connection_t *rc = containerof(batch, praw_connection_t, batch);
+  pn_raw_connection_t *raw = &rc->raw_connection;
+
+  // Check wake status every event processed
+  bool waking = false;
+  lock(&rc->context.mutex);
+  waking = rc->waking;
+  rc->waking = false;
+  unlock(&rc->context.mutex);
+  if (waking) pni_raw_wake(raw);
+
   return pni_raw_event_next(raw);
 }
 
@@ -330,9 +346,11 @@ pn_event_batch_t *pni_raw_connection_process(pcontext_t *c, bool sched_wake) {
   bool wake = false;
   lock(&c->mutex);
   c->working = true;
-  if (sched_wake) wake_done(c);
-  wake = sched_wake || rc->waking;
-  rc->waking = false;
+  if (sched_wake) {
+    wake_done(c);
+    wake = rc->waking;
+    rc->waking = false;
+  }
   unlock(&c->mutex);
 
   if (wake) pni_raw_wake(&rc->raw_connection);
@@ -343,11 +361,13 @@ pn_event_batch_t *pni_raw_connection_process(pcontext_t *c, bool sched_wake) {
 
 void pni_raw_connection_done(praw_connection_t *rc) {
   bool self_notify = false;
+  bool wake_pending = false;
   lock(&rc->context.mutex);
   pn_proactor_t *p = rc->context.proactor;
   tslot_t *ts = rc->context.runner;
   rc->context.working = false;
   self_notify = rc->waking && wake(&rc->context);
+  wake_pending = rc->waking;
   unlock(&rc->context.mutex);
   if (self_notify) wake_notify(&rc->context);
 
@@ -359,7 +379,7 @@ void pni_raw_connection_done(praw_connection_t *rc) {
     rc->psocket.epoll_io.wanted = wanted;
     rearm_polling(&rc->psocket.epoll_io, p->epollfd);  // TODO: check for error
   } else {
-    bool finished_disconnect = raw->rclosed && raw->wclosed && !raw->disconnectpending;
+    bool finished_disconnect = raw->rclosed && raw->wclosed && !wake_pending && !raw->disconnectpending;
     if (finished_disconnect) {
       // If we're closed and we've sent the disconnect then close
       pni_raw_finalize(raw);

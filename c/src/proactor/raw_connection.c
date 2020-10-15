@@ -351,7 +351,7 @@ void pni_raw_read(pn_raw_connection_t *conn, int sock, long (*recv)(int, void*, 
         // Detected an error
         default:
           set_error(conn, "recv error", errno);
-          pn_raw_connection_close(conn);
+          pni_raw_close(conn);
           return;
       }
     }
@@ -418,7 +418,7 @@ void pni_raw_write(pn_raw_connection_t *conn, int sock, long (*send)(int, const 
         default:
           set_error(conn, "send error", errno);
           pni_raw_release_buffers(conn);
-          pn_raw_connection_close(conn);
+          pni_raw_close(conn);
           return;
       }
     }
@@ -524,7 +524,7 @@ pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn) {
   } while (true);
 }
 
-void pn_raw_connection_close(pn_raw_connection_t *conn) {
+void pni_raw_close(pn_raw_connection_t *conn) {
   // TODO: Do we need different flags here?
   // TODO: What is the precise semantics for close?
   bool rclosed = conn->rclosed;

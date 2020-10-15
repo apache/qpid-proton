@@ -545,7 +545,7 @@ TEST_CASE("raw connection") {
       // No need buffers event as we already gave buffers
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_EVENT_NONE);
 
-      pn_raw_connection_close(p);
+      pni_raw_close(p);
 
       size_t rgiven = pn_raw_connection_take_read_buffers(p, &read[0], rtaken);
       REQUIRE(pni_raw_validate(p));
