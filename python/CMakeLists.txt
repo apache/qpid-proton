@@ -48,6 +48,12 @@ set_target_properties(${SWIG_MODULE_cproton_REAL_NAME}
 
 find_package(PythonInterp REQUIRED)
 
+# Distutils is required to build the binding
+check_python_module("distutils.sysconfig" DISTUTILS_MODULE_FOUND)
+if (NOT DISTUTILS_MODULE_FOUND)
+  message(FATAL_ERROR "Distutils module not found; cannot build Python binding.")
+endif()
+
 if (CHECK_SYSINSTALL_PYTHON)
   execute_process(COMMAND ${PYTHON_EXECUTABLE}
     -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(True))"
@@ -204,7 +210,7 @@ add_custom_command(TARGET py_src_dist
                    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${file} "${py_dist_dir}/${file}")
 endforeach()
 
-# Make python source and binary packages if we have prerequisistes
+# Make python source and binary packages if we have prerequisites
 check_python_module("setuptools" SETUPTOOLS_MODULE_FOUND)
 check_python_module("wheel" WHEEL_MODULE_FOUND)
 if (SETUPTOOLS_MODULE_FOUND)
