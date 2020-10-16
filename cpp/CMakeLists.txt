@@ -150,10 +150,6 @@ set(qpid-proton-cpp-source
   ${CONNECT_CONFIG_SRC}
   )
 
-if (MSVC)
-  set (CMAKE_DEBUG_POSTFIX "d")
-endif ()
-
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
 if(BUILD_STATIC_LIBS)
   add_library(qpid-proton-cpp-static STATIC ${qpid-proton-cpp-source})

@@ -165,22 +165,8 @@ if (PN_WINAPI)
   list(APPEND PLATFORM_DEFINITIONS "PN_WINAPI")
 endif (PN_WINAPI)
 
-if (MSVC)
-    set(CMAKE_DEBUG_POSTFIX "d")
-    add_definitions(
-        /wd4244
-        /wd4267
-        /wd4800
-        /wd4996
-    )
-endif (MSVC)
-
-# Ensure that examples build with c99 on gcc/clang
-set(C_EXAMPLE_FLAGS_GNU "-pedantic")
-set(C_EXAMPLE_FLAGS_Clang "-pedantic")
-
 # Flags for example self-test build
-set(C_EXAMPLE_FLAGS "${COMPILE_WARNING_FLAGS} ${C_EXAMPLE_FLAGS_${CMAKE_C_COMPILER_ID}}")
+set(C_EXAMPLE_FLAGS "${C_STANDARD_FLAGS} ${COMPILE_WARNING_FLAGS}")
 set(C_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}")
 
 set(qpid-proton-platform_GNU src/compiler/gcc/start.c)
