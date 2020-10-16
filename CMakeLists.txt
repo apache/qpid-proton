@@ -36,7 +36,6 @@ find_package (PythonInterp REQUIRED)
 find_package (SWIG)
 find_package (CyrusSASL)
 
-enable_testing ()
 include(tests/PNAddTest.cmake)
 
 # Set up runtime checks (valgrind, sanitizers etc.)

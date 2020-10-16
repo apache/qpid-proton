@@ -21,7 +21,6 @@ cmake_minimum_required(VERSION 2.8.12)
 
 project(ProtonExamples)
 include(CTest)
-enable_testing()
 include("tests/RuntimeCheck.cmake")
 
 # find example sub-directories that contain "CMakeLists.txt" or "testme"
@@ -40,4 +39,4 @@ foreach(dir ${subs})
       COMMAND ${dir}/testme
       WORKING_DIRECTORY ${dir})
   endif()
- endforeach()
+endforeach()
