@@ -533,13 +533,12 @@ static void make_runnable(pcontext_t *ctx) {
 
 
 
-void psocket_init(psocket_t* ps, pn_proactor_t* p, epoll_type_t type)
+void psocket_init(psocket_t* ps, epoll_type_t type)
 {
   ps->epoll_io.fd = -1;
   ps->epoll_io.type = type;
   ps->epoll_io.wanted = 0;
   ps->epoll_io.polling = false;
-  ps->proactor = p;
 }
 
 
@@ -675,7 +674,7 @@ static acceptor_t *acceptor_list_next(acceptor_t **start) {
 // Add an overflowing acceptor to the overflow list. Called with listener context lock held.
 static void acceptor_set_overflow(acceptor_t *a) {
   a->overflowed = true;
-  pn_proactor_t *p = a->psocket.proactor;
+  pn_proactor_t *p = a->listener->context.proactor;
   lock(&p->overflow_mutex);
   acceptor_list_append(&p->overflow, a);
   unlock(&p->overflow_mutex);
@@ -740,7 +739,7 @@ static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_con
 
 
   pcontext_init(&pc->context, PCONNECTION, p);
-  psocket_init(&pc->psocket, p, PCONNECTION_IO);
+  psocket_init(&pc->psocket, PCONNECTION_IO);
   pni_parse_addr(addr, pc->addr_buf, addrlen+1, &pc->host, &pc->port);
   pc->new_events = 0;
   pc->wake_count = 0;
@@ -804,9 +803,9 @@ static void pconnection_final_free(pconnection_t *pc) {
 static void pconnection_cleanup(pconnection_t *pc) {
   assert(pconnection_is_final(pc));
   int fd = pc->psocket.epoll_io.fd;
-  stop_polling(&pc->psocket.epoll_io, pc->psocket.proactor->epollfd);
+  stop_polling(&pc->psocket.epoll_io, pc->context.proactor->epollfd);
   if (fd != -1)
-    pclosefd(pc->psocket.proactor, fd);
+    pclosefd(pc->context.proactor, fd);
 
   lock(&pc->context.mutex);
   bool can_free = proactor_remove(&pc->context);
@@ -945,7 +944,7 @@ static int pconnection_rearm_check(pconnection_t *pc) {
 static inline void pconnection_rearm(pconnection_t *pc, int wanted_now) {
   lock(&pc->rearm_mutex);
   pc->current_arm = pc->psocket.epoll_io.wanted = wanted_now;
-  rearm(pc->psocket.proactor, &pc->psocket.epoll_io);
+  rearm(pc->context.proactor, &pc->psocket.epoll_io);
   unlock(&pc->rearm_mutex);
   // Return immediately.  pc may have just been freed by another thread.
 }
@@ -1314,7 +1313,7 @@ void pconnection_connected_lh(pconnection_t *pc) {
 
 /* multi-address connections may call pconnection_start multiple times with diffferent FDs  */
 static void pconnection_start(pconnection_t *pc, int fd) {
-  int efd = pc->psocket.proactor->epollfd;
+  int efd = pc->context.proactor->epollfd;
   /* Get the local socket name now, get the peer name in pconnection_connected */
   socklen_t len = sizeof(pc->local.ss);
   (void)getsockname(fd, (struct sockaddr*)&pc->local.ss, &len);
@@ -1323,7 +1322,7 @@ static void pconnection_start(pconnection_t *pc, int fd) {
   if (ee->polling) {     /* This is not the first attempt, stop polling and close the old FD */
     int fd = ee->fd;     /* Save fd, it will be set to -1 by stop_polling */
     stop_polling(ee, efd);
-    pclosefd(pc->psocket.proactor, fd);
+    pclosefd(pc->context.proactor, fd);
   }
   ee->fd = fd;
   pc->current_arm = ee->wanted = EPOLLIN | EPOLLOUT;
@@ -1541,11 +1540,11 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
 
           acceptor->listener = l;
           psocket_t *ps = &acceptor->psocket;
-          psocket_init(ps, p, LISTENER_IO);
+          psocket_init(ps, LISTENER_IO);
           ps->epoll_io.fd = fd;
           ps->epoll_io.wanted = EPOLLIN;
           ps->epoll_io.polling = false;
-          start_polling(&ps->epoll_io, ps->proactor->epollfd);  // TODO: check for error
+          start_polling(&ps->epoll_io, l->context.proactor->epollfd);  // TODO: check for error
           l->active_count++;
           acceptor->armed = true;
         } else {
@@ -1563,7 +1562,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
     l->acceptors = (acceptor_t*)realloc(l->acceptors, sizeof(acceptor_t));
     l->acceptors_size = 1;
     memset(l->acceptors, 0, sizeof(acceptor_t));
-    psocket_init(&l->acceptors[0].psocket, p, LISTENER_IO);
+    psocket_init(&l->acceptors[0].psocket, LISTENER_IO);
     l->acceptors[0].listener = l;
     if (gai_err) {
       psocket_gai_error(&l->acceptors[0].psocket, gai_err, "listen on");
@@ -1624,7 +1623,7 @@ static void listener_begin_close(pn_listener_t* l) {
           shutdown(ps->epoll_io.fd, SHUT_RD);  // Force epoll event and callback
         } else {
           int fd = ps->epoll_io.fd;
-          stop_polling(&ps->epoll_io, ps->proactor->epollfd);
+          stop_polling(&ps->epoll_io, l->context.proactor->epollfd);
           close(fd);
           l->active_count--;
         }
@@ -1709,7 +1708,7 @@ static pn_event_batch_t *listener_process(pn_listener_t *l, int n_events, bool w
         if (l->context.closing) {
           l->acceptors[i].armed = false;
           int fd = ps->epoll_io.fd;
-          stop_polling(&ps->epoll_io, ps->proactor->epollfd);
+          stop_polling(&ps->epoll_io, l->context.proactor->epollfd);
           close(fd);
           l->active_count--;
         } else {
@@ -1778,7 +1777,7 @@ static void listener_done(pn_listener_t *l) {
       // Rearm acceptor when appropriate
       if (ps->epoll_io.polling && l->pending_count==0 && !a->overflowed) {
         if (!a->armed) {
-          rearm(ps->proactor, &ps->epoll_io);
+          rearm(l->context.proactor, &ps->epoll_io);
           a->armed = true;
         }
       }
@@ -1827,7 +1826,7 @@ static void listener_done(pn_listener_t *l) {
 }
 
 pn_proactor_t *pn_listener_proactor(pn_listener_t* l) {
-  return l ? l->acceptors[0].psocket.proactor : NULL;
+  return l ? l->context.proactor : NULL;
 }
 
 pn_condition_t* pn_listener_condition(pn_listener_t* l) {
@@ -2023,7 +2022,7 @@ void pn_proactor_free(pn_proactor_t *p) {
 pn_proactor_t *pn_event_proactor(pn_event_t *e) {
   if (pn_event_class(e) == PN_CLASSCLASS(pn_proactor)) return (pn_proactor_t*)pn_event_context(e);
   pn_listener_t *l = pn_event_listener(e);
-  if (l) return l->acceptors[0].psocket.proactor;
+  if (l) return l->context.proactor;
   pn_connection_t *c = pn_event_connection(e);
   if (c) return pn_connection_proactor(c);
   return NULL;
@@ -2776,7 +2775,7 @@ void pni_proactor_timeout(pn_proactor_t *p) {
 
 pn_proactor_t *pn_connection_proactor(pn_connection_t* c) {
   pconnection_t *pc = get_pconnection(c);
-  return pc ? pc->psocket.proactor : NULL;
+  return pc ? pc->context.proactor : NULL;
 }
 
 void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {

@@ -212,16 +212,15 @@ struct pn_proactor_t {
 
 /* common to connection and listener */
 typedef struct psocket_t {
-  pn_proactor_t *proactor;
-  // Remaining protected by the pconnection/listener mutex
+  // Protected by the pconnection/listener mutex
   epoll_extended_t epoll_io;
   uint32_t sched_io_events;
   uint32_t working_io_events;
 } psocket_t;
 
 typedef struct pconnection_t {
-  psocket_t psocket;
   pcontext_t context;
+  psocket_t psocket;
   pni_timer_t *timer;
   const char *host, *port;
   uint32_t new_events;
@@ -357,7 +356,7 @@ bool wake(pcontext_t *ctx);
 void wake_notify(pcontext_t *ctx);
 void wake_done(pcontext_t *ctx);
 
-void psocket_init(psocket_t* ps, pn_proactor_t* p, epoll_type_t type);
+void psocket_init(psocket_t* ps, epoll_type_t type);
 bool start_polling(epoll_extended_t *ee, int epollfd);
 void stop_polling(epoll_extended_t *ee, int epollfd);
 void rearm_polling(epoll_extended_t *ee, int epollfd);

@@ -85,7 +85,7 @@ static void praw_connection_connected_lh(praw_connection_t *prc) {
 
 /* multi-address connections may call pconnection_start multiple times with diffferent FDs  */
 static void praw_connection_start(praw_connection_t *prc, int fd) {
-  int efd = prc->psocket.proactor->epollfd;
+  int efd = prc->context.proactor->epollfd;
 
   /* Get the local socket name now, get the peer name in pconnection_connected */
   socklen_t len = sizeof(prc->local.ss);
@@ -95,7 +95,7 @@ static void praw_connection_start(praw_connection_t *prc, int fd) {
   if (ee->polling) {     /* This is not the first attempt, stop polling and close the old FD */
     int fd = ee->fd;     /* Save fd, it will be set to -1 by stop_polling */
     stop_polling(ee, efd);
-    pclosefd(prc->psocket.proactor, fd);
+    pclosefd(prc->context.proactor, fd);
   }
   ee->fd = fd;
   ee->wanted = EPOLLIN | EPOLLOUT;
@@ -140,7 +140,7 @@ static pn_event_t * pni_raw_batch_next(pn_event_batch_t *batch);
 
 static void praw_connection_init(praw_connection_t *prc, pn_proactor_t *p, pn_raw_connection_t *rc) {
   pcontext_init(&prc->context, RAW_CONNECTION, p);
-  psocket_init(&prc->psocket, p, RAW_CONNECTION_IO);
+  psocket_init(&prc->psocket, RAW_CONNECTION_IO);
 
   prc->connected = false;
   prc->disconnected = false;
@@ -152,9 +152,9 @@ static void praw_connection_init(praw_connection_t *prc, pn_proactor_t *p, pn_ra
 
 static void praw_connection_cleanup(praw_connection_t *prc) {
   int fd = prc->psocket.epoll_io.fd;
-  stop_polling(&prc->psocket.epoll_io, prc->psocket.proactor->epollfd);
+  stop_polling(&prc->psocket.epoll_io, prc->context.proactor->epollfd);
   if (fd != -1)
-    pclosefd(prc->psocket.proactor, fd);
+    pclosefd(prc->context.proactor, fd);
 
   lock(&prc->context.mutex);
   bool can_free = proactor_remove(&prc->context);
