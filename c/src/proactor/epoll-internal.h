@@ -54,11 +54,13 @@ extern "C" {
 typedef struct acceptor_t acceptor_t;
 typedef struct tslot_t tslot_t;
 typedef pthread_mutex_t pmutex;
+typedef struct pconnection_t pconnection_t;
+typedef struct pn_tick_timer_t pn_tick_timer_t;
 
 typedef enum {
   WAKE,   /* see if any work to do in proactor/psocket context */
   PCONNECTION_IO,
-  PCONNECTION_TIMER,
+  CTIMERQ_TIMER,
   LISTENER_IO,
   PROACTOR_TIMER,
   RAW_CONNECTION_IO
@@ -77,15 +79,14 @@ typedef struct ptimer_t {
   pmutex mutex;
   epoll_extended_t epoll_io;
   bool timer_active;
-  bool in_doubt;  // 0 or 1 callbacks are possible
-  bool shutting_down;
 } ptimer_t;
 
 typedef enum {
   PROACTOR,
   PCONNECTION,
   LISTENER,
-  RAW_CONNECTION
+  RAW_CONNECTION,
+  CONN_TIMERQ
 } pcontext_type_t;
 
 typedef struct pcontext_t {
@@ -107,7 +108,7 @@ typedef struct pcontext_t {
   tslot_t *prev_runner;
   bool sched_wake;
   bool sched_pending;           /* If true, one or more unseen epoll or other events to process() */
-  bool runnable ;               /* in need of scheduling */
+  bool runnable;                /* in need of scheduling */
 } pcontext_t;
 
 typedef enum {
@@ -137,12 +138,21 @@ struct tslot_t {
   unsigned int earmark_override_gen;
 };
 
+typedef struct connection_timerq_t {
+  pcontext_t context;
+  ptimer_t timer;
+  pn_list_t *pending_ticks;
+  uint64_t ctq_deadline;
+  bool sched_timeout;
+} connection_timerq_t;
+
 struct pn_proactor_t {
   pcontext_t context;
   ptimer_t timer;
   epoll_extended_t epoll_wake;
   epoll_extended_t epoll_interrupt;
   pn_event_batch_t batch;
+  connection_timerq_t ctimerq;
   pcontext_t *contexts;         /* track in-use contexts for PN_PROACTOR_INACTIVE and disconnect */
   size_t disconnects_pending;   /* unfinished proactor disconnects*/
   // need_xxx flags indicate we should generate PN_PROACTOR_XXX on the next update_batch()
@@ -217,16 +227,15 @@ typedef struct psocket_t {
   uint32_t working_io_events;
 } psocket_t;
 
-typedef struct pconnection_t {
+struct pconnection_t {
   psocket_t psocket;
   pcontext_t context;
-  ptimer_t timer;  // TODO: review one timerfd per connection
   const char *host, *port;
+  pn_tick_timer_t *timer;     // Idle timeout timer. Protected by and sole use by ctimerq.
   uint32_t new_events;
   int wake_count; // TODO: protected by context.mutex so should be moved in there (also really bool)
   bool server;                /* accept, not connect */
   bool tick_pending;
-  bool timer_armed;
   bool queued_disconnect;     /* deferred from pn_proactor_disconnect() */
   pn_condition_t *disconnect_condition;
   // Following values only changed by (sole) working context:
@@ -250,9 +259,8 @@ typedef struct pconnection_t {
   struct addrinfo *ai;               /* Current connect address */
   pmutex rearm_mutex;                /* protects pconnection_rearm from out of order arming*/
   bool io_doublecheck;               /* callbacks made and new IO may have arrived */
-  bool sched_timeout;
   char addr_buf[1];
-} pconnection_t;
+};
 
 /*
  * A listener can have multiple sockets (as specified in the addrinfo).  They
@@ -298,6 +306,17 @@ struct pn_listener_t {
 
 typedef char strerrorbuf[1024];      /* used for pstrerror message buffer */
 void pstrerror(int err, strerrorbuf msg);
+
+/* Internal error, no recovery */
+#define EPOLL_FATAL(EXPR, SYSERRNO)                                     \
+  do {                                                                  \
+    strerrorbuf msg;                                                    \
+    pstrerror((SYSERRNO), msg);                                         \
+    fprintf(stderr, "epoll proactor failure in %s:%d: %s: %s\n",        \
+            __FILE__, __LINE__ , #EXPR, msg);                           \
+    abort();                                                            \
+  } while (0)
+
 
 // In general all locks to be held singly and shortly (possibly as spin locks).
 // See above about lock ordering.
@@ -347,6 +366,11 @@ bool start_polling(epoll_extended_t *ee, int epollfd);
 void stop_polling(epoll_extended_t *ee, int epollfd);
 void rearm_polling(epoll_extended_t *ee, int epollfd);
 
+bool ptimer_init(ptimer_t *pt, epoll_type_t ep_type);
+void ptimer_finalize(ptimer_t *pt);
+void ptimer_set(ptimer_t *pt, uint64_t t_millis);
+bool ptimer_callback(ptimer_t *pt);
+
 int pgetaddrinfo(const char *host, const char *port, int flags, struct addrinfo **res);
 void configure_socket(int sock);
 
@@ -359,6 +383,13 @@ typedef struct praw_connection_t praw_connection_t;
 pcontext_t *pni_raw_connection_context(praw_connection_t *rc);
 praw_connection_t *pni_batch_raw_connection(pn_event_batch_t* batch);
 void pni_raw_connection_done(praw_connection_t *rc);
+
+bool ctimerq_init(pn_proactor_t *p);
+void ctimerq_finalize(pn_proactor_t *p);
+bool ctimerq_register(connection_timerq_t *ctq, pconnection_t *pc);
+void ctimerq_deregister(connection_timerq_t *ctq, pconnection_t *pc);
+void ctimerq_schedule_tick(connection_timerq_t *ctq, pconnection_t *pc, uint64_t deadline, uint64_t now);
+pn_event_batch_t *ctimerq_process(connection_timerq_t *ctq, bool timeout);
 
 #ifdef __cplusplus
 }
