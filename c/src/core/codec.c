@@ -434,9 +434,6 @@ static int pni_data_grow(pn_data_t *data)
 
 static ssize_t pni_data_intern(pn_data_t *data, const char *start, size_t size)
 {
-  if (data->buf == NULL) {
-    data->buf = pn_buffer(size);
-  }
   size_t offset = pn_buffer_size(data->buf);
   int err = pn_buffer_append(data->buf, start, size);
   if (err) return err;
@@ -472,7 +469,10 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
   pn_bytes_t *bytes = pni_data_bytes(data, node);
   if (!bytes) return 0;
   if (data->buf == NULL) {
-    data->buf = pn_buffer(bytes->size);
+    // Heuristic to avoid growing small buffers too much
+    // size + 1 to allow for zero termination
+    size_t size = pn_max(bytes->size+1, PNI_INTERN_MINSIZE);
+    data->buf = pn_buffer(size);
   }
   size_t oldcap = pn_buffer_capacity(data->buf);
   ssize_t offset = pni_data_intern(data, bytes->start, bytes->size);
