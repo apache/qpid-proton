@@ -391,7 +391,7 @@ TEST_CASE("raw connection") {
 
       // First event is always connected
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_CONNECTED);
-      // Mo need buffers event as we already gave buffers
+      // No need buffers event as we already gave buffers
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_EVENT_NONE);
 
       SECTION("Write then read") {
@@ -535,6 +535,67 @@ TEST_CASE("raw connection") {
       CHECK(wgiven==0);
     }
 
+    SECTION("Close, ensure writes drained correctly") {
+      int fds[2];
+      REQUIRE(makepair(fds) == 0);
+      pni_raw_connected(p);
+
+      // First event is always connected
+      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_CONNECTED);
+      // No need buffers event as we already gave buffers
+      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_EVENT_NONE);
+
+      pn_raw_connection_close(p);
+
+      size_t rgiven = pn_raw_connection_take_read_buffers(p, &read[0], rtaken);
+      REQUIRE(pni_raw_validate(p));
+      CHECK(rgiven==0);
+      size_t wgiven = pn_raw_connection_take_written_buffers(p, &written[0], wtaken);
+      REQUIRE(pni_raw_validate(p));
+      CHECK(wgiven==0);
+
+      REQUIRE(pn_raw_connection_is_read_closed(p));
+      REQUIRE(pn_raw_connection_is_write_closed(p));
+
+      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_CLOSED_READ);
+      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_EVENT_NONE);
+
+      REQUIRE_FALSE(pni_raw_can_read(p));
+      REQUIRE(pni_raw_can_write(p));
+      pni_raw_write(p, fds[0], snd, set_write_error);
+      REQUIRE(pni_raw_validate(p));
+      CHECK(write_err == 0);
+
+      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_WRITTEN);
+      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_CLOSED_WRITE);
+      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_READ);
+      rgiven = pn_raw_connection_take_read_buffers(p, &read[0], rtaken);
+      REQUIRE(pni_raw_validate(p));
+      CHECK(rgiven==rtaken);
+      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_WRITTEN);
+      wgiven = pn_raw_connection_take_written_buffers(p, &written[0], wtaken);
+      REQUIRE(pni_raw_validate(p));
+      CHECK(wgiven==wtaken);
+      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_DISCONNECTED);
+      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_EVENT_NONE);
+
+      // Now read other end of socket manually and compare
+      size_t sz=0;
+      do {
+        long i = rcv(fds[1], rbuffer_memory+sz, BUFFMEMSIZE);
+        if (i<0) break;
+        sz+=i;
+      } while (true);
+
+      // concatenate the written buffers
+      std::string s;
+      for (size_t i = 0; i < wtaken; ++i) {
+        s+=std::string(written[i].bytes, written[i].size);
+      }
+      REQUIRE(sz == s.size());
+      REQUIRE(s == std::string(rbuffer_memory, sz));
+    }
+
     SECTION("Simple tests using a looped back socketpair") {
       int fds[2];
       REQUIRE(makepair(fds) == 0);
@@ -542,7 +603,7 @@ TEST_CASE("raw connection") {
 
       // First event is always connected
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_CONNECTED);
-      // Mo need buffers event as we already gave buffers
+      // No need buffers event as we already gave buffers
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_EVENT_NONE);
 
       SECTION("Ensure nothing is read if nothing is written") {

@@ -35,6 +35,7 @@ typedef struct app_data_t {
 
   pn_proactor_t *proactor;
   pn_listener_t *listener;
+  pn_raw_connection_t *towake;
 
   int connects;
   int disconnects;
@@ -152,7 +153,9 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
       if (fgets(line, sizeof(line), stdin)) {
         send_message(c, line);
       } else {
-        pn_raw_connection_close(c);
+        /* On end of file wait 2 sec for response */
+        app->towake = c;
+        pn_proactor_set_timeout(app->proactor, 2000);
       }
     } break;
 
@@ -170,6 +173,10 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
       }
     } break;
 
+    /* This is signal to close 2 secs after input closes */
+    case PN_RAW_CONNECTION_WAKE:
+
+    /* This is signal the other end of the network closed */
     case PN_RAW_CONNECTION_CLOSED_READ: {
       pn_raw_connection_t *c = pn_event_raw_connection(event);
       pn_raw_connection_close(c);
@@ -203,6 +210,10 @@ static bool handle(app_data_t* app, pn_event_t* event) {
   switch (pn_event_type(event)) {
 
     case PN_PROACTOR_TIMEOUT: {
+      if (app->towake) {
+        pn_raw_connection_wake(app->towake);
+        app->towake = NULL;
+      }
     }  break;
 
     case PN_PROACTOR_INACTIVE: {

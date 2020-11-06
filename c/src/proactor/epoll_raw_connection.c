@@ -174,9 +174,6 @@ pn_raw_connection_t *pn_raw_connection(void) {
   return &conn->raw_connection;
 }
 
-void pn_raw_connection_free(pn_raw_connection_t *conn) {
-}
-
 void pn_proactor_raw_connect(pn_proactor_t *p, pn_raw_connection_t *rc, const char *addr) {
   assert(rc);
   praw_connection_t *prc = containerof(rc, praw_connection_t, raw_connection);

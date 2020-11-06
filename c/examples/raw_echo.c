@@ -87,6 +87,18 @@ static void check_condition_fatal(pn_event_t *e, pn_condition_t *cond, app_data_
   }
 }
 
+static void send_message(pn_raw_connection_t *c, const char* msg) {
+  pn_raw_buffer_t buffer;
+  uint32_t len = strlen(msg);
+  char *buf = (char*) malloc(1024);
+  memcpy(buf, msg, len);
+  buffer.bytes = buf;
+  buffer.capacity = 1024;
+  buffer.offset = 0;
+  buffer.size = len;
+  pn_raw_connection_write_buffers(c, &buffer, 1);
+}
+
 static void recv_message(pn_raw_buffer_t buf) {
   fwrite(buf.bytes, buf.size, 1, stdout);
 }
@@ -150,6 +162,7 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
       }
       app->disconnects++;
       check_condition(event, pn_raw_connection_condition(c), app);
+      pn_raw_connection_wake(c);
       free_conn_data(cd);
     } break;
 
@@ -183,8 +196,12 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
         }
       }
     } break;
-    case PN_RAW_CONNECTION_CLOSED_WRITE:
+
     case PN_RAW_CONNECTION_CLOSED_READ: {
+      pn_raw_connection_t *c = pn_event_raw_connection(event);
+      send_message(c, "** Goodbye **");
+    }
+    case PN_RAW_CONNECTION_CLOSED_WRITE:{
       pn_raw_connection_t *c = pn_event_raw_connection(event);
       pn_raw_connection_close(c);
     } break;

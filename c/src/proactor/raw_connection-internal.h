@@ -77,6 +77,7 @@ struct pn_raw_connection_t {
   bool rpending;
   bool wpending;
   bool rclosed;
+  bool wdraining;
   bool wclosed;
   bool rclosedpending;
   bool wclosedpending;
@@ -92,7 +93,6 @@ struct pn_raw_connection_t {
 bool pni_raw_validate(pn_raw_connection_t *conn);
 void pni_raw_connected(pn_raw_connection_t *conn);
 void pni_raw_connect_failed(pn_raw_connection_t *conn);
-void pni_raw_process(pn_raw_connection_t *conn, int events, bool wake);
 void pni_raw_wake(pn_raw_connection_t *conn);
 void pni_raw_read(pn_raw_connection_t *conn, int sock, long (*recv)(int, void*, size_t), void (*set_error)(pn_raw_connection_t *, const char *, int));
 void pni_raw_write(pn_raw_connection_t *conn, int sock, long (*send)(int, const void*, size_t), void (*set_error)(pn_raw_connection_t *, const char *, int));
