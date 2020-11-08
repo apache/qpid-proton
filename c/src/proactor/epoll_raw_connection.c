@@ -160,6 +160,7 @@ static void praw_connection_cleanup(praw_connection_t *prc) {
   bool can_free = proactor_remove(&prc->context);
   unlock(&prc->context.mutex);
   if (can_free) {
+    pcontext_finalize(&prc->context);
     free(prc);
   }
   // else proactor_disconnect logic owns prc and its final free

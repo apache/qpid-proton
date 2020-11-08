@@ -54,14 +54,14 @@ extern "C" {
 typedef struct acceptor_t acceptor_t;
 typedef struct tslot_t tslot_t;
 typedef pthread_mutex_t pmutex;
+typedef struct pni_timer_t pni_timer_t;
 
 typedef enum {
   WAKE,   /* see if any work to do in proactor/psocket context */
-  PCONNECTION_IO,
-  PCONNECTION_TIMER,
   LISTENER_IO,
-  PROACTOR_TIMER,
-  RAW_CONNECTION_IO
+  PCONNECTION_IO,
+  RAW_CONNECTION_IO,
+  TIMER
 } epoll_type_t;
 
 // Data to use with epoll.
@@ -73,19 +73,12 @@ typedef struct epoll_extended_t {
   pmutex barrier_mutex;
 } epoll_extended_t;
 
-typedef struct ptimer_t {
-  pmutex mutex;
-  epoll_extended_t epoll_io;
-  bool timer_active;
-  bool in_doubt;  // 0 or 1 callbacks are possible
-  bool shutting_down;
-} ptimer_t;
-
 typedef enum {
   PROACTOR,
   PCONNECTION,
   LISTENER,
-  RAW_CONNECTION
+  RAW_CONNECTION,
+  TIMER_MANAGER
 } pcontext_type_t;
 
 typedef struct pcontext_t {
@@ -137,13 +130,24 @@ struct tslot_t {
   unsigned int earmark_override_gen;
 };
 
+typedef struct pni_timer_manager_t {
+  pcontext_t context;
+  epoll_extended_t epoll_timer;
+  pmutex deletion_mutex;
+  pni_timer_t *proactor_timer;
+  pn_list_t *timers_heap;
+  uint64_t timerfd_deadline;
+  bool sched_timeout;
+} pni_timer_manager_t;
+
 struct pn_proactor_t {
   pcontext_t context;
-  ptimer_t timer;
+  pni_timer_manager_t timer_manager;
   epoll_extended_t epoll_wake;
   epoll_extended_t epoll_interrupt;
   pn_event_batch_t batch;
   pcontext_t *contexts;         /* track in-use contexts for PN_PROACTOR_INACTIVE and disconnect */
+  pni_timer_t *timer;
   size_t disconnects_pending;   /* unfinished proactor disconnects*/
   // need_xxx flags indicate we should generate PN_PROACTOR_XXX on the next update_batch()
   bool need_interrupt;
@@ -151,7 +155,6 @@ struct pn_proactor_t {
   bool need_timeout;
   bool timeout_set; /* timeout has been set by user and not yet cancelled or generated event */
   bool timeout_processed;  /* timeout event dispatched in the most recent event batch */
-  bool timer_armed; /* timer is armed in epoll */
   int context_count;
 
   // wake subsystem
@@ -167,7 +170,6 @@ struct pn_proactor_t {
   pmutex overflow_mutex;
 
   // Sched vars specific to proactor context.
-  bool sched_timeout;
   bool sched_interrupt;
 
   // Global scheduling/poller vars.
@@ -220,13 +222,12 @@ typedef struct psocket_t {
 typedef struct pconnection_t {
   psocket_t psocket;
   pcontext_t context;
-  ptimer_t timer;  // TODO: review one timerfd per connection
+  pni_timer_t *timer;
   const char *host, *port;
   uint32_t new_events;
   int wake_count; // TODO: protected by context.mutex so should be moved in there (also really bool)
   bool server;                /* accept, not connect */
   bool tick_pending;
-  bool timer_armed;
   bool queued_disconnect;     /* deferred from pn_proactor_disconnect() */
   pn_condition_t *disconnect_condition;
   // Following values only changed by (sole) working context:
@@ -250,7 +251,7 @@ typedef struct pconnection_t {
   struct addrinfo *ai;               /* Current connect address */
   pmutex rearm_mutex;                /* protects pconnection_rearm from out of order arming*/
   bool io_doublecheck;               /* callbacks made and new IO may have arrived */
-  bool sched_timeout;
+  uint64_t expected_timeout;
   char addr_buf[1];
 } pconnection_t;
 
@@ -299,6 +300,16 @@ struct pn_listener_t {
 typedef char strerrorbuf[1024];      /* used for pstrerror message buffer */
 void pstrerror(int err, strerrorbuf msg);
 
+/* Internal error, no recovery */
+#define EPOLL_FATAL(EXPR, SYSERRNO)                                     \
+  do {                                                                  \
+    strerrorbuf msg;                                                    \
+    pstrerror((SYSERRNO), msg);                                         \
+    fprintf(stderr, "epoll proactor failure in %s:%d: %s: %s\n",        \
+            __FILE__, __LINE__ , #EXPR, msg);                           \
+    abort();                                                            \
+  } while (0)
+
 // In general all locks to be held singly and shortly (possibly as spin locks).
 // See above about lock ordering.
 
@@ -338,6 +349,10 @@ bool proactor_remove(pcontext_t *ctx);
 bool unassign_thread(tslot_t *ts, tslot_state new_state);
 
 void pcontext_init(pcontext_t *ctx, pcontext_type_t t, pn_proactor_t *p);
+static void pcontext_finalize(pcontext_t* ctx) {
+  pmutex_finalize(&ctx->mutex);
+}
+
 bool wake(pcontext_t *ctx);
 void wake_notify(pcontext_t *ctx);
 void wake_done(pcontext_t *ctx);
@@ -359,6 +374,15 @@ typedef struct praw_connection_t praw_connection_t;
 pcontext_t *pni_raw_connection_context(praw_connection_t *rc);
 praw_connection_t *pni_batch_raw_connection(pn_event_batch_t* batch);
 void pni_raw_connection_done(praw_connection_t *rc);
+
+pni_timer_t *pni_timer(pni_timer_manager_t *tm, pconnection_t *c);
+void pni_timer_free(pni_timer_t *timer);
+void pni_timer_set(pni_timer_t *timer, uint64_t deadline);
+bool pni_timer_manager_init(pni_timer_manager_t *tm);
+void pni_timer_manager_finalize(pni_timer_manager_t *tm);
+pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool wake);
+void pni_pconnection_timeout(pconnection_t *pc);
+void pni_proactor_timeout(pn_proactor_t *p);
 
 #ifdef __cplusplus
 }
