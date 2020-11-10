@@ -184,6 +184,17 @@ void pnx_sasl_set_default_implementation(const pnx_sasl_implementation* impl)
   global_sasl_impl = impl;
 }
 
+// Aliases for linkage compatibility in face of renamings
+PN_EXTERN bool  pnx_sasl_is_included_mech(pn_transport_t *transport, pn_bytes_t s)
+{ return pnx_sasl_is_mechanism_included(transport, s); }
+PN_EXTERN bool  pnx_sasl_get_allow_insecure_mechs(pn_transport_t *transport)
+{ return pnx_sasl_get_allow_insecure_mechanisms(transport); }
+PN_EXTERN bool  pnx_sasl_get_auth_required(pn_transport_t *transport)
+{ return pnx_sasl_get_authentication_required(transport); }
+PN_EXTERN void  pnx_sasl_succeed_authentication(pn_transport_t *transport, const char *username, const char *authzid)
+{ pnx_sasl_set_succeeded(transport, username, authzid);}
+PN_EXTERN void  pnx_sasl_fail_authentication(pn_transport_t *transport)
+{pnx_sasl_set_failed(transport); }
 
 //-----------------------------------------------------------------------------
 // pni_sasl_impl: Abstract the entry points to the SASL implementation (virtual function calls)

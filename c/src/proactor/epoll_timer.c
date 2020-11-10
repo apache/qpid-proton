@@ -287,7 +287,6 @@ void pni_timer_set(pni_timer_t *timer, uint64_t deadline) {
 
 pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool wake) {
   uint64_t now = pn_proactor_now_64();
-  lock(&tm->context.mutex);
   tm->context.working = true;
   if (timeout)
     tm->timerfd_deadline = 0;
