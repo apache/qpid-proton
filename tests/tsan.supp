@@ -30,3 +30,7 @@ race:cpp/examples/broker
 # found by threaderciser, in c/src/proactor/epoll.c
 race:^listener_final_free$
 race:^pn_proactor_connect2$
+
+# PROTON-2292 & PROTON-1496: false suspected collision between set/free
+mutex:^pni_timer_set$
+mutex:^pni_timer_free$
