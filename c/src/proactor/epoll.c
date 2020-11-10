@@ -1985,7 +1985,6 @@ void pn_proactor_free(pn_proactor_t *p) {
   p->eventfd = -1;
   close(p->interruptfd);
   p->interruptfd = -1;
-  pni_timer_manager_finalize(&p->timer_manager);
   while (p->contexts) {
     pcontext_t *ctx = p->contexts;
     p->contexts = ctx->next;
@@ -2001,6 +2000,7 @@ void pn_proactor_free(pn_proactor_t *p) {
     }
   }
 
+  pni_timer_manager_finalize(&p->timer_manager);
   pn_collector_free(p->collector);
   pmutex_finalize(&p->tslot_mutex);
   pmutex_finalize(&p->sched_mutex);
