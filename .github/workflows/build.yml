@@ -16,7 +16,7 @@ jobs:
           cmake_generator: '-G "Visual Studio 16 2019"'
         - os: macOS-latest
           pkg_config_path: '/usr/local/opt/openssl@1.1/lib/pkgconfig'
-          cmake_extra: '-DBUILD_RUBY=no'
+          cmake_extra: '-DBUILD_RUBY=no -DTHREADERCISER=ON'
     env:
       BuildType: ${{matrix.buildType}}
       BuildDir: ${{github.workspace}}/BLD
