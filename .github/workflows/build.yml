@@ -12,11 +12,11 @@ jobs:
         buildType: [RelWithDebInfo]
         include:
         - os: windows-latest
-          cmake_extra: '-A x64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
+          cmake_extra: '-A x64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DTHREADERCISER=ON'
           cmake_generator: '-G "Visual Studio 16 2019"'
         - os: macOS-latest
           pkg_config_path: '/usr/local/opt/openssl@1.1/lib/pkgconfig'
-          cmake_extra: '-DBUILD_RUBY=no'
+          cmake_extra: '-DBUILD_RUBY=no -DTHREADERCISER=ON'
     env:
       BuildType: ${{matrix.buildType}}
       BuildDir: ${{github.workspace}}/BLD

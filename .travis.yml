@@ -32,7 +32,7 @@ jobs:
     env:
     - OPENSSL_ia32cap='0x00000000'
     # c-threaderciser test hangs on older clang
-    - QPID_PROTON_CMAKE_ARGS='-DENABLE_LINKTIME_OPTIMIZATION=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DENABLE_LINKTIME_OPTIMIZATION=OFF -DTHREADERCISER=ON'
     - QPID_PROTON_CTEST_ARGS='--exclude-regex c-threaderciser'
   - name: static libs
     os: linux
@@ -41,7 +41,7 @@ jobs:
     compiler: gcc
     env:
     - PYTHON=python3
-    - QPID_PROTON_CMAKE_ARGS='-DBUILD_STATIC_LIBS=ON'
+    - QPID_PROTON_CMAKE_ARGS='-DBUILD_STATIC_LIBS=ON -DTHREADERCISER=ON'
   - name: benchmarks
     os: linux
     dist: focal
@@ -49,7 +49,7 @@ jobs:
     compiler: gcc
     env:
     - PYTHON=python3
-    - QPID_PROTON_CMAKE_ARGS='-DENABLE_BENCHMARKS=ON -DRUNTIME_CHECK=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DENABLE_BENCHMARKS=ON -DRUNTIME_CHECK=OFF -DTHREADERCISER=ON'
     before_install:
     - sudo apt-get install -y libbenchmark-dev
   - name: gcc asan
@@ -62,7 +62,7 @@ jobs:
     - CXX=g++-10
     - PYTHON=python3
     # python-tox-test fails and ruby tests segfault
-    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF -DTHREADERCISER=ON'
     - QPID_PROTON_CTEST_ARGS='-E ^ruby.*'
   - name: clang asan
     os: linux
@@ -73,7 +73,7 @@ jobs:
     - CC=clang-10
     - CXX=clang++-10
     - PYTHON=python3
-    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF -DTHREADERCISER=ON'
     # otherwise, on Travis ldd gives `libclang_rt.asan-x86_64.so => not found` and binaries don't work
     - LD_LIBRARY_PATH=/usr/lib/llvm-10/lib/clang/10.0.0/lib/linux/
   - name: gcc tsan
@@ -86,7 +86,7 @@ jobs:
     - CXX=g++-10
     - PYTHON=python3
     # python-test, python-integration-test, and python-tox-test segfault
-    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=tsan -DENABLE_TOX_TEST=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=tsan -DENABLE_TOX_TEST=OFF -DTHREADERCISER=ON'
     - QPID_PROTON_CTEST_ARGS="-E 'python-test|python-integration-test'"
   - name: coverage
     os: linux
@@ -94,7 +94,7 @@ jobs:
     language: cpp
     compiler: gcc
     env:
-    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_BUILD_TYPE=Coverage'
+    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_BUILD_TYPE=Coverage -DTHREADERCISER=ON'
     after_success:
     - bash <(curl -s https://codecov.io/bash)
 
@@ -105,7 +105,7 @@ jobs:
     env:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
     - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
-    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13'
+    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 -DTHREADERCISER=ON'
     # c-threaderciser test hangs on older clang
     # python-tox-test segfaults and ruby tests do not start due to dynamic library issues
     - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser|python-tox-test|ruby.*'"
@@ -117,7 +117,7 @@ jobs:
     env:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
     - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
-    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14'
+    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14 -DTHREADERCISER=ON'
     # TODO PROTON-2225: c-threaderciser sometimes fails with assertion error
     # python-tox-test segfaults and ruby tests do not start due to dynamic library issues
     - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser|python-tox-test|ruby.*'"
