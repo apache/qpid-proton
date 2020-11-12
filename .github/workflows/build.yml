@@ -28,6 +28,14 @@ jobs:
     - name: Create Build and Install directories
       run: mkdir -p "${BuildDir}" "{InstallPrefix}"
       shell: bash
+
+    # PROTON-2295 avoid using go 1.15.3 on macOS, which is broken
+    - if: runner.os == 'macOS'
+      name: Setup go (Mac OS)
+      uses: actions/setup-go@v2
+      with:
+        go-version: '^1.15.4'
+
     - name: Setup python
       uses: actions/setup-python@v2
       with:
