@@ -367,7 +367,9 @@ void pni_raw_connection_done(praw_connection_t *rc) {
   tslot_t *ts = rc->context.runner;
   rc->context.working = false;
   self_notify = rc->waking && wake(&rc->context);
-  wake_pending = rc->waking;
+  // There could be a scheduler wake pending even if we've got no raw connection
+  // wakes outstanding because we dealt with it already in pni_raw_batch_next()
+  wake_pending = rc->context.wake_pending;
   unlock(&rc->context.mutex);
   if (self_notify) wake_notify(&rc->context);
 

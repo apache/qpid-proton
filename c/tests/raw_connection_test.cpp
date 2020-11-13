@@ -582,7 +582,7 @@ TEST_CASE("raw connection") {
       // Now read other end of socket manually and compare
       size_t sz=0;
       do {
-        long i = rcv(fds[1], rbuffer_memory+sz, BUFFMEMSIZE);
+        long i = rcv(fds[1], rbuffer_memory+sz, BUFFMEMSIZE-sz);
         if (i<0) break;
         sz+=i;
       } while (true);
