@@ -326,17 +326,19 @@ pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeou
       lock(&tm->context.mutex);
     } else {
       uint64_t deadline = td->timer->deadline;
-      if (deadline && deadline <= now) {
-        td->timer->deadline = 0;
-        pconnection_t *pc = td->timer->connection;
-        lock(&tm->deletion_mutex);     // Prevent connection from deleting itself when tm->context.mutex dropped.
-        unlock(&tm->context.mutex);
-        pni_pconnection_timeout(pc);
-        unlock(&tm->deletion_mutex);
-        lock(&tm->context.mutex);
-      } else {
-        td->list_deadline = td->timer->deadline;
-        pn_list_minpush(tm->timers_heap, td);
+      if (deadline) {
+        if (deadline <= now) {
+          td->timer->deadline = 0;
+          pconnection_t *pc = td->timer->connection;
+          lock(&tm->deletion_mutex);     // Prevent connection from deleting itself when tm->context.mutex dropped.
+          unlock(&tm->context.mutex);
+          pni_pconnection_timeout(pc);
+          unlock(&tm->deletion_mutex);
+          lock(&tm->context.mutex);
+        } else {
+          td->list_deadline = deadline;
+          pn_list_minpush(tm->timers_heap, td);
+        }
       }
     }
   }
