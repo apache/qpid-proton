@@ -51,8 +51,7 @@ class FdLimitTest(unittest.TestCase):
         if cls.devnull:
             cls.devnull.close()
 
-    # @unittest.skipUnless(prlimit_available, "prlimit not available")
-    @unittest.skip("temporarily disabled (epoll fix pending)")
+    @unittest.skipUnless(prlimit_available, "prlimit not available")
     def test_fd_limit_broker(self):
         """Check behaviour when running out of file descriptors on accept"""
         # Not too many FDs but not too few either, some are used for system purposes.
@@ -64,9 +63,11 @@ class FdLimitTest(unittest.TestCase):
             # NOTE: broker does not log a file descriptor related error at any point in the test, only
             #  PN_TRANSPORT_CLOSED: amqp:connection:framing-error: connection aborted
             #  PN_TRANSPORT_CLOSED: proton:io: Connection reset by peer - disconnected :5672 (connection aborted)
-            for i in range(fdlimit + 1):
+            for i in range(fdlimit):
                 receiver = test_subprocess.Popen(["receive", "", b.port, str(i)], stdout=self.devnull)
                 receivers.append(receiver)
+            # Allow these subprocesses time to establish ahead of the upcoming test sender.
+            time.sleep(1)
 
             # All FDs are now in use, send attempt will (with present implementation) hang
             with test_subprocess.Popen(["send", "", b.port, "x"],
