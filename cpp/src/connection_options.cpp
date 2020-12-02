@@ -21,6 +21,7 @@
 #include "proton/connection_options.hpp"
 
 #include "proton/connection.hpp"
+#include <proton/codec/map.hpp>
 #include "proton/codec/vector.hpp"
 #include "proton/fwd.hpp"
 #include "proton/messaging_handler.hpp"
@@ -63,6 +64,7 @@ class connection_options::impl {
     option<std::string> password;
     option<std::vector<symbol> > offered_capabilities;
     option<std::vector<symbol> > desired_capabilities;
+    option<std::map<symbol, value> > properties;
     option<reconnect_options_base> reconnect;
     option<std::string> reconnect_url;
     option<std::vector<std::string> > failover_urls;
@@ -108,6 +110,8 @@ class connection_options::impl {
             value(pn_connection_offered_capabilities(pnc)) = offered_capabilities.value;
         if (desired_capabilities.set)
             value(pn_connection_desired_capabilities(pnc)) = desired_capabilities.value;
+        if (properties.set)
+            value(pn_connection_properties(pnc)) = properties.value;
     }
 
     void apply_reconnect_urls(pn_connection_t* pnc) {
@@ -194,6 +198,7 @@ class connection_options::impl {
         password.update(x.password);
         offered_capabilities.update(x.offered_capabilities);
         desired_capabilities.update(x.desired_capabilities);
+        properties.update(x.properties);
         reconnect.update(x.reconnect);
         reconnect_url.update(x.reconnect_url);
         failover_urls.update(x.failover_urls);
@@ -238,6 +243,7 @@ connection_options& connection_options::user(const std::string &user) { impl_->u
 connection_options& connection_options::password(const std::string &password) { impl_->password = password; return *this; }
 connection_options& connection_options::offered_capabilities(const std::vector<symbol> &caps) { impl_->offered_capabilities = caps; return *this; }
 connection_options& connection_options::desired_capabilities(const std::vector<symbol> &caps) { impl_->desired_capabilities = caps; return *this; }
+connection_options& connection_options::properties(const std::map<symbol, value> &props) { impl_->properties = props; return *this; }
 connection_options& connection_options::reconnect(const reconnect_options &r) {
     if (!r.impl_->failover_urls.empty()) {
         impl_->failover_urls = r.impl_->failover_urls;
