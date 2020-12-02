@@ -3,13 +3,13 @@ Qpid Proton - AMQP messaging toolkit
 
 Linux/OSX Build | Windows Build
 ----------------|---------------
-[![Linux/OSX Build Status](https://travis-ci.org/apache/qpid-proton.svg?branch=master)](https://travis-ci.org/apache/qpid-proton) | [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/apache/qpid-proton?branch=master&svg=true)](https://ci.appveyor.com/project/ke4qqq/qpid-proton/branch/master)
+[![Linux/OSX Build Status](https://travis-ci.com/apache/qpid-proton.svg?branch=master)](https://travis-ci.com/github/apache/qpid-proton) | [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/apache/qpid-proton?branch=master&svg=true)](https://ci.appveyor.com/project/ke4qqq/qpid-proton/branch/master)
 
-Qpid Proton is a high-performance, lightweight messaging library. It can be
-used in the widest range of messaging applications, including brokers, client
-libraries, routers, bridges, proxies, and more. Proton makes it trivial to
-integrate with the AMQP 1.0 ecosystem from any platform, environment, or
-language
+[Qpid Proton](https://qpid.apache.org/proton) is a high-performance, lightweight
+messaging library. It can be used in the widest range of messaging applications,
+including brokers, client libraries, routers, bridges, proxies, and more.
+Proton makes it trivial to integrate with the AMQP 1.0 ecosystem from any
+platform, environment, or language.
 
 Features
 --------
@@ -33,7 +33,8 @@ Standard - Built around the AMQP 1.0 messaging standard, Proton is not only
 ideal for building out your own messaging applications but also for connecting
 them to the broader ecosystem of AMQP 1.0-based messaging applications.
 
-Please see <https://qpid.apache.org/proton> for more information.
+Please see [https://qpid.apache.org/proton](https://qpid.apache.org/proton)
+for more information.
 
 Getting Started
 ---------------
