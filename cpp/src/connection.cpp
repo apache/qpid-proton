@@ -21,6 +21,7 @@
 
 #include "proton_bits.hpp"
 
+#include "proton/codec/map.hpp"
 #include "proton/codec/vector.hpp"
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
@@ -190,6 +191,15 @@ std::vector<symbol> connection::offered_capabilities() const {
 std::vector<symbol> connection::desired_capabilities() const {
     value caps(pn_connection_remote_desired_capabilities(pn_object()));
     return get_multiple<std::vector<symbol> >(caps);
+}
+
+std::map<symbol, value> connection::properties() const {
+    std::map<symbol, value> props_ret;
+    value props(pn_connection_remote_properties(pn_object()));
+    if (!props.empty()) {
+        get(props, props_ret);
+    }
+    return props_ret;
 }
 
 bool connection::reconnected() const {

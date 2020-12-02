@@ -32,6 +32,7 @@
 
 #include <proton/type_compat.h>
 
+#include <map>
 #include <vector>
 #include <string>
 
@@ -161,6 +162,9 @@ class connection_options {
 
     /// **Unsettled API** - Extension capabilities desired from the remote peer.
     PN_CPP_EXTERN connection_options& desired_capabilities(const std::vector<symbol>&);
+
+    /// **Unsettled API** - Connection properties.
+    PN_CPP_EXTERN connection_options& properties(const std::map<symbol, value>&);
 
     /// **Unsettled API** - Set the SASL configuration name.
     PN_CPP_EXTERN connection_options& sasl_config_name(const std::string&);

@@ -28,9 +28,11 @@
 #include "./endpoint.hpp"
 #include "./session.hpp"
 #include "./symbol.hpp"
+#include "./value.hpp"
 
 #include <proton/type_compat.h>
 
+#include <map>
 #include <string>
 
 /// @file
@@ -149,6 +151,9 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
 
     /// **Unsettled API** - Extension capabilities desired by the remote peer.
     PN_CPP_EXTERN std::vector<symbol> desired_capabilities() const;
+
+    /// **Unsettled API** - Connection properties
+    PN_CPP_EXTERN std::map<symbol, value> properties() const;
 
     /// Get the idle timeout set by the remote peer.
     ///

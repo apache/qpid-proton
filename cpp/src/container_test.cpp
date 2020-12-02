@@ -90,6 +90,7 @@ class test_handler : public proton::messaging_handler {
     std::string peer_container_id;
     std::vector<proton::symbol> peer_offered_capabilities;
     std::vector<proton::symbol> peer_desired_capabilities;
+    std::map<proton::symbol, proton::value> peer_properties;
     proton::listener listener;
     test_listen_handler listen_handler;
 
@@ -112,6 +113,7 @@ class test_handler : public proton::messaging_handler {
             peer_container_id = c.container_id();
             peer_offered_capabilities = c.offered_capabilities();
             peer_desired_capabilities = c.desired_capabilities();
+            peer_properties = c.properties();
             c.close();
         }
         closing = true;
@@ -179,6 +181,21 @@ int test_container_capabilities() {
     ASSERT_EQUAL(th.peer_offered_capabilities[0], proton::symbol("offered"));
     ASSERT_EQUAL(th.peer_desired_capabilities.size(), 1u);
     ASSERT_EQUAL(th.peer_desired_capabilities[0], proton::symbol("desired"));
+    ASSERT_EQUAL(th.peer_properties.size(), 0u);
+    return 0;
+}
+
+int test_container_properties() {
+    proton::connection_options opts;
+    std::map<proton::symbol, proton::value> props;
+    props["qpid.client_process"] = "test_process";
+    props["qpid.client_pid"] = 123;
+    opts.properties(props);
+    test_handler th("", opts);
+    proton::container(th).run();
+    ASSERT_EQUAL(th.peer_properties.size(), 2u);
+    ASSERT_EQUAL(th.peer_properties["qpid.client_process"], "test_process");
+    ASSERT_EQUAL(th.peer_properties["qpid.client_pid"], 123);
     return 0;
 }
 
@@ -475,6 +492,7 @@ int main(int argc, char** argv) {
     RUN_ARGV_TEST(failed, test_container_default_container_id());
     RUN_ARGV_TEST(failed, test_container_vhost());
     RUN_ARGV_TEST(failed, test_container_capabilities());
+    RUN_ARGV_TEST(failed, test_container_properties());
     RUN_ARGV_TEST(failed, test_container_default_vhost());
     RUN_ARGV_TEST(failed, test_container_no_vhost());
     RUN_ARGV_TEST(failed, test_container_bad_address());
