@@ -305,6 +305,7 @@ struct pn_link_t {
   pn_sequence_t available;
   pn_sequence_t credit;
   pn_sequence_t queued;
+  pn_sequence_t more_id;
   int drained; // number of drained credits
   uint8_t snd_settle_mode;
   uint8_t rcv_settle_mode;
@@ -313,6 +314,7 @@ struct pn_link_t {
   bool drain_flag_mode; // receiver only
   bool drain;
   bool detached;
+  bool more_pending;
 };
 
 struct pn_disposition_t {
