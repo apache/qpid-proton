@@ -21,7 +21,6 @@ from __future__ import absolute_import
 
 from uuid import uuid4
 from sys import version_info
-from unittest import skipIf
 
 from proton import *
 
