@@ -1177,6 +1177,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   link->available = 0;
   link->credit = 0;
   link->queued = 0;
+  link->more_id = 0;
   link->drain = false;
   link->drain_flag_mode = true;
   link->drained = 0;
@@ -1186,6 +1187,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   link->remote_snd_settle_mode = PN_SND_MIXED;
   link->remote_rcv_settle_mode = PN_RCV_FIRST;
   link->detached = false;
+  link->more_pending = false;
   link->properties = 0;
   link->remote_properties = 0;
 
