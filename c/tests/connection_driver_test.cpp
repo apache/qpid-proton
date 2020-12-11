@@ -1,6 +1,6 @@
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
- h * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
@@ -525,10 +525,9 @@ TEST_CASE("driver_duplicate_link_client", "[!hide][!shouldfail]") {
              cond_empty());
 }
 
-/* Settling an incomplete delivery should not cause an error
-   This test will fail till PROTON-1914 is fixed
+/* Settling an incomplete delivery should not cause an error.
 */
-TEST_CASE("driver_settle_incomplete_receiver", "[!hide][!shouldfail]") {
+TEST_CASE("driver_settle_incomplete_receiver") {
   send_client_handler client;
   delivery_handler server;
   pn_test::driver_pair d(client, server);
@@ -544,24 +543,34 @@ TEST_CASE("driver_settle_incomplete_receiver", "[!hide][!shouldfail]") {
 
   /* Send/receive a frame */
   CHECK(sizeof(data) == pn_link_send(snd, data, sizeof(data)));
+  server.log_clear();
   d.run();
   CHECK_THAT(ETYPES(PN_DELIVERY), Equals(server.log_clear()));
   CHECK(sizeof(data) == pn_link_recv(rcv, rbuf, sizeof(data)));
   d.run();
 
-  /* Settle the receiver's delivery */
+  /* Settle early while the sender is still sending */
   pn_delivery_settle(pn_link_current(rcv));
+  CHECK(sizeof(data) == pn_link_send(snd, data, sizeof(data)));
   d.run();
   CHECK_THAT(*pn_connection_remote_condition(d.client.connection),
              cond_empty());
   CHECK_THAT(*pn_connection_condition(d.server.connection), cond_empty());
 
-  /* Send/receive a frame, should not cause error */
+  pn_delivery_settle(pn_link_current(snd));
+
+  /* Send/receive a new message, should not cause error */
+  pn_link_flow(rcv, 1);
+  d.run();
+  pn_delivery(snd, pn_bytes("2")); /* Prepare to send */
   CHECK(sizeof(data) == pn_link_send(snd, data, sizeof(data)));
+  server.log_clear();
   d.run();
   CHECK_THAT(ETYPES(PN_DELIVERY), Equals(server.log_clear()));
   CHECK(sizeof(data) == pn_link_recv(rcv, rbuf, sizeof(data)));
-  d.run();
+  pn_delivery_tag_t tag = pn_delivery_tag(pn_link_current(rcv));
+  CHECK(tag.size == 1);
+  CHECK(tag.start[0] == '2');
   CHECK_THAT(*pn_connection_remote_condition(d.client.connection),
              cond_empty());
   CHECK_THAT(*pn_connection_condition(d.server.connection), cond_empty());
