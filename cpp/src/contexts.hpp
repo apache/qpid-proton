@@ -112,6 +112,7 @@ class reconnect_context {
     duration delay_;
     int retries_;
     int current_url_;
+    bool stop_reconnect_;
     bool reconnected_;
 };
 

@@ -107,7 +107,6 @@ class container::impl {
     void reconnect(pn_connection_t* pnc);
     bool can_reconnect(pn_connection_t* pnc);
     void setup_reconnect(pn_connection_t* pnc);
-    void reset_reconnect(pn_connection_t* pnc);
 
     // Event loop to run in each container thread
     void thread();

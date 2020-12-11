@@ -60,7 +60,11 @@ void connection::open(const connection_options &opts) {
     pn_connection_open(pn_object());
 }
 
-void connection::close() { pn_connection_close(pn_object()); }
+void connection::close() {
+  pn_connection_close(pn_object());
+  reconnect_context* rctx = connection_context::get(pn_object()).reconnect_context_.get();
+  if (rctx) rctx->stop_reconnect_ = true;
+}
 
 std::string connection::virtual_host() const {
     return str(pn_connection_remote_hostname(pn_object()));

@@ -299,11 +299,13 @@ duration next_delay(reconnect_context& rc) {
     }
     return random_between(roi.delay, rc.delay_);
 }
+
+inline reconnect_context* get_reconnect_context(pn_connection_t* pnc) {
+    return connection_context::get(pnc).reconnect_context_.get();
 }
 
-void container::impl::reset_reconnect(pn_connection_t* pnc) {
-    connection_context& cc = connection_context::get(pnc);
-    reconnect_context* rc = cc.reconnect_context_.get();
+void reset_reconnect(pn_connection_t* pnc) {
+    reconnect_context* rc = get_reconnect_context(pnc);
 
     if (!rc) return;
 
@@ -313,10 +315,17 @@ void container::impl::reset_reconnect(pn_connection_t* pnc) {
     rc->current_url_ = -1;
 }
 
+}
+
 bool container::impl::can_reconnect(pn_connection_t* pnc) {
+    reconnect_context* rc = get_reconnect_context(pnc);
+
+    // If reconnect not enabled just fail
+    if (!rc) return false;
+
     // Don't reconnect if we are locally closed, the application will
     // not expect a connection it closed to re-open.
-    if (pn_connection_state(pnc) & PN_LOCAL_CLOSED) return false;
+    if (rc->stop_reconnect_) return false;
 
     // If container stopping don't try to reconnect
     // - we pretend to have set up a reconnect attempt so
@@ -326,11 +335,6 @@ bool container::impl::can_reconnect(pn_connection_t* pnc) {
         GUARD(lock_);
         if (stopping_) return true;
     }
-    connection_context& cc = connection_context::get(pnc);
-    reconnect_context* rc = cc.reconnect_context_.get();
-
-    // If reconnect not enabled just fail
-    if (!rc) return false;
 
     const reconnect_options_base& roi = rc->reconnect_options_;
 
@@ -665,17 +669,19 @@ container::impl::dispatch_result container::impl::dispatch(pn_event_t* event) {
         pn_connection_t *c = pn_event_connection(event);
         pn_condition_t *cc = pn_connection_remote_condition(c);
 
-        // amqp:connection:forced should be treated like a transport
-        // disconnect. Hide the connection error/close events from the
-        // application and generate a PN_TRANSPORT_CLOSE event.
-        if (pn_condition_is_set(cc) &&
+        // If reconnect is on, amqp:connection:forced should be treated specially:
+        // Hide the connection error/close events from the application;
+        // Then we close the connection noting the forced close;
+        // Then set up for reconnect handling.
+        if (get_reconnect_context(c) &&
+            pn_condition_is_set(cc) &&
             !strcmp(pn_condition_get_name(cc), "amqp:connection:forced"))
         {
             pn_transport_t* t = pn_event_transport(event);
             pn_condition_t* tc = pn_transport_condition(t);
             pn_condition_copy(tc, cc);
-            pn_transport_close_head(t);
             pn_transport_close_tail(t);
+            pn_connection_close(c);
             return ContinueLoop;
         }
         break;
@@ -702,8 +708,9 @@ container::impl::dispatch_result container::impl::dispatch(pn_event_t* event) {
                         throw;
                 }
             }
-            // on_connection_reconnecting() may have closed the connection, check again.
-            if (!(pn_connection_state(c) & PN_LOCAL_CLOSED)) {
+            // on_transport_error() may have closed the connection, check again.
+            reconnect_context* rc = get_reconnect_context(c);
+            if (rc && !(rc->stop_reconnect_)) {
                 setup_reconnect(c);
                 return ContinueLoop;
             }

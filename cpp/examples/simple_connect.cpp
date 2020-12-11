@@ -68,11 +68,7 @@ class simple_connect : public proton::messaging_handler {
     }
 
     void on_connection_open(proton::connection &c) OVERRIDE {
-        c.close();
-    }
-
-    void on_error(const proton::error_condition& e) OVERRIDE {
-        throw std::runtime_error(e.what());
+        if (!reconnect) c.close();
     }
 };
 
