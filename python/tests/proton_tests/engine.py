@@ -935,6 +935,36 @@ class TransferTest(Test):
     self.pump()
     assert self.rcv.current.aborted
 
+  def test_multiframe_last_empty(self):
+    self.rcv.flow(1)
+    sd = self.snd.delivery("tag")
+    msg_p1 = b"this is a test"
+    n = self.snd.send(msg_p1)
+    assert n == len(msg_p1)
+
+    self.pump()
+
+    assert len(msg_p1) == self.rcv.current.pending
+    assert self.rcv.current.partial
+    msg_p2 = b"this is more."
+    n = self.snd.send(msg_p2)
+    assert n == len(msg_p2)
+
+    self.pump()
+
+    msg = msg_p1 + msg_p2
+    assert len(msg) == self.rcv.current.pending
+    assert self.rcv.current.partial
+    # Advance.  Should send empty xfer frame with more flag false.
+    assert self.snd.advance()
+
+    self.pump()
+
+    assert len(msg) == self.rcv.current.pending
+    assert not self.rcv.current.partial
+    binary = self.rcv.recv(self.rcv.current.pending)
+    assert binary == msg
+
   def test_disposition(self):
     self.rcv.flow(1)
 

@@ -575,3 +575,45 @@ TEST_CASE("driver_settle_incomplete_receiver") {
              cond_empty());
   CHECK_THAT(*pn_connection_condition(d.server.connection), cond_empty());
 }
+
+/* Empty last frame in streaming message.
+*/
+TEST_CASE("driver_empty_last_frame") {
+  send_client_handler client;
+  delivery_handler server;
+  pn_test::driver_pair d(client, server);
+
+  d.run();
+  pn_link_t *rcv = server.link;
+  pn_link_t *snd = client.link;
+  char data[100] = {0};          /* Dummy data to send. */
+  char rbuf[sizeof(data)] = {0}; /* Read buffer for incoming data. */
+  pn_link_flow(rcv, 1);
+  pn_delivery_t *sd = pn_delivery(snd, pn_bytes("1")); /* Prepare to send */
+  d.run();
+
+  /* Send/receive a frame */
+  CHECK(sizeof(data) == pn_link_send(snd, data, sizeof(data)));
+  server.log_clear();
+  d.run();
+  CHECK_THAT(ETYPES(PN_DELIVERY), Equals(server.log_clear()));
+  CHECK(sizeof(data) == pn_link_recv(rcv, rbuf, sizeof(data)));
+  CHECK(pn_delivery_partial(pn_link_current(rcv)));
+  d.run();
+
+  /* Advance after all data transfered over wire. */
+  CHECK(pn_link_advance(snd));
+  server.log_clear();
+  d.run();
+  CHECK_THAT(ETYPES(PN_DELIVERY), Equals(server.log_clear()));
+  CHECK(PN_EOS == pn_link_recv(rcv, rbuf, sizeof(data)));
+  CHECK(!pn_delivery_partial(pn_link_current(rcv)));
+
+  pn_delivery_settle(sd);
+  sd = NULL;
+  pn_delivery_settle(pn_link_current(rcv));
+  d.run();
+  CHECK_THAT(*pn_connection_remote_condition(d.client.connection),
+             cond_empty());
+  CHECK_THAT(*pn_connection_condition(d.server.connection), cond_empty());
+}
