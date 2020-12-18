@@ -99,25 +99,25 @@ jobs:
     - bash <(curl -s https://codecov.io/bash)
 
   - os: osx
-    osx_image: xcode9.4
-    language: cpp
-    compiler: clang
-    env:
-    - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
-    - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
-    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 -DTHREADERCISER=ON'
-    # c-threaderciser test hangs on older clang
-    # python-tox-test segfaults and ruby tests do not start due to dynamic library issues
-    - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser|python-tox-test|ruby.*'"
-
-  - os: osx
-    osx_image: xcode11.3
+    osx_image: xcode10.3
     language: cpp
     compiler: clang
     env:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
     - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
     - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.14 -DTHREADERCISER=ON'
+    # c-threaderciser test hangs on older clang
+    # python-tox-test segfaults and ruby tests do not start due to dynamic library issues
+    - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser|python-tox-test|ruby.*'"
+
+  - os: osx
+    osx_image: xcode12.2
+    language: cpp
+    compiler: clang
+    env:
+    - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
+    - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
+    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DTHREADERCISER=ON'
     # TODO PROTON-2225: c-threaderciser sometimes fails with assertion error
     # python-tox-test segfaults and ruby tests do not start due to dynamic library issues
     - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser|python-tox-test|ruby.*'"
