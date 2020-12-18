@@ -21,11 +21,11 @@ from __future__ import absolute_import
 
 import time
 
-from proton.reactor import Container, ApplicationEvent, EventInjector, Selector
+from proton.reactor import Container, ApplicationEvent, EventInjector, Selector, Backoff
 from proton.handlers import Handshaker, MessagingHandler
 from proton import Handler, Url, symbol
 
-from .common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
+from .common import Test, SkipTest, TestServer, free_tcp_port, free_tcp_ports, ensureCanTestExtendedSASL
 
 class Barf(Exception):
     pass
@@ -442,18 +442,21 @@ class ContainerTest(Test):
         def __init__(self):
             super(ContainerTest._ClientHandler, self).__init__()
             self.server_addr = None
+            self.errors = 0
 
         def on_connection_opened(self, event):
             self.server_addr = event.connected_address
             event.connection.close()
+
+        def on_transport_error(self, event):
+            self.errors += 1
 
     def test_numeric_hostname(self):
         ensureCanTestExtendedSASL()
         server_handler = ContainerTest._ServerHandler("127.0.0.1")
         client_handler = ContainerTest._ClientHandler()
         container = Container(server_handler)
-        container.connect(url=Url(host="127.0.0.1",
-                                  port=server_handler.port),
+        container.connect(url="127.0.0.1:%s" % (server_handler.port),
                           handler=client_handler)
         container.run()
         assert server_handler.client_addr
@@ -466,8 +469,7 @@ class ContainerTest(Test):
         server_handler = ContainerTest._ServerHandler("localhost")
         client_handler = ContainerTest._ClientHandler()
         container = Container(server_handler)
-        container.connect(url=Url(host="localhost",
-                                  port=server_handler.port),
+        container.connect(url="localhost:%s" % (server_handler.port),
                           handler=client_handler)
         container.run()
         assert server_handler.client_addr
@@ -479,8 +481,7 @@ class ContainerTest(Test):
         ensureCanTestExtendedSASL()
         server_handler = ContainerTest._ServerHandler("localhost")
         container = Container(server_handler)
-        conn = container.connect(url=Url(host="localhost",
-                                         port=server_handler.port),
+        conn = container.connect(url="localhost:%s" % (server_handler.port),
                                  handler=ContainerTest._ClientHandler(),
                                  virtual_host="a.b.c.org")
         container.run()
@@ -492,8 +493,7 @@ class ContainerTest(Test):
         # Python Container.
         server_handler = ContainerTest._ServerHandler("localhost")
         container = Container(server_handler)
-        conn = container.connect(url=Url(host="localhost",
-                                         port=server_handler.port),
+        conn = container.connect(url="localhost:%s" % (server_handler.port),
                                  handler=ContainerTest._ClientHandler(),
                                  virtual_host="")
         container.run()
@@ -536,11 +536,55 @@ class ContainerTest(Test):
             self.connect_failed = True
             self.server_handler.listen(event.container)
 
+    def test_failover(self):
+        server_handler = ContainerTest._ServerHandler("localhost")
+        client_handler = ContainerTest._ClientHandler()
+        free_ports = free_tcp_ports(2)
+        container = Container(server_handler)
+        container.connect(urls=["localhost:%s" % (free_ports[0]), "localhost:%s" % (free_ports[1]),
+                                "localhost:%s" % (server_handler.port)],
+                          handler=client_handler)
+        container.run()
+        assert server_handler.peer_hostname == 'localhost', server_handler.peer_hostname
+        assert client_handler.server_addr == Url(host='localhost', port=server_handler.port), client_handler.server_addr
+
+    def test_failover_fail(self):
+        client_handler = ContainerTest._ClientHandler()
+        free_ports = free_tcp_ports(2)
+        container = Container(client_handler)
+        start = time.time()
+        container.connect(urls=["localhost:%s" % (free_ports[0]), "localhost:%s" % (free_ports[1])],
+                          reconnect=Backoff(max_tries=5),
+                          handler=client_handler)
+        container.run()
+        end = time.time()
+        assert client_handler.errors == 10
+        # Total time for failure should be greater than but close to 3s
+        # would like to have an upper bound of about 3.2 too - but loaded CI machines can take a loooong time!
+        assert 3.0 < end-start, end-start
+        assert client_handler.server_addr is None, client_handler.server_addr
+
+    def test_failover_fail_custom_reconnect(self):
+        client_handler = ContainerTest._ClientHandler()
+        free_ports = free_tcp_ports(2)
+        container = Container(client_handler)
+        start = time.time()
+        container.connect(urls=["localhost:%s" % (free_ports[0]), "localhost:%s" % (free_ports[1])],
+                          reconnect=[0, 0.5, 1],
+                          handler=client_handler)
+        container.run()
+        end = time.time()
+        assert client_handler.errors == 6
+        # Total time for failure should be greater than but close to 3s
+        # would like to have an upper bound of about 3.2 too - but loaded CI machines can take a loooong time!
+        assert 3.0 < end-start, end-start
+        assert client_handler.server_addr is None, client_handler.server_addr
+
     def test_reconnect(self):
         server_handler = ContainerTest._ReconnectServerHandler("localhost", listen_on_error=True)
         client_handler = ContainerTest._ReconnectClientHandler(server_handler)
         container = Container(server_handler)
-        container.connect(url=Url(host="localhost", port=server_handler.port),
+        container.connect(url="localhost:%s" % (server_handler.port),
                           handler=client_handler)
         container.run()
         assert server_handler.peer_hostname == 'localhost', server_handler.peer_hostname
@@ -551,7 +595,7 @@ class ContainerTest(Test):
         server_handler = ContainerTest._ReconnectServerHandler("localhost", listen_on_error=False)
         client_handler = ContainerTest._ReconnectClientHandler(server_handler)
         container = Container(server_handler)
-        container.connect(url=Url(host="localhost", port=server_handler.port),
+        container.connect(url="localhost:%s" % (server_handler.port),
                           handler=client_handler, reconnect=False)
         container.run()
         assert server_handler.peer_hostname == None, server_handler.peer_hostname

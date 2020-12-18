@@ -523,7 +523,7 @@ class AtomicCount(object):
     def next(self):
         """Get the next value"""
         self.lock.acquire()
-        self.count += self.step;
+        self.count += self.step
         result = self.count
         self.lock.release()
         return result

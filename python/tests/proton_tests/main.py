@@ -22,7 +22,7 @@
 import optparse, os, struct, sys, time, traceback, types, cgi
 from fnmatch import fnmatchcase as match
 from logging import getLogger, StreamHandler, Formatter, Filter, \
-    WARN, DEBUG, ERROR
+    WARN, DEBUG, ERROR, INFO
 
 from .common import SkipTest
 
@@ -33,6 +33,7 @@ else:
 
 levels = {
   "DEBUG": DEBUG,
+  "INFO": INFO,
   "WARN": WARN,
   "ERROR": ERROR
   }
