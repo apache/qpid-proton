@@ -17,6 +17,7 @@ jobs:
         - os: macOS-latest
           pkg_config_path: '/usr/local/opt/openssl@1.1/lib/pkgconfig'
           cmake_extra: '-DBUILD_RUBY=no -DTHREADERCISER=ON'
+          ctest_extra: '--exclude-regex c-threaderciser'
     env:
       BuildType: ${{matrix.buildType}}
       BuildDir: ${{github.workspace}}/BLD
@@ -79,7 +80,7 @@ jobs:
     - id: ctest
       name: ctest
       working-directory: ${{env.BuildDir}}
-      run: ctest -C ${BuildType} -V -T Test --no-compress-output
+      run: ctest -C ${BuildType} -V -T Test --no-compress-output ${{matrix.ctest_extra}}
       shell: bash
     - name: Upload Test results
       if: always() && (steps.ctest.outcome == 'failure' || steps.ctest.outcome == 'success')
