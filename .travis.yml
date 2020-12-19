@@ -161,4 +161,6 @@ before_script:
 
 script:
 # travis timeouts a job after 600 s elapses without any new output being printed; use 360 s here to preempt that
-- cmake --build . --target install -- -j$(nproc) && eval ctest --timeout 360 -VV ${QPID_PROTON_CTEST_ARGS}
+- cmake --build . --target install -- -j$(nproc)
+- /usr/local/opt/python/libexec/bin/python "/Users/travis/build/apache/qpid-proton/scripts/env.py" "--" "UBSAN_OPTIONS=suppressions=/Users/travis/build/apache/qpid-proton/tests/ubsan.supp" "LSAN_OPTIONS=suppressions=/Users/travis/build/apache/qpid-proton/tests/lsan.supp" "/Users/travis/build/apache/qpid-proton/build/c/tests/c-raw-connection-test"
+- eval ctest --timeout 360 -VV ${QPID_PROTON_CTEST_ARGS}
