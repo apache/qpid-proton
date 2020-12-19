@@ -145,6 +145,9 @@ addons:
       - jsoncpp
       - libuv
       - swig
+# update:true workaround as of Feb. 22/20 as per
+# https://travis-ci.community/t/macos-build-fails-because-of-homebrew-bundle-unknown-command/7296/10
+    update: true
 
 install:
 - echo "Using PYTHON=${PYTHON:=python}"
