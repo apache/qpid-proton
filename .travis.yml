@@ -164,4 +164,4 @@ before_script:
 
 script:
 # travis timeouts a job after 600 s elapses without any new output being printed; use 360 s here to preempt that
-- cmake --build . --target install -- -j$(nproc) && eval ctest --timeout 360 -V ${QPID_PROTON_CTEST_ARGS}
+- cmake --build . --target install -- -j$(nproc) && eval ctest --timeout 360 -VV ${QPID_PROTON_CTEST_ARGS}
