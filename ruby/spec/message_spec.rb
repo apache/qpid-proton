@@ -109,7 +109,7 @@ module Qpid
 
       it "raises an error when the time-to-live is negative" do
         proc {
-          @message.ttl = (0 - rand(1000))
+          @message.ttl = (0 - (rand(1000) + 1))
         }.must_raise(RangeError)
       end
 
