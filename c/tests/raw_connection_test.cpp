@@ -63,7 +63,11 @@ namespace {
   size_t max_send_size = 0;
   size_t max_recv_size = 0;
 
-#ifdef MSG_DONTWAIT
+#if defined(MSG_DONTWAIT) && defined(MSG_NOSIGNAL) && defined(__linux__)
+  // This version uses socketpairs and only gets run on Linux
+  // It seems that some versions of macOSX define both symbols but don't
+  // implement them fully.
+
   long rcv(int fd, void* b, size_t s) {
     read_err = 0;
     if (max_recv_size && max_recv_size < s) s = max_recv_size;
@@ -83,7 +87,6 @@ namespace {
       ::shutdown(fd, SHUT_WR);
   }
 
-#ifdef MSG_NOSIGNAL
   long snd(int fd, const void* b, size_t s) {
     write_err = 0;
     if (max_send_size && max_send_size < s) s = max_send_size;
@@ -93,27 +96,9 @@ namespace {
   int makepair(int fds[2]) {
     return ::socketpair(AF_LOCAL, SOCK_STREAM, PF_UNSPEC, fds);
   }
-#elif defined(SO_NOSIGPIPE)
-  long snd(int fd, const void* b, size_t s) {
-    write_err = 0;
-    if (max_send_size && max_send_size < s) s = max_send_size;
-    return ::send(fd, b, s, MSG_DONTWAIT);
-  }
-
-  int makepair(int fds[2]) {
-    int rc = ::socketpair(AF_LOCAL, SOCK_STREAM, PF_UNSPEC, fds);
-    if (rc == 0) {
-      int optval = 1;
-      ::setsockopt(fds[0], SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval));
-      ::setsockopt(fds[1], SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval));
-    }
-    return rc;
-  }
-#endif
 #else
   // Simple mock up of the read/write functions of a socketpair for testing
-  // systems without socketpairs (Windows really)
-  // TODO: perhaps this should used everywhere
+  // systems without socketpairs or MSG_NOSIGNAL/MSG_DONTWAIT (Windows/BSDs)
   static const uint16_t buffsize = 4096;
   struct fbuf {
     uint8_t buff[buffsize*2] = {};
