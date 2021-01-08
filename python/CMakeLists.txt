@@ -162,11 +162,11 @@ add_custom_target(py_src_dist ALL)
 add_dependencies(py_src_dist generated_c_files)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
-               ${CMAKE_CURRENT_BINARY_DIR}/README.rst
+               ${py_dist_dir}/README.rst
 )
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
-               ${CMAKE_CURRENT_BINARY_DIR}/setup.py
+               ${py_dist_dir}/setup.py
 )
 
 add_custom_command(TARGET py_src_dist
@@ -192,12 +192,6 @@ add_custom_command(TARGET py_src_dist
 
 add_custom_command(TARGET py_src_dist
                    COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/protocol.h "${py_dist_dir}/src")
-
-add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/README.rst "${py_dist_dir}")
-
-add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/setup.py "${py_dist_dir}")
 
 foreach(file IN LISTS py_dist_files pysrc)
 add_custom_command(TARGET py_src_dist
@@ -248,32 +242,18 @@ pn_add_test(
   COMMAND ${PYTHON_EXECUTABLE} ${python_coverage_options} -- "${py_tests}/proton-test")
 set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
-if(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
-  execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import unittest2"
-          RESULT_VARIABLE UNITTEST_MISSING
-          ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
-  if(UNITTEST_MISSING)
-    message(WARNING "unittest2 is not installed. ***some unit tests cannot be run***\ntry 'pip install unittest2' to install unittest2")
-  else(UNITTEST_MISSING)
-    set(PYTHON_TEST_COMMAND "-m" "unittest2")
-  endif(UNITTEST_MISSING)
-else(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
-  set(PYTHON_TEST_COMMAND "-m" "unittest")
-endif(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
-
-if (PYTHON_TEST_COMMAND)
-  pn_add_test(
-    INTERPRETED
-    NAME python-integration-test
-    PREPEND_ENVIRONMENT
-      "PATH=${py_path}"
-      "PYTHONPATH=${py_pythonpath}"
-      "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-    COMMAND
-      ${PYTHON_EXECUTABLE}
-        ${python_coverage_options}
-        ${PYTHON_TEST_COMMAND} discover -v -s "${py_tests}/integration")
-endif(PYTHON_TEST_COMMAND)
+set(PYTHON_TEST_COMMAND "-m" "unittest")
+pn_add_test(
+  INTERPRETED
+  NAME python-integration-test
+  PREPEND_ENVIRONMENT
+    "PATH=${py_path}"
+    "PYTHONPATH=${py_pythonpath}"
+    "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+  COMMAND
+    ${PYTHON_EXECUTABLE}
+      ${python_coverage_options}
+      ${PYTHON_TEST_COMMAND} discover -v -s "${py_tests}/integration")
 
 check_python_module("tox" TOX_MODULE_FOUND)
 if (NOT TOX_MODULE_FOUND)
@@ -281,7 +261,7 @@ if (NOT TOX_MODULE_FOUND)
 else ()
   option(ENABLE_TOX_TEST "Enable multi-version python testing with TOX" ON)
 
-  set(tox_default "py26,py27,py35,py36,py37,py38")
+  set(tox_default "py27,py35,py36,py37,py38")
   set(TOX_ENVLIST "" CACHE STRING "List of python environments for TOX tests" )
   mark_as_advanced(TOX_ENVLIST)
 
@@ -292,8 +272,9 @@ else ()
     if (CMAKE_BUILD_TYPE MATCHES "Coverage")
       message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
     else ()
-      configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
+      add_custom_command(TARGET py_src_dist
+        COMMAND ${CMAKE_COMMAND} -E copy
+        "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini"
         "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
       pn_add_test(
         INTERPRETED
@@ -302,6 +283,8 @@ else ()
           "PATH=${py_path}"
           "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
           "SWIG=${SWIG_EXECUTABLE}"
+          "TOXENV=${TOX_ENVLIST}"
+          "PY_TEST_DIR=${CMAKE_CURRENT_SOURCE_DIR}/tests"
         COMMAND ${PYTHON_EXECUTABLE} -m tox)
       set_tests_properties(python-tox-test
         PROPERTIES

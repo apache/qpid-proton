@@ -26,21 +26,21 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import platform
 import gc
 import logging
 import os
+import platform
 import subprocess
 import sys
 import threading
 import time
+import unittest
 import uuid
 
 import proton.handlers
 import proton.reactor
 import proton.utils
 
-from test_unittest import unittest
 
 logger = logging.getLogger(__name__)
 

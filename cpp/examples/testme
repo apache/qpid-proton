@@ -21,17 +21,22 @@
 # Run the C++ examples and verify that they behave as expected.
 # Example executables must be in PATH
 
-import sys, shutil, os, errno
-from test_unittest import  unittest
-from test_subprocess import Popen, TestProcessError, check_output, in_path
-import test_subprocess
+import os, shutil, sys, unittest
+from test_subprocess import Popen, Server as TestServer, check_output, in_path
 from os.path import dirname
 from string import Template
 
-class Server(test_subprocess.Server):
+
+class Server(TestServer):
     @property
     def addr(self):
         return ":%s/example" % self.port
+
+
+class Broker(Server):
+    def __init__(self):
+        super(Broker, self).__init__(["broker", "-a", "//:0"], kill_me=True)
+
 
 def _cyrusSetup(conf_dir):
   """Write out simple SASL config.tests
@@ -53,12 +58,9 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
     check_output(cmd, shell=True)
     os.environ['PN_SASL_CONFIG_PATH'] = abs_conf_dir
 
+
 # Globally initialize Cyrus SASL configuration
 _cyrusSetup('sasl-conf')
-
-class Broker(Server):
-    def __init__(self):
-        super(Broker, self).__init__(["broker", "-a", "//:0"], kill_me=True)
 
 CLIENT_EXPECT="""Twas brillig, and the slithy toves => TWAS BRILLIG, AND THE SLITHY TOVES
 Did gire and gymble in the wabe. => DID GIRE AND GYMBLE IN THE WABE.
@@ -66,8 +68,10 @@ All mimsy were the borogroves, => ALL MIMSY WERE THE BOROGROVES,
 And the mome raths outgrabe. => AND THE MOME RATHS OUTGRABE.
 """
 
+
 def recv_expect():
     return "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
+
 
 class ContainerExampleTest(unittest.TestCase):
     """Run the container examples, verify they behave as expected."""

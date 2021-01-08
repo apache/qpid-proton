@@ -25,15 +25,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import gc
 import platform
 import threading
-import gc
+import unittest
 
 import proton
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, ApplicationEvent, EventInjector
-
-from test_unittest import unittest
 
 
 class Program(MessagingHandler):

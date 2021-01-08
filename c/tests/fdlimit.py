@@ -23,9 +23,9 @@ from __future__ import print_function
 import os
 import subprocess
 import time
+import unittest
 
 import test_subprocess
-from test_unittest import unittest
 
 # Check if we can run prlimit to control resources
 try:

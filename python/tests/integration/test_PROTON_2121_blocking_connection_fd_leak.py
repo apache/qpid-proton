@@ -26,11 +26,12 @@ from __future__ import division
 from __future__ import print_function
 
 import contextlib
-import socket
 import gc
 import os
+import socket
 import subprocess
 import threading
+import unittest
 import warnings
 
 import cproton
@@ -38,8 +39,6 @@ import cproton
 import proton.handlers
 import proton.utils
 import proton.reactor
-
-from test_unittest import unittest
 
 
 def get_fd_set():

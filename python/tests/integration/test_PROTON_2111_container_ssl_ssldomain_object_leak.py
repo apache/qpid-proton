@@ -26,20 +26,18 @@ from __future__ import division
 from __future__ import print_function
 
 import contextlib
-import platform
-
 import gc
 import os
+import platform
 import socket
 import threading
+import unittest
 
 import cproton
 
 import proton.handlers
 import proton.utils
 import proton.reactor
-
-from test_unittest import unittest
 
 
 class Broker(proton.handlers.MessagingHandler):

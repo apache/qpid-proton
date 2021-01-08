@@ -25,13 +25,15 @@ from __future__ import division
 from __future__ import print_function
 
 import contextlib
-import socket
-import uuid
 import gc
 import os
-import threading
 import subprocess
+import socket
+import threading
+import unittest
+import uuid
 import warnings
+
 from collections import namedtuple
 
 import cproton
@@ -42,8 +44,6 @@ import proton.reactor
 from proton import Message
 from proton.utils import SyncRequestResponse, BlockingConnection
 from proton.handlers import IncomingMessageHandler
-
-from test_unittest import unittest
 
 
 def get_fd_set():
