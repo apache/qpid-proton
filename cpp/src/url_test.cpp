@@ -103,6 +103,14 @@ TEST_CASE("parse URL","[url]") {
                   "amqps", "user/:=", "pass/:=", "example.net", "amqps", "some_topic",
                   "amqps://user%2F%3A=:pass%2F%3A=@example.net:amqps/some_topic");
     }
+    SECTION("ipv6") {
+        CHECK_URL(url("[fe80::c662:ab36:1ef1:1596]:5672/path"),
+                  "amqp", "", "", "fe80::c662:ab36:1ef1:1596", "5672", "path",
+                  "amqp://[fe80::c662:ab36:1ef1:1596]:5672/path");
+        CHECK_URL(url("amqp://user:pass@[::1]:1234/path"),
+                  "amqp", "user", "pass", "::1", "1234", "path",
+                  "amqp://user:pass@[::1]:1234/path");
+    }
 }
 
 } // namespace
