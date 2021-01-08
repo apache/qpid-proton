@@ -155,7 +155,7 @@ install:
 - ${PYTHON} -m pip install --user --upgrade pip
 - ${PYTHON} -m pip install --user coverage setuptools wheel tox virtualenv==20.0.23
 # PROTON-2125 suppress annoying deprecation warning from Minitest in Ruby tests
-- gem install minitest:4.3.2 simplecov codecov
+- gem install minitest:4.3.2 simplecov:0.18.0 codecov
 
 before_script:
 - mkdir build
