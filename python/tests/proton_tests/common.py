@@ -20,14 +20,7 @@
 from __future__ import absolute_import
 
 from unittest import TestCase
-try:
-  from unittest import SkipTest
-except:
-  try:
-    from unittest2 import SkipTest
-  except:
-    class SkipTest(Exception):
-      pass
+from unittest import SkipTest
 
 import sys, os, subprocess
 from random import randint
