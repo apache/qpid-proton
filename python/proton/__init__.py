@@ -114,21 +114,7 @@ API_LANGUAGE = "C"
 IMPLEMENTATION_LANGUAGE = "C"
 
 
-# This private NullHandler is required for Python 2.6,
-# when we no longer support 2.6 replace this NullHandler class definition and assignment with:
-#  handler = logging.NullHandler()
-class NullHandler(logging.Handler):
-    def handle(self, record):
-        pass
-
-    def emit(self, record):
-        pass
-
-    def createLock(self):
-        self.lock = None
-
-
-handler = NullHandler()
+handler = logging.NullHandler()
 
 logconfigfile = os.getenv('PNPY_LOGGER_CONFIG', None)
 if logconfigfile:

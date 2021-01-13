@@ -18,11 +18,11 @@ Cross-platform dependencies
 Linux dependencies
 
   - GNU Make 3.81+
-  - GCC 4.4+
+  - GCC 4.8.4+
   - Cyrus SASL 2.1+ (for SASL support)
   - OpenSSL 1.0+ (for SSL support)
   - JsonCpp 1.8+ for C++ connection configuration file support
-  - Python 2.6+ (for the Python binding)
+  - Python 2.7, 3.5+ (for the Python binding)
 
 Windows dependencies
 

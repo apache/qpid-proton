@@ -489,11 +489,7 @@ class DataTest(Test):
     assert data.get_object() == b"foo"
 
   def testMemoryView(self):
-    try:
-      self.data.put_object(memoryview(b"foo"))
-    except NameError:
-      # python <= 2.6 does not have `memoryview`
-      return
+    self.data.put_object(memoryview(b"foo"))
     data = Data()
     data.decode(self.data.encode())
     data.rewind()
