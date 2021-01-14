@@ -24,6 +24,7 @@ from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
+
 class Send(MessagingHandler):
     def __init__(self, url, messages):
         super(Send, self).__init__()
@@ -42,7 +43,7 @@ class Send(MessagingHandler):
             else:
                 colour = 'green'
             content = '%s %d' % (colour, self.sent+1)
-            msg = Message(id=(self.sent+1), properties={'colour':colour}, body=content)
+            msg = Message(id=(self.sent+1), properties={'colour': colour}, body=content)
             event.sender.send(msg)
             self.sent += 1
 
@@ -55,6 +56,7 @@ class Send(MessagingHandler):
     def on_disconnected(self, event):
         self.sent = self.confirmed
 
+
 parser = optparse.OptionParser(usage="usage: %prog [options]",
                                description="Send messages to the supplied address.")
 parser.add_option("-a", "--address", default="localhost:5672/examples",
@@ -65,4 +67,5 @@ opts, args = parser.parse_args()
 
 try:
     Container(Send(opts.address, opts.messages)).run()
-except KeyboardInterrupt: pass
+except KeyboardInterrupt:
+    pass

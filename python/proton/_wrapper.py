@@ -91,7 +91,8 @@ class Wrapper(object):
         self.__dict__["_impl"] = impl
         self.__dict__["_attrs"] = attrs
         self.__dict__["_record"] = record
-        if init: self._init()
+        if init:
+            self._init()
 
     def __getattr__(self, name):
         attrs = self.__dict__["_attrs"]

@@ -27,6 +27,7 @@ from proton import Message
 from proton.handlers import MessagingHandler
 from proton_tornado import Container
 
+
 class Client(MessagingHandler):
     def __init__(self, host, address):
         super(Client, self).__init__()
@@ -71,6 +72,7 @@ class Client(MessagingHandler):
         self.do_request()
         self.container.touch()
         return future
+
 
 class ExampleHandler(tornado.web.RequestHandler):
     def initialize(self, client):

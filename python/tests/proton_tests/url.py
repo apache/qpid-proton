@@ -23,6 +23,7 @@ from proton import Url
 
 from . import common
 
+
 class UrlTest(common.Test):
     def assertEqual(self, a, b):
         assert a == b, "%s != %s" % (a, b)
@@ -68,7 +69,8 @@ class UrlTest(common.Test):
             ("user@host/topic://test", "amqp://user@host:amqp/topic://test"),
             ("user@host:3456", "amqp://user@host:3456"),
             ("user:pass@host/topic://test", "amqp://user:pass@host:amqp/topic://test")
-        ]: self.assertEqual(str(Url(s)), u)
+        ]:
+            self.assertEqual(str(Url(s)), u)
 
     def assertPort(self, port, portint, portstr):
         self.assertEqual((port, port), (portint, portstr))
@@ -78,7 +80,7 @@ class UrlTest(common.Test):
         self.assertPort(Url.Port('amqp'), 5672, 'amqp')
         self.assertPort(Url.Port(5672), 5672, '5672')
         self.assertPort(Url.Port(5671), 5671, '5671')
-        self.assertEqual(Url.Port(5671)+1, 5672) # Treat as int
+        self.assertEqual(Url.Port(5671)+1, 5672)  # Treat as int
         self.assertEqual(str(Url.Port(5672)), '5672')
 
         self.assertPort(Url.Port(Url.Port('amqp')), 5672, 'amqp')
@@ -87,7 +89,8 @@ class UrlTest(common.Test):
         try:
             Url.Port('xxx')
             assert False, "Expected ValueError"
-        except ValueError: pass
+        except ValueError:
+            pass
 
         self.assertEqual(str(Url("host:amqp", defaults=False)), "//host:amqp")
         self.assertEqual(Url("host:amqp", defaults=False).port, 5672)
@@ -102,7 +105,8 @@ class UrlTest(common.Test):
         try:
             function(*args, **kwargs)
             assert False, "Expected exception %s" % exception.__name__
-        except exception: pass
+        except exception:
+            pass
 
     def testMissing(self):
         self.assertUrl(Url(defaults=False), None, None, None, None, None, None)
@@ -115,10 +119,10 @@ class UrlTest(common.Test):
 
         for s, full in [
             ('amqp://', 'amqp://'),
-            ('username@','//username@'),
+            ('username@', '//username@'),
             (':pass@', '//:pass@'),
             (':1234', '//:1234'),
-            ('/path','/path')
+            ('/path', '/path')
         ]:
             self.assertEqual(str(Url(s, defaults=False)), full)
 

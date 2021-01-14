@@ -24,6 +24,7 @@ from proton import Message, Url
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
+
 class Server(MessagingHandler):
     def __init__(self, url, address):
         super(Server, self).__init__()
@@ -40,7 +41,8 @@ class Server(MessagingHandler):
     def on_message(self, event):
         print("Received", event.message)
         self.server.send(Message(address=event.message.reply_to, body=event.message.body.upper(),
-                            correlation_id=event.message.correlation_id))
+                                 correlation_id=event.message.correlation_id))
+
 
 parser = optparse.OptionParser(usage="usage: %prog [options]")
 parser.add_option("-a", "--address", default="localhost:5672/examples",
@@ -51,7 +53,5 @@ url = Url(opts.address)
 
 try:
     Container(Server(url, url.path)).run()
-except KeyboardInterrupt: pass
-
-
-
+except KeyboardInterrupt:
+    pass

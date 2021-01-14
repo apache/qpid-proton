@@ -82,7 +82,7 @@ class ExamplesTest(unittest.TestCase):
             actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
             expected_py2 = ["{'sequence': int32(%i)}" % (i+1,) for i in range(100)]
             expected_py3 = ["{'sequence': %i}" % (i+1,) for i in range(100)]
-            self.assertIn(actual,[expected_py2, expected_py3])
+            self.assertIn(actual, [expected_py2, expected_py3])
 
     def test_client_server(self, client=['client.py'], server=['server.py'], sleep=0):
         with Popen(server) as s:
@@ -109,10 +109,12 @@ class ExamplesTest(unittest.TestCase):
         self.test_client_server(client=['sync_client.py'], server=['server_tx.py'])
 
     def test_client_server_direct(self):
-        self.test_client_server(client=['client.py', '-a', 'localhost:8888/examples'], server=['server_direct.py'], sleep=0.5)
+        self.test_client_server(client=['client.py', '-a', 'localhost:8888/examples'],
+                                server=['server_direct.py'], sleep=0.5)
 
     def test_sync_client_server_direct(self):
-        self.test_client_server(client=['sync_client.py', '-a', 'localhost:8888/examples'], server=['server_direct.py'], sleep=0.5)
+        self.test_client_server(client=['sync_client.py', '-a', 'localhost:8888/examples'],
+                                server=['server_direct.py'], sleep=0.5)
 
     def test_db_send_recv(self):
         self.maxDiff = None
@@ -154,7 +156,7 @@ class ExamplesTest(unittest.TestCase):
             actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
             expected_py2 = ["{'sequence': int32(%i)}" % (i+1,) for i in range(100)]
             expected_py3 = ["{'sequence': %i}" % (i+1,) for i in range(100)]
-            self.assertIn(actual,[expected_py2, expected_py3])
+            self.assertIn(actual, [expected_py2, expected_py3])
 
     def test_direct_send_simple_recv(self):
         with Popen(['direct_send.py', '-a', 'localhost:8888']):

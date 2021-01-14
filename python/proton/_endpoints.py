@@ -88,7 +88,7 @@ class Endpoint(object):
     but also the last known state of the remote endpoint.
     """
 
-    LOCAL_UNINIT = PN_LOCAL_UNINIT 
+    LOCAL_UNINIT = PN_LOCAL_UNINIT
     """ The local  endpoint state is uninitialized. """
 
     REMOTE_UNINIT = PN_REMOTE_UNINIT
@@ -521,7 +521,7 @@ class Connection(Wrapper, Endpoint):
         additional error details can be obtained using this property. The
         returned value is the error code defined by Proton in ``pn_error_t``
         (see ``error.h``).
-        
+
         :type: ``int``
         """
         return pn_error_code(pn_connection_error(self._impl))
@@ -682,7 +682,7 @@ class Session(Wrapper, Endpoint):
         will be set. This may be called without calling
         :meth:`open`, in this case it is equivalent to calling
         :meth:`open` followed by :meth:`close`.
-        
+
         """
         self._update_cond()
         pn_session_close(self._impl)
@@ -786,7 +786,8 @@ class Link(Wrapper, Endpoint):
 
     @staticmethod
     def wrap(impl):
-        if impl is None: return None
+        if impl is None:
+            return None
         if pn_link_is_sender(impl):
             return Sender(impl)
         else:
@@ -1243,7 +1244,6 @@ class Link(Wrapper, Endpoint):
         """
         return dat2obj(pn_link_remote_properties(self._impl))
 
-
     def _get_properties(self):
         return self._properties_dict
 
@@ -1391,7 +1391,7 @@ class Terminus(object):
     A source or target for messages.
     """
     UNSPECIFIED = PN_UNSPECIFIED
-    """A nonexistent terminus, may used as a source or target."""   
+    """A nonexistent terminus, may used as a source or target."""
     SOURCE = PN_SOURCE
     """A source of messages."""
     TARGET = PN_TARGET
@@ -1549,7 +1549,7 @@ class Terminus(object):
     def outcomes(self):
         """
         Outcomes of the source or target.
- 
+
         :type: :class:`Data` containing an array of :class:`symbol`.
        """
         return Data(pn_terminus_outcomes(self._impl))

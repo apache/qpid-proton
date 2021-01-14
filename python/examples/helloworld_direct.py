@@ -23,6 +23,7 @@ from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
+
 class HelloWorld(MessagingHandler):
     def __init__(self, url):
         super(HelloWorld, self).__init__()
@@ -44,5 +45,6 @@ class HelloWorld(MessagingHandler):
 
     def on_connection_closed(self, event):
         self.acceptor.close()
+
 
 Container(HelloWorld("localhost:8888/examples")).run()

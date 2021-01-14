@@ -30,11 +30,11 @@ from proton.utils import SyncRequestResponse, BlockingConnection
 from .common import Test, free_tcp_port
 from .common import ensureCanTestExtendedSASL
 
-CONNECTION_PROPERTIES={u'connection': u'properties'}
+CONNECTION_PROPERTIES = {u'connection': u'properties'}
 OFFERED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("O_one"), symbol("O_two"), symbol("O_three"))
 DESIRED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("D_one"), symbol("D_two"), symbol("D_three"))
-ANONYMOUS='ANONYMOUS'
-EXTERNAL='EXTERNAL'
+ANONYMOUS = 'ANONYMOUS'
+EXTERNAL = 'EXTERNAL'
 
 
 class EchoServer(MessagingHandler, Thread):
@@ -85,13 +85,13 @@ class EchoServer(MessagingHandler, Thread):
 
 
 class ConnPropertiesServer(EchoServer):
-     def __init__(self, url, timeout):
+    def __init__(self, url, timeout):
         EchoServer.__init__(self, url, timeout)
         self.properties_received = False
         self.offered_capabilities_received = False
         self.desired_capabilities_received = False
 
-     def on_connection_opening(self, event):
+    def on_connection_opening(self, event):
         conn = event.connection
 
         if conn.remote_properties == CONNECTION_PROPERTIES:
@@ -101,14 +101,16 @@ class ConnPropertiesServer(EchoServer):
         if conn.remote_desired_capabilities == DESIRED_CAPABILITIES:
             self.desired_capabilities_received = True
 
+
 class SyncRequestResponseTest(Test):
     """Test SyncRequestResponse"""
 
     def test_request_response(self):
         ensureCanTestExtendedSASL()
+
         def test(name, address="x"):
             for i in range(5):
-                body="%s%s" % (name, i)
+                body = "%s%s" % (name, i)
                 response = client.call(Message(address=address, body=body))
                 self.assertEquals(response.address, client.reply_to)
                 self.assertEquals(response.body, body)
@@ -124,13 +126,13 @@ class SyncRequestResponseTest(Test):
             client.connection.close()
         server.join(timeout=self.timeout)
 
-
     def test_connection_properties(self):
         ensureCanTestExtendedSASL()
         server = ConnPropertiesServer(Url(host="127.0.0.1", port=free_tcp_port()), timeout=self.timeout)
         server.start()
         server.wait()
-        connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES, offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES)
+        connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES,
+                                        offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES)
         client = SyncRequestResponse(connection)
         client.connection.close()
         server.join(timeout=self.timeout)
@@ -146,7 +148,8 @@ class SyncRequestResponseTest(Test):
         server.wait()
         try:
             # This will cause an exception because we are specifying allowed_mechs as EXTERNAL. The SASL handshake will fail because the server is not setup to handle EXTERNAL
-            connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES, offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES, allowed_mechs=EXTERNAL)
+            connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES,
+                                            offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES, allowed_mechs=EXTERNAL)
             self.fail("Expected ConnectionException")
         except ConnectionException as e:
             self.assertTrue('amqp:unauthorized-access' in str(e), "expected unauthorized-access")
@@ -158,7 +161,8 @@ class SyncRequestResponseTest(Test):
         server.start()
         server.wait()
         # An ANONYMOUS allowed_mechs will work, anonymous connections are allowed by ConnPropertiesServer
-        connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES, offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES, allowed_mechs=ANONYMOUS)
+        connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES,
+                                        offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES, allowed_mechs=ANONYMOUS)
         client = SyncRequestResponse(connection)
         client.connection.close()
         server.join(timeout=self.timeout)

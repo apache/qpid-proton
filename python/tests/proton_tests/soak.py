@@ -31,6 +31,7 @@ from .common import Test, Skipped, free_tcp_ports, \
 # Tests that run the apps
 #
 
+
 class AppTests(Test):
 
     def __init__(self, *args):
@@ -86,11 +87,11 @@ class AppTests(Test):
         verbose = self.verbose
 
         for R in self.receivers:
-            R.start( verbose )
+            R.start(verbose)
 
         for j in range(iterations):
             for S in self.senders:
-                S.start( verbose )
+                S.start(verbose)
 
             for S in self.senders:
                 S.wait()
@@ -116,6 +117,7 @@ class AppTests(Test):
 # Traffic passing tests based on the Messenger apps
 #
 
+
 class MessengerTests(AppTests):
 
     _timeout = 60
@@ -123,7 +125,7 @@ class MessengerTests(AppTests):
     def _ssl_check(self):
         if not isSSLPresent():
             raise Skipped("No SSL libraries found.")
-        if os.name=="nt":
+        if os.name == "nt":
             raise Skipped("Windows SChannel lacks anonymous cipher support.")
 
     def __init__(self, *args):
@@ -148,12 +150,12 @@ class MessengerTests(AppTests):
         receiver.subscriptions = ["%s://~0.0.0.0:%s" % (domain, port)]
         receiver.receive_count = receive_total
         receiver.timeout = MessengerTests._timeout
-        self.receivers.append( receiver )
+        self.receivers.append(receiver)
 
         sender.targets = ["%s://0.0.0.0:%s/X%d" % (domain, port, j) for j in range(target_count)]
         sender.send_count = send_total
         sender.timeout = MessengerTests._timeout
-        self.senders.append( sender )
+        self.senders.append(sender)
 
         self._do_test(iterations)
 
@@ -179,14 +181,14 @@ class MessengerTests(AppTests):
         receiver.receive_count = receive_total
         receiver.send_reply = True
         receiver.timeout = MessengerTests._timeout
-        self.receivers.append( receiver )
+        self.receivers.append(receiver)
 
         sender.targets = ["%s://0.0.0.0:%s/%dY" % (domain, port, j) for j in range(target_count)]
         sender.send_count = send_total
         sender.get_reply = True
         sender.send_batch = send_batch
         sender.timeout = MessengerTests._timeout
-        self.senders.append( sender )
+        self.senders.append(sender)
 
         self._do_test(iterations)
 
@@ -231,7 +233,7 @@ class MessengerTests(AppTests):
         receiver.receive_count = receive_total
         receiver.send_reply = True
         receiver.timeout = MessengerTests._timeout
-        self.receivers.append( receiver )
+        self.receivers.append(receiver)
 
         for i in range(sender_count):
             sender = s_factory()
@@ -240,7 +242,7 @@ class MessengerTests(AppTests):
             sender.send_batch = send_batch
             sender.get_reply = True
             sender.timeout = MessengerTests._timeout
-            self.senders.append( sender )
+            self.senders.append(sender)
 
         self._do_test(iterations)
 
@@ -259,11 +261,11 @@ class MessengerTests(AppTests):
         self._do_echo_test(MessengerReceiverC(), MessengerSenderC(), "amqps")
 
     def test_star_topology_C(self):
-        self._do_star_topology_test( MessengerReceiverC, MessengerSenderC )
+        self._do_star_topology_test(MessengerReceiverC, MessengerSenderC)
 
     def test_star_topology_C_SSL(self):
         self._ssl_check()
-        self._do_star_topology_test( MessengerReceiverC, MessengerSenderC, "amqps" )
+        self._do_star_topology_test(MessengerReceiverC, MessengerSenderC, "amqps")
 
     def test_oneway_reactor(self):
         self._do_oneway_test(ReactorReceiverC(), ReactorSenderC())

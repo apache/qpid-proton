@@ -24,6 +24,7 @@ from proton import Url
 from proton.reactor import Container
 from proton.handlers import MessagingHandler, TransactionHandler
 
+
 class TxRecv(MessagingHandler, TransactionHandler):
     def __init__(self, url, messages, batch_size):
         super(TxRecv, self).__init__(prefetch=0, auto_accept=False)
@@ -63,6 +64,7 @@ class TxRecv(MessagingHandler, TransactionHandler):
     def on_disconnected(self, event):
         self.current_batch = 0
 
+
 parser = optparse.OptionParser(usage="usage: %prog [options]")
 parser.add_option("-a", "--address", default="localhost:5672/examples",
                   help="address from which messages are received (default %default)")
@@ -74,7 +76,5 @@ opts, args = parser.parse_args()
 
 try:
     Container(TxRecv(opts.address, opts.messages, opts.batch_size)).run()
-except KeyboardInterrupt: pass
-
-
-
+except KeyboardInterrupt:
+    pass

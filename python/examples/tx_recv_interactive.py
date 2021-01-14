@@ -24,6 +24,7 @@ import threading
 from proton.reactor import ApplicationEvent, Container, EventInjector
 from proton.handlers import MessagingHandler, TransactionHandler
 
+
 class TxRecv(MessagingHandler, TransactionHandler):
     def __init__(self):
         super(TxRecv, self).__init__(prefetch=0, auto_accept=False)
@@ -65,12 +66,13 @@ class TxRecv(MessagingHandler, TransactionHandler):
         self.receiver.close()
         c.close()
 
+
 try:
     reactor = Container(TxRecv())
     events = EventInjector()
     reactor.selectable(events)
     thread = threading.Thread(target=reactor.run)
-    thread.daemon=True
+    thread.daemon = True
     thread.start()
 
     print("Enter 'fetch', 'commit' or 'abort'")
@@ -80,6 +82,5 @@ try:
             events.trigger(ApplicationEvent(line.strip()))
         else:
             break
-except KeyboardInterrupt: pass
-
-
+except KeyboardInterrupt:
+    pass

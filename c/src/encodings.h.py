@@ -19,7 +19,10 @@
 #
 
 from __future__ import print_function
-import mllib, optparse, os, sys
+import mllib
+import optparse
+import os
+import sys
 
 xml = os.path.join(os.path.dirname(__file__), "types.xml")
 doc = mllib.xml_parse(xml)
@@ -31,12 +34,12 @@ print()
 print("#define PNE_DESCRIPTOR          (0x00)")
 
 for enc in doc.query["amqp/section/type/encoding"]:
-  name = enc["@name"] or enc.parent["@name"]
-  # XXX: a bit hacky
-  if name == "ieee-754":
-    name = enc.parent["@name"]
-  cname = "PNE_" + name.replace("-", "_").upper()
-  print("#define %s%s(%s)" % (cname, " "*(20-len(cname)), enc["@code"]))
+    name = enc["@name"] or enc.parent["@name"]
+    # XXX: a bit hacky
+    if name == "ieee-754":
+        name = enc.parent["@name"]
+    cname = "PNE_" + name.replace("-", "_").upper()
+    print("#define %s%s(%s)" % (cname, " "*(20-len(cname)), enc["@code"]))
 
 print()
 print("#endif /* encodings.h */")

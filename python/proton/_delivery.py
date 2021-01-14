@@ -74,7 +74,7 @@ class Disposition(object):
     """
     A non terminal state indicating how much (if any) message data
     has been received for a delivery.
-    """    
+    """
 
     ACCEPTED = DispositionType(PN_ACCEPTED, "ACCEPTED")
     """
@@ -107,7 +107,6 @@ class Disposition(object):
     delivery being settled.
     """
 
-
     def __init__(self, impl, local):
         self._impl = impl
         self.local = local
@@ -121,13 +120,13 @@ class Disposition(object):
         Get the type of this disposition object.
 
         Defined values are:
-        
+
         * :const:`RECEIVED`
         * :const:`ACCEPTED`
         * :const:`REJECTED`
         * :const:`RELEASED`
         * :const:`MODIFIED`
-        
+
         :type: ``str``
         """
         return DispositionType.get(pn_disposition_type(self._impl))
@@ -269,7 +268,7 @@ class Delivery(Wrapper):
     """
     A non terminal state indicating how much (if any) message data
     has been received for a delivery.
-    """    
+    """
 
     ACCEPTED = Disposition.ACCEPTED
     """
@@ -301,7 +300,6 @@ class Delivery(Wrapper):
     state there will be no further state changes prior to the
     delivery being settled.
     """
-
 
     @staticmethod
     def wrap(impl):

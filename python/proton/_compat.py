@@ -27,11 +27,11 @@ import sys
 try:
     import Queue as queue
 except ImportError:
-    import queue # type: ignore
+    import queue  # type: ignore
 
 try:
     from urlparse import urlparse, urlunparse
-    from urllib import quote, unquote # type: ignore
+    from urllib import quote, unquote  # type: ignore
 except ImportError:
     from urllib.parse import urlparse, urlunparse, quote, unquote
 
@@ -59,7 +59,7 @@ if PY3:
 else:
     # the raise syntax will cause a parse error in Py3, so 'sneak' in a
     # definition that won't cause the parser to barf
-    exec ("""def raise_(t, v=None, tb=None):
+    exec("""def raise_(t, v=None, tb=None):
     raise t, v, tb
 """)
 

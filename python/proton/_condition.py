@@ -68,10 +68,11 @@ class Condition:
                                             if x])
 
     def __eq__(self, o):
-        if not isinstance(o, Condition): return False
+        if not isinstance(o, Condition):
+            return False
         return self.name == o.name and \
-               self.description == o.description and \
-               self.info == o.info
+            self.description == o.description and \
+            self.info == o.info
 
 
 def obj2cond(obj, cond):

@@ -21,6 +21,7 @@
 from __future__ import print_function
 from proton.reactor import Container, Handler
 
+
 class Recurring(Handler):
     def __init__(self, period):
         self.period = period
@@ -33,11 +34,10 @@ class Recurring(Handler):
         print("Tick...")
         self.container.schedule(self.period, self)
 
+
 try:
     container = Container(Recurring(1.0))
     container.run()
 except KeyboardInterrupt:
     container.stop()
     print()
-
-

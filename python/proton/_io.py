@@ -28,6 +28,7 @@ from ._compat import socket_errno
 
 PN_INVALID_SOCKET = -1
 
+
 class IO(object):
 
     @staticmethod
@@ -144,9 +145,10 @@ class IO(object):
                     return IO.select(r, w, w, timeout)
 
                 t = max(0, min(timeout, self._deadline - now))
-                if len(r)==0 and len(w)==0:
-                    if t > 0: IO.sleep(t)
-                    return ([],[],[])
+                if len(r) == 0 and len(w) == 0:
+                    if t > 0:
+                        IO.sleep(t)
+                    return ([], [], [])
 
                 return IO.select(r, w, w, t)
 

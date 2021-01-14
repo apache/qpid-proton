@@ -27,9 +27,11 @@ from proton.reactor import Container
 from proton.handlers import MessagingHandler
 from .ssl import _testpath
 
+
 def write_connect_conf(obj):
     with open('connect.json', 'w') as outfile:
         json.dump(obj, outfile)
+
 
 class Server(MessagingHandler):
     def __init__(self, expected_user=None, scheme='amqps'):
@@ -52,6 +54,7 @@ class Server(MessagingHandler):
         event.connection.close()
         self.listener.close()
 
+
 class Client(MessagingHandler):
     def __init__(self):
         super(Client, self).__init__()
@@ -61,13 +64,14 @@ class Client(MessagingHandler):
         self.opened = True
         event.connection.close()
 
+
 class ConnectConfigTest(Test):
     def test_port(self):
         ensureCanTestExtendedSASL()
         server = Server()
         container = Container(server)
         client = Client()
-        write_connect_conf({'port':server.port})
+        write_connect_conf({'port': server.port})
         container.connect(handler=client, reconnect=False)
         container.run()
         assert client.opened == True
@@ -79,7 +83,7 @@ class ConnectConfigTest(Test):
         server = Server(user)
         container = Container(server)
         client = Client()
-        write_connect_conf({'port':server.port, 'user':user, 'password':password})
+        write_connect_conf({'port': server.port, 'user': user, 'password': password})
         container.connect(handler=client, reconnect=False)
         container.run()
         assert client.opened == True
@@ -94,11 +98,11 @@ class ConnectConfigTest(Test):
                                              'server-password')
         client = Client()
         config = {
-            'scheme':'amqps',
-            'port':server.port,
+            'scheme': 'amqps',
+            'port': server.port,
             'tls': {
                 'verify': False
-             }
+            }
         }
         write_connect_conf(config)
         container.connect(handler=client, reconnect=False)
@@ -113,13 +117,13 @@ class ConnectConfigTest(Test):
                                              _testpath('server-private-key-lh.pem'),
                                              'server-password')
         container.ssl.server.set_trusted_ca_db(_testpath('ca-certificate.pem'))
-        container.ssl.server.set_peer_authentication( SSLDomain.VERIFY_PEER,
-                                                      _testpath('ca-certificate.pem') )
+        container.ssl.server.set_peer_authentication(SSLDomain.VERIFY_PEER,
+                                                     _testpath('ca-certificate.pem'))
 
         client = Client()
         config = {
-            'scheme':'amqps',
-            'port':server.port,
+            'scheme': 'amqps',
+            'port': server.port,
             'sasl': {
                 'mechanisms': 'EXTERNAL'
             },
@@ -145,18 +149,18 @@ class ConnectConfigTest(Test):
                                              _testpath('server-private-key-lh.pem'),
                                              'server-password')
         container.ssl.server.set_trusted_ca_db(_testpath('ca-certificate.pem'))
-        container.ssl.server.set_peer_authentication( SSLDomain.VERIFY_PEER,
-                                                      _testpath('ca-certificate.pem') )
+        container.ssl.server.set_peer_authentication(SSLDomain.VERIFY_PEER,
+                                                     _testpath('ca-certificate.pem'))
 
         client = Client()
         config = {
-            'scheme':'amqps',
-            'port':server.port,
-            'user':user,
-            'password':password,
+            'scheme': 'amqps',
+            'port': server.port,
+            'user': user,
+            'password': password,
             'sasl': {
                 'mechanisms': 'PLAIN'
-             },
+            },
             'tls': {
                 'cert': _testpath('client-certificate.pem'),
                 'key': _testpath('client-private-key-no-password.pem'),
@@ -168,4 +172,3 @@ class ConnectConfigTest(Test):
         container.connect(handler=client, reconnect=False)
         container.run()
         assert client.opened == True
-

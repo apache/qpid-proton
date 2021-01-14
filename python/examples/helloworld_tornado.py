@@ -23,6 +23,7 @@ from proton import Message
 from proton.handlers import MessagingHandler
 from proton_tornado import Container
 
+
 class HelloWorld(MessagingHandler):
     def __init__(self, server, address):
         super(HelloWorld, self).__init__()
@@ -41,5 +42,6 @@ class HelloWorld(MessagingHandler):
     def on_message(self, event):
         print(event.message.body)
         event.connection.close()
+
 
 Container(HelloWorld("localhost:5672", "examples")).run()

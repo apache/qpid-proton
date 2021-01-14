@@ -32,9 +32,9 @@ try:
     with open(ver_file_path, 'r') as ver_file:
         ver_str = ver_file.read().replace('\n', '')
         if '-' in ver_str:
-            version = ver_str.split("-")[0] # Strip '-SNAPSHOT' from end of string
+            version = ver_str.split("-")[0]  # Strip '-SNAPSHOT' from end of string
         else:
-            version = ver_str;
+            version = ver_str
         release = version
     print('Proton version: %s' % version)
 except IOError:
@@ -53,7 +53,7 @@ except IOError:
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
-    'sphinx.ext.mathjax', # needed for math formulas on some versions of Sphinx
+    'sphinx.ext.mathjax',  # needed for math formulas on some versions of Sphinx
 ]
 
 # Add any paths that contain templates here, relative to this directory.

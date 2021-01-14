@@ -70,7 +70,7 @@ class UnmappedType:
 class ulong(long):
     """
     The ulong AMQP type.
-    
+
     An unsigned 64 bit integer in the range :math:`0` to :math:`2^{64} - 1` inclusive.
     """
 
@@ -86,7 +86,7 @@ class ulong(long):
 class timestamp(long):
     """
     The timestamp AMQP type.
-    
+
     An absolute point in time, represented by a signed 64 bit value measuring
     milliseconds since the epoch. This value is encoded using the Unix ``time_t``
     [IEEE1003] encoding of UTC, but with a precision of milliseconds. For
@@ -100,7 +100,7 @@ class timestamp(long):
 class symbol(unicode):
     """
     The symbol AMQP type.
-    
+
     Symbolic values from a constrained domain, represented by a sequence of ASCII characters.
     """
 
@@ -111,7 +111,7 @@ class symbol(unicode):
 class char(unicode):
     """
     The char AMQP type.
-    
+
     A 32 bit UTF-32BE encoded Unicode character.
     """
 
@@ -122,7 +122,7 @@ class char(unicode):
 class byte(int):
     """
     The byte AMQP type.
-    
+
     An 8 bit signed integer in the range :math:`-(2^7)` to :math:`2^7 - 1` inclusive.
     """
 
@@ -133,7 +133,7 @@ class byte(int):
 class short(int):
     """
     The short AMQP type.
-    
+
     A 16 bit signed integer in the range :math:`-(2^{15})` to :math:`2^{15} - 1` inclusive.
     """
 
@@ -144,7 +144,7 @@ class short(int):
 class int32(int):
     """
     The signed int AMQP type.
-    
+
     A 32 bit signed integer in the range :math:`-(2^{31})` to :math:`2^{31} - 1` inclusive.
     """
 
@@ -155,7 +155,7 @@ class int32(int):
 class ubyte(int):
     """
     The unsigned byte AMQP type.
-    
+
     An 8 bit unsigned integer in the range :math:`0` to :math:`2^8 - 1` inclusive.
     """
 
@@ -171,7 +171,7 @@ class ubyte(int):
 class ushort(int):
     """
     The unsigned short AMQP type.
-    
+
     A 16 bit unsigned integer in the range :math:`0` to :math:`2^{16} - 1` inclusive.
     """
 
@@ -187,7 +187,7 @@ class ushort(int):
 class uint(long):
     """
     The unsigned int AMQP type.
-    
+
     A 32 bit unsigned integer in the range :math:`0` to :math:`2^{32} - 1` inclusive.
     """
 
@@ -203,7 +203,7 @@ class uint(long):
 class float32(float):
     """
     The float AMQP type.
-    
+
     A 32 bit floating point number (IEEE 754-2008 binary32).
     """
 
@@ -214,7 +214,7 @@ class float32(float):
 class decimal32(int):
     """
     The decimal32 AMQP type.
-    
+
     A 32 bit decimal floating point  number (IEEE 754-2008 decimal32).
     """
 
@@ -225,7 +225,7 @@ class decimal32(int):
 class decimal64(long):
     """
     The decimal64 AMQP type.
-    
+
     A 64 bit decimal floating point number (IEEE 754-2008 decimal64).
     """
 
@@ -236,7 +236,7 @@ class decimal64(long):
 class decimal128(bytes):
     """
     The decimal128 AMQP type.
-    
+
     A 128-bit decimal floating-point number (IEEE 754-2008 decimal128).
     """
 
@@ -303,7 +303,7 @@ class Array(object):
     def __eq__(self, o):
         if isinstance(o, Array):
             return self.descriptor == o.descriptor and \
-                   self.type == o.type and self.elements == o.elements
+                self.type == o.type and self.elements == o.elements
         else:
             return False
 
@@ -334,6 +334,7 @@ def _check_is_symbol_or_ulong(s, raise_on_error=True):
 
 class RestrictedKeyDict(dict):
     """Parent class for :class:`PropertyDict` and :class:`AnnotationDict`"""
+
     def __init__(self, validation_fn, e=None, raise_on_error=True, **kwargs):
         super(RestrictedKeyDict, self).__init__()
         self.validation_fn = validation_fn
@@ -401,6 +402,7 @@ class PropertyDict(RestrictedKeyDict):
     :type raise_on_error: ``bool``
     :param kwargs: Keyword args for initializing a ``dict`` of the form key1=val1, key2=val2, ...
     """
+
     def __init__(self, e=None, raise_on_error=True, **kwargs):
         super(PropertyDict, self).__init__(_check_is_symbol, e, raise_on_error, **kwargs)
 
@@ -445,6 +447,7 @@ class AnnotationDict(RestrictedKeyDict):
     :type raise_on_error: ``bool``
     :param kwargs: Keyword args for initializing a ``dict`` of the form key1=val1, key2=val2, ...
     """
+
     def __init__(self, e=None, raise_on_error=True, **kwargs):
         super(AnnotationDict, self).__init__(_check_is_symbol_or_ulong, e, raise_on_error, **kwargs)
 
@@ -483,6 +486,7 @@ class SymbolList(list):
         an error.
     :type raise_on_error: ``bool``
     """
+
     def __init__(self, t=None, raise_on_error=True):
         super(SymbolList, self).__init__()
         self.raise_on_error = raise_on_error
@@ -639,7 +643,7 @@ class Data:
     def type_name(amqptype):
         """
         Return a string name for an AMQP type.
-        
+
         :param type: Numeric Proton AMQP type (`enum pn_type_t`)
         :type type: integer
         :rtype: String describing the AMQP type with numeric value `amqptype`
@@ -1412,7 +1416,7 @@ class Data:
         """
         Copy the contents of another pn_data_t object. Any values in the
         data object will be lost.
-        
+
         :param src: The source object from which to copy
         :type src: :class:`Data`
         :raise: :exc:`DataException` if there is a Proton error.
@@ -1566,7 +1570,8 @@ class Data:
         """
 
         count, described, type = self.get_array()
-        if type is None: return None
+        if type is None:
+            return None
         if self.enter():
             try:
                 if described:
@@ -1680,7 +1685,8 @@ class Data:
 
     def get_object(self):
         type = self.type()
-        if type is None: return None
+        if type is None:
+            return None
         getter = self.get_mappings.get(type)
         if getter:
             return getter(self)

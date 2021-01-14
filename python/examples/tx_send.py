@@ -24,6 +24,7 @@ from proton import Message, Url
 from proton.reactor import Container
 from proton.handlers import MessagingHandler, TransactionHandler
 
+
 class TxSend(MessagingHandler, TransactionHandler):
     def __init__(self, url, messages, batch_size):
         super(TxSend, self).__init__()
@@ -51,7 +52,7 @@ class TxSend(MessagingHandler, TransactionHandler):
     def send(self):
         while self.transaction and self.sender.credit and (self.committed + self.current_batch) < self.total:
             seq = self.committed + self.current_batch + 1
-            msg = Message(id=seq, body={'sequence':seq})
+            msg = Message(id=seq, body={'sequence': seq})
             self.transaction.send(self.sender, msg)
             self.current_batch += 1
             if self.current_batch == self.batch_size:
@@ -74,6 +75,7 @@ class TxSend(MessagingHandler, TransactionHandler):
     def on_disconnected(self, event):
         self.current_batch = 0
 
+
 parser = optparse.OptionParser(usage="usage: %prog [options]",
                                description="Send messages transactionally to the supplied address.")
 parser.add_option("-a", "--address", default="localhost:5672/examples",
@@ -86,4 +88,5 @@ opts, args = parser.parse_args()
 
 try:
     Container(TxSend(opts.address, opts.messages, opts.batch_size)).run()
-except KeyboardInterrupt: pass
+except KeyboardInterrupt:
+    pass

@@ -19,7 +19,9 @@
 
 from __future__ import absolute_import
 
-import os, gc, traceback
+import os
+import gc
+import traceback
 
 from proton import *
 from proton.reactor import Container
@@ -28,95 +30,105 @@ from . import common
 
 CUSTOM = EventType("custom")
 
+
 class HandlerTest(common.Test):
-  def test_reactorHandlerCycling(self, n=0):
+    def test_reactorHandlerCycling(self, n=0):
 
-    class CustomHandler(Handler):
-      UNSET = 999999999
-      def __init__(self):
-        self.offset = len(traceback.extract_stack())
-      def on_reactor_init(self, event):
-        self.depth = len(traceback.extract_stack())
-      def reset(self):
-        self.depth = self.UNSET
-      @property
-      def init_depth(self):
-        d = self.depth - self.offset
-        return d
-    custom = CustomHandler()
+        class CustomHandler(Handler):
+            UNSET = 999999999
 
-    container = Container()
-    container.handler = custom
-    for i in range(n):
-      h = container.handler
-      container.handler = h
-    custom.reset()
-    container.run()
-    assert custom.init_depth < 50, "Unexpectedly long traceback for a simple handler"
+            def __init__(self):
+                self.offset = len(traceback.extract_stack())
 
-  def test_reactorHandlerCycling10k(self):
-    self.test_reactorHandlerCycling(10000)
+            def on_reactor_init(self, event):
+                self.depth = len(traceback.extract_stack())
 
-  def test_reactorHandlerCycling100(self):
-    self.test_reactorHandlerCycling(100)
+            def reset(self):
+                self.depth = self.UNSET
 
-  def do_customEvent(self, reactor_handler, event_root):
+            @property
+            def init_depth(self):
+                d = self.depth - self.offset
+                return d
+        custom = CustomHandler()
 
-    class CustomHandler:
-      did_custom = False
-      did_init = False
-      def __init__(self, *handlers):
-        self.handlers = handlers
-      def on_reactor_init(self, event):
-        self.did_init = True
-      def on_custom(self, event):
-        self.did_custom = True
+        container = Container()
+        container.handler = custom
+        for i in range(n):
+            h = container.handler
+            container.handler = h
+        custom.reset()
+        container.run()
+        assert custom.init_depth < 50, "Unexpectedly long traceback for a simple handler"
 
-    class CustomInvoker(CustomHandler):
-      def on_reactor_init(self, event):
-        h = event_root(event)
-        event.dispatch(h, CUSTOM)
-        self.did_init = True
+    def test_reactorHandlerCycling10k(self):
+        self.test_reactorHandlerCycling(10000)
 
-    child = CustomInvoker()
-    root = CustomHandler(child)
+    def test_reactorHandlerCycling100(self):
+        self.test_reactorHandlerCycling(100)
 
-    container = Container()
+    def do_customEvent(self, reactor_handler, event_root):
 
-    reactor_handler(container, root)
-    container.run()
-    assert root.did_init
-    assert child.did_init
-    assert root.did_custom
-    assert child.did_custom
+        class CustomHandler:
+            did_custom = False
+            did_init = False
 
-  def set_root(self, reactor, root):
-    reactor.handler = root
-  def add_root(self, reactor, root):
-    reactor.handler.add(root)
-  def append_root(self, reactor, root):
-    reactor.handler.handlers.append(root)
+            def __init__(self, *handlers):
+                self.handlers = handlers
 
-  def event_root(self, event):
-    return event.handler
+            def on_reactor_init(self, event):
+                self.did_init = True
 
-  def event_reactor_handler(self, event):
-    return event.reactor.handler
+            def on_custom(self, event):
+                self.did_custom = True
 
-  def test_set_handler(self):
-    self.do_customEvent(self.set_root, self.event_reactor_handler)
+        class CustomInvoker(CustomHandler):
+            def on_reactor_init(self, event):
+                h = event_root(event)
+                event.dispatch(h, CUSTOM)
+                self.did_init = True
 
-  def test_add_handler(self):
-    self.do_customEvent(self.add_root, self.event_reactor_handler)
+        child = CustomInvoker()
+        root = CustomHandler(child)
 
-  def test_append_handler(self):
-    self.do_customEvent(self.append_root, self.event_reactor_handler)
+        container = Container()
 
-  def test_set_root(self):
-    self.do_customEvent(self.set_root, self.event_root)
+        reactor_handler(container, root)
+        container.run()
+        assert root.did_init
+        assert child.did_init
+        assert root.did_custom
+        assert child.did_custom
 
-  def test_add_root(self):
-    self.do_customEvent(self.add_root, self.event_root)
+    def set_root(self, reactor, root):
+        reactor.handler = root
 
-  def test_append_root(self):
-    self.do_customEvent(self.append_root, self.event_root)
+    def add_root(self, reactor, root):
+        reactor.handler.add(root)
+
+    def append_root(self, reactor, root):
+        reactor.handler.handlers.append(root)
+
+    def event_root(self, event):
+        return event.handler
+
+    def event_reactor_handler(self, event):
+        return event.reactor.handler
+
+    def test_set_handler(self):
+        self.do_customEvent(self.set_root, self.event_reactor_handler)
+
+    def test_add_handler(self):
+        self.do_customEvent(self.add_root, self.event_reactor_handler)
+
+    def test_append_handler(self):
+        self.do_customEvent(self.append_root, self.event_reactor_handler)
+
+    def test_set_root(self):
+        self.do_customEvent(self.set_root, self.event_root)
+
+    def test_add_root(self):
+        self.do_customEvent(self.add_root, self.event_root)
+
+    def test_append_root(self):
+        self.do_customEvent(self.append_root, self.event_root)

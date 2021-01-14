@@ -50,7 +50,7 @@ class Url(object):
     :ivar ~.host: Host name, ipv6 literal or ipv4 dotted quad.
     :ivar ~.port: Integer port.
     :ivar host_port: Returns host:port
-    
+
     :param url: URL string to parse.
     :type url: ``str``
     :param defaults: If ``True``, fill in missing default values in the URL.
@@ -65,7 +65,6 @@ class Url(object):
 
     AMQP = "amqp"
     """URL scheme for the AMQP protocol."""
-
 
     class Port(int):
         """An integer port number that can be constructed from a service name string"""
@@ -121,7 +120,8 @@ class Url(object):
                 if '/' in p[0] or not p[2].startswith('//'):
                     url = '//' + url
             u = urlparse(url)
-            if not u: raise ValueError("Invalid URL '%s'" % url)
+            if not u:
+                raise ValueError("Invalid URL '%s'" % url)
             self.scheme = None if not u.scheme else u.scheme
             self.username = u.username and unquote(u.username)
             self.password = u.password and unquote(u.password)
@@ -143,7 +143,8 @@ class Url(object):
         for k in kwargs:  # Let kwargs override values parsed from url
             getattr(self, k)  # Check for invalid kwargs
             setattr(self, k, kwargs[k])
-        if defaults: self.defaults()
+        if defaults:
+            self.defaults()
 
     @staticmethod
     def _parse_host_port(nl):
@@ -152,7 +153,7 @@ class Url(object):
         beforebrace = hostportsplit[0]
         afterbrace = hostportsplit[-1]
 
-        if len(hostportsplit)==1:
+        if len(hostportsplit) == 1:
             beforebrace = ''
         else:
             beforebrace += ']'

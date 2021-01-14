@@ -1,15 +1,15 @@
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #  Copyright (C) PyZMQ Developers
 #  Distributed under the terms of the Modified BSD License.
 #
 #  This bundling code is largely adapted from pyzmq-static's get.sh by
 #  Brandon Craig-Rhodes, which is itself BSD licensed.
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #  These functions were largely adapted from pyzmq's code
 #  PyZMQ Developers, which is itself Modified BSD licensed.
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 import errno
@@ -18,6 +18,7 @@ import subprocess
 import sys
 
 from . import log
+
 
 def _call_pkg_config(args):
     """Spawn a subprocess running pkg-config with the given args.
@@ -37,7 +38,6 @@ def _call_pkg_config(args):
         else:
             log.warn("Running pkg-config failed - %s." % e)
     return None
-
 
 
 def pkg_config_version_installed(package, version=None, atleast=None):
@@ -60,7 +60,7 @@ def pkg_config_version_installed(package, version=None, atleast=None):
                                                version or atleast),
                           package])
     if p:
-        out,err = p.communicate()
+        out, err = p.communicate()
         if p.returncode:
             log.info("Did not find %s via pkg-config: %s" % (package, err))
             return False
@@ -78,9 +78,8 @@ def pkg_config_get_var(package, name):
     if not p:
         log.warn("pkg-config: var %s get failed, package %s", name, package)
         return ""
-    out,err = p.communicate()
+    out, err = p.communicate()
     if p.returncode:
         out = ""
         log.warn(err)
     return out.splitlines()[0]
-

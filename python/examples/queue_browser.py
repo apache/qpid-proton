@@ -22,6 +22,7 @@ from __future__ import print_function
 from proton.reactor import Container, Copy
 from proton.handlers import MessagingHandler
 
+
 class Recv(MessagingHandler):
     def __init__(self):
         super(Recv, self).__init__()
@@ -35,9 +36,8 @@ class Recv(MessagingHandler):
         if event.receiver.queued == 0 and event.receiver.drained:
             event.connection.close()
 
+
 try:
     Container(Recv()).run()
-except KeyboardInterrupt: pass
-
-
-
+except KeyboardInterrupt:
+    pass
