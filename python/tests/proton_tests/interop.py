@@ -35,7 +35,9 @@ def find_test_interop_dir():
         raise Exception("Cannot find tests/interop directory from "+__file__)
     return f
 
-test_interop_dir=find_test_interop_dir()
+
+test_interop_dir = find_test_interop_dir()
+
 
 class InteropTest(common.Test):
 
@@ -48,9 +50,11 @@ class InteropTest(common.Test):
 
     def get_data(self, name):
         filename = os.path.join(test_interop_dir, name+".amqp")
-        f = open(filename,"rb")
-        try: return f.read()
-        finally: f.close()
+        f = open(filename, "rb")
+        try:
+            return f.read()
+        finally:
+            f.close()
 
     def decode_data(self, encoded):
         buffer = encoded
@@ -78,10 +82,10 @@ class InteropTest(common.Test):
 
     def assert_next(self, type, value):
         next_type = self.data.next()
-        assert next_type == type, "Type mismatch: %s != %s"%(
+        assert next_type == type, "Type mismatch: %s != %s" % (
             Data.type_names[next_type], Data.type_names[type])
         next_value = self.data.get_object()
-        assert next_value == value, "Value mismatch: %s != %s"%(next_value, value)
+        assert next_value == value, "Value mismatch: %s != %s" % (next_value, value)
 
     def test_message(self):
         self.decode_message_file("message")
@@ -128,11 +132,11 @@ class InteropTest(common.Test):
 
     def test_described_array(self):
         self.decode_data_file("described_array")
-        self.assert_next(Data.ARRAY, Array("int-array", Data.INT, *range(0,10)))
+        self.assert_next(Data.ARRAY, Array("int-array", Data.INT, *range(0, 10)))
 
     def test_arrays(self):
         self.decode_data_file("arrays")
-        self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.INT, *range(0,100)))
+        self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.INT, *range(0, 100)))
         self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.STRING, *["a", "b", "c"]))
         self.assert_next(Data.ARRAY, Array(UNDESCRIBED, Data.INT))
         assert self.data.next() is None
@@ -145,7 +149,7 @@ class InteropTest(common.Test):
 
     def test_maps(self):
         self.decode_data_file("maps")
-        self.assert_next(Data.MAP, {"one":1, "two":2, "three":3 })
-        self.assert_next(Data.MAP, {1:"one", 2:"two", 3:"three"})
+        self.assert_next(Data.MAP, {"one": 1, "two": 2, "three": 3})
+        self.assert_next(Data.MAP, {1: "one", 2: "two", 3: "three"})
         self.assert_next(Data.MAP, {})
         assert self.data.next() is None

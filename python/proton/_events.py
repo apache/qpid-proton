@@ -194,7 +194,6 @@ class Event(EventBase):
     TIMER_TASK = _core(PN_TIMER_TASK, "on_timer_task")
     """A timer event has occurred."""
 
-
     CONNECTION_INIT = _core(PN_CONNECTION_INIT, "on_connection_init")
     """
     The connection has been created. This is the first event that
@@ -245,7 +244,6 @@ class Event(EventBase):
     for a connection.
     """
 
-
     SESSION_INIT = _core(PN_SESSION_INIT, "on_session_init")
     """
     The session has been created. This is the first event that will
@@ -282,7 +280,6 @@ class Event(EventBase):
     been completed. This is the final event that will ever be issued
     for a session.
     """
-
 
     LINK_INIT = _core(PN_LINK_INIT, "on_link_init")
     """
@@ -339,13 +336,11 @@ class Event(EventBase):
     link. Events of this type point to the relevant link.
     """
 
-
     DELIVERY = _core(PN_DELIVERY, "on_delivery")
     """
     A delivery has been created or updated. Events of this type point
     to the relevant delivery.
     """
-
 
     TRANSPORT = _core(PN_TRANSPORT, "on_transport")
     """
@@ -378,7 +373,6 @@ class Event(EventBase):
     Indicates that the both the "head" and "tail" of the transport are
     closed. Events of this type point to the relevant transport.
     """
-
 
     # These events are now internal events in the python code
     REACTOR_INIT = _internal("reactor_init")

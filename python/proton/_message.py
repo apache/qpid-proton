@@ -548,9 +548,11 @@ class Message(object):
         :rtype: :class:`Delivery`
 
         """
-        if link.is_sender: return None
+        if link.is_sender:
+            return None
         dlv = link.current
-        if not dlv or dlv.partial: return None
+        if not dlv or dlv.partial:
+            return None
         dlv.encoded = link.recv(dlv.pending)
         link.advance()
         # the sender has already forgotten about the delivery, so we might
@@ -568,5 +570,6 @@ class Message(object):
                      "reply_to_group_id", "instructions", "annotations",
                      "properties", "body"):
             value = getattr(self, attr)
-            if value: props.append("%s=%r" % (attr, value))
+            if value:
+                props.append("%s=%r" % (attr, value))
         return "Message(%s)" % ", ".join(props)

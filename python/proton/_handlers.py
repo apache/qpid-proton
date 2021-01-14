@@ -160,6 +160,7 @@ class Acking(object):
     """
     A class containing methods for handling received messages.
     """
+
     def accept(self, delivery):
         """
         Accepts a received message.
@@ -245,7 +246,8 @@ class IncomingMessageHandler(Handler, Acking):
 
     def on_delivery(self, event):
         dlv = event.delivery
-        if not dlv.link.is_receiver: return
+        if not dlv.link.is_receiver:
+            return
         if dlv.aborted:
             self.on_aborted(event)
             dlv.settle()
@@ -1142,7 +1144,8 @@ class PythonIO:
         reactor = event.reactor
         # check if we are still quiesced, other handlers of
         # on_reactor_quiesced could have produced events to process
-        if not reactor.quiesced: return
+        if not reactor.quiesced:
+            return
 
         reading = []
         writing = []
@@ -1162,7 +1165,8 @@ class PythonIO:
             timeout = deadline - time.time()
         else:
             timeout = reactor.timeout
-        if timeout < 0: timeout = 0
+        if timeout < 0:
+            timeout = 0
         timeout = min(timeout, reactor.timeout)
         readable, writable, _ = IO.select(reading, writing, [], timeout)
 
@@ -1346,7 +1350,7 @@ class IOHandler(Handler):
     def update(transport, selectable, now):
         try:
             capacity = transport.capacity()
-            selectable.reading = capacity>0
+            selectable.reading = capacity > 0
         except:
             if transport.closed:
                 selectable.terminate()
@@ -1354,7 +1358,7 @@ class IOHandler(Handler):
                 transport._selectable = None
         try:
             pending = transport.pending()
-            selectable.writing = pending>0
+            selectable.writing = pending > 0
         except:
             if transport.closed:
                 selectable.terminate()

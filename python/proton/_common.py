@@ -77,6 +77,7 @@ def unicode2utf8(string):
     # Anything else illegal - specifically python3 bytes
     raise TypeError("Unrecognized string type: %r (%s)" % (string, type(string)))
 
+
 def utf82unicode(string):
     """Convert C strings returned from proton-c into python unicode"""
     if string is None:

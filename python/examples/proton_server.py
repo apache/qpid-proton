@@ -22,6 +22,7 @@ from proton import Message
 from proton.reactor import Container
 from proton.handlers import MessagingHandler
 
+
 class Server(MessagingHandler):
     def __init__(self, host, address):
         super(Server, self).__init__()
@@ -34,7 +35,8 @@ class Server(MessagingHandler):
         self.on_request(event.message.body, event.message.reply_to)
 
     def on_connection_close(self, endpoint, error):
-        if error: print("Closed due to %s" % error)
+        if error:
+            print("Closed due to %s" % error)
         self.conn.close()
 
     def run(self):
@@ -48,4 +50,3 @@ class Server(MessagingHandler):
 
     def on_request(self, request, reply_to):
         pass
-

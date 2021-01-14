@@ -6,9 +6,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -23,8 +23,10 @@ This module provides document parsing and transformation utilities for XML.
 
 from __future__ import absolute_import
 
-import os, sys
-import xml.sax, types
+import os
+import sys
+import xml.sax
+import types
 from xml.sax.handler import ErrorHandler
 from xml.sax.xmlreader import InputSource
 
@@ -43,43 +45,47 @@ from . import dom
 from . import transforms
 from . import parsers
 
+
 def transform(node, *args):
-  result = node
-  for t in args:
-    if isinstance(t, CLASS_TYPES):
-      t = t()
-    result = result.dispatch(t)
-  return result
+    result = node
+    for t in args:
+        if isinstance(t, CLASS_TYPES):
+            t = t()
+        result = result.dispatch(t)
+    return result
+
 
 class Resolver:
 
-  def __init__(self, path):
-    self.path = path
+    def __init__(self, path):
+        self.path = path
 
-  def resolveEntity(self, publicId, systemId):
-    for p in self.path:
-      fname = os.path.join(p, systemId)
-      if os.path.exists(fname):
-        source = InputSource(systemId)
-        source.setByteStream(open(fname))
-        return source
-    return InputSource(systemId)
+    def resolveEntity(self, publicId, systemId):
+        for p in self.path:
+            fname = os.path.join(p, systemId)
+            if os.path.exists(fname):
+                source = InputSource(systemId)
+                source.setByteStream(open(fname))
+                return source
+        return InputSource(systemId)
+
 
 def xml_parse(filename, path=()):
-  if sys.version_info[0:2] == (2,3):
-    # XXX: this is for older versions of python
-    source = "file://%s" % os.path.abspath(filename)
-  else:
-    source = filename
-  h = parsers.XMLParser()
-  p = xml.sax.make_parser()
-  p.setContentHandler(h)
-  p.setErrorHandler(ErrorHandler())
-  p.setEntityResolver(Resolver(path))
-  p.parse(source)
-  return h.parser.tree
+    if sys.version_info[0:2] == (2, 3):
+        # XXX: this is for older versions of python
+        source = "file://%s" % os.path.abspath(filename)
+    else:
+        source = filename
+    h = parsers.XMLParser()
+    p = xml.sax.make_parser()
+    p.setContentHandler(h)
+    p.setErrorHandler(ErrorHandler())
+    p.setEntityResolver(Resolver(path))
+    p.parse(source)
+    return h.parser.tree
+
 
 def sexp(node):
-  s = transforms.Sexp()
-  node.dispatch(s)
-  return s.out
+    s = transforms.Sexp()
+    node.dispatch(s)
+    return s.out

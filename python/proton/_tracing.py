@@ -42,6 +42,7 @@ from proton.handlers import (
 _tracer = None
 _trace_key = proton.symbol('x-opt-qpid-tracestate')
 
+
 def get_tracer():
     global _tracer
     if _tracer is not None:
@@ -49,11 +50,13 @@ def get_tracer():
     exe = sys.argv[0] if sys.argv[0] else 'interactive-session'
     return init_tracer(os.path.basename(exe))
 
+
 def _fini_tracer():
     time.sleep(1)
     c = opentracing.global_tracer().close()
     while not c.done():
         time.sleep(0.5)
+
 
 def init_tracer(service_name):
     global _tracer
@@ -95,6 +98,7 @@ class IncomingMessageHandler(ProtonIncomingMessageHandler):
                 with tracer.start_active_span('amqp-delivery-receive', ignore_active_span=True, tags=span_tags):
                     proton._events._dispatch(self.delegate, 'on_message', event)
 
+
 class OutgoingMessageHandler(ProtonOutgoingMessageHandler):
     def on_settled(self, event):
         if self.delegate is not None:
@@ -105,6 +109,7 @@ class OutgoingMessageHandler(ProtonOutgoingMessageHandler):
             span.log_kv({'event': 'delivery settled', 'state': state.name})
             span.finish()
             proton._events._dispatch(self.delegate, 'on_settled', event)
+
 
 class Sender(ProtonSender):
     def send(self, msg):
@@ -121,13 +126,14 @@ class Sender(ProtonSender):
         headers = {}
         tracer.inject(span, Format.TEXT_MAP, headers)
         if msg.annotations is None:
-            msg.annotations = { _trace_key: headers }
+            msg.annotations = {_trace_key: headers}
         else:
             msg.annotations[_trace_key] = headers
         delivery = ProtonSender.send(self, msg)
         delivery.span = span
         span.set_tag('delivery-tag', delivery.tag)
         return delivery
+
 
 # Monkey patch proton for tracing (need to patch both internal and external names)
 proton._handlers.IncomingMessageHandler = IncomingMessageHandler

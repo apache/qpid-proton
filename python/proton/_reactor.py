@@ -31,11 +31,11 @@ import uuid
 
 from cproton import PN_PYREF, PN_ACCEPTED, PN_EVENT_NONE
 
-from ._delivery import  Delivery
+from ._delivery import Delivery
 from ._endpoints import Connection, Endpoint, Link, Session, Terminus
 from ._exceptions import SSLUnavailable
 from ._data import Described, symbol, ulong
-from ._message import  Message
+from ._message import Message
 from ._transport import Transport, SSL, SSLDomain
 from ._url import Url
 from ._common import isstring, unicode2utf8, utf82unicode
@@ -99,6 +99,7 @@ class TimerSelectable(Selectable):
         self._reactor.timer_tick()
         self.deadline = self._reactor.timer_deadline
         self.update()
+
 
 class Reactor(object):
 
@@ -177,7 +178,8 @@ class Reactor(object):
         # TODO: Why do we timeout like this?
         self.timeout = 3.14159265359
         self.start()
-        while self.process(): pass
+        while self.process():
+            pass
         self.stop()
         self.process()
         # TODO: This isn't correct if we ever run again
@@ -492,11 +494,11 @@ class Transaction(object):
     a call to :meth:`proton.reactor.Container.declare_transaction`.
 
     To send messages under this transaction, use :meth:`send`.
-    
+
     To receive messages under this transaction, call :meth:`accept` once the
     message is received (typically from the
     :meth:`proton.handlers.MessagingHandler.on_message` callback).
-    
+
     To discharge the transaction, call either :meth:`commit`
     (for a successful transaction), or :meth:`abort` (for a failed transaction).
     """
@@ -633,6 +635,7 @@ class AtMostOnce(LinkOption):
     setting the sender link settle mode to :const:`proton.Link.SND_SETTLED`
     (ie pre-settled).
     """
+
     def apply(self, link):
         """
         Set the at-most-once delivery semantics on the link.
@@ -650,6 +653,7 @@ class AtLeastOnce(LinkOption):
     and the receiver link settle mode to :const:`proton.Link.RCV_FIRST`. This
     forces the receiver to settle all messages once they are successfully received.
     """
+
     def apply(self, link):
         """
         Set the at-least-once delivery semantics on the link.
@@ -665,6 +669,7 @@ class SenderOption(LinkOption):
     """
     Abstract class for sender options.
     """
+
     def apply(self, sender):
         """
         Set the option on the sender.
@@ -681,6 +686,7 @@ class ReceiverOption(LinkOption):
     """
     Abstract class for receiver options
     """
+
     def apply(self, receiver):
         """
         Set the option on the receiver.
@@ -702,6 +708,7 @@ class DynamicNodeProperties(LinkOption):
     :param props: A map of link options to be applied to a link.
     :type props: ``dict``
     """
+
     def __init__(self, props={}):
         self.properties = {}
         for k in props:
@@ -731,6 +738,7 @@ class Filter(ReceiverOption):
         containing the filter name, and the value a filter string.
     :type filter_set: ``dict``
     """
+
     def __init__(self, filter_set={}):
         self.filter_set = filter_set
 
@@ -755,7 +763,8 @@ class Selector(Filter):
     """
 
     def __init__(self, value, name='selector'):
-        super(Selector, self).__init__({symbol(name): Described(symbol('apache.org:selector-filter:string'), utf82unicode(value))})
+        super(Selector, self).__init__({symbol(name): Described(
+            symbol('apache.org:selector-filter:string'), utf82unicode(value))})
 
 
 class DurableSubscription(ReceiverOption):
@@ -765,6 +774,7 @@ class DurableSubscription(ReceiverOption):
     to :const:`proton.Terminus.DELIVERIES` and the source expiry policy to
     :const:`proton.Terminus.EXPIRE_NEVER`.
     """
+
     def apply(self, receiver):
         """
         Set durability on the specified receiver.
@@ -783,6 +793,7 @@ class Move(ReceiverOption):
     receivers. This is achieved by setting the receiver source distribution
     mode to :const:`proton.Terminus.DIST_MODE_MOVE`.
     """
+
     def apply(self, receiver):
         """
         Set message move semantics on the specified receiver.
@@ -800,6 +811,7 @@ class Copy(ReceiverOption):
     are. This is achieved by setting the receiver source distribution mode to
     :const:`proton.Terminus.DIST_MODE_COPY`.
     """
+
     def apply(self, receiver):
         """
         Set message copy semantics on the specified receiver.
@@ -814,9 +826,11 @@ def _apply_link_options(options, link):
     if options:
         if isinstance(options, list):
             for o in options:
-                if o.test(link): o.apply(link)
+                if o.test(link):
+                    o.apply(link)
         else:
-            if options.test(link): options.apply(link)
+            if options.test(link):
+                options.apply(link)
 
 
 def _create_session(connection, handler=None):
@@ -1044,6 +1058,7 @@ class _Connector(Handler):
 
     def on_transport_closed(self, event):
         if self.connection is None:
+
             return
 
         if not self.connection.state & Endpoint.LOCAL_ACTIVE:
@@ -1088,6 +1103,7 @@ class SSLConfig(object):
         self.client.set_trusted_ca_db(certificate_db)
         self.server.set_trusted_ca_db(certificate_db)
 
+
 def _find_config_file():
     confname = 'connect.json'
     confpath = ['.', os.path.expanduser('~/.config/messaging'), '/etc/messaging']
@@ -1096,6 +1112,7 @@ def _find_config_file():
         if os.path.isfile(f):
             return f
     return None
+
 
 def _get_default_config():
     conf = os.environ.get('MESSAGING_CONNECT_FILE') or _find_config_file()
@@ -1107,23 +1124,26 @@ def _get_default_config():
     else:
         return {}
 
+
 def _strip_json_comments(json_text):
     """This strips c-style comments from text, taking into account '/*comments*/' and '//comments'
     nested inside a string etc."""
     def replacer(match):
         s = match.group(0)
         if s.startswith('/'):
-            return " " # note: a space and not an empty string
+            return " "  # note: a space and not an empty string
         else:
             return s
     pattern = re.compile(r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"', re.DOTALL | re.MULTILINE)
     return re.sub(pattern, replacer, json_text)
+
 
 def _get_default_port_for_scheme(scheme):
     if scheme == 'amqps':
         return 5671
     else:
         return 5672
+
 
 class Container(Reactor):
     """
@@ -1169,7 +1189,7 @@ class Container(Reactor):
         To use SSL/TLS for encryption (when an ``amqps`` URL scheme is used), the above
         configuration file must contain a ``tls`` submap containing the following
         configuration entries (See :class:`proton.SSLDomain` for details):
-        
+
         *   ``ca``: Path to a database of trusted CAs that the server will advertise.
         *   ``cert``: Path to a file/database containing the identifying certificate.
         *   ``key``: An optional key to access the identifying certificate.
@@ -1258,7 +1278,8 @@ class Container(Reactor):
         if not url and not urls and not address:
             config = _get_default_config()
             scheme = config.get('scheme', 'amqps')
-            _url = "%s://%s:%s" % (scheme, config.get('host', 'localhost'), config.get('port', _get_default_port_for_scheme(scheme)))
+            _url = "%s://%s:%s" % (scheme, config.get('host', 'localhost'),
+                                   config.get('port', _get_default_port_for_scheme(scheme)))
             _ssl_domain = None
             _kwargs = kwargs
             if config.get('user'):

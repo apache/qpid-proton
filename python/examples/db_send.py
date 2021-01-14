@@ -32,6 +32,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor import ApplicationEvent, Container, EventInjector
 from db_common import Db
 
+
 class Send(MessagingHandler):
     def __init__(self, url, count):
         super(Send, self).__init__()
@@ -65,14 +66,16 @@ class Send(MessagingHandler):
         if not self.records.full():
             print("loading records...")
             self.load_count += 1
-            self.db.load(self.records, event=ApplicationEvent("records_loaded", link=self.sender, subject=self.load_count))
+            self.db.load(self.records, event=ApplicationEvent(
+                "records_loaded", link=self.sender, subject=self.load_count))
 
     def on_sendable(self, event):
         self.send()
 
     def send(self):
         while self.sender.credit and not self.records.empty():
-            if not self.keep_sending(): return
+            if not self.keep_sending():
+                return
             record = self.records.get(False)
             id = record['id']
             self.sender.send(Message(id=id, durable=True, body=record['description']), tag=str(id))
@@ -97,6 +100,7 @@ class Send(MessagingHandler):
         print("Rechecking for data...")
         self.request_records()
 
+
 parser = optparse.OptionParser(usage="usage: %prog [options]",
                                description="Send messages to the supplied address.")
 parser.add_option("-a", "--address", default="localhost:5672/examples",
@@ -107,5 +111,5 @@ opts, args = parser.parse_args()
 
 try:
     Container(Send(opts.address, opts.messages)).run()
-except KeyboardInterrupt: pass
-
+except KeyboardInterrupt:
+    pass

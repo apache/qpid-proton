@@ -90,6 +90,7 @@ class BlockingSender(BlockingLink):
     A synchronous sender wrapper. This is typically created by calling
     :meth:`BlockingConnection.create_sender`.
     """
+
     def __init__(self, connection, sender):
         super(BlockingSender, self).__init__(connection, sender)
         if self.link.target and self.link.target.address and self.link.target.address != self.link.remote_target.address:
@@ -137,6 +138,7 @@ class Fetcher(MessagingHandler):
     :param prefetch:
     :type prefetch:
     """
+
     def __init__(self, connection, prefetch):
         super(Fetcher, self).__init__(prefetch=prefetch, auto_accept=False)
         self.connection = connection
@@ -198,6 +200,7 @@ class BlockingReceiver(BlockingLink):
     A synchronous receiver wrapper. This is typically created by calling
     :meth:`BlockingConnection.create_receiver`.
     """
+
     def __init__(self, connection, receiver, fetcher, credit=1):
         super(BlockingReceiver, self).__init__(connection, receiver)
         if self.link.source and self.link.source.address and self.link.source.address != self.link.remote_source.address:
@@ -206,7 +209,8 @@ class BlockingReceiver(BlockingLink):
             # ...but close ourselves if peer does not
             self.link.close()
             raise LinkException("Failed to open receiver %s, source does not match" % self.link.name)
-        if credit: receiver.flow(credit)
+        if credit:
+            receiver.flow(credit)
         self.fetcher = fetcher
         self.container = connection.container
 
@@ -287,6 +291,7 @@ class LinkDetached(LinkException):
     :param link: The link which closed unexpectedly.
     :type link: :class:`proton.Link`
     """
+
     def __init__(self, link):
         self.link = link
         if link.is_sender:
@@ -310,6 +315,7 @@ class ConnectionClosed(ConnectionException):
     :param connection: The connection which closed unexpectedly.
     :type connection: :class:`proton.Connection`
     """
+
     def __init__(self, connection):
         self.connection = connection
         txt = "Connection %s closed" % connection.hostname
@@ -459,7 +465,8 @@ class BlockingConnection(Handler):
         """
         Hand control over to the event loop (e.g. if waiting indefinitely for incoming messages)
         """
-        while self.container.process(): pass
+        while self.container.process():
+            pass
         self.container.stop()
         self.container.process()
 
@@ -490,7 +497,8 @@ class BlockingConnection(Handler):
                     self.container.process()
                     if deadline < time.time():
                         txt = "Connection %s timed out" % self.url
-                        if msg: txt += ": " + msg
+                        if msg:
+                            txt += ": " + msg
                         raise Timeout(txt)
             finally:
                 self.container.timeout = container_timeout

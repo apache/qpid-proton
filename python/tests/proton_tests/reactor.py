@@ -27,8 +27,10 @@ from proton import Handler, Url, symbol
 
 from .common import Test, SkipTest, TestServer, free_tcp_port, free_tcp_ports, ensureCanTestExtendedSASL
 
+
 class Barf(Exception):
     pass
+
 
 class BarfOnInit:
 
@@ -44,10 +46,12 @@ class BarfOnInit:
     def on_link_init(self, event):
         raise Barf()
 
+
 class BarfOnTask:
 
     def on_timer_task(self, event):
         raise Barf()
+
 
 class BarfOnFinal:
     init = False
@@ -58,6 +62,7 @@ class BarfOnFinal:
     def on_reactor_final(self, event):
         raise Barf()
 
+
 class BarfOnFinalDerived(Handshaker):
     init = False
 
@@ -66,6 +71,7 @@ class BarfOnFinalDerived(Handshaker):
 
     def on_reactor_final(self, event):
         raise Barf()
+
 
 class ExceptionTest(Test):
 
@@ -197,6 +203,7 @@ class ExceptionTest(Test):
                 self.parent = p
 
             results = []
+
             def on_timer_task(self, event):
                 self.parent.triggered = True
                 assert event.context == self.parent.task
@@ -208,6 +215,7 @@ class ExceptionTest(Test):
     def test_schedule_many_nothings(self):
         class Nothing:
             results = []
+
             def on_timer_task(self, event):
                 self.results.append(None)
         num = 12345
@@ -219,6 +227,7 @@ class ExceptionTest(Test):
     def test_schedule_many_nothing_refs(self):
         class Nothing:
             results = []
+
             def on_timer_task(self, event):
                 self.results.append(None)
         num = 12345
@@ -231,6 +240,7 @@ class ExceptionTest(Test):
     def test_schedule_many_nothing_refs_cancel_before_run(self):
         class Nothing:
             results = []
+
             def on_timer_task(self, event):
                 self.results.append(None)
         num = 12345
@@ -244,9 +254,11 @@ class ExceptionTest(Test):
 
     def test_schedule_cancel(self):
         barf = self.container.schedule(10, BarfOnTask())
+
         class CancelBarf:
             def __init__(self, barf):
                 self.barf = barf
+
             def on_timer_task(self, event):
                 self.barf.cancel()
                 pass
@@ -264,9 +276,11 @@ class ExceptionTest(Test):
         barfs = set()
         for a in range(num):
             barf = self.container.schedule(10 * (a + 1), BarfOnTask())
+
             class CancelBarf:
                 def __init__(self, barf):
                     self.barf = barf
+
                 def on_timer_task(self, event):
                     self.barf.cancel()
                     barfs.discard(self.barf)
@@ -307,7 +321,7 @@ class ApplicationEventTest(Test):
         if not hasattr(os, 'pipe'):
             # KAG: seems like Jython doesn't have an os.pipe() method
             raise SkipTest()
-        if os.name=="nt":
+        if os.name == "nt":
             # Correct implementation on Windows is complicated
             raise SkipTest("PROTON-1071")
         self.server = ApplicationEventTest.MyTestServer()
@@ -363,11 +377,13 @@ class AuthenticationTestHandler(MessagingHandler):
         event.connection.close()
         self.listener.close()
 
+
 class ContainerTest(Test):
     """Test container subclass of reactor."""
 
     def test_event_has_container_attribute(self):
         ensureCanTestExtendedSASL()
+
         class TestHandler(MessagingHandler):
             def __init__(self):
                 super(TestHandler, self).__init__()
@@ -382,6 +398,7 @@ class ContainerTest(Test):
                 self.listener.close()
         test_handler = TestHandler()
         container = Container(test_handler)
+
         class ConnectionHandler(MessagingHandler):
             def __init__(self):
                 super(ConnectionHandler, self).__init__()

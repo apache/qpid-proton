@@ -85,8 +85,10 @@ class FdLimitTest(unittest.TestCase):
                 self.assertEqual(sender.wait(), 0)
 
             # Additional send/receive should succeed now
-            self.assertIn("10 messages sent", test_subprocess.check_output(["send", "", b.port], universal_newlines=True))
-            self.assertIn("10 messages received", test_subprocess.check_output(["receive", "", b.port], universal_newlines=True))
+            self.assertIn("10 messages sent", test_subprocess.check_output(
+                ["send", "", b.port], universal_newlines=True))
+            self.assertIn("10 messages received", test_subprocess.check_output(
+                ["receive", "", b.port], universal_newlines=True))
 
 
 if __name__ == "__main__":

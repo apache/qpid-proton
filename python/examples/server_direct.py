@@ -25,6 +25,7 @@ from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
+
 class Server(MessagingHandler):
     def __init__(self, url):
         super(Server, self).__init__()
@@ -58,9 +59,8 @@ class Server(MessagingHandler):
         sender.send(Message(address=event.message.reply_to, body=event.message.body.upper(),
                             correlation_id=event.message.correlation_id))
 
+
 try:
     Container(Server("0.0.0.0:8888")).run()
-except KeyboardInterrupt: pass
-
-
-
+except KeyboardInterrupt:
+    pass

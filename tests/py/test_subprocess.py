@@ -27,7 +27,7 @@ from subprocess import PIPE
 
 
 def in_path(name):
-    """Look for name in the PATH""" 
+    """Look for name in the PATH"""
     for path in os.environ["PATH"].split(os.pathsep):
         f = os.path.join(path, name)
         if os.path.isfile(f) and os.access(f, os.X_OK):
@@ -37,7 +37,7 @@ def in_path(name):
 class TestProcessError(Exception):
     def __init__(self, proc, what, output=None):
         self.output = output
-        sep = "\n%s stderr(%s) %s\n" %("_" * 32, proc.pid, "_" * 32)
+        sep = "\n%s stderr(%s) %s\n" % ("_" * 32, proc.pid, "_" * 32)
         error = sep + proc.error + sep if proc.error else ""
         super(TestProcessError, self).__init__("%s pid=%s exit=%s: %s%s" % (
             proc.cmd, proc.pid, proc.returncode, what, error))
@@ -116,6 +116,7 @@ def check_output(*args, **kwargs):
 
 class Server(Popen):
     """A process that prints 'listening on <port>' to stdout"""
+
     def __init__(self, *args, **kwargs):
         super(Server, self).__init__(*args, **kwargs)
         self.port = self.expect("listening on ([0-9]+)$").group(1)
