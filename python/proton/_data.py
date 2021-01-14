@@ -582,31 +582,31 @@ class Data:
         * :const:`MAP`
     """
 
-    NULL = PN_NULL; "A null value."
-    BOOL = PN_BOOL; "A boolean value."
-    UBYTE = PN_UBYTE; "An unsigned byte value."
-    BYTE = PN_BYTE; "A signed byte value."
-    USHORT = PN_USHORT; "An unsigned short value."
-    SHORT = PN_SHORT; "A short value."
-    UINT = PN_UINT; "An unsigned int value."
-    INT = PN_INT; "A signed int value."
-    CHAR = PN_CHAR; "A character value."
-    ULONG = PN_ULONG; "An unsigned long value."
-    LONG = PN_LONG; "A signed long value."
-    TIMESTAMP = PN_TIMESTAMP; "A timestamp value."
-    FLOAT = PN_FLOAT; "A float value."
-    DOUBLE = PN_DOUBLE; "A double value."
-    DECIMAL32 = PN_DECIMAL32; "A DECIMAL32 value."
-    DECIMAL64 = PN_DECIMAL64; "A DECIMAL64 value."
-    DECIMAL128 = PN_DECIMAL128; "A DECIMAL128 value."
-    UUID = PN_UUID; "A UUID value."
-    BINARY = PN_BINARY; "A binary string."
-    STRING = PN_STRING; "A unicode string."
-    SYMBOL = PN_SYMBOL; "A symbolic string."
-    DESCRIBED = PN_DESCRIBED; "A described value."
-    ARRAY = PN_ARRAY; "An array value."
-    LIST = PN_LIST; "A list value."
-    MAP = PN_MAP; "A map value."
+    NULL = PN_NULL  #: A null value.
+    BOOL = PN_BOOL  #: A boolean value.
+    UBYTE = PN_UBYTE  #: An unsigned byte value.
+    BYTE = PN_BYTE  #: A signed byte value.
+    USHORT = PN_USHORT  #: An unsigned short value.
+    SHORT = PN_SHORT  #: A short value.
+    UINT = PN_UINT  #: An unsigned int value.
+    INT = PN_INT  #: A signed int value.
+    CHAR = PN_CHAR  #: A character value.
+    ULONG = PN_ULONG  #: An unsigned long value.
+    LONG = PN_LONG  #: A signed long value.
+    TIMESTAMP = PN_TIMESTAMP  #: A timestamp value.
+    FLOAT = PN_FLOAT  #: A float value.
+    DOUBLE = PN_DOUBLE  #: A double value.
+    DECIMAL32 = PN_DECIMAL32  #: A DECIMAL32 value.
+    DECIMAL64 = PN_DECIMAL64  #: A DECIMAL64 value.
+    DECIMAL128 = PN_DECIMAL128  #: A DECIMAL128 value.
+    UUID = PN_UUID  #: A UUID value.
+    BINARY = PN_BINARY  #: A binary string.
+    STRING = PN_STRING  #: A unicode string.
+    SYMBOL = PN_SYMBOL  #: A symbolic string.
+    DESCRIBED = PN_DESCRIBED  #: A described value.
+    ARRAY = PN_ARRAY  #: An array value.
+    LIST = PN_LIST  #: A list value.
+    MAP = PN_MAP  #: A map value.
 
     type_names = {
         NULL: "null",

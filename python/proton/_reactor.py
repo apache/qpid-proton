@@ -19,7 +19,7 @@
 
 from __future__ import absolute_import
 
-#from functools import total_ordering
+# from functools import total_ordering  # TODO(PROTON-2323) requires Python 3
 import heapq
 import json
 import logging
@@ -60,7 +60,9 @@ def _generate_uuid():
 def _now():
     return time.time()
 
-#@total_ordering
+# @total_ordering  # TODO(PROTON-2323) requires Python 3
+
+
 class Task(object):
 
     def __init__(self, reactor, deadline, handler):
@@ -189,7 +191,7 @@ class Reactor(object):
     # Cross thread reactor wakeup
     def wakeup(self):
         # TODO: Do this with pipe and write?
-        #os.write(self._wakeup[1], "x", 1);
+        #  os.write(self._wakeup[1], "x", 1);
         pass
 
     def start(self):
@@ -197,8 +199,8 @@ class Reactor(object):
         self._selectable = TimerSelectable(self)
         self._selectable.deadline = self.timer_deadline
         # TODO set up fd to read for wakeups - but problematic on windows
-        # self._selectable.fileno(self._wakeup[0])
-        #self._selectable.reading = True
+        #  self._selectable.fileno(self._wakeup[0])
+        #  self._selectable.reading = True
         self.update(self._selectable)
 
     @property
@@ -679,7 +681,8 @@ class SenderOption(LinkOption):
         """
         pass
 
-    def test(self, link): return link.is_sender
+    def test(self, link):
+        return link.is_sender
 
 
 class ReceiverOption(LinkOption):
@@ -696,7 +699,8 @@ class ReceiverOption(LinkOption):
         """
         pass
 
-    def test(self, link): return link.is_receiver
+    def test(self, link):
+        return link.is_receiver
 
 
 class DynamicNodeProperties(LinkOption):

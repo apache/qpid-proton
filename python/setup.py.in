@@ -46,7 +46,6 @@ for this and produce an appropriate error if the requirements are not met.
 """
 
 import os
-import shutil
 
 from setuptools import setup, Extension
 from setuptools.command.sdist import sdist
@@ -60,9 +59,7 @@ from setuputils import log
 from setuputils import misc
 
 
-_PROTON_VERSION=(@PN_VERSION_MAJOR@,
-                 @PN_VERSION_MINOR@,
-                 @PN_VERSION_POINT@)
+_PROTON_VERSION = (@PN_VERSION_MAJOR@, @PN_VERSION_MINOR@, @PN_VERSION_POINT@)
 _PROTON_VERSION_STR = "%d.%d.%d" % _PROTON_VERSION
 
 
@@ -73,8 +70,8 @@ class Swig(build_ext):
         cproton.py.
         """
         ext = Extension('_cproton',
-                             sources=['cproton.i'],
-                             swig_opts=['-threads', '-Iinclude'])
+                        sources=['cproton.i'],
+                        swig_opts=['-threads', '-Iinclude'])
 
         if 'SWIG' in os.environ:
             self.swig = os.environ['SWIG']
