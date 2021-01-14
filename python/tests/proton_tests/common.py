@@ -319,7 +319,7 @@ class MessengerApp(object):
         return self._process.returncode
 
     def stdout(self):
-        #self._process.communicate()[0]
+        # self._process.communicate()[0]
         if not self._output or not self._output[0]:
             return "*** NO STDOUT ***"
         return self._output[0]

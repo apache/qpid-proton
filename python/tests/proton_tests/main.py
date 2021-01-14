@@ -41,7 +41,7 @@ else:
 levels = {
     "DEBUG": DEBUG,
     "INFO": INFO,
-  "WARN": WARN,
+    "WARN": WARN,
     "ERROR": ERROR
 }
 

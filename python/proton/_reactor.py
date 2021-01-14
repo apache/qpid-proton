@@ -197,7 +197,7 @@ class Reactor(object):
         self._selectable = TimerSelectable(self)
         self._selectable.deadline = self.timer_deadline
         # TODO set up fd to read for wakeups - but problematic on windows
-        #self._selectable.fileno(self._wakeup[0])
+        # self._selectable.fileno(self._wakeup[0])
         #self._selectable.reading = True
         self.update(self._selectable)
 
@@ -414,7 +414,7 @@ class EventInjector(object):
 
     def on_selectable_init(self, event):
         sel = event.context
-        #sel.fileno(self.fileno())
+        # sel.fileno(self.fileno())
         sel.reading = True
         sel.update()
 
@@ -1044,7 +1044,7 @@ class _Connector(Handler):
             self._connect_sequence = ((delay, url) for delay in delay_iter(max_tries=1) for url in self.address)
         else:
             self._connect_sequence = ((delay, url) for delay in self.reconnect for url in self.address)
-        _, url = next(self._connect_sequence) # Ignore delay as we assume first delay must be 0
+        _, url = next(self._connect_sequence)  # Ignore delay as we assume first delay must be 0
         self._connect(event.connection, url)
 
     def on_connection_remote_open(self, event):
@@ -1054,7 +1054,7 @@ class _Connector(Handler):
         elif self.reconnect:
             self._connect_sequence = ((delay, url) for delay in self.reconnect for url in self.address)
         else:
-            self._connect_sequence = None # Help take out the garbage
+            self._connect_sequence = None  # Help take out the garbage
 
     def on_transport_closed(self, event):
         if self.connection is None:
