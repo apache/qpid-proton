@@ -135,13 +135,13 @@ class ClientTransportTest(Test):
         self.transport.push(out)
 
         c = Connection()
-        assert c.remote_container == None
-        assert c.remote_hostname == None
-        assert c.session_head(0) == None
+        assert c.remote_container is None
+        assert c.remote_hostname is None
+        assert c.session_head(0) is None
         self.transport.bind(c)
         assert c.remote_container == "test-container"
         assert c.remote_hostname == "test-hostname"
-        assert c.session_head(0) != None
+        assert c.session_head(0) is not None
 
     def testCloseHead(self):
         n = self.transport.pending()
@@ -299,13 +299,13 @@ class ServerTransportTest(Test):
         self.transport.push(out)
 
         c = Connection()
-        assert c.remote_container == None
-        assert c.remote_hostname == None
-        assert c.session_head(0) == None
+        assert c.remote_container is None
+        assert c.remote_hostname is None
+        assert c.session_head(0) is None
         self.transport.bind(c)
         assert c.remote_container == "test-container"
         assert c.remote_hostname == "test-hostname"
-        assert c.session_head(0) != None
+        assert c.session_head(0) is not None
 
     def testCloseHead(self):
         n = self.transport.pending()

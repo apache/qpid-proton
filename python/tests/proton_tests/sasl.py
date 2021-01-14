@@ -42,7 +42,8 @@ def _sslCertpath(file):
                         "ssl_db/%s" % file)
 
 
-def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', authzid=None, encrypted=False, authenticated=True):
+def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton',
+                  authzid=None, encrypted=False, authenticated=True):
     self.s1.allowed_mechs(mech)
     self.c1.open()
     self.c2.open()
@@ -78,9 +79,9 @@ def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', 
                 self.c1.state & Endpoint.LOCAL_ACTIVE, self.c1.state & Endpoint.REMOTE_ACTIVE)
     else:
         # Server
-        assert self.t2.user == None
-        assert self.s2.user == None
-        assert self.s2.authorization == None, self.s2.authorization
+        assert self.t2.user is None
+        assert self.s2.user is None
+        assert self.s2.authorization is None, self.s2.authorization
         assert self.s2.outcome != SASL.OK, self.s2.outcome
         # Client
         assert self.t1.user == clientUser
@@ -275,11 +276,11 @@ class SaslTest(Test):
         self.t1 = Transport()
         self.t2.require_auth(False)
         self.pump()
-        assert self.s2.outcome == None
-        assert self.t2.condition == None
+        assert self.s2.outcome is None
+        assert self.t2.condition is None
         assert self.t2.authenticated == False
-        assert self.s1.outcome == None
-        assert self.t1.condition == None
+        assert self.s1.outcome is None
+        assert self.t1.condition is None
         assert self.t1.authenticated == False
 
     def testSaslSkippedFail(self):
@@ -287,10 +288,10 @@ class SaslTest(Test):
         self.t1 = Transport()
         self.t2.require_auth(True)
         self.pump()
-        assert self.s2.outcome == None
-        assert self.t2.condition != None
-        assert self.s1.outcome == None
-        assert self.t1.condition != None
+        assert self.s2.outcome is None
+        assert self.t2.condition is not None
+        assert self.s1.outcome is None
+        assert self.t1.condition is not None
 
     def testMechNotFound(self):
         self.c1 = Connection()

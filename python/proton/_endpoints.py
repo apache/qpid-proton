@@ -1211,7 +1211,7 @@ class Link(Wrapper, Endpoint):
         size is unlimited.
 
         .. warning:: **Unsettled API**
-        
+
         :type: ``long``
         """)
 

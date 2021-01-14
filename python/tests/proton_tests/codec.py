@@ -151,7 +151,7 @@ class DataTest(Test):
         bits, signed = self.INT_TYPES[dtype]
         values = [0, 1, 2, 5, 42]
         if signed:
-            min, max = -2**(bits-1), 2**(bits-1)-1
+            min, max = -2**(bits - 1), 2**(bits - 1) - 1
             values.append(max // 2)
             values += [-i for i in values if i]
             values += [min, max]
@@ -180,7 +180,7 @@ class DataTest(Test):
         if dtype is None:
             assert described == False
         else:
-            assert described == True
+            assert described
         assert type == aTYPE, type
         assert self.data.enter()
         if described:
@@ -432,7 +432,7 @@ class DataTest(Test):
         self._test("decimal64", decimal64(0), decimal64(1), decimal64(2), decimal64(3), decimal64(4), decimal64(2**60))
 
     def testDecimal128(self):
-        self._test("decimal128", decimal128(b"fdsaasdf;lkjjkl;"), decimal128(b"x"*16))
+        self._test("decimal128", decimal128(b"fdsaasdf;lkjjkl;"), decimal128(b"x" * 16))
 
     def testCopy(self):
         self.data.put_described()

@@ -290,7 +290,7 @@ class Event(EventBase):
     LINK_LOCAL_OPEN = _core(PN_LINK_LOCAL_OPEN, "on_link_local_open")
     """
     The local link endpoint has been opened. Events of this type
-    point ot the relevant link.    
+    point ot the relevant link.
     """
 
     LINK_LOCAL_CLOSE = _core(PN_LINK_LOCAL_CLOSE, "on_link_local_close")

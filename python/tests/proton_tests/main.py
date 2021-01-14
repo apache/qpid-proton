@@ -110,7 +110,7 @@ for d in opts.defines:
     try:
         idx = d.index("=")
         name = d[:idx]
-        value = d[idx+1:]
+        value = d[idx + 1:]
         config.defines[name] = value
     except ValueError:
         config.defines[d] = None
@@ -470,7 +470,7 @@ def run_test(name, test, config):
             line = part
 
     if line:
-        output += "%s %s" % (line, (((WIDTH - ST_WIDTH) - len(line))*"."))
+        output += "%s %s" % (line, (((WIDTH - ST_WIDTH) - len(line)) * "."))
     sys.stdout.write(output)
     sys.stdout.flush()
     interceptor.begin()
@@ -728,7 +728,7 @@ def runthrough():
         if opts.time and run > 0:
             sys.stdout.write(colorize("Timing:", 1))
             timing = [colorize_word("elapsed", "%.2fs elapsed" % (end - start)),
-                      colorize_word("average", "%.2fs average" % ((end - start)/run))]
+                      colorize_word("average", "%.2fs average" % ((end - start) / run))]
             print(", ".join(timing))
 
     if xmlr:

@@ -74,7 +74,7 @@ class ConnectConfigTest(Test):
         write_connect_conf({'port': server.port})
         container.connect(handler=client, reconnect=False)
         container.run()
-        assert client.opened == True
+        assert client.opened
 
     def test_user(self):
         ensureCanTestExtendedSASL()
@@ -86,8 +86,8 @@ class ConnectConfigTest(Test):
         write_connect_conf({'port': server.port, 'user': user, 'password': password})
         container.connect(handler=client, reconnect=False)
         container.run()
-        assert client.opened == True
-        assert server.verified_user == True
+        assert client.opened
+        assert server.verified_user
 
     def test_ssl(self):
         ensureCanTestExtendedSASL()
@@ -107,7 +107,7 @@ class ConnectConfigTest(Test):
         write_connect_conf(config)
         container.connect(handler=client, reconnect=False)
         container.run()
-        assert client.opened == True
+        assert client.opened
 
     def test_ssl_external(self):
         ensureCanTestExtendedSASL()
@@ -137,7 +137,7 @@ class ConnectConfigTest(Test):
         write_connect_conf(config)
         container.connect(handler=client, reconnect=False)
         container.run()
-        assert client.opened == True
+        assert client.opened
 
     def test_ssl_plain(self):
         ensureCanTestExtendedSASL()
@@ -171,4 +171,4 @@ class ConnectConfigTest(Test):
         write_connect_conf(config)
         container.connect(handler=client, reconnect=False)
         container.run()
-        assert client.opened == True
+        assert client.opened

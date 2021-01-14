@@ -37,7 +37,7 @@ TYPEStmp = doc.query["amqp/section/type", eq("@class", "composite")] + \
     mdoc.query["amqp/section/type", eq("@provides", "section")]
 TYPES = []
 for ty in TYPEStmp:
-    if not ty in TYPES:
+    if ty not in TYPES:
         TYPES.append(ty)
 RESTRICTIONS = {}
 COMPOSITES = {}

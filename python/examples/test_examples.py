@@ -80,8 +80,8 @@ class ExamplesTest(unittest.TestCase):
             with Popen([send]):
                 pass
             actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
-            expected_py2 = ["{'sequence': int32(%i)}" % (i+1,) for i in range(100)]
-            expected_py3 = ["{'sequence': %i}" % (i+1,) for i in range(100)]
+            expected_py2 = ["{'sequence': int32(%i)}" % (i + 1,) for i in range(100)]
+            expected_py3 = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
             self.assertIn(actual, [expected_py2, expected_py3])
 
     def test_client_server(self, client=['client.py'], server=['server.py'], sleep=0):
@@ -123,7 +123,7 @@ class ExamplesTest(unittest.TestCase):
         subprocess.check_call(['db_ctrl.py', 'init', './dst_db'])
         with Popen(['db_ctrl.py', 'insert', './src_db'], stdin=subprocess.PIPE) as fill:
             for i in range(100):
-                fill.stdin.write("Message-%i\n" % (i+1))
+                fill.stdin.write("Message-%i\n" % (i + 1))
             fill.stdin.close()
 
         # run send and recv
@@ -133,13 +133,13 @@ class ExamplesTest(unittest.TestCase):
             r.wait()
             # verify output of receive
             actual = [l.strip() for l in r.stdout]
-            expected = ["inserted message %i" % (i+1) for i in range(100)]
+            expected = ["inserted message %i" % (i + 1) for i in range(100)]
             self.assertEqual(actual, expected)
 
         # verify state of databases
         with Popen(['db_ctrl.py', 'list', './dst_db']) as v:
             v.wait()
-            expected = ["(%i, 'Message-%i')" % (i+1, i+1) for i in range(100)]
+            expected = ["(%i, 'Message-%i')" % (i + 1, i + 1) for i in range(100)]
             actual = [remove_unicode_prefix(l.strip()) for l in v.stdout]
             self.assertEqual(actual, expected)
 
@@ -154,8 +154,8 @@ class ExamplesTest(unittest.TestCase):
                 pass
             r.wait()
             actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
-            expected_py2 = ["{'sequence': int32(%i)}" % (i+1,) for i in range(100)]
-            expected_py3 = ["{'sequence': %i}" % (i+1,) for i in range(100)]
+            expected_py2 = ["{'sequence': int32(%i)}" % (i + 1,) for i in range(100)]
+            expected_py3 = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
             self.assertIn(actual, [expected_py2, expected_py3])
 
     def test_direct_send_simple_recv(self):
@@ -175,11 +175,11 @@ class ExamplesTest(unittest.TestCase):
         with Popen(['selected_recv.py', '-m', '50']) as r:
             r.wait()
             actual = [l.strip() for l in r.stdout]
-            expected = ["green %i" % (i+1) for i in range(100) if i % 2 == 0]
+            expected = ["green %i" % (i + 1) for i in range(100) if i % 2 == 0]
             self.assertEqual(actual, expected)
 
         with Popen(['simple_recv.py', '-m', '50']) as r:
             r.wait()
             actual = [l.strip() for l in r.stdout]
-            expected = ["red %i" % (i+1) for i in range(100) if i % 2 == 1]
+            expected = ["red %i" % (i + 1) for i in range(100) if i % 2 == 1]
             self.assertEqual(actual, expected)

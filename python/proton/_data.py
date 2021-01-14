@@ -282,7 +282,7 @@ class Array(object):
     :ivar type: Array element type, as an integer. The :class:`Data` class has constants defined
         for all the valid AMQP types. For example, for an array of double values, use
         :const:`Data.DOUBLE`, which has integer value 14.
-    :ivar elements: A Python list of elements of the appropriate type.    
+    :ivar elements: A Python list of elements of the appropriate type.
     """
 
     def __init__(self, descriptor, type, *elements):
@@ -958,7 +958,7 @@ class Data:
 
         :param ui: an integral value in the range :math:`0` to :math:`2^{32} - 1` inclusive.
         :type ui: ``int``, :class:`uint`
-        :raise: * ``AssertionError`` if parameter is out of the range :math:`0` to :math:`2^{32} - 1` inclusive. 
+        :raise: * ``AssertionError`` if parameter is out of the range :math:`0` to :math:`2^{32} - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_uint(self._data, ui))
@@ -1187,7 +1187,7 @@ class Data:
             >>> data.exit()
 
         :return: A tuple containing the number of array elements, the descriptor
-            (or ``None`` if no descriptor) and the enumerated array element type. 
+            (or ``None`` if no descriptor) and the enumerated array element type.
         :rtype: ``tuple`` (``int``, ``str`` or ``None``, ``int``)
         """
         count = pn_data_get_array(self._data)

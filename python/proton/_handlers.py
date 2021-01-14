@@ -324,8 +324,8 @@ class EndpointStateHandler(Handler):
 
     :param peer_close_is_error: If ``True``, a peer endpoint closing will be
         treated as an error with an error callback. Otherwise (default), the
-        normal callbacks for the closing will occur. 
-    :type peer_close_is_error:  ``bool`` 
+        normal callbacks for the closing will occur.
+    :type peer_close_is_error:  ``bool``
     :param delegate: A client handler for the endpoint event
     """
 
@@ -714,8 +714,8 @@ class MessagingHandler(Handler, Acking):
     :type auto_settle: ``bool``
     :param peer_close_is_error: If ``True``, a peer endpoint closing will be
         treated as an error with an error callback. Otherwise (default), the
-        normal callbacks for the closing will occur. 
-    :type peer_close_is_error:  ``bool``  
+        normal callbacks for the closing will occur.
+    :type peer_close_is_error:  ``bool``
     """
 
     def __init__(self, prefetch=10, auto_accept=True, auto_settle=True, peer_close_is_error=False):
@@ -995,7 +995,7 @@ class TransactionHandler(object):
 
     def on_transaction_commit_failed(self, event):
         """
-        Called when the commit of a local transaction fails. 
+        Called when the commit of a local transaction fails.
 
         :param event: The underlying event object. Use this to obtain further
             information on the event.
@@ -1022,8 +1022,8 @@ class TransactionalClientHandler(MessagingHandler, TransactionHandler):
     :type auto_settle: ``bool``
     :param peer_close_is_error: If ``True``, a peer endpoint closing will be
         treated as an error with an error callback. Otherwise (default), the
-        normal callbacks for the closing will occur. 
-    :type peer_close_is_error:  ``bool`` 
+        normal callbacks for the closing will occur.
+    :type peer_close_is_error:  ``bool``
     """
 
     def __init__(self, prefetch=10, auto_accept=False, auto_settle=True, peer_close_is_error=False):

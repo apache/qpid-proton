@@ -160,11 +160,11 @@ class Url(object):
         if ':' in afterbrace:
             afterbracesplit = afterbrace.split(':')
             port = afterbracesplit[1]
-            host = (beforebrace+afterbracesplit[0]).lower()
+            host = (beforebrace + afterbracesplit[0]).lower()
             if not port:
                 port = None
         else:
-            host = (beforebrace+afterbrace).lower()
+            host = (beforebrace + afterbrace).lower()
             port = None
         if not host:
             host = None

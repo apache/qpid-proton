@@ -248,7 +248,7 @@ class Disposition(object):
 
     condition = property(_get_condition, _set_condition, doc="""
         The condition object associated with a disposition.
-        
+
         The :class:`Condition` object retrieved by this operation may be
         modified prior to updating a delivery. When a delivery is updated,
         the condition described by the disposition is reported to the peer

@@ -32,7 +32,7 @@ def find_test_interop_dir():
     f = dirname(dirname(dirname(dirname(abspath(__file__)))))
     f = join(f, "tests", "interop")
     if not isdir(f):
-        raise Exception("Cannot find tests/interop directory from "+__file__)
+        raise Exception("Cannot find tests/interop directory from " + __file__)
     return f
 
 
@@ -49,7 +49,7 @@ class InteropTest(common.Test):
         self.data = None
 
     def get_data(self, name):
-        filename = os.path.join(test_interop_dir, name+".amqp")
+        filename = os.path.join(test_interop_dir, name + ".amqp")
         f = open(filename, "rb")
         try:
             return f.read()

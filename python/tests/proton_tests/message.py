@@ -247,7 +247,7 @@ class CodecTest(Test):
         assert dproperties.descriptor == 0x73, (dproperties.descriptor)
 
         properties = dproperties.value
-        assert properties[8] == None, properties[8]
+        assert properties[8] is None, properties[8]
 
     def testCreationEncodeAsNull(self):
         self.msg.group_id = "A"  # Force creation and expiry fields to be present
@@ -266,7 +266,7 @@ class CodecTest(Test):
         assert dproperties.descriptor == 0x73, (dproperties.descriptor)
 
         properties = dproperties.value
-        assert properties[9] == None, properties[9]
+        assert properties[9] is None, properties[9]
 
     def testGroupSequenceEncodeAsNull(self):
         self.msg.reply_to_group_id = "R"  # Force group_id and group_sequence fields to be present
@@ -285,8 +285,8 @@ class CodecTest(Test):
         assert dproperties.descriptor == 0x73, (dproperties.descriptor)
 
         properties = dproperties.value
-        assert properties[10] == None, properties[10]
-        assert properties[11] == None, properties[11]
+        assert properties[10] is None, properties[10]
+        assert properties[11] is None, properties[11]
 
     def testGroupSequenceEncodeAsNonNull(self):
         self.msg.group_id = "G"
@@ -345,7 +345,7 @@ class CodecTest(Test):
 
         # Check that the priority field (second field) is encoded as null
         headers = dheaders.value
-        assert headers[1] == None, (headers[1])
+        assert headers[1] is None, (headers[1])
 
     def testDefaultPriorityDecode(self):
         # This is a message with everything filled explicitly as null or zero in LIST32 HEADER and PROPERTIES lists

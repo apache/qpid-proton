@@ -52,7 +52,7 @@ except:
     def bytearray(x):
         return b'\x00' * x
 
-OUTPUT_SIZE = 10*1024
+OUTPUT_SIZE = 10 * 1024
 
 
 class Test(common.Test):
@@ -293,7 +293,7 @@ class ConnectionTest(Test):
         self.c1.open()
         self.c2.open()
         ssn_0 = self.c2.session()
-        assert ssn_0 != None
+        assert ssn_0 is not None
         ssn_0.open()
         self.pump()
         try:
@@ -333,9 +333,9 @@ class ConnectionTest(Test):
         self.pump()
 
         assert self.c1.user == "vindaloo", self.c1.user
-        assert self.c1.password == None, self.c1.password
+        assert self.c1.password is None, self.c1.password
         assert self.c2.user == "leela", self.c2.user
-        assert self.c2.password == None, self.c2.password
+        assert self.c2.password is None, self.c2.password
 
 
 class SessionTest(Test):
@@ -372,7 +372,7 @@ class SessionTest(Test):
 
         ssn = self.c2.session_head(Endpoint.REMOTE_ACTIVE | Endpoint.LOCAL_UNINIT)
 
-        assert ssn != None
+        assert ssn is not None
         assert ssn.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE
         assert self.ssn.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT
 
@@ -410,7 +410,7 @@ class SessionTest(Test):
         self.ssn.open()
         self.pump()
         ssn = self.c2.session_head(Endpoint.REMOTE_ACTIVE | Endpoint.LOCAL_UNINIT)
-        assert ssn != None
+        assert ssn is not None
         ssn.open()
         self.pump()
 
@@ -440,7 +440,7 @@ class SessionTest(Test):
         self.ssn.open()
         self.pump()
         ssn = self.c2.session_head(Endpoint.REMOTE_ACTIVE | Endpoint.LOCAL_UNINIT)
-        assert ssn != None
+        assert ssn is not None
         ssn.open()
         self.pump()
 
@@ -779,7 +779,7 @@ class LinkTest(Test):
         self.pump()
 
         assert self.rcv.remote_properties == sender_props, (self.rcv.remote_properties, sender_props)
-        assert self.snd.remote_properties == None, (self.snd.remote_properties, None)
+        assert self.snd.remote_properties is None, (self.snd.remote_properties, None)
 
     def test_cleanup(self):
         snd, rcv = self.link("test-link")
@@ -1008,7 +1008,7 @@ class TransferTest(Test):
 
     def test_delivery_id_ordering(self):
         self.rcv.flow(1024)
-        self.pump(buffer_size=64*1024)
+        self.pump(buffer_size=64 * 1024)
 
         # fill up delivery buffer on sender
         for m in range(1024):
@@ -1018,7 +1018,7 @@ class TransferTest(Test):
             assert n == len(msg)
             assert self.snd.advance()
 
-        self.pump(buffer_size=64*1024)
+        self.pump(buffer_size=64 * 1024)
 
         # receive a session-windows worth of messages and accept them
         for m in range(1024):
@@ -1030,7 +1030,7 @@ class TransferTest(Test):
             rd.update(Delivery.ACCEPTED)
             rd.settle()
 
-        self.pump(buffer_size=64*1024)
+        self.pump(buffer_size=64 * 1024)
 
         # add some new deliveries
         for m in range(1024, 1450):
@@ -1057,9 +1057,9 @@ class TransferTest(Test):
             assert n == len(msg)
             assert self.snd.advance()
 
-        self.pump(buffer_size=64*1024)
+        self.pump(buffer_size=64 * 1024)
         self.rcv.flow(1024)
-        self.pump(buffer_size=64*1024)
+        self.pump(buffer_size=64 * 1024)
 
         # verify remaining messages can be received and accepted
         for m in range(1024, 1500):
@@ -1149,7 +1149,7 @@ class MaxFrameTransferTest(Test):
         assert binary == msg
 
         binary = self.rcv.recv(1024)
-        assert binary == None
+        assert binary is None
 
     def testOddFrame(self):
         """
@@ -1178,7 +1178,7 @@ class MaxFrameTransferTest(Test):
         assert binary == msg
 
         binary = self.rcv.recv(1024)
-        assert binary == None
+        assert binary is None
 
         self.rcv.advance()
 
@@ -1196,7 +1196,7 @@ class MaxFrameTransferTest(Test):
         self.pump()
 
         binary = self.rcv.recv(1024)
-        assert binary == None
+        assert binary is None
 
     def testSendQueuedMultiFrameMessages(self, sendSingleFrameMsg=False):
         """
@@ -1278,18 +1278,18 @@ class MaxFrameTransferTest(Test):
 
         self.rcv.flow(2)
         self.snd.delivery("tag")
-        msg = self.message(1024*256)
+        msg = self.message(1024 * 256)
         n = self.snd.send(msg)
         assert n == len(msg)
         assert self.snd.advance()
 
         self.pump()
 
-        binary = self.rcv.recv(1024*256)
+        binary = self.rcv.recv(1024 * 256)
         assert binary == msg
 
         binary = self.rcv.recv(1024)
-        assert binary == None
+        assert binary is None
 
     def testMaxFrameAbort(self):
         self.snd, self.rcv = self.link("test-link", max_frame=[0, 512])
@@ -1412,14 +1412,14 @@ class IdleTimeoutTest(Test):
         # at t+1msec, nothing should happen:
         clock = 0.001
         assert t_snd.tick(clock) == 1.001, "deadline for remote timeout"
-        assert t_rcv.tick(clock) == 0.251,  "deadline to send keepalive"
+        assert t_rcv.tick(clock) == 0.251, "deadline to send keepalive"
         self.pump()
         assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
 
         # at one tick from expected idle frame send, nothing should happen:
         clock = 0.250
         assert t_snd.tick(clock) == 1.001, "deadline for remote timeout"
-        assert t_rcv.tick(clock) == 0.251,  "deadline to send keepalive"
+        assert t_rcv.tick(clock) == 0.251, "deadline to send keepalive"
         self.pump()
         assert sndr_frames_in == t_snd.frames_input, "unexpected received frame"
 
@@ -1452,7 +1452,7 @@ class IdleTimeoutTest(Test):
 class CreditTest(Test):
 
     def setUp(self):
-        self.snd, self.rcv = self.link("test-link", max_frame=(16*1024, 16*1024))
+        self.snd, self.rcv = self.link("test-link", max_frame=(16 * 1024, 16 * 1024))
         self.c1 = self.snd.session.connection
         self.c2 = self.rcv.session.connection
         self.snd.open()
@@ -1861,7 +1861,7 @@ class SessionCreditTest(Test):
     def tearDown(self):
         self.cleanup()
 
-    def testBuffering(self, count=32, size=1024, capacity=16*1024, max_frame=1024):
+    def testBuffering(self, count=32, size=1024, capacity=16 * 1024, max_frame=1024):
         snd, rcv = self.link("test-link", max_frame=(max_frame, max_frame))
         rcv.session.incoming_capacity = capacity
         snd.open()
@@ -1945,7 +1945,7 @@ class SessionCreditTest(Test):
 
     def testCreditWithBuffering(self):
         snd, rcv = self.link("test-link", max_frame=(1024, 1024))
-        rcv.session.incoming_capacity = 64*1024
+        rcv.session.incoming_capacity = 64 * 1024
         snd.open()
         rcv.open()
         rcv.flow(128)
@@ -1957,7 +1957,7 @@ class SessionCreditTest(Test):
         idx = 0
         while snd.credit:
             d = snd.delivery("tag%s" % idx)
-            snd.send(("x"*1024).encode('ascii'))
+            snd.send(("x" * 1024).encode('ascii'))
             assert d
             assert snd.advance()
             self.pump()
@@ -2061,7 +2061,7 @@ class SettlementTest(Test):
         for i in range(count):
             sd = self.snd.delivery("tag%s" % i)
             assert sd
-            n = self.snd.send(("x"*size).encode('ascii'))
+            n = self.snd.send(("x" * size).encode('ascii'))
             assert n == size, n
             assert self.snd.advance()
             self.pump()
@@ -2256,13 +2256,13 @@ class NoValue:
         pass
 
     def check(self, dlv):
-        assert dlv.data == None
+        assert dlv.data is None
         assert dlv.section_number == 0
         assert dlv.section_offset == 0
-        assert dlv.condition == None
+        assert dlv.condition is None
         assert dlv.failed == False
         assert dlv.undeliverable == False
-        assert dlv.annotations == None
+        assert dlv.annotations is None
 
 
 class RejectValue:
@@ -2273,13 +2273,13 @@ class RejectValue:
         dlv.condition = self.condition
 
     def check(self, dlv):
-        assert dlv.data == None, dlv.data
+        assert dlv.data is None, dlv.data
         assert dlv.section_number == 0
         assert dlv.section_offset == 0
         assert dlv.condition == self.condition, (dlv.condition, self.condition)
         assert dlv.failed == False
         assert dlv.undeliverable == False
-        assert dlv.annotations == None
+        assert dlv.annotations is None
 
 
 class ReceivedValue:
@@ -2292,13 +2292,13 @@ class ReceivedValue:
         dlv.section_offset = self.section_offset
 
     def check(self, dlv):
-        assert dlv.data == None, dlv.data
+        assert dlv.data is None, dlv.data
         assert dlv.section_number == self.section_number, (dlv.section_number, self.section_number)
         assert dlv.section_offset == self.section_offset
-        assert dlv.condition == None
+        assert dlv.condition is None
         assert dlv.failed == False
         assert dlv.undeliverable == False
-        assert dlv.annotations == None
+        assert dlv.annotations is None
 
 
 class ModifiedValue:
@@ -2313,10 +2313,10 @@ class ModifiedValue:
         dlv.annotations = self.annotations
 
     def check(self, dlv):
-        assert dlv.data == None, dlv.data
+        assert dlv.data is None, dlv.data
         assert dlv.section_number == 0
         assert dlv.section_offset == 0
-        assert dlv.condition == None
+        assert dlv.condition is None
         assert dlv.failed == self.failed
         assert dlv.undeliverable == self.undeliverable
         assert dlv.annotations == self.annotations, (dlv.annotations, self.annotations)
@@ -2333,10 +2333,10 @@ class CustomValue:
         assert dlv.data == self.data, (dlv.data, self.data)
         assert dlv.section_number == 0
         assert dlv.section_offset == 0
-        assert dlv.condition == None
+        assert dlv.condition is None
         assert dlv.failed == False
         assert dlv.undeliverable == False
-        assert dlv.annotations == None
+        assert dlv.annotations is None
 
 
 class DeliveryTest(Test):
@@ -2581,7 +2581,7 @@ class EventTest(CollectorTest):
         self.pump()
         self.expect(Event.LINK_FLOW)
         rdlv = rcv.current
-        assert rdlv != None
+        assert rdlv is not None
         assert rdlv.tag == "delivery"
         rdlv.update(Delivery.ACCEPTED)
         self.pump()
@@ -2767,7 +2767,7 @@ class IdleTimeoutEventTest(PeerTest):
         self.half_pump()
         t = time()
         self.transport.tick(t)
-        self.transport.tick(t + self.delay*4)
+        self.transport.tick(t + self.delay * 4)
         self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
                     Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
                     Event.TRANSPORT_ERROR, Event.TRANSPORT_TAIL_CLOSED)

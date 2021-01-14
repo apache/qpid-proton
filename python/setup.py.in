@@ -135,13 +135,13 @@ class Configure(build_ext):
         # -D flags (None means no value, just define)
         macros += [('PROTON_DECLARE_STATIC', None)]
 
-        if self.compiler_type=='msvc':
+        if self.compiler_type == 'msvc':
             sources += [
                 os.path.join(proton_src, 'compiler', 'msvc', 'start.c')
             ]
-        elif self.compiler_type=='unix':
+        elif self.compiler_type == 'unix':
             sources += [
-                os.path.join(proton_src, 'compiler' , 'gcc', 'start.c')
+                os.path.join(proton_src, 'compiler', 'gcc', 'start.c')
             ]
 
         # Check whether openssl is installed by poking
@@ -151,7 +151,7 @@ class Configure(build_ext):
             libraries += ['ssl', 'crypto']
             includes += [misc.pkg_config_get_var('openssl', 'includedir')]
             sources.append(os.path.join(proton_src, 'ssl', 'openssl.c'))
-        elif os.name=='nt':
+        elif os.name == 'nt':
             libraries += ['crypt32', 'secur32']
             sources.append(os.path.join(proton_src, 'ssl', 'schannel.cpp'))
         else:
@@ -174,7 +174,7 @@ class Configure(build_ext):
         # strings there. This is a known issue with CMake and msbuild, see
         # * https://github.com/Microsoft/msbuild/issues/2424
         # * https://cmake.org/pipermail/cmake-developers/2015-October/026775.html
-        if cc.compiler_type!='msvc':
+        if cc.compiler_type != 'msvc':
             if cc.has_function('sasl_client_done', includes=['sasl/sasl.h'], libraries=['sasl2']):
                 libraries.append('sasl2')
                 sources.append(os.path.join(proton_src, 'sasl', 'cyrus_sasl.c'))
@@ -195,13 +195,13 @@ class Configure(build_ext):
         ds_sys.customize_compiler(cc)
 
         extra = []
-        if self.compiler_type=='unix':
+        if self.compiler_type == 'unix':
             extra.append('-std=gnu99')
         objects = cc.compile(sources,
                              macros=macros,
                              include_dirs=[build_include,
                                            proton_include,
-                                           proton_src]+includes,
+                                           proton_src] + includes,
                              # compiler command line options:
                              extra_preargs=extra,
                              output_dir=self.build_temp)
@@ -217,7 +217,7 @@ class Configure(build_ext):
 
         # lastly replace the libqpid-proton-core dependency with libraries required
         # by the Proton objects:
-        _cproton.libraries=libraries
+        _cproton.libraries = libraries
 
     def libqpid_proton_installed(self, version):
         """Check to see if the proper version of the Proton development library
@@ -282,7 +282,7 @@ setup(name='python-qpid-proton',
                    "Programming Language :: Python :: 3.6",
                    "Programming Language :: Python :: 3.7",
                    "Programming Language :: Python :: 3.8"],
-      cmdclass = {
+      cmdclass={
           'configure': Configure,
           'swig': Swig,
           'build_py': BuildExtFirst,
