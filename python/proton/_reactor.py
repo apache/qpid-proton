@@ -19,7 +19,6 @@
 
 from __future__ import absolute_import
 
-# from functools import total_ordering  # TODO(PROTON-2323) requires Python 3
 import heapq
 import json
 import logging
@@ -28,6 +27,7 @@ import os
 import time
 import traceback
 import uuid
+from functools import total_ordering
 
 from cproton import PN_PYREF, PN_ACCEPTED, PN_EVENT_NONE
 
@@ -60,9 +60,8 @@ def _generate_uuid():
 def _now():
     return time.time()
 
-# @total_ordering  # TODO(PROTON-2323) requires Python 3
 
-
+@total_ordering
 class Task(object):
 
     def __init__(self, reactor, deadline, handler):
