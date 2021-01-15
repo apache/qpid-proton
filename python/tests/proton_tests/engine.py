@@ -39,18 +39,6 @@ if not hasattr(gc, "garbage"):
 #  + resuming
 #    - locally and remotely created deliveries with the same tag
 
-# Jython 2.5 needs this:
-try:
-    bytes()
-except:
-    bytes = str
-
-# and this...
-try:
-    bytearray()
-except:
-    def bytearray(x):
-        return b'\x00' * x
 
 OUTPUT_SIZE = 10 * 1024
 

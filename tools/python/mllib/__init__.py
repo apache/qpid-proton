@@ -71,17 +71,12 @@ class Resolver:
 
 
 def xml_parse(filename, path=()):
-    if sys.version_info[0:2] == (2, 3):
-        # XXX: this is for older versions of python
-        source = "file://%s" % os.path.abspath(filename)
-    else:
-        source = filename
     h = parsers.XMLParser()
     p = xml.sax.make_parser()
     p.setContentHandler(h)
     p.setErrorHandler(ErrorHandler())
     p.setEntityResolver(Resolver(path))
-    p.parse(source)
+    p.parse(filename)
     return h.parser.tree
 
 
