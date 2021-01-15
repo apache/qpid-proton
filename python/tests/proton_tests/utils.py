@@ -147,7 +147,9 @@ class SyncRequestResponseTest(Test):
         server.start()
         server.wait()
         try:
-            # This will cause an exception because we are specifying allowed_mechs as EXTERNAL. The SASL handshake will fail because the server is not setup to handle EXTERNAL
+            # This will cause an exception because we are specifying allowed_mechs as
+            # EXTERNAL. The SASL handshake will fail because the server is not setup
+            # to handle EXTERNAL
             connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES,
                                             offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES, allowed_mechs=EXTERNAL)
             self.fail("Expected ConnectionException")

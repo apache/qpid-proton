@@ -39,7 +39,7 @@ for enc in doc.query["amqp/section/type/encoding"]:
     if name == "ieee-754":
         name = enc.parent["@name"]
     cname = "PNE_" + name.replace("-", "_").upper()
-    print("#define %s%s(%s)" % (cname, " "*(20-len(cname)), enc["@code"]))
+    print("#define %s%s(%s)" % (cname, " " * (20 - len(cname)), enc["@code"]))
 
 print()
 print("#endif /* encodings.h */")

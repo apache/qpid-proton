@@ -81,7 +81,7 @@ class Sexp(Identity):
 
     def line(self, s=""):
         self.out = self.out.rstrip()
-        self.out += "\n" + " "*self.level + s
+        self.out += "\n" + " " * self.level + s
 
     def close(self):
         s = self.stack.pop()

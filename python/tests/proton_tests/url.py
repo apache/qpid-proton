@@ -80,7 +80,7 @@ class UrlTest(common.Test):
         self.assertPort(Url.Port('amqp'), 5672, 'amqp')
         self.assertPort(Url.Port(5672), 5672, '5672')
         self.assertPort(Url.Port(5671), 5671, '5671')
-        self.assertEqual(Url.Port(5671)+1, 5672)  # Treat as int
+        self.assertEqual(Url.Port(5671) + 1, 5672)  # Treat as int
         self.assertEqual(str(Url.Port(5672)), '5672')
 
         self.assertPort(Url.Port(Url.Port('amqp')), 5672, 'amqp')

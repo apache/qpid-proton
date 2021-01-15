@@ -82,7 +82,7 @@ class XMLParser(xml.sax.handler.ContentHandler):
         self.locator = None
 
     def line(self):
-        if self.locator != None:
+        if self.locator is not None:
             self.parser.line(self.locator.getSystemId(),
                              self.locator.getLineNumber(),
                              self.locator.getColumnNumber())

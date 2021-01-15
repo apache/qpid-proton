@@ -136,7 +136,7 @@ for i in range(256):
         if i < field_min:
             field_min = i
 
-for i in range(field_min, field_max+1):
+for i in range(field_min, field_max + 1):
     if i in fields:
         name, fnames = fields[i]
         if fnames:

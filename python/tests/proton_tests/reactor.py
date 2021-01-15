@@ -210,7 +210,7 @@ class ExceptionTest(Test):
                 assert event.container == self.parent.container
         self.task = self.container.schedule(0, Nothing(self))
         self.container.run()
-        assert self.triggered == True
+        assert self.triggered
 
     def test_schedule_many_nothings(self):
         class Nothing:
@@ -578,7 +578,7 @@ class ContainerTest(Test):
         assert client_handler.errors == 10
         # Total time for failure should be greater than but close to 3s
         # would like to have an upper bound of about 3.2 too - but loaded CI machines can take a loooong time!
-        assert 3.0 < end-start, end-start
+        assert 3.0 < end - start, end - start
         assert client_handler.server_addr is None, client_handler.server_addr
 
     def test_failover_fail_custom_reconnect(self):
@@ -594,7 +594,7 @@ class ContainerTest(Test):
         assert client_handler.errors == 6
         # Total time for failure should be greater than but close to 3s
         # would like to have an upper bound of about 3.2 too - but loaded CI machines can take a loooong time!
-        assert 3.0 < end-start, end-start
+        assert 3.0 < end - start, end - start
         assert client_handler.server_addr is None, client_handler.server_addr
 
     def test_reconnect(self):
@@ -615,9 +615,9 @@ class ContainerTest(Test):
         container.connect(url="localhost:%s" % (server_handler.port),
                           handler=client_handler, reconnect=False)
         container.run()
-        assert server_handler.peer_hostname == None, server_handler.peer_hostname
+        assert server_handler.peer_hostname is None, server_handler.peer_hostname
         assert client_handler.connect_failed
-        assert client_handler.server_addr == None, client_handler.server_addr
+        assert client_handler.server_addr is None, client_handler.server_addr
 
 
 class SelectorTest(Test):

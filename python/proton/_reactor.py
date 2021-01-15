@@ -274,7 +274,7 @@ class Reactor(object):
         :param handler:
         """
         himpl = self._make_handler(handler)
-        task = Task(self, self._now+delay, himpl)
+        task = Task(self, self._now + delay, himpl)
         heapq.heappush(self._timerheap, task)
         self._timers += 1
         deadline = self._timerheap[0]._deadline
@@ -1303,9 +1303,11 @@ class Container(Reactor):
                 if cert and key:
                     _ssl_domain.set_credentials(str(cert), str(key), None)
 
-            return self._connect(_url, handler=handler, reconnect=reconnect, heartbeat=heartbeat, ssl_domain=_ssl_domain, **_kwargs)
+            return self._connect(_url, handler=handler, reconnect=reconnect,
+                                 heartbeat=heartbeat, ssl_domain=_ssl_domain, **_kwargs)
         else:
-            return self._connect(url=url, urls=urls, handler=handler, reconnect=reconnect, heartbeat=heartbeat, ssl_domain=ssl_domain, **kwargs)
+            return self._connect(url=url, urls=urls, handler=handler, reconnect=reconnect,
+                                 heartbeat=heartbeat, ssl_domain=ssl_domain, **kwargs)
 
     def _connect(self, url=None, urls=None, handler=None, reconnect=None, heartbeat=None, ssl_domain=None, **kwargs):
         conn = self.connection(handler)

@@ -75,7 +75,7 @@ class Dispatcher:
 
     def is_type(self, type):
         cls = self
-        while cls != None:
+        while cls is not None:
             if cls.type == type:
                 return True
             cls = cls.base
@@ -83,17 +83,17 @@ class Dispatcher:
 
     def dispatch(self, f, attrs=""):
         cls = self
-        while cls != None:
+        while cls is not None:
             if hasattr(f, cls.type):
                 return getattr(f, cls.type)(self)
             else:
                 cls = cls.base
 
         cls = self
-        while cls != None:
+        while cls is not None:
             if attrs:
                 sep = ", "
-                if cls.base == None:
+                if cls.base is None:
                     sep += "or "
             else:
                 sep = ""

@@ -343,7 +343,7 @@ class BlockingConnection(Handler):
     :type timeout: ``None`` or float
     :param container: Container to process the events on the connection. If ``None``,
         a new :class:`proton.Container` will be created.
-    :param ssl_domain: 
+    :param ssl_domain:
     :param heartbeat: A value in seconds indicating the desired frequency of
         heartbeats used to test the underlying socket is alive.
     :type heartbeat: ``float``

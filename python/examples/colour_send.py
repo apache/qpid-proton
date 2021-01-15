@@ -42,8 +42,8 @@ class Send(MessagingHandler):
                 colour = 'red'
             else:
                 colour = 'green'
-            content = '%s %d' % (colour, self.sent+1)
-            msg = Message(id=(self.sent+1), properties={'colour': colour}, body=content)
+            content = '%s %d' % (colour, self.sent + 1)
+            msg = Message(id=(self.sent + 1), properties={'colour': colour}, body=content)
             event.sender.send(msg)
             self.sent += 1
 
