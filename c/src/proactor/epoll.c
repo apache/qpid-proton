@@ -314,8 +314,7 @@ bool schedule(task_t *tsk) {
 }
 
 // part2: unblock epoll_wait().  Make OS call without lock held.
-void notify_poller(task_t *tsk) {
-  pn_proactor_t *p = tsk->proactor;
+void notify_poller(pn_proactor_t *p) {
   if (p->eventfd == -1)
     return;
   rearm(p, &p->epoll_schedule);
@@ -706,7 +705,7 @@ static void proactor_rearm_overflow(pn_proactor_t *p) {
     }
     else notify = schedule(&l->task);
     unlock(&l->task.mutex);
-    if (notify) notify_poller(&l->task);
+    if (notify) notify_poller(p);
     a = acceptor_list_next(&ovflw);
   }
 }
@@ -871,7 +870,7 @@ void pni_pconnection_timeout(pconnection_t  *pc) {
   }
   unlock(&pc->task.mutex);
   if (notify)
-    notify_poller(&pc->task);
+    notify_poller(pc->task.proactor);
 }
 
 static pn_event_t *pconnection_batch_next(pn_event_batch_t *batch) {
@@ -1018,7 +1017,7 @@ static void pconnection_done(pconnection_t *pc) {
       notify = unassign_thread(ts, UNUSED);
       unlock(&p->sched_mutex);
       if (notify)
-        notify_poller(&p->task);
+        notify_poller(p);
       return;
     }
   }
@@ -1033,7 +1032,7 @@ static void pconnection_done(pconnection_t *pc) {
   if (unassign_thread(ts, UNUSED))
     notify = true;
   unlock(&p->sched_mutex);
-  if (notify) notify_poller(&p->task);
+  if (notify) notify_poller(p);
   return;
 }
 
@@ -1399,7 +1398,6 @@ void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *
   pn_connection_open(pc->driver.connection); /* Auto-open */
 
   bool notify = false;
-  bool notify_proactor = false;
 
   if (pc->disconnected) {
     notify = schedule(&pc->task);    /* Error during initialization */
@@ -1414,14 +1412,13 @@ void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *
       psocket_gai_error(&pc->psocket, gai_error, "connect to ");
       notify = schedule(&pc->task);
       lock(&p->task.mutex);
-      notify_proactor = schedule_if_inactive(p);
+      notify |= schedule_if_inactive(p);
       unlock(&p->task.mutex);
     }
   }
   /* We need to issue INACTIVE on immediate failure */
   unlock(&pc->task.mutex);
-  if (notify) notify_poller(&pc->task);
-  if (notify_proactor) notify_poller(&p->task);
+  if (notify) notify_poller(pc->task.proactor);
 }
 
 static void pconnection_tick(pconnection_t *pc) {
@@ -1449,7 +1446,7 @@ void pn_connection_wake(pn_connection_t* c) {
     }
     unlock(&pc->task.mutex);
   }
-  if (notify) notify_poller(&pc->task);
+  if (notify) notify_poller(pc->task.proactor);
 }
 
 void pn_proactor_release_connection(pn_connection_t *c) {
@@ -1463,7 +1460,7 @@ void pn_proactor_release_connection(pn_connection_t *c) {
     notify = schedule(&pc->task);
     unlock(&pc->task.mutex);
   }
-  if (notify) notify_poller(&pc->task);
+  if (notify) notify_poller(pc->task.proactor);
 }
 
 // ========================================================================
@@ -1576,7 +1573,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
   }
   proactor_add(&l->task);
   unlock(&l->task.mutex);
-  if (notify) notify_poller(&l->task);
+  if (notify) notify_poller(p);
   return;
 }
 
@@ -1656,7 +1653,7 @@ void pn_listener_close(pn_listener_t* l) {
     notify = schedule(&l->task);
   }
   unlock(&l->task.mutex);
-  if (notify) notify_poller(&l->task);
+  if (notify) notify_poller(l->task.proactor);
 }
 
 static void listener_forced_shutdown(pn_listener_t *l) {
@@ -1814,7 +1811,7 @@ static void listener_done(pn_listener_t *l) {
     notify = unassign_thread(ts, UNUSED);
     unlock(&p->sched_mutex);
     if (notify)
-      notify_poller(&p->task);
+      notify_poller(p);
     return;
   } else if (n_events || listener_has_event(l))
     notify = schedule(&l->task);
@@ -1824,7 +1821,7 @@ static void listener_done(pn_listener_t *l) {
   if (unassign_thread(ts, UNUSED))
     notify = true;
   unlock(&p->sched_mutex);
-  if (notify) notify_poller(&l->task);
+  if (notify) notify_poller(p);
 }
 
 pn_proactor_t *pn_listener_proactor(pn_listener_t* l) {
@@ -1885,7 +1882,7 @@ void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t
     notify = schedule(&l->task);
   unlock(&pc->task.mutex);
   unlock(&l->task.mutex);
-  if (notify) notify_poller(&l->task);
+  if (notify) notify_poller(l->task.proactor);
 }
 
 
@@ -2154,7 +2151,7 @@ bool proactor_remove(task_t *tsk) {
   }
   bool notify = schedule_if_inactive(p);
   unlock(&p->task.mutex);
-  if (notify) notify_poller(&p->task);
+  if (notify) notify_poller(p);
   return can_free;
 }
 
@@ -2432,7 +2429,7 @@ static pn_event_batch_t *next_event_batch(pn_proactor_t* p, bool can_block) {
       bool notify = unassign_thread(ts, PROCESSING);
       if (notify) {
         unlock(&p->sched_mutex);
-        notify_poller(&p->task);
+        notify_poller(p);
         lock(&p->sched_mutex);
       }
       continue;  // Long time may have passed.  Back to beginning.
@@ -2725,7 +2722,7 @@ void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
     unlock(&p->sched_mutex);
 
     if (notify)
-      notify_poller(&p->task);
+      notify_poller(p);
     check_earmark_override(p, ts);
     return;
   }
@@ -2751,7 +2748,7 @@ void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
     pni_timer_set(p->timer, t + pn_proactor_now_64());
   }
   unlock(&p->task.mutex);
-  if (notify) notify_poller(&p->task);
+  if (notify) notify_poller(p);
 }
 
 void pn_proactor_cancel_timeout(pn_proactor_t *p) {
@@ -2761,7 +2758,7 @@ void pn_proactor_cancel_timeout(pn_proactor_t *p) {
   pni_timer_set(p->timer, 0);
   bool notify = schedule_if_inactive(p);
   unlock(&p->task.mutex);
-  if (notify) notify_poller(&p->task);
+  if (notify) notify_poller(p);
 }
 
 void pni_proactor_timeout(pn_proactor_t *p) {
@@ -2772,7 +2769,7 @@ void pni_proactor_timeout(pn_proactor_t *p) {
     notify = schedule(&p->task);
   }
   unlock(&p->task.mutex);
-  if (notify) notify_poller(&p->task);
+  if (notify) notify_poller(p);
 }
 
 pn_proactor_t *pn_connection_proactor(pn_connection_t* c) {
@@ -2799,7 +2796,7 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
   notify = schedule_if_inactive(p);
   unlock(&p->task.mutex);
   if (!disconnecting_tasks) {
-    if (notify) notify_poller(&p->task);
+    if (notify) notify_poller(p);
     return;
   }
 
@@ -2859,7 +2856,7 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
       if (tsk_notify)
         tsk_notify = schedule(tsk);
       if (tsk_notify)
-        notify_poller(tsk);
+        notify_poller(p);
     }
     unlock(&p->task.mutex);
     unlock(tsk_mutex);
@@ -2871,7 +2868,7 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
     }
   }
   if (notify)
-    notify_poller(&p->task);
+    notify_poller(p);
 }
 
 const pn_netaddr_t *pn_transport_local_addr(pn_transport_t *t) {

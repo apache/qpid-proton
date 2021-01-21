@@ -282,7 +282,7 @@ void pni_timer_set(pni_timer_t *timer, uint64_t deadline) {
   unlock(&tm->task.mutex);
 
   if (notify)
-    notify_poller(&tm->task);
+    notify_poller(tm->task.proactor);
 }
 
 pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool sched_ready) {
@@ -353,7 +353,7 @@ pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeou
   unlock(&tm->task.mutex);
 
   if (notify)
-    notify_poller(&tm->task);
+    notify_poller(tm->task.proactor);
   // The timer_manager never has events to batch.
   return NULL;
   // TODO: perhaps become task of one of the timed out timers (if otherwise idle) and process() that task.

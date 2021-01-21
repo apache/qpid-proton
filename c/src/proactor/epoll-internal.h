@@ -352,7 +352,7 @@ static void task_finalize(task_t* tsk) {
 }
 
 bool schedule(task_t *tsk);
-void notify_poller(task_t *tsk);
+void notify_poller(pn_proactor_t *p);
 void schedule_done(task_t *tsk);
 
 void psocket_init(psocket_t* ps, epoll_type_t type);

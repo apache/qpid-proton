@@ -185,7 +185,6 @@ void pn_proactor_raw_connect(pn_proactor_t *p, pn_raw_connection_t *rc, const ch
   proactor_add(&prc->task);
 
   bool notify = false;
-  bool notify_proactor = false;
 
   const char *host;
   const char *port;
@@ -203,14 +202,13 @@ void pn_proactor_raw_connect(pn_proactor_t *p, pn_raw_connection_t *rc, const ch
     prc->disconnected = true;
     notify = schedule(&prc->task);
     lock(&p->task.mutex);
-    notify_proactor = schedule_if_inactive(p);
+    notify |= schedule_if_inactive(p);
     unlock(&p->task.mutex);
   }
 
   /* We need to issue INACTIVE on immediate failure */
   unlock(&prc->task.mutex);
-  if (notify) notify_poller(&prc->task);
-  if (notify_proactor) notify_poller(&p->task);
+  if (notify) notify_poller(p);
 }
 
 void pn_listener_raw_accept(pn_listener_t *l, pn_raw_connection_t *rc) {
@@ -250,7 +248,7 @@ void pn_listener_raw_accept(pn_listener_t *l, pn_raw_connection_t *rc) {
   }
   unlock(&prc->task.mutex);
   unlock(&l->task.mutex);
-  if (notify) notify_poller(&l->task);
+  if (notify) notify_poller(l->task.proactor);
 }
 
 const pn_netaddr_t *pn_raw_connection_local_addr(pn_raw_connection_t *rc) {
@@ -274,7 +272,7 @@ void pn_raw_connection_wake(pn_raw_connection_t *rc) {
     notify = schedule(&prc->task);
   }
   unlock(&prc->task.mutex);
-  if (notify) notify_poller(&prc->task);
+  if (notify) notify_poller(prc->task.proactor);
 }
 
 void pn_raw_connection_close(pn_raw_connection_t *rc) {
@@ -360,18 +358,17 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, bool sched_ready) {
 }
 
 void pni_raw_connection_done(praw_connection_t *rc) {
-  bool self_notify = false;
+  bool notify = false;
   bool ready = false;
   lock(&rc->task.mutex);
   pn_proactor_t *p = rc->task.proactor;
   tslot_t *ts = rc->task.runner;
   rc->task.working = false;
-  self_notify = rc->waking && schedule(&rc->task);
+  notify = rc->waking && schedule(&rc->task);
   // The task may be in the ready state even if we've got no raw connection
   // wakes outstanding because we dealt with it already in pni_raw_batch_next()
   ready = rc->task.ready;
   unlock(&rc->task.mutex);
-  if (self_notify) notify_poller(&rc->task);
 
   pn_raw_connection_t *raw = &rc->raw_connection;
   int wanted =
@@ -390,7 +387,7 @@ void pni_raw_connection_done(praw_connection_t *rc) {
   }
 
   lock(&p->sched_mutex);
-  bool notify = unassign_thread(ts, UNUSED);
+  notify |= unassign_thread(ts, UNUSED);
   unlock(&p->sched_mutex);
-  if (notify) notify_poller(&p->task);
+  if (notify) notify_poller(p);
 }
