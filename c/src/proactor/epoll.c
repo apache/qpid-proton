@@ -49,6 +49,7 @@
 
  TODO: document role of sched_pending and how sched_XXX (i.e. sched_interrupt)
  transitions from "private to the scheduler" to "visible to the task".
+ TODO: document task.working duration can be long: from xxx_process() to xxx_done() or null batch.
  */
 
 
@@ -742,7 +743,6 @@ static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_con
   psocket_init(&pc->psocket, PCONNECTION_IO);
   pni_parse_addr(addr, pc->addr_buf, addrlen+1, &pc->host, &pc->port);
   pc->new_events = 0;
-  pc->wake_count = 0;
   pc->tick_pending = false;
   pc->queued_disconnect = false;
   pc->disconnect_condition = NULL;
@@ -980,7 +980,7 @@ static bool pconnection_sched_sync(pconnection_t *pc) {
 
 /* Call with task lock and having done a write_flush() to "know" the value of wbuf_remaining */
 static inline bool pconnection_work_pending(pconnection_t *pc) {
-  if (pc->new_events || pc->wake_count || pc->tick_pending || pc->queued_disconnect)
+  if (pc->new_events || pni_wake_pending(&pc->task) || pc->tick_pending || pc->queued_disconnect)
     return true;
   if (!pc->read_blocked && !pconnection_rclosed(pc))
     return true;
@@ -1153,9 +1153,9 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
     return &pc->batch;
   }
   bool closed = pconnection_rclosed(pc) && pconnection_wclosed(pc);
-  if (pc->wake_count) {
+  if (pni_wake_pending(&pc->task)) {
     waking = !closed;
-    pc->wake_count = 0;
+    pni_wake_done(&pc->task);
   }
   if (pc->tick_pending) {
     pc->tick_pending = false;
@@ -1441,8 +1441,7 @@ void pn_connection_wake(pn_connection_t* c) {
   if (pc) {
     lock(&pc->task.mutex);
     if (!pc->task.closing) {
-      pc->wake_count++;
-      notify = schedule(&pc->task);
+      notify = pni_wake(&pc->task);
     }
     unlock(&pc->task.mutex);
   }
