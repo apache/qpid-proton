@@ -1835,7 +1835,7 @@ pn_condition_t* pn_listener_condition(pn_listener_t* l) {
   return l->condition;
 }
 
-void *pn_listener_get_task(pn_listener_t *l) {
+void *pn_listener_get_context(pn_listener_t *l) {
   return l->listener_context;
 }
 

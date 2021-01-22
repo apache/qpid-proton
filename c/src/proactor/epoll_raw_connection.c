@@ -210,7 +210,7 @@ void pn_proactor_raw_connect(pn_proactor_t *p, pn_raw_connection_t *rc, const ch
   /* We need to issue INACTIVE on immediate failure */
   unlock(&prc->task.mutex);
   if (notify) notify_poller(&prc->task);
-  if (notify_proactor) notify_poller(&p->task);  // ZZZ 2 is wrong
+  if (notify_proactor) notify_poller(&p->task);
 }
 
 void pn_listener_raw_accept(pn_listener_t *l, pn_raw_connection_t *rc) {

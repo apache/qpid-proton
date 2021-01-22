@@ -262,7 +262,7 @@ void pni_timer_set(pni_timer_t *timer, uint64_t deadline) {
       if (td->resequenced)
         EPOLL_FATAL("idle timeout sequencing error", 0);  //
       else {
-        // replace drops the lock for malloc.  Safe because there can be no competing call to 
+        // replace drops the lock for malloc.  Safe because there can be no competing call to
         // the timer set function by the same pconnection from another thread.
         td = replace_timer_deadline(tm, timer);
       }
@@ -359,7 +359,7 @@ pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeou
   // TODO: perhaps become task of one of the timed out timers (if otherwise idle) and process() that task.
 }
 
-// Call with timer_manager lock held.  
+// Call with timer_manager lock held.
 // There can be no competing call to this and timer_set() from the same connection.
 static timer_deadline_t *replace_timer_deadline(pni_timer_manager_t *tm, pni_timer_t *timer) {
   assert(timer->connection);
