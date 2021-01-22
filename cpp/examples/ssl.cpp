@@ -165,12 +165,17 @@ int main(int argc, char **argv) {
         opts.parse();
 
         size_t sz = cert_directory.size();
-        if (sz && cert_directory[sz -1] != '/')
-            cert_directory.append("/");
-        else cert_directory = "ssl-certs/";
+        if (sz) {
+            if (cert_directory[sz -1] != '/') {
+                cert_directory.append("/");
+	    }
+        } else {
+	    cert_directory = "ssl-certs/";
+	}
 
-        if (verify != verify_noname && verify != verify_full && verify != verify_fail)
+        if (verify != verify_noname && verify != verify_full && verify != verify_fail) {
             throw std::runtime_error("bad verify argument: " + verify);
+	}
 
         hello_world_direct hwd;
         proton::container(hwd).run();
