@@ -176,6 +176,8 @@ int main(int argc, char **argv) {
         hello_world_direct hwd;
         proton::container(hwd).run();
         return 0;
+    } catch (const example::bad_option& e) {
+        std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
