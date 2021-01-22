@@ -24,6 +24,24 @@ find_package(Proton REQUIRED Core Proactor)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 
+# The following block is purely for CMake 2.8.12
+# Remove it when we no longer support CMake 2.8.12
+if(NOT TARGET Threads::Threads)
+  add_library(Threads::Threads UNKNOWN IMPORTED)
+
+  if(THREADS_HAVE_PTHREAD_ARG)
+    set_target_properties(Threads::Threads PROPERTIES
+      INTERFACE_COMPILE_OPTIONS "-pthread"
+    )
+  endif()
+
+  if(CMAKE_THREAD_LIBS_INIT)
+    set_target_properties(Threads::Threads PROPERTIES
+      IMPORTED_LOCATION "${CMAKE_THREAD_LIBS_INIT}"
+    )
+  endif()
+endif()
+
 foreach (name broker send receive direct send-abort send-ssl raw_echo raw_connect)
   add_executable(c-${name} ${name}.c)
   target_link_libraries(c-${name} Proton::core Proton::proactor Threads::Threads)
