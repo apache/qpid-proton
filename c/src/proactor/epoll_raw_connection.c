@@ -50,7 +50,6 @@ struct praw_connection_t {
   struct addrinfo *ai;               /* Current connect address */
   bool connected;
   bool disconnected;
-  bool waking; // TODO: This is actually protected by task.mutex so should be moved into task (pconnection too)
 };
 
 static void psocket_error(praw_connection_t *rc, int err, const char* msg) {
@@ -144,7 +143,6 @@ static void praw_connection_init(praw_connection_t *prc, pn_proactor_t *p, pn_ra
 
   prc->connected = false;
   prc->disconnected = false;
-  prc->waking = false;
   prc->batch.next_event = pni_raw_batch_next;
 
   pmutex_init(&prc->rearm_mutex);
@@ -268,8 +266,7 @@ void pn_raw_connection_wake(pn_raw_connection_t *rc) {
   praw_connection_t *prc = containerof(rc, praw_connection_t, raw_connection);
   lock(&prc->task.mutex);
   if (!prc->task.closing) {
-    prc->waking = true;
-    notify = schedule(&prc->task);
+    notify = pni_task_wake(&prc->task);
   }
   unlock(&prc->task.mutex);
   if (notify) notify_poller(prc->task.proactor);
@@ -290,8 +287,10 @@ static pn_event_t *pni_raw_batch_next(pn_event_batch_t *batch) {
   // Check wake status every event processed
   bool waking = false;
   lock(&rc->task.mutex);
-  waking = rc->waking;
-  rc->waking = false;
+  if (pni_task_wake_pending(&rc->task)) {
+    waking = true;
+    pni_task_wake_done(&rc->task);
+  }
   unlock(&rc->task.mutex);
   if (waking) pni_raw_wake(raw);
 
@@ -346,8 +345,10 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, bool sched_ready) {
   t->working = true;
   if (sched_ready) {
     schedule_done(t);
-    wake = rc->waking;
-    rc->waking = false;
+    if (pni_task_wake_pending(&rc->task)) {
+      wake = true;
+      pni_task_wake_done(&rc->task);
+    }
   }
   unlock(&t->mutex);
 
@@ -364,7 +365,7 @@ void pni_raw_connection_done(praw_connection_t *rc) {
   pn_proactor_t *p = rc->task.proactor;
   tslot_t *ts = rc->task.runner;
   rc->task.working = false;
-  notify = rc->waking && schedule(&rc->task);
+  notify = pni_task_wake_pending(&rc->task) && schedule(&rc->task);
   // The task may be in the ready state even if we've got no raw connection
   // wakes outstanding because we dealt with it already in pni_raw_batch_next()
   ready = rc->task.ready;

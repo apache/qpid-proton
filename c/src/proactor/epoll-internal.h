@@ -86,8 +86,9 @@ typedef struct task_t {
   pn_proactor_t *proactor;  /* Immutable */
   task_type_t type;
   bool working;
-  bool on_ready_list;
   bool ready;                // ready to run and on ready list.  Poller notified by eventfd.
+  bool waking;
+  bool on_ready_list;        // todo: protected by eventfd_mutex or sched mutex?  needed?
   struct task_t *ready_next; // ready list, guarded by proactor eventfd_mutex
   bool closing;
   // Next 4 are protected by the proactor mutex
@@ -223,7 +224,6 @@ typedef struct pconnection_t {
   pni_timer_t *timer;
   const char *host, *port;
   uint32_t new_events;
-  int wake_count;   // TODO: protected by task.mutex so should be moved in there (also really bool)
   bool server;                /* accept, not connect */
   bool tick_pending;
   bool queued_disconnect;     /* deferred from pn_proactor_disconnect() */
@@ -381,6 +381,28 @@ void pni_timer_manager_finalize(pni_timer_manager_t *tm);
 pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool sched_ready);
 void pni_pconnection_timeout(pconnection_t *pc);
 void pni_proactor_timeout(pn_proactor_t *p);
+
+// Generic wake primitives for a task.
+
+// Call with task lock held.  Must call notify_poller() if returns true.
+static inline bool pni_task_wake(task_t *tsk) {
+  if (!tsk->waking) {
+    tsk->waking = true;
+    return schedule(tsk);
+  }
+  return false;
+}
+
+// Call with task lock held.
+static inline bool pni_task_wake_pending(task_t *tsk) {
+  return tsk->waking;
+}
+
+// Call with task lock held and only from the running task.
+static inline void pni_task_wake_done(task_t *tsk) {
+  tsk->waking = false;
+}
+
 
 #ifdef __cplusplus
 }
