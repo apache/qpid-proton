@@ -57,7 +57,7 @@ typedef pthread_mutex_t pmutex;
 typedef struct pni_timer_t pni_timer_t;
 
 typedef enum {
-  WAKE,   /* see if any work to do in proactor/psocket context */
+  EVENT_FD,   /* schedule() or pn_proactor_interrupt() */
   LISTENER_IO,
   PCONNECTION_IO,
   RAW_CONNECTION_IO,
@@ -67,7 +67,7 @@ typedef enum {
 // Data to use with epoll.
 typedef struct epoll_extended_t {
   int fd;
-  epoll_type_t type;   // io/timer/wakeup
+  epoll_type_t type;   // io/timer/eventfd
   uint32_t wanted;     // events to poll for
   bool polling;
   pmutex barrier_mutex;
@@ -79,36 +79,36 @@ typedef enum {
   LISTENER,
   RAW_CONNECTION,
   TIMER_MANAGER
-} pcontext_type_t;
+} task_type_t;
 
-typedef struct pcontext_t {
+typedef struct task_t {
   pmutex mutex;
   pn_proactor_t *proactor;  /* Immutable */
-  pcontext_type_t type;
+  task_type_t type;
   bool working;
-  bool on_wake_list;
-  bool wake_pending;             // unprocessed eventfd wake callback
-  struct pcontext_t *wake_next; // wake list, guarded by proactor eventfd_mutex
+  bool on_ready_list;
+  bool ready;                // ready to run and on ready list.  Poller notified by eventfd.
+  struct task_t *ready_next; // ready list, guarded by proactor eventfd_mutex
   bool closing;
   // Next 4 are protected by the proactor mutex
-  struct pcontext_t* next;  /* Protected by proactor.mutex */
-  struct pcontext_t* prev;  /* Protected by proactor.mutex */
+  struct task_t* next;  /* Protected by proactor.mutex */
+  struct task_t* prev;  /* Protected by proactor.mutex */
   int disconnect_ops;           /* ops remaining before disconnect complete */
   bool disconnecting;           /* pn_proactor_disconnect */
   // Protected by schedule mutex
   tslot_t *runner __attribute__((aligned(64)));  /* designated or running thread */
   tslot_t *prev_runner;
-  bool sched_wake;
+  bool sched_ready;
   bool sched_pending;           /* If true, one or more unseen epoll or other events to process() */
-  bool runnable ;               /* in need of scheduling */
-} pcontext_t;
+  bool runnable ;               /* on one of the runnable lists */
+} task_t;
 
 typedef enum {
   NEW,
   UNUSED,                       /* pn_proactor_done() called, may never come back */
   SUSPENDED,
-  PROCESSING,                   /* Hunting for a context  */
-  BATCHING,                     /* Doing work on behalf of a context */
+  PROCESSING,                   /* Hunting for a task  */
+  BATCHING,                     /* Doing work on behalf of a task */
   DELETING,
   POLLING
 } tslot_state;
@@ -121,8 +121,8 @@ struct tslot_t {
   bool suspended;
   volatile bool scheduled;
   tslot_state state;
-  pcontext_t *context;
-  pcontext_t *prev_context;
+  task_t *task;
+  task_t *prev_task;
   bool earmarked;
   tslot_t *suspend_list_prev;
   tslot_t *suspend_list_next;
@@ -131,7 +131,7 @@ struct tslot_t {
 };
 
 typedef struct pni_timer_manager_t {
-  pcontext_t context;
+  task_t task;
   epoll_extended_t epoll_timer;
   pmutex deletion_mutex;
   pni_timer_t *proactor_timer;
@@ -141,12 +141,12 @@ typedef struct pni_timer_manager_t {
 } pni_timer_manager_t;
 
 struct pn_proactor_t {
-  pcontext_t context;
+  task_t task;
   pni_timer_manager_t timer_manager;
-  epoll_extended_t epoll_wake;
+  epoll_extended_t epoll_schedule;     /* ready list */
   epoll_extended_t epoll_interrupt;
   pn_event_batch_t batch;
-  pcontext_t *contexts;         /* track in-use contexts for PN_PROACTOR_INACTIVE and disconnect */
+  task_t *tasks;         /* track in-use tasks for PN_PROACTOR_INACTIVE and disconnect */
   pni_timer_t *timer;
   size_t disconnects_pending;   /* unfinished proactor disconnects*/
   // need_xxx flags indicate we should generate PN_PROACTOR_XXX on the next update_batch()
@@ -155,21 +155,21 @@ struct pn_proactor_t {
   bool need_timeout;
   bool timeout_set; /* timeout has been set by user and not yet cancelled or generated event */
   bool timeout_processed;  /* timeout event dispatched in the most recent event batch */
-  int context_count;
+  int task_count;
 
-  // wake subsystem
+  // ready list subsystem
   int eventfd;
   pmutex eventfd_mutex;
-  bool wakes_in_progress;
-  pcontext_t *wake_list_first;
-  pcontext_t *wake_list_last;
+  bool ready_list_active;
+  task_t *ready_list_first;
+  task_t *ready_list_last;
   // Interrupts have a dedicated eventfd because they must be async-signal safe.
   int interruptfd;
   // If the process runs out of file descriptors, disarm listening sockets temporarily and save them here.
   acceptor_t *overflow;
   pmutex overflow_mutex;
 
-  // Sched vars specific to proactor context.
+  // Sched vars specific to proactor task.
   bool sched_interrupt;
 
   // Global scheduling/poller vars.
@@ -185,20 +185,19 @@ struct pn_proactor_t {
   tslot_t *poller;
   bool poller_suspended;
   tslot_t *last_earmark;
-  pcontext_t *sched_wake_first;
-  pcontext_t *sched_wake_last;
-  pcontext_t *sched_wake_current;
+  task_t *sched_ready_first;
+  task_t *sched_ready_last;
+  task_t *sched_ready_current;
   pmutex tslot_mutex;
   int earmark_count;
   bool earmark_drain;
-  bool sched_wakes_pending;
   // For debugging help for core dumps with optimized code.
   pn_event_type_t current_event_type;
 
   // Mostly read only: after init or once thread_count stabilizes
   pn_collector_t *collector  __attribute__((aligned(64)));
-  pcontext_t **warm_runnables;
-  pcontext_t **runnables;
+  task_t **warm_runnables;
+  task_t **runnables;
   tslot_t **resume_list;
   pn_hash_t *tslot_map;
   struct epoll_event *kevents;
@@ -219,17 +218,17 @@ typedef struct psocket_t {
 } psocket_t;
 
 typedef struct pconnection_t {
-  pcontext_t context;
+  task_t task;
   psocket_t psocket;
   pni_timer_t *timer;
   const char *host, *port;
   uint32_t new_events;
-  int wake_count; // TODO: protected by context.mutex so should be moved in there (also really bool)
+  int wake_count;   // TODO: protected by task.mutex so should be moved in there (also really bool)
   bool server;                /* accept, not connect */
   bool tick_pending;
   bool queued_disconnect;     /* deferred from pn_proactor_disconnect() */
   pn_condition_t *disconnect_condition;
-  // Following values only changed by (sole) working context:
+  // Following values only changed by (sole) working task:
   uint32_t current_arm;  // active epoll io events
   bool connected;
   bool read_blocked;
@@ -277,7 +276,7 @@ typedef struct accepted_t{
 } accepted_t;
 
 struct pn_listener_t {
-  pcontext_t context;
+  task_t task;
   acceptor_t *acceptors;          /* Array of listening sockets */
   size_t acceptors_size;
   char addr_buf[PN_MAX_ADDR];
@@ -339,22 +338,22 @@ static inline bool proactor_has_event(pn_proactor_t *p) {
   return pn_collector_peek(p->collector);
 }
 
-bool wake_if_inactive(pn_proactor_t *p);
+bool schedule_if_inactive(pn_proactor_t *p);
 int pclosefd(pn_proactor_t *p, int fd);
 
-void proactor_add(pcontext_t *ctx);
-bool proactor_remove(pcontext_t *ctx);
+void proactor_add(task_t *tsk);
+bool proactor_remove(task_t *tsk);
 
 bool unassign_thread(tslot_t *ts, tslot_state new_state);
 
-void pcontext_init(pcontext_t *ctx, pcontext_type_t t, pn_proactor_t *p);
-static void pcontext_finalize(pcontext_t* ctx) {
-  pmutex_finalize(&ctx->mutex);
+void task_init(task_t *tsk, task_type_t t, pn_proactor_t *p);
+static void task_finalize(task_t* tsk) {
+  pmutex_finalize(&tsk->mutex);
 }
 
-bool wake(pcontext_t *ctx);
-void wake_notify(pcontext_t *ctx);
-void wake_done(pcontext_t *ctx);
+bool schedule(task_t *tsk);
+void notify_poller(task_t *tsk);
+void schedule_done(task_t *tsk);
 
 void psocket_init(psocket_t* ps, epoll_type_t type);
 bool start_polling(epoll_extended_t *ee, int epollfd);
@@ -366,11 +365,11 @@ void configure_socket(int sock);
 
 accepted_t *listener_accepted_next(pn_listener_t *listener);
 
-pcontext_t *pni_psocket_raw_context(psocket_t *ps);
-pn_event_batch_t *pni_raw_connection_process(pcontext_t *c, bool sched_wake);
+task_t *pni_psocket_raw_task(psocket_t *ps);
+pn_event_batch_t *pni_raw_connection_process(task_t *t, bool sched_ready);
 
 typedef struct praw_connection_t praw_connection_t;
-pcontext_t *pni_raw_connection_context(praw_connection_t *rc);
+task_t *pni_raw_connection_task(praw_connection_t *rc);
 praw_connection_t *pni_batch_raw_connection(pn_event_batch_t* batch);
 void pni_raw_connection_done(praw_connection_t *rc);
 
@@ -379,7 +378,7 @@ void pni_timer_free(pni_timer_t *timer);
 void pni_timer_set(pni_timer_t *timer, uint64_t deadline);
 bool pni_timer_manager_init(pni_timer_manager_t *tm);
 void pni_timer_manager_finalize(pni_timer_manager_t *tm);
-pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool wake);
+pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool sched_ready);
 void pni_pconnection_timeout(pconnection_t *pc);
 void pni_proactor_timeout(pn_proactor_t *p);
 

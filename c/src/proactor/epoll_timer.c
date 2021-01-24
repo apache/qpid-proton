@@ -50,7 +50,7 @@
  * second AMQP open frame results in a shorter periodic transport timer than the first open frame.  In this case, the
  * existing timer_deadline is immediately orphaned and a new one created for the rest of the connection's life.
  *
- * Lock ordering: tm->context_mutex --> tm->deletion_mutex.
+ * Lock ordering: tm->task_mutex --> tm->deletion_mutex.
  */
 
 static void timerfd_set(int fd, uint64_t t_millis) {
@@ -114,7 +114,7 @@ struct pni_timer_t {
 pni_timer_t *pni_timer(pni_timer_manager_t *tm, pconnection_t *c) {
   timer_deadline_t *td = NULL;
   pni_timer_t *timer = NULL;
-  assert(c || !tm->context.proactor->timer);  // Proactor timer.  Can only be one.
+  assert(c || !tm->task.proactor->timer);  // Proactor timer.  Can only be one.
   timer = (pni_timer_t *) malloc(sizeof(pni_timer_t));
   if (!timer) return NULL;
   if (c) {
@@ -126,14 +126,14 @@ pni_timer_t *pni_timer(pni_timer_manager_t *tm, pconnection_t *c) {
     }
   }
 
-  lock(&tm->context.mutex);
+  lock(&tm->task.mutex);
   timer->connection = c;
   timer->manager = tm;
   timer->timer_deadline = td;
   timer->deadline = 0;
   if (c)
     td->timer = timer;
-  unlock(&tm->context.mutex);
+  unlock(&tm->task.mutex);
   return timer;
 }
 
@@ -143,7 +143,7 @@ void pni_timer_free(pni_timer_t *timer) {
   bool can_free_td = false;
   if (td) pni_timer_set(timer, 0);
   pni_timer_manager_t *tm = timer->manager;
-  lock(&tm->context.mutex);
+  lock(&tm->task.mutex);
   lock(&tm->deletion_mutex);
   if (td) {
     if (td->list_deadline)
@@ -152,7 +152,7 @@ void pni_timer_free(pni_timer_t *timer) {
       can_free_td = true;
   }
   unlock(&tm->deletion_mutex);
-  unlock(&tm->context.mutex);
+  unlock(&tm->task.mutex);
   if (can_free_td) {
     pn_free(td);
   }
@@ -168,7 +168,7 @@ bool pni_timer_manager_init(pni_timer_manager_t *tm) {
   tm->timers_heap = NULL;
   tm->proactor_timer = NULL;
   pn_proactor_t *p = containerof(tm, pn_proactor_t, timer_manager);
-  pcontext_init(&tm->context, TIMER_MANAGER, p);
+  task_init(&tm->task, TIMER_MANAGER, p);
   pmutex_init(&tm->deletion_mutex);
 
   // PN_VOID turns off ref counting for the elements in the list.
@@ -190,8 +190,8 @@ bool pni_timer_manager_init(pni_timer_manager_t *tm) {
 
 // Only call from proactor's destructor, when it is single threaded and scheduling has stopped.
 void pni_timer_manager_finalize(pni_timer_manager_t *tm) {
-  lock(&tm->context.mutex);
-  unlock(&tm->context.mutex);  // Memory barrier
+  lock(&tm->task.mutex);
+  unlock(&tm->task.mutex);  // Memory barrier
   if (tm->epoll_timer.fd >= 0) close(tm->epoll_timer.fd);
   pni_timer_free(tm->proactor_timer);
   if (tm->timers_heap) {
@@ -205,14 +205,14 @@ void pni_timer_manager_finalize(pni_timer_manager_t *tm) {
     pn_free(tm->timers_heap);
   }
   pmutex_finalize(&tm->deletion_mutex);
-  pcontext_finalize(&tm->context);
+  task_finalize(&tm->task);
 }
 
-// Call with timer_manager lock held.  Return true if wake_notify required.
+// Call with timer_manager lock held.  Return true if notify_poller required.
 static bool adjust_deadline(pni_timer_manager_t *tm) {
-  // Make sure the timer_manager context will get a timeout in time for the earliest connection timeout.
-  if (tm->context.working)
-    return false;  // timer_manager context will adjust the timer when it stops working
+  // Make sure the timer_manager task will get a timeout in time for the earliest connection timeout.
+  if (tm->task.working)
+    return false;  // timer_manager task will adjust the timer when it stops working
   bool notify = false;
   uint64_t new_deadline = tm->proactor_timer->deadline;
   if (pn_list_size(tm->timers_heap)) {
@@ -227,7 +227,7 @@ static bool adjust_deadline(pni_timer_manager_t *tm) {
       uint64_t now = pn_proactor_now_64();
       if (new_deadline <= now) {
         // no need for a timer update.  Wake the timer_manager.
-        notify = wake(&tm->context);
+        notify = schedule(&tm->task);
       }
       else {
         timerfd_set(tm->epoll_timer.fd, new_deadline - now);
@@ -238,16 +238,16 @@ static bool adjust_deadline(pni_timer_manager_t *tm) {
   return notify;
 }
 
-// Call without context lock or timer_manager lock.
+// Call without task lock or timer_manager lock.
 // Calls for connection timers are generated in the proactor and serialized per connection.
 // Calls for the proactor timer can come from arbitrary user threads.
 void pni_timer_set(pni_timer_t *timer, uint64_t deadline) {
   pni_timer_manager_t *tm = timer->manager;
   bool notify = false;
 
-  lock(&tm->context.mutex);
+  lock(&tm->task.mutex);
   if (deadline == timer->deadline) {
-    unlock(&tm->context.mutex);
+    unlock(&tm->task.mutex);
     return;  // No change.
   }
 
@@ -262,7 +262,7 @@ void pni_timer_set(pni_timer_t *timer, uint64_t deadline) {
       if (td->resequenced)
         EPOLL_FATAL("idle timeout sequencing error", 0);  //
       else {
-        // replace drops the lock for malloc.  Safe because there can be no competing call to 
+        // replace drops the lock for malloc.  Safe because there can be no competing call to
         // the timer set function by the same pconnection from another thread.
         td = replace_timer_deadline(tm, timer);
       }
@@ -279,30 +279,30 @@ void pni_timer_set(pni_timer_t *timer, uint64_t deadline) {
   // Skip a cancelled timer (deadline == 0) since it doesn't change the timerfd deadline.
   if (deadline)
     notify = adjust_deadline(tm);
-  unlock(&tm->context.mutex);
+  unlock(&tm->task.mutex);
 
   if (notify)
-    wake_notify(&tm->context);
+    notify_poller(&tm->task);
 }
 
-pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool wake) {
+pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool sched_ready) {
   uint64_t now = pn_proactor_now_64();
-  lock(&tm->context.mutex);
-  tm->context.working = true;
+  lock(&tm->task.mutex);
+  tm->task.working = true;
   if (timeout)
     tm->timerfd_deadline = 0;
-  if (wake)
-    wake_done(&tm->context);
+  if (sched_ready)
+    schedule_done(&tm->task);
 
   // First check for proactor timer expiry.
   uint64_t deadline = tm->proactor_timer->deadline;
   if (deadline && deadline <= now) {
     tm->proactor_timer->deadline = 0;
-    unlock(&tm->context.mutex);
-    pni_proactor_timeout(tm->context.proactor);
-    lock(&tm->context.mutex);
-    // If lower latency desired for the proactor timer, we could convert to the proactor context (if not working) and return
-    // here with the event batch, and wake the timer manager context to process the connection timers.
+    unlock(&tm->task.mutex);
+    pni_proactor_timeout(tm->task.proactor);
+    lock(&tm->task.mutex);
+    // If lower latency desired for the proactor timer, we could convert to the proactor task (if not working) and return
+    // here with the event batch, and schedule the timer manager task to process the connection timers.
   }
 
   // Next, find all expired connection timers at front of the ordered heap.
@@ -321,20 +321,20 @@ pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeou
     //   timer deadline extended -> minpush back on list to new spot
     //   timer freed -> free the associated timer_deadline popped off the list
     if (!td->timer) {
-      unlock(&tm->context.mutex);
+      unlock(&tm->task.mutex);
       pn_free(td);
-      lock(&tm->context.mutex);
+      lock(&tm->task.mutex);
     } else {
       uint64_t deadline = td->timer->deadline;
       if (deadline) {
         if (deadline <= now) {
           td->timer->deadline = 0;
           pconnection_t *pc = td->timer->connection;
-          lock(&tm->deletion_mutex);     // Prevent connection from deleting itself when tm->context.mutex dropped.
-          unlock(&tm->context.mutex);
+          lock(&tm->deletion_mutex);     // Prevent connection from deleting itself when tm->task.mutex dropped.
+          unlock(&tm->task.mutex);
           pni_pconnection_timeout(pc);
           unlock(&tm->deletion_mutex);
-          lock(&tm->context.mutex);
+          lock(&tm->task.mutex);
         } else {
           td->list_deadline = deadline;
           pn_list_minpush(tm->timers_heap, td);
@@ -346,20 +346,20 @@ pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeou
   if (timeout) {
     // TODO: query whether perf gain by doing these system calls outside the lock, perhaps with additional set_reset_mutex.
     timerfd_drain(tm->epoll_timer.fd);
-    rearm_polling(&tm->epoll_timer, tm->context.proactor->epollfd);
+    rearm_polling(&tm->epoll_timer, tm->task.proactor->epollfd);
   }
-  tm->context.working = false;  // must be false for adjust_deadline to do adjustment
+  tm->task.working = false;  // must be false for adjust_deadline to do adjustment
   bool notify = adjust_deadline(tm);
-  unlock(&tm->context.mutex);
+  unlock(&tm->task.mutex);
 
   if (notify)
-    wake_notify(&tm->context);
+    notify_poller(&tm->task);
   // The timer_manager never has events to batch.
   return NULL;
-  // TODO: perhaps become context of one of the timed out timers (if otherwise idle) and process() that context.
+  // TODO: perhaps become task of one of the timed out timers (if otherwise idle) and process() that task.
 }
 
-// Call with timer_manager lock held.  
+// Call with timer_manager lock held.
 // There can be no competing call to this and timer_set() from the same connection.
 static timer_deadline_t *replace_timer_deadline(pni_timer_manager_t *tm, pni_timer_t *timer) {
   assert(timer->connection);
@@ -368,12 +368,12 @@ static timer_deadline_t *replace_timer_deadline(pni_timer_manager_t *tm, pni_tim
   // Mark old struct for deletion.  No parent timer.
   old_td->timer = NULL;
 
-  unlock(&tm->context.mutex);
+  unlock(&tm->task.mutex);
   // Create replacement timer for life of connection.
   timer_deadline_t *new_td = pni_timer_deadline();
   if (!new_td)
     EPOLL_FATAL("replacement timer deadline allocation", errno);
-  lock(&tm->context.mutex);
+  lock(&tm->task.mutex);
 
   new_td->list_deadline = 0;
   new_td->timer = timer;
