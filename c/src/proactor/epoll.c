@@ -461,7 +461,7 @@ bool unassign_thread(tslot_t *ts, tslot_state new_state) {
 
   if (tsk && !deleting) {
     pn_proactor_t *p = tsk->proactor;
-    ts->prev_task = ts->task;
+    ts->prev_task = tsk;
     if (tsk->sched_pending) {
       // Make sure the task is already scheduled or put it on the ready list
       if (tsk->sched_ready) {
