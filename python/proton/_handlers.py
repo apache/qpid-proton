@@ -235,8 +235,8 @@ class IncomingMessageHandler(Handler, Acking):
     events related to incoming i.e. received messages.
 
     :type auto_accept: ``bool``
-    :param auto_settle: If ``True``, settle all messages (default). Otherwise
-        messages must be explicitly settled.
+    :param auto_accept: If ``True``, accept all messages (default). Otherwise
+        messages must be individually accepted or rejected.
     :param delegate: A client handler for the endpoint event
     """
 
@@ -706,8 +706,8 @@ class MessagingHandler(Handler, Acking):
 
     :param prefetch: Initial flow credit for receiving messages, defaults to 10.
     :type prefetch: ``int``
-    :param auto_accept: If ``True``, accept all messages (default). Otherwise messages
-        must be individually accepted or rejected.
+    :param auto_accept: If ``True``, accept all messages (default). Otherwise
+        messages must be individually accepted or rejected.
     :type auto_accept: ``bool``
     :param auto_settle: If ``True``, settle all messages (default). Otherwise
         messages must be explicitly settled.
