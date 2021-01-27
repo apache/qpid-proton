@@ -21,6 +21,7 @@
 
 #include "proton_bits.hpp"
 
+#include "proton/codec/map.hpp"
 #include "proton/link.hpp"
 #include "proton/error.hpp"
 #include "proton/connection.hpp"
@@ -80,6 +81,15 @@ class connection link::connection() const {
 
 class session link::session() const {
     return make_wrapper(pn_link_session(pn_object()));
+}
+
+std::map<symbol, value> link::properties() const {
+    std::map<symbol, value> ret;
+    value props(pn_link_remote_properties(pn_object()));
+    if (!props.empty()) {
+        get(props, ret);
+    }
+    return ret;
 }
 
 error_condition link::error() const {

@@ -23,9 +23,13 @@
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/container.hpp"
-#include "proton/messaging_handler.hpp"
 #include "proton/listener.hpp"
 #include "proton/listen_handler.hpp"
+#include "proton/messaging_handler.hpp"
+#include "proton/receiver.hpp"
+#include "proton/receiver_options.hpp"
+#include "proton/sender.hpp"
+#include "proton/sender_options.hpp"
 #include "proton/work_queue.hpp"
 
 #include <cstdlib>
@@ -336,6 +340,97 @@ int test_container_schedule_stop() {
     return 0;
 }
 
+class link_test_handler : public proton::messaging_handler {//, public proton::listen_handler {
+  public:
+    bool had_receiver;
+    bool had_sender;
+
+    test_listen_handler listen_handler;
+    proton::listener listener;
+
+    proton::receiver_options receiver_options;
+    proton::sender_options sender_options;
+
+    std::map<proton::symbol, proton::value> peer_receiver_properties;
+    std::map<proton::symbol, proton::value> peer_sender_properties;
+
+    link_test_handler(const proton::receiver_options &r_opts=proton::receiver_options(),
+                      const proton::sender_options &s_opts=proton::sender_options())
+        : had_receiver(false),
+          had_sender(false),
+          receiver_options(r_opts),
+          sender_options(s_opts)
+    {}
+
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+        listener = c.listen("//:0", listen_handler);
+    }
+
+    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
+        if (c.uninitialized()) {
+            proton::messaging_handler::on_connection_open(c);
+            c.open_receiver("", receiver_options);
+            c.open_sender("", sender_options);
+        }
+    }
+
+
+    void check_close(proton::link &l) {
+        if (had_receiver && had_sender) {
+            l.connection().close();
+            listener.stop();
+        }
+    }
+
+    void on_receiver_open(proton::receiver &l) PN_CPP_OVERRIDE {
+        had_receiver = true;
+        // When a client creates a sender then the server is notified about it as a receiver
+        peer_sender_properties = l.properties();
+        check_close(l);
+    }
+
+    void on_sender_open(proton::sender &l) PN_CPP_OVERRIDE {
+        had_sender = true;
+        // When a client creates a receiver then the server is notified about it as a sender
+        peer_receiver_properties = l.properties();
+        check_close(l);
+    }
+};
+
+int test_container_links_no_properties() {
+    link_test_handler th;
+    proton::container(th).run();
+    ASSERT(th.had_receiver);
+    ASSERT(th.had_sender);
+    ASSERT_EQUAL(th.peer_receiver_properties.size(), 0u);
+    ASSERT_EQUAL(th.peer_sender_properties.size(), 0u);
+    return 0;
+}
+
+int test_container_links_properties() {
+    proton::receiver_options r_opts;
+    std::map<proton::symbol, proton::value> r_props;
+    r_props["recv.prop_str"] = "receiver_string";
+    r_opts.properties(r_props);
+
+    proton::sender_options s_opts;
+    std::map<proton::symbol, proton::value> s_props;
+    s_props["send.prop_str"] = "sender_string";
+    s_props["send.prop_int"] = 123456789;
+    s_opts.properties(s_props);
+
+    link_test_handler th(r_opts, s_opts);
+    proton::container(th).run();
+
+    ASSERT(th.had_receiver);
+    ASSERT(th.had_sender);
+    ASSERT_EQUAL(th.peer_receiver_properties.size(), 1u);
+    ASSERT_EQUAL(th.peer_receiver_properties["recv.prop_str"], "receiver_string");
+    ASSERT_EQUAL(th.peer_sender_properties.size(), 2u);
+    ASSERT_EQUAL(th.peer_sender_properties["send.prop_str"], "sender_string");
+    ASSERT_EQUAL(th.peer_sender_properties["send.prop_int"], 123456789);
+    return 0;
+}
 
 #if PN_CPP_SUPPORTS_THREADS // Tests that require thread support
 
@@ -501,6 +596,8 @@ int main(int argc, char** argv) {
     RUN_ARGV_TEST(failed, test_container_immediate_stop());
     RUN_ARGV_TEST(failed, test_container_pre_stop());
     RUN_ARGV_TEST(failed, test_container_schedule_stop());
+    RUN_ARGV_TEST(failed, test_container_links_no_properties());
+    RUN_ARGV_TEST(failed, test_container_links_properties());
 #if PN_CPP_SUPPORTS_THREADS
     RUN_ARGV_TEST(failed, test_container_mt_stop_empty());
     RUN_ARGV_TEST(failed, test_container_mt_stop());

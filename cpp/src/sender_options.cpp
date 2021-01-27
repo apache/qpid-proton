@@ -19,6 +19,7 @@
  *
  */
 
+#include "proton/codec/map.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/source_options.hpp"
@@ -66,6 +67,7 @@ class sender_options::impl {
     option<source_options> source;
     option<target_options> target;
     option<std::string> name;
+    option<std::map<symbol, value> > properties;
 
     void apply(sender& s) {
         if (s.uninitialized()) {
@@ -80,6 +82,9 @@ class sender_options::impl {
                 proton::target local_t(make_wrapper<proton::target>(pn_link_target(unwrap(s))));
                 target.value.apply(local_t);
             }
+            if (properties.set) {
+                value(pn_link_properties(unwrap(s))) = properties.value;
+            }
         }
     }
 
@@ -90,6 +95,7 @@ class sender_options::impl {
         source.update(x.source);
         target.update(x.target);
         name.update(x.name);
+        properties.update(x.properties);
     }
 
 };
@@ -113,6 +119,7 @@ sender_options& sender_options::auto_settle(bool b) {impl_->auto_settle = b; ret
 sender_options& sender_options::source(const source_options &s) {impl_->source = s; return *this; }
 sender_options& sender_options::target(const target_options &s) {impl_->target = s; return *this; }
 sender_options& sender_options::name(const std::string &s) {impl_->name = s; return *this; }
+sender_options& sender_options::properties(const std::map<symbol, value> &props) { impl_->properties = props; return *this; }
 
 void sender_options::apply(sender& s) const { impl_->apply(s); }
 

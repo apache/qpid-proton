@@ -19,6 +19,7 @@
  *
  */
 
+#include "proton/codec/map.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/source_options.hpp"
@@ -71,6 +72,7 @@ class receiver_options::impl {
     option<source_options> source;
     option<target_options> target;
     option<std::string> name;
+    option<std::map<symbol, value> > properties;
 
 
     void apply(receiver& r) {
@@ -89,6 +91,9 @@ class receiver_options::impl {
                 proton::target local_t(make_wrapper<proton::target>(pn_link_target(unwrap(r))));
                 target.value.apply(local_t);
             }
+            if (properties.set) {
+                value(pn_link_properties(unwrap(r))) = properties.value;
+            }
         }
     }
 
@@ -102,6 +107,7 @@ class receiver_options::impl {
         source.update(x.source);
         target.update(x.target);
         name.update(x.name);
+        properties.update(x.properties);
     }
 
 };
@@ -126,6 +132,7 @@ receiver_options& receiver_options::credit_window(int w) {impl_->credit_window =
 receiver_options& receiver_options::source(source_options &s) {impl_->source = s; return *this; }
 receiver_options& receiver_options::target(target_options &s) {impl_->target = s; return *this; }
 receiver_options& receiver_options::name(const std::string &s) {impl_->name = s; return *this; }
+receiver_options& receiver_options::properties(const std::map<symbol, value> &props) { impl_->properties = props; return *this; }
 
 void receiver_options::apply(receiver& r) const { impl_->apply(r); }
 

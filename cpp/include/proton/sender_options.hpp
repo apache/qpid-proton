@@ -26,6 +26,9 @@
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 #include "./delivery_mode.hpp"
+#include "./types_fwd.hpp"
+
+#include <map>
 #include <string>
 
 /// @file
@@ -90,6 +93,9 @@ class sender_options {
 
     /// Set the link name. If not set a unique name is generated.
     PN_CPP_EXTERN sender_options& name(const std::string& name);
+
+    /// **Unsettled API** - Link properties.
+    PN_CPP_EXTERN sender_options& properties(const std::map<symbol, value>&);
 
   private:
     void apply(sender&) const;
