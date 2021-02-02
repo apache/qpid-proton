@@ -32,7 +32,27 @@ include (CheckPythonModule)
 
 find_package (OpenSSL)
 find_package (Threads)
-find_package (PythonInterp REQUIRED)
+# FindPython was added in CMake 3.12, but there it always returned
+#  newest Python on the entire PATH. We want to use the first one.
+if (CMAKE_VERSION VERSION_LESS "3.15.0")
+  find_package (PythonInterp REQUIRED)
+  # forward compatibility with FindPython
+  set(Python_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(Python_LIBRARIES "${PYTHON_LIBRARIES}")
+  set(Python_INCLUDE_DIRS "${PYTHON_INCLUDE_PATH}")
+  set(Python_VERSION_STRING "${PYTHON_VERSION_STRING}")
+  # for completeness, these are not actually used now
+  set(Python_VERSION_MAJOR "${PYTHON_VERSION_MAJOR}")
+  set(Python_VERSION_MINOR "${PYTHON_VERSION_MINOR}")
+  set(Python_VERSION_PATCH "${PYTHON_VERSION_PATCH}")
+else ()
+  if (POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
+    cmake_policy(SET CMP0094 NEW)  # FindPython should return the first matching Python on PATH
+  endif ()
+
+  find_package(Python REQUIRED COMPONENTS Interpreter
+          OPTIONAL_COMPONENTS Development)
+endif()
 find_package (SWIG)
 find_package (CyrusSASL)
 
@@ -47,7 +67,7 @@ set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/config)
 
 ## Variables used across components
 
-set (PN_ENV_SCRIPT "${PYTHON_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/env.py")
+set (PN_ENV_SCRIPT "${Python_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/env.py")
 set (PN_C_INCLUDE_DIR "${CMAKE_BINARY_DIR}/c/include")
 set (PN_C_LIBRARY_DIR "${CMAKE_BINARY_DIR}/c")
 set (PN_C_SOURCE_DIR "${CMAKE_BINARY_DIR}/c/src")
@@ -383,8 +403,11 @@ if(SWIG_FOUND)
   # DEFAULT_{uppercase name of binding} to ON
 
   # Prerequisites for Python wrapper:
-  find_package (PythonLibs ${PYTHON_VERSION_STRING} EXACT)
-  if (PYTHONLIBS_FOUND)
+  if (CMAKE_VERSION VERSION_LESS "3.15.0")
+    find_package (PythonLibs ${PYTHON_VERSION_STRING} EXACT)
+    set (Python_Development_FOUND "${PYTHONLIBS_FOUND}")
+  endif ()
+  if (Python_Development_FOUND)
     set (DEFAULT_PYTHON ON)
   endif ()
 
