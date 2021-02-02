@@ -91,7 +91,9 @@ PNP_EXTERN const struct pn_netaddr_t *pn_raw_connection_remote_addr(pn_raw_conne
 
 /**
  * Close a raw connection.
- * This will close the underlying socket and release all buffers held by the raw connection.
+ * This will flush any buffers to be written; close the underlying socket and release all buffers held by the
+ * raw connection.
+ *
  * It will cause @ref PN_RAW_CONNECTION_READ and @ref PN_RAW_CONNECTION_WRITTEN to be emitted so
  * the application can clean up buffers given to the raw connection. After that a
  * @ref PN_RAW_CONNECTION_DISCONNECTED event will be emitted to allow the application to clean up
@@ -99,6 +101,38 @@ PNP_EXTERN const struct pn_netaddr_t *pn_raw_connection_remote_addr(pn_raw_conne
  *
  */
 PNP_EXTERN void pn_raw_connection_close(pn_raw_connection_t *connection);
+
+/**
+ * Shutdown a raw connection for reading.
+ * This will close the underlying socket for reading and release all empty read buffers held by the raw connection.
+ *
+ * It will cause @ref PN_RAW_CONNECTION_READ to be emitted so the application can clean up buffers given to the raw
+ * connection. Note that these buffers may still also contain data read from the socket but not yet consumed by the
+ * application.
+ *
+ * If @ref pn_raw_connection_write_close() has already been called then @ref PN_RAW_CONNECTION_DISCONNECTED will then
+ * also be emitted.
+ *
+ * In order to fully close a raw connection the application will need to either call @ref pn_raw_connection_close()
+ * or @ref pn_raw_connection_write_close() after it calls @ref pn_raw_connection_read_close().
+ */
+PNP_EXTERN void pn_raw_connection_read_close(pn_raw_connection_t *connection);
+
+/**
+ * Shutdown a raw connection for writing.
+ * This will flush any buffers to be written to the socket; close the underlying socket for writing and release all
+ * write buffers held by the raw connection.
+ *
+ * It will cause @ref PN_RAW_CONNECTION_WRITTEN to be emitted so the application can clean up write buffers given to
+ * the raw connection.
+ *
+ * If @ref pn_raw_connection_read_close() has already been called then @ref PN_RAW_CONNECTION_DISCONNECTED will then
+ * also be emitted.
+ *
+ * In order to fully close a raw connection the application will need to either call @ref pn_raw_connection_close()
+ * or @ref pn_raw_connection_read_close() after it calls @ref pn_raw_connection_write_close().
+ */
+PNP_EXTERN void pn_raw_connection_write_close(pn_raw_connection_t *connection);
 
 /**
  * Query the raw connection for how many more read buffers it can be given

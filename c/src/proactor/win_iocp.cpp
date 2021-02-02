@@ -3427,5 +3427,7 @@ void pn_proactor_raw_connect(pn_proactor_t *p, pn_raw_connection_t *rc, const ch
 void pn_listener_raw_accept(pn_listener_t *l, pn_raw_connection_t *rc) {}
 void pn_raw_connection_wake(pn_raw_connection_t *conn) {}
 void pn_raw_connection_close(pn_raw_connection_t *conn) {}
+void pn_raw_connection_read_close(pn_raw_connection_t *conn) {}
+void pn_raw_connection_write_close(pn_raw_connection_t *conn) {}
 const struct pn_netaddr_t *pn_raw_connection_local_addr(pn_raw_connection_t *connection) { return NULL; }
 const struct pn_netaddr_t *pn_raw_connection_remote_addr(pn_raw_connection_t *connection) { return NULL; }
