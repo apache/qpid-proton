@@ -421,7 +421,7 @@ int pni_store_update(pni_store_t *store, pn_sequence_t id, pn_status_t status,
     }
   }
 
-  while (store->hwm - store->lwm > 0 &&
+  while (store->hwm > store->lwm &&
          !pn_hash_get(store->tracked, store->lwm)) {
     store->lwm++;
   }
