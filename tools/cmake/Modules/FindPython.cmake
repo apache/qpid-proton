@@ -23,6 +23,10 @@
 # FindPython was added in CMake 3.12, but there it always returned
 #  newest Python on the entire PATH. We want to use the first one.
 if (CMAKE_VERSION VERSION_LESS "3.15.0")
+    if (DEFINED Python_EXECUTABLE)
+        set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
+    endif ()
+
     find_package (PythonInterp REQUIRED)
     # forward compatibility with FindPython
     set(Python_EXECUTABLE "${PYTHON_EXECUTABLE}")
