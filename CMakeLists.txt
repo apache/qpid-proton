@@ -132,6 +132,38 @@ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
     COMMAND ${CMAKE_SOURCE_DIR}/scripts/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
 endif()
 
+# Enable asserts for C/C++ code if requested
+#  from the LLVM project, https://opensource.apple.com/source/llvmCore/llvmCore-2358.3/CMakeLists.txt.auto.html
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" )
+    option(PN_ENABLE_ASSERTIONS "Enable assertions" ON)
+else()
+    option(PN_ENABLE_ASSERTIONS "Enable assertions" OFF)
+endif()
+if(PN_ENABLE_ASSERTIONS)
+  # MSVC doesn't like _DEBUG on release builds.
+  if(NOT MSVC)
+    add_definitions(-D_DEBUG)
+  endif()
+  # On non-Debug builds cmake automatically defines NDEBUG, so we explicitly undefine it:
+  if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    # NOTE: use `add_compile_options` rather than `add_definitions` since
+    # `add_definitions` does not support generator expressions.
+    add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
+
+    # Also remove /D NDEBUG to avoid MSVC warnings about conflicting defines.
+    foreach (flags_var_to_scrub
+            CMAKE_CXX_FLAGS_RELEASE
+            CMAKE_CXX_FLAGS_RELWITHDEBINFO
+            CMAKE_CXX_FLAGS_MINSIZEREL
+            CMAKE_C_FLAGS_RELEASE
+            CMAKE_C_FLAGS_RELWITHDEBINFO
+            CMAKE_C_FLAGS_MINSIZEREL)
+      string (REGEX REPLACE "(^| )[/-]D *NDEBUG($| )" " "
+              "${flags_var_to_scrub}" "${${flags_var_to_scrub}}")
+    endforeach()
+  endif()
+endif()
+
 # Try to keep any platform specific overrides together here:
 
 # MacOS has a bunch of differences in build tools and process and so we have to turn some things

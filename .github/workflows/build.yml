@@ -62,7 +62,12 @@ jobs:
         brew install libuv swig pkgconfig jsoncpp
     - name: cmake configure
       working-directory: ${{env.BuildDir}}
-      run: cmake "${{github.workspace}}" "-DCMAKE_BUILD_TYPE=${BuildType}" "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" ${{matrix.cmake_extra}}
+      run: >
+        cmake "${{github.workspace}}"
+        "-DCMAKE_BUILD_TYPE=${BuildType}"
+        "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}"
+        "-DPN_ENABLE_ASSERTIONS=ON"
+        ${{matrix.cmake_extra}}
       shell: bash
     - name: cmake build/install
       run: cmake --build "${BuildDir}" --config ${BuildType} -t install

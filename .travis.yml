@@ -117,7 +117,7 @@ jobs:
     env:
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
     - PKG_CONFIG_PATH='/usr/local/opt/openssl@1.1/lib/pkgconfig'
-    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 -DTHREADERCISER=ON'
+    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.15 "-DPN_ENABLE_ASSERTIONS=ON" -DTHREADERCISER=ON'
     # TODO PROTON-2225: c-threaderciser sometimes fails with assertion error
     # python-tox-test segfaults and ruby tests do not start due to dynamic library issues
     - QPID_PROTON_CTEST_ARGS="--exclude-regex 'c-threaderciser|python-tox-test|ruby.*'"
