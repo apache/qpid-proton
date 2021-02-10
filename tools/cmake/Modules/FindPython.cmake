@@ -25,7 +25,7 @@ if (POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
 endif ()
 
 if (DEFINED PYTHON_EXECUTABLE AND DEFINED Python_EXECUTABLE)
-    message(FATAL_ERROR "Both PYTHON_EXECUTABLE and Python_EXECUTABLE were defined. Define at most one of those.")
+    message(FATAL_ERROR "Both PYTHON_EXECUTABLE and Python_EXECUTABLE are defined. Define at most one of those.")
 endif ()
 
 # FindPython was added in CMake 3.12, but there it always returned
