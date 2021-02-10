@@ -58,6 +58,8 @@ if (CMAKE_CXX_COMPILER)
   add_c_test(c-core-test
     pn_test_test.cpp
     object_test.cpp
+    event_test.cpp
+    message_test.cpp
     condition_test.cpp
     connection_driver_test.cpp
     data_test.cpp
