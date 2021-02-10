@@ -20,6 +20,10 @@
 # This is a wrapper hack purely so that we can use FindPython
 # with cmake 2.8.12 and its supplied older modules
 
+if (POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
+    cmake_policy(SET CMP0094 NEW)  # FindPython should return the first matching Python on PATH
+endif ()
+
 # FindPython was added in CMake 3.12, but there it always returned
 #  newest Python on the entire PATH. We want to use the first one.
 if (CMAKE_VERSION VERSION_LESS "3.15.0")
@@ -41,10 +45,6 @@ if (CMAKE_VERSION VERSION_LESS "3.15.0")
     set(Python_INCLUDE_DIRS "${PYTHON_INCLUDE_PATH}")
     set(Python_LIBRARIES "${PYTHON_LIBRARIES}")
 else ()
-    if (POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
-        cmake_policy(SET CMP0094 NEW)  # FindPython should return the first matching Python on PATH
-    endif ()
-
     if (DEFINED PYTHON_EXECUTABLE)
         set(Python_EXECUTABLE ${PYTHON_EXECUTABLE})
     endif ()
