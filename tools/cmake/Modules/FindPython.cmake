@@ -29,10 +29,8 @@ if (CMAKE_VERSION VERSION_LESS "3.15.0")
 
     find_package (PythonInterp REQUIRED)
     # forward compatibility with FindPython
-    set(Python_EXECUTABLE "${PYTHON_EXECUTABLE}")
-    set(Python_LIBRARIES "${PYTHON_LIBRARIES}")
-    set(Python_INCLUDE_DIRS "${PYTHON_INCLUDE_PATH}")
     set(Python_VERSION_STRING "${PYTHON_VERSION_STRING}")
+    set(Python_EXECUTABLE "${PYTHON_EXECUTABLE}")
     # for completeness, these are not actually used now
     set(Python_VERSION_MAJOR "${PYTHON_VERSION_MAJOR}")
     set(Python_VERSION_MINOR "${PYTHON_VERSION_MINOR}")
@@ -40,6 +38,8 @@ if (CMAKE_VERSION VERSION_LESS "3.15.0")
 
     find_package (PythonLibs ${PYTHON_VERSION_STRING} EXACT)
     set(Python_Development_FOUND "${PYTHONLIBS_FOUND}")
+    set(Python_INCLUDE_DIRS "${PYTHON_INCLUDE_PATH}")
+    set(Python_LIBRARIES "${PYTHON_LIBRARIES}")
 else ()
     if (POLICY CMP0094)  # https://cmake.org/cmake/help/latest/policy/CMP0094.html
         cmake_policy(SET CMP0094 NEW)  # FindPython should return the first matching Python on PATH
