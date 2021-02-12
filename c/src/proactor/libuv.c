@@ -654,7 +654,6 @@ static int lsocket(pn_listener_t *l, struct addrinfo *ai) {
 
 /* Listen on all available addresses */
 static void leader_listen_lh(pn_listener_t *l) {
-  add_active(l->work.proactor);
   int err = leader_resolve(l->work.proactor, &l->addr, true);
   if (!err) {
     /* Allocate enough space for the pn_netaddr_t addresses */
@@ -1170,6 +1169,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
   work_init(&l->work, p, T_LISTENER);
   parse_addr(&l->addr, addr);
   l->backlog = backlog;
+  add_active(l->work.proactor);  /* Owned by proactor.  Track it for PN_PROACTOR_INACTIVE. */;
   work_start(&l->work);
 }
 
