@@ -272,12 +272,31 @@ void pn_raw_connection_wake(pn_raw_connection_t *rc) {
   if (notify) notify_poller(prc->task.proactor);
 }
 
-void pn_raw_connection_close(pn_raw_connection_t *rc) {
+static inline void set_closed(pn_raw_connection_t *rc)
+{
   praw_connection_t *prc = containerof(rc, praw_connection_t, raw_connection);
   lock(&prc->task.mutex);
   prc->task.closing = true;
   unlock(&prc->task.mutex);
+}
+
+void pn_raw_connection_close(pn_raw_connection_t *rc) {
+  set_closed(rc);
   pni_raw_close(rc);
+}
+
+void pn_raw_connection_read_close(pn_raw_connection_t *rc) {
+  if (pn_raw_connection_is_write_closed(rc)) {
+    set_closed(rc);
+  }
+  pni_raw_read_close(rc);
+}
+
+void pn_raw_connection_write_close(pn_raw_connection_t *rc) {
+  if (pn_raw_connection_is_read_closed(rc)) {
+    set_closed(rc);
+  }
+  pni_raw_write_close(rc);
 }
 
 static pn_event_t *pni_raw_batch_next(pn_event_batch_t *batch) {
@@ -316,6 +335,14 @@ static long snd(int fd, const void* b, size_t s) {
 
 static long rcv(int fd, void* b, size_t s) {
   return recv(fd, b, s, MSG_DONTWAIT);
+}
+
+static int shutr(int fd) {
+  return shutdown(fd, SHUT_RD);
+}
+
+static int shutw(int fd) {
+  return shutdown(fd, SHUT_WR);
 }
 
 static void  set_error(pn_raw_connection_t *conn, const char *msg, int err) {
@@ -372,6 +399,8 @@ void pni_raw_connection_done(praw_connection_t *rc) {
   unlock(&rc->task.mutex);
 
   pn_raw_connection_t *raw = &rc->raw_connection;
+  int fd = rc->psocket.epoll_io.fd;
+  pni_raw_process_shutdown(raw, fd, shutr, shutw);
   int wanted =
     (pni_raw_can_read(raw)  ? EPOLLIN : 0) |
     (pni_raw_can_write(raw) ? EPOLLOUT : 0);
@@ -379,7 +408,7 @@ void pni_raw_connection_done(praw_connection_t *rc) {
     rc->psocket.epoll_io.wanted = wanted;
     rearm_polling(&rc->psocket.epoll_io, p->epollfd);  // TODO: check for error
   } else {
-    bool finished_disconnect = raw->rclosed && raw->wclosed && !ready && !raw->disconnectpending;
+    bool finished_disconnect = raw->state==conn_fini && !ready && !raw->disconnectpending;
     if (finished_disconnect) {
       // If we're closed and we've sent the disconnect then close
       pni_raw_finalize(raw);
