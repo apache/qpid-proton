@@ -32,11 +32,19 @@ include (CheckPythonModule)
 
 find_package (OpenSSL)
 find_package (Threads)
+find_package (SWIG)
+find_package (CyrusSASL)
+
+# This setting mirrors FindPythonInterp behavior on Windows/macOS, which did not consult registry/frameworks first.`
+if (NOT DEFINED Python_FIND_REGISTRY)
+  set(Python_FIND_REGISTRY "LAST")
+endif ()
+if (NOT DEFINED Python_FIND_FRAMEWORK)
+  set(Python_FIND_FRAMEWORK "LAST")
+endif ()
 find_package(Python
         REQUIRED COMPONENTS Interpreter
         OPTIONAL_COMPONENTS Development)
-find_package (SWIG)
-find_package (CyrusSASL)
 
 include(tests/PNAddTest.cmake)
 

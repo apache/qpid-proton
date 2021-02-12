@@ -53,14 +53,5 @@ else ()
         set(Python_EXECUTABLE ${PYTHON_EXECUTABLE})
     endif ()
 
-    # needed on GitHub Actions CI: actions/setup-python does not touch registry/frameworks on Windows/macOS
-    # this mirrors PythonInterp behavior which did not consult registry/frameworks first
-    if (NOT DEFINED Python_FIND_REGISTRY)
-        set(Python_FIND_REGISTRY "LAST")
-    endif ()
-    if (NOT DEFINED Python_FIND_FRAMEWORK)
-        set(Python_FIND_FRAMEWORK "LAST")
-    endif ()
-
     include(${CMAKE_ROOT}/Modules/FindPython.cmake)
 endif ()
