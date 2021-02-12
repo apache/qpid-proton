@@ -64,25 +64,26 @@ class FdLimitTest(unittest.TestCase):
             #  PN_TRANSPORT_CLOSED: amqp:connection:framing-error: connection aborted
             #  PN_TRANSPORT_CLOSED: proton:io: Connection reset by peer - disconnected :5672 (connection aborted)
             for i in range(fdlimit):
-                receiver = test_subprocess.Popen(["receive", "", b.port, str(i)], stdout=self.devnull)
+                receiver = subprocess.Popen(["receive", "", b.port, str(i)], stdout=self.devnull, stderr=subprocess.STDOUT)
                 receivers.append(receiver)
             # Allow these subprocesses time to establish ahead of the upcoming test sender.
             time.sleep(1)
 
-            # All FDs are now in use, send attempt will (with present implementation) hang
-            with test_subprocess.Popen(["send", "", b.port, "x"],
-                                       stdout=self.devnull, stderr=subprocess.STDOUT) as sender:
-                time.sleep(1)  # polling for None immediately would always succeed, regardless whether send hangs or not
-                self.assertIsNone(sender.poll())
+            # All FDs are now in use, new send should not succeed.  May fail by hanging (epoll) or by
+            # immediate failure (libuv). But poll() should never be 0.
+            sender = subprocess.Popen(["send", "", b.port, "x"],
+                                       stdout=self.devnull, stderr=subprocess.STDOUT)
+            time.sleep(1)  # polling for None immediately would always succeed, regardless whether send hangs or not
+            self.assertNotEqual(sender.poll(), 0)
 
-                # Kill receivers to free up FDs
-                for r in receivers:
-                    r.kill()
-                for r in receivers:
-                    r.wait()
+            # Kill receivers to free up FDs
+            for r in receivers:
+                r.kill()
+            for r in receivers:
+                r.wait()
 
-                # Sender now succeeded and exited
-                self.assertEqual(sender.wait(), 0)
+            # Sender completes on its own
+            sender.wait()
 
             # Additional send/receive should succeed now
             self.assertIn("10 messages sent", test_subprocess.check_output(
