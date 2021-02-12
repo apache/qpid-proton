@@ -68,14 +68,14 @@ jobs:
     os: linux
     dist: focal
     before_install:
-    - sudo apt-get install -y clang-10 llvm-10-dev
+    - sudo apt-get install -y clang-11 llvm-11-dev
     env:
-    - CC=clang-10
-    - CXX=clang++-10
+    - CC=clang-11
+    - CXX=clang++-11
     - PYTHON=python3
     - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF -DTHREADERCISER=ON'
     # otherwise, on Travis ldd gives `libclang_rt.asan-x86_64.so => not found` and binaries don't work
-    - LD_LIBRARY_PATH=/usr/lib/llvm-10/lib/clang/10.0.0/lib/linux/
+    - LD_LIBRARY_PATH=/usr/lib/llvm-11/lib/clang/11.0.0/lib/linux/
   - name: gcc tsan
     os: linux
     dist: focal
