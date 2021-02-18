@@ -22,7 +22,7 @@
 
 set(CMAKE_SWIG_FLAGS "-threads" "-DUINTPTR_SIZE=${CMAKE_SIZEOF_VOID_P}")
 
-include_directories (${PN_C_INCLUDE_DIR} ${PYTHON_INCLUDE_PATH})
+include_directories (${PN_C_INCLUDE_DIR} ${Python_INCLUDE_DIRS})
 
 set_source_files_properties(cproton.i PROPERTIES CPLUSPLUS NO)
 
@@ -41,15 +41,13 @@ list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
 )
 
 swig_add_library(cproton LANGUAGE python SOURCES cproton.i)
-swig_link_libraries(cproton ${BINDING_DEPS} ${PYTHON_LIBRARIES} -lm)
+swig_link_libraries(cproton ${BINDING_DEPS} ${Python_LIBRARIES} -lm)
 set_target_properties(${SWIG_MODULE_cproton_REAL_NAME}
     PROPERTIES
     LINK_FLAGS "${CATCH_UNDEFINED}")
 
-find_package(PythonInterp REQUIRED)
-
 if (CHECK_SYSINSTALL_PYTHON)
-  execute_process(COMMAND ${PYTHON_EXECUTABLE}
+  execute_process(COMMAND ${Python_EXECUTABLE}
     -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(True))"
     OUTPUT_VARIABLE PYTHON_SITEARCH_PACKAGES_DEFAULT
     OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -105,9 +103,9 @@ set(py_dist_files
 
 macro (py_compile directory files artifacts)
   foreach (src_file ${files})
-    install(CODE "execute_process(COMMAND \"${PYTHON_EXECUTABLE}\" -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}c')\"
+    install(CODE "execute_process(COMMAND \"${Python_EXECUTABLE}\" -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}c')\"
                                   WORKING_DIRECTORY ${directory})")
-    install(CODE "execute_process(COMMAND \"${PYTHON_EXECUTABLE}\" -O -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}o')\"
+    install(CODE "execute_process(COMMAND \"${Python_EXECUTABLE}\" -O -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}o')\"
                                   WORKING_DIRECTORY ${directory})")
     list(APPEND ${artifacts} ${directory}/${src_file}
       ${directory}/${src_file}c
@@ -127,7 +125,7 @@ else ()
         COMMAND ${PN_ENV_SCRIPT} --
         PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
         LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/c"
-        ${PYTHON_EXECUTABLE} -m sphinx "${CMAKE_CURRENT_SOURCE_DIR}/docs" "${CMAKE_CURRENT_BINARY_DIR}/docs")
+        ${Python_EXECUTABLE} -m sphinx "${CMAKE_CURRENT_SOURCE_DIR}/docs" "${CMAKE_CURRENT_BINARY_DIR}/docs")
     add_dependencies(docs docs-py)
     install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/docs/"
             DESTINATION "${PROTON_SHARE}/docs/api-py"
@@ -206,12 +204,12 @@ if (SETUPTOOLS_MODULE_FOUND)
                      WORKING_DIRECTORY dist
                      DEPENDS py_src_dist
 		     COMMAND ${PN_ENV_SCRIPT} "SWIG=${SWIG_EXECUTABLE}" --
-		      ${PYTHON_EXECUTABLE} setup.py sdist --dist-dir ${CMAKE_CURRENT_BINARY_DIR}/pkgs)
+		      ${Python_EXECUTABLE} setup.py sdist --dist-dir ${CMAKE_CURRENT_BINARY_DIR}/pkgs)
   if (WHEEL_MODULE_FOUND)
     add_custom_target(py_pkg_wheel ALL
                        WORKING_DIRECTORY dist
                        DEPENDS py_pkg_src
-                       COMMAND ${PYTHON_EXECUTABLE} setup.py bdist_wheel --dist-dir ${CMAKE_CURRENT_BINARY_DIR}/pkgs)
+                       COMMAND ${Python_EXECUTABLE} setup.py bdist_wheel --dist-dir ${CMAKE_CURRENT_BINARY_DIR}/pkgs)
   endif ()
 endif ()
 
@@ -239,7 +237,7 @@ pn_add_test(
     "PATH=${py_path}"
     "PYTHONPATH=${py_pythonpath}"
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-  COMMAND ${PYTHON_EXECUTABLE} ${python_coverage_options} -- "${py_tests}/proton-test")
+  COMMAND ${Python_EXECUTABLE} ${python_coverage_options} -- "${py_tests}/proton-test")
 set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
 set(PYTHON_TEST_COMMAND "-m" "unittest")
@@ -251,7 +249,7 @@ pn_add_test(
     "PYTHONPATH=${py_pythonpath}"
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
   COMMAND
-    ${PYTHON_EXECUTABLE}
+    ${Python_EXECUTABLE}
       ${python_coverage_options}
       ${PYTHON_TEST_COMMAND} discover -v -s "${py_tests}/integration")
 
@@ -285,7 +283,7 @@ else ()
           "SWIG=${SWIG_EXECUTABLE}"
           "TOXENV=${TOX_ENVLIST}"
           "PY_TEST_DIR=${CMAKE_CURRENT_SOURCE_DIR}/tests"
-        COMMAND ${PYTHON_EXECUTABLE} -m tox)
+        COMMAND ${Python_EXECUTABLE} -m tox)
       set_tests_properties(python-tox-test
         PROPERTIES
         PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"

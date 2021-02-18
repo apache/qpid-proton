@@ -18,7 +18,7 @@
 #
 
 
-if (NOT PYTHON_EXECUTABLE)
+if (NOT Python_EXECUTABLE)
   return()
 endif()
 
@@ -38,7 +38,7 @@ pn_add_test(
   NAME c-example-tests
   PREPEND_ENVIRONMENT "${c_test_env}"
   WORKING_DIRECTORY ${ProtonCExamples_SOURCE_DIR}
-  COMMAND ${PYTHON_EXECUTABLE} testme -v)
+  COMMAND ${Python_EXECUTABLE} testme -v)
 
 if (BUILD_CPP)
   if(WIN32)
@@ -58,7 +58,7 @@ if (BUILD_CPP)
     NAME cpp-example-container
     PREPEND_ENVIRONMENT "${cpp_test_env}"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND ${PYTHON_EXECUTABLE} ${ProtonCppExamples_SOURCE_DIR}/testme -v ContainerExampleTest)
+    COMMAND ${Python_EXECUTABLE} ${ProtonCppExamples_SOURCE_DIR}/testme -v ContainerExampleTest)
 
   if (NOT SSL_IMPL STREQUAL none)
     pn_add_test(
@@ -66,6 +66,6 @@ if (BUILD_CPP)
       NAME cpp-example-container-ssl
       PREPEND_ENVIRONMENT "${cpp_test_env}"
       WORKING_DIRECTORY ${ProtonCppExamples_SOURCE_DIR}
-      COMMAND ${PYTHON_EXECUTABLE} testme -v ContainerExampleSSLTest)
+      COMMAND ${Python_EXECUTABLE} testme -v ContainerExampleSSLTest)
   endif()
 endif()

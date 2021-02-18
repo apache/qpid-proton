@@ -160,7 +160,7 @@ install:
 before_script:
 - mkdir build
 - cd build
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install -DPYTHON_EXECUTABLE="$(which ${PYTHON})" ${QPID_PROTON_CMAKE_ARGS}
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install -DPython_EXECUTABLE="$(which ${PYTHON})" ${QPID_PROTON_CMAKE_ARGS}
 
 script:
 # travis timeouts a job after 600 s elapses without any new output being printed; use 360 s here to preempt that

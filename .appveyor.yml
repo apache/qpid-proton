@@ -43,7 +43,7 @@ cache:
 before_build:
 - mkdir BLD
 - cd BLD
-- cmake %VCPKG_INTEGRATION% -G "%CMAKE_GENERATOR%" -DPYTHON_EXECUTABLE=%PYTHON%\\python.exe %QPID_PROTON_CMAKE_ARGS% ..
+- cmake %VCPKG_INTEGRATION% -G "%CMAKE_GENERATOR%" -DPython_EXECUTABLE=%PYTHON%\\python.exe %QPID_PROTON_CMAKE_ARGS% ..
 - cd ..
 build:
   project: BLD/Proton.sln

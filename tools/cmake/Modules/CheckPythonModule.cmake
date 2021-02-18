@@ -33,13 +33,13 @@
 #   python interpreter and store the result in an internal cache entry
 #   named ``<variable>``.
 #
-#   The ``PYTHON_EXECUTABLE`` variable must be set before calling this
-#   macro, usually by using find_package(PythonInterp).
+#   The ``Python_EXECUTABLE`` variable must be set before calling this
+#   macro, usually by using find_package(Python).
 
 macro (CHECK_PYTHON_MODULE MODULE VARIABLE)
-  if (NOT ${VARIABLE} AND PYTHON_EXECUTABLE)
+  if (NOT ${VARIABLE} AND Python_EXECUTABLE)
     execute_process(
-      COMMAND ${PYTHON_EXECUTABLE} -c "import sys, pkgutil; sys.exit(0 if pkgutil.find_loader('${MODULE}') else 1)"
+      COMMAND ${Python_EXECUTABLE} -c "import sys, pkgutil; sys.exit(0 if pkgutil.find_loader('${MODULE}') else 1)"
       RESULT_VARIABLE RESULT)
     if (RESULT EQUAL 0)
       if(NOT CMAKE_REQUIRED_QUIET)

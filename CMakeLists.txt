@@ -32,9 +32,19 @@ include (CheckPythonModule)
 
 find_package (OpenSSL)
 find_package (Threads)
-find_package (PythonInterp REQUIRED)
 find_package (SWIG)
 find_package (CyrusSASL)
+
+# This setting mirrors FindPythonInterp behavior on Windows/macOS, which did not consult registry/frameworks first.`
+if (NOT DEFINED Python_FIND_REGISTRY)
+  set(Python_FIND_REGISTRY "LAST")
+endif ()
+if (NOT DEFINED Python_FIND_FRAMEWORK)
+  set(Python_FIND_FRAMEWORK "LAST")
+endif ()
+find_package(Python
+        REQUIRED COMPONENTS Interpreter
+        OPTIONAL_COMPONENTS Development)
 
 include(tests/PNAddTest.cmake)
 
@@ -47,7 +57,7 @@ set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/config)
 
 ## Variables used across components
 
-set (PN_ENV_SCRIPT "${PYTHON_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/env.py")
+set (PN_ENV_SCRIPT "${Python_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/env.py")
 set (PN_C_INCLUDE_DIR "${CMAKE_BINARY_DIR}/c/include")
 set (PN_C_LIBRARY_DIR "${CMAKE_BINARY_DIR}/c")
 set (PN_C_SOURCE_DIR "${CMAKE_BINARY_DIR}/c/src")
@@ -383,8 +393,7 @@ if(SWIG_FOUND)
   # DEFAULT_{uppercase name of binding} to ON
 
   # Prerequisites for Python wrapper:
-  find_package (PythonLibs ${PYTHON_VERSION_STRING} EXACT)
-  if (PYTHONLIBS_FOUND)
+  if (Python_Development_FOUND)
     set (DEFAULT_PYTHON ON)
   endif ()
 
