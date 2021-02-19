@@ -2407,12 +2407,12 @@ static pn_event_batch_t *next_event_batch(pn_proactor_t* p, bool can_block) {
   lock(&p->tslot_mutex);
   tslot_t * ts = find_tslot(p);
   unlock(&p->tslot_mutex);
-  ts->generation++;  // wrapping OK.  Just looking for any change
 
   lock(&p->sched_mutex);
   assert(ts->task == NULL || ts->earmarked);
   assert(ts->state == UNUSED || ts->state == NEW);
   ts->state = PROCESSING;
+  ts->generation++;  // wrapping OK.  Just looking for any change
 
   // Process outstanding epoll events until we get a batch or need to block.
   while (true) {
