@@ -20,7 +20,7 @@
 
 try:
     import Queue
-except:
+except ImportError:
     import queue as Queue
 
 import sqlite3

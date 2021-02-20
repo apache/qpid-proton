@@ -45,9 +45,7 @@ levels = {
     "ERROR": ERROR
 }
 
-sorted_levels = [(v, k) for k, v in list(levels.items())]
-sorted_levels.sort()
-sorted_levels = [v for k, v in sorted_levels]
+sorted_levels = [k for k, v in sorted(levels.items(), key=lambda kv: kv[1])]
 
 parser = optparse.OptionParser(usage="usage: %prog [options] PATTERN ...",
                                description="Run tests matching the specified PATTERNs.")
@@ -604,9 +602,7 @@ class ClassScanner(PatternMatcher):
         yield None
 
     def extract(self, cls):
-        names = dir(cls)
-        names.sort()
-        for name in names:
+        for name in sorted(dir(cls)):
             obj = getattr(cls, name)
             if hasattr(obj, '__call__') and name.startswith("test"):
                 yield MethodTest(cls, name)
@@ -618,9 +614,7 @@ class ModuleScanner:
         return type(obj) == types.ModuleType
 
     def descend(self, obj):
-        names = dir(obj)
-        names.sort()
-        for name in names:
+        for name in sorted(dir(obj)):
             yield getattr(obj, name)
 
     def extract(self, obj):

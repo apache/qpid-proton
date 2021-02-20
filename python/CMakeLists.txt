@@ -259,7 +259,7 @@ if (NOT TOX_MODULE_FOUND)
 else ()
   option(ENABLE_TOX_TEST "Enable multi-version python testing with TOX" ON)
 
-  set(tox_default "py27,py35,py36,py37,py38")
+  set(tox_default "pep8,py27,py35,py36,py37,py38")
   set(TOX_ENVLIST "" CACHE STRING "List of python environments for TOX tests" )
   mark_as_advanced(TOX_ENVLIST)
 
@@ -287,7 +287,7 @@ else ()
       set_tests_properties(python-tox-test
         PROPERTIES
         PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
-        FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
+        FAIL_REGULAR_EXPRESSION "ERROR:.*commands failed")
     endif ()
   endif (ENABLE_TOX_TEST)
 endif (NOT TOX_MODULE_FOUND)

@@ -34,7 +34,7 @@ from ._wrapper import Wrapper
 
 
 class NamedInt(int):
-    values = {}  # type: Dict[int, str]
+    values = {}  # type: Dict[int, str]  # noqa  # TODO(PROTON-2323) typing.Dict is not available on Python 2.7
 
     def __new__(cls, i, name):
         ni = super(NamedInt, cls).__new__(cls, i)
