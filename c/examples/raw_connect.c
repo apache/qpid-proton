@@ -143,6 +143,7 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
       pn_raw_connection_set_context(c, NULL);
       free(cd);
       printf("**raw connection disconnected\n");
+      pn_proactor_cancel_timeout(app->proactor);
       app->disconnects++;
       check_condition(event, pn_raw_connection_condition(c), app);
     } break;
@@ -153,7 +154,8 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
       if (fgets(line, sizeof(line), stdin)) {
         send_message(c, line);
       } else {
-        /* On end of file wait 2 sec for response */
+        /* On end of file, close for write then wait 2 sec for response */
+        pn_raw_connection_write_close(c);
         app->towake = c;
         pn_proactor_set_timeout(app->proactor, 2000);
       }

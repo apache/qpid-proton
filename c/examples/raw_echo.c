@@ -96,7 +96,11 @@ static void send_message(pn_raw_connection_t *c, const char* msg) {
   buffer.capacity = 1024;
   buffer.offset = 0;
   buffer.size = len;
-  pn_raw_connection_write_buffers(c, &buffer, 1);
+  // If message not accepted just throw it away!
+  if (pn_raw_connection_write_buffers(c, &buffer, 1) < 1) {
+    printf("**Couldn't send message: write not accepted**\n");
+    free(buf);
+  }
 }
 
 static void recv_message(pn_raw_buffer_t buf) {

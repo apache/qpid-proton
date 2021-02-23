@@ -530,7 +530,7 @@ TEST_CASE("raw connection") {
       // No need buffers event as we already gave buffers
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_EVENT_NONE);
 
-      pni_raw_close(p);
+      pni_raw_write_close(p);
 
       size_t rgiven = pn_raw_connection_take_read_buffers(p, &read[0], rtaken);
       REQUIRE(pni_raw_validate(p));
@@ -539,19 +539,35 @@ TEST_CASE("raw connection") {
       REQUIRE(pni_raw_validate(p));
       CHECK(wgiven==0);
 
-      REQUIRE(pn_raw_connection_is_read_closed(p));
       REQUIRE(pn_raw_connection_is_write_closed(p));
 
-      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_CLOSED_READ);
-      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_EVENT_NONE);
-
-      REQUIRE_FALSE(pni_raw_can_read(p));
       REQUIRE(pni_raw_can_write(p));
       pni_raw_write(p, fds[0], snd, set_write_error);
       REQUIRE(pni_raw_validate(p));
       CHECK(write_err == 0);
 
+      REQUIRE_FALSE(pni_raw_can_write(p));
+
+      REQUIRE(pni_raw_can_read(p));
+      pni_raw_read(p, fds[0], rcv, set_read_error);
+      REQUIRE(pni_raw_validate(p));
+      CHECK(read_err == 0);
+
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_WRITTEN);
+
+      SECTION("Read close after write close") {
+        pni_raw_read_close(p);
+      }
+
+      SECTION("Full close after write close") {
+        // We should be able to fully close here (even if we read close would be more specific)
+        pni_raw_close(p);
+      }
+
+      REQUIRE(pn_raw_connection_is_read_closed(p));
+      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_CLOSED_READ);
+
+      REQUIRE_FALSE(pni_raw_can_read(p));
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_CLOSED_WRITE);
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_READ);
       rgiven = pn_raw_connection_take_read_buffers(p, &read[0], rtaken);
@@ -561,6 +577,10 @@ TEST_CASE("raw connection") {
       wgiven = pn_raw_connection_take_written_buffers(p, &written[0], wtaken);
       REQUIRE(pni_raw_validate(p));
       CHECK(wgiven==wtaken);
+
+      // This should have no affect because we are already read and write closed
+      pni_raw_close(p);
+
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_DISCONNECTED);
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_EVENT_NONE);
 
@@ -770,7 +790,6 @@ TEST_CASE("raw connection") {
         REQUIRE(pni_raw_validate(p));
         CHECK(rgiven > 0);
 
-        CHECK(pn_raw_connection_read_buffers_capacity(p) == rgiven);
         CHECK(read[rgiven-1].size == 0);
 
         // At this point we should have read everything - make sure it matches
