@@ -445,13 +445,12 @@ static inline void pni_raw_release_buffers(pn_raw_connection_t *conn) {
     conn->wbuffers[p-1].type = buff_written;
   }
   conn->wbuffer_last_towrite = 0;
-  conn->rdrainpending = (bool)(conn->rbuffer_first_read);
-  conn->wdrainpending = (bool)(conn->wbuffer_first_written);
 }
 
 static inline void pni_raw_disconnect(pn_raw_connection_t *conn) {
   pni_raw_release_buffers(conn);
   conn->disconnectpending = true;
+  conn->disconnect_state  = disc_init;
   conn->state = pni_raw_new_state(conn, int_disconnect);
 }
 
@@ -672,15 +671,34 @@ pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn) {
     } else if (conn->wclosedpending) {
       pni_raw_put_event(conn, PN_RAW_CONNECTION_CLOSED_WRITE);
       conn->wclosedpending = false;
-    } else if (conn->rdrainpending) {
-      pni_raw_put_event(conn, PN_RAW_CONNECTION_READ);
-      conn->rdrainpending = false;
-    } else if (conn->wdrainpending) {
-      pni_raw_put_event(conn, PN_RAW_CONNECTION_WRITTEN);
-      conn->wdrainpending = false;
     } else if (conn->disconnectpending) {
-      pni_raw_put_event(conn, PN_RAW_CONNECTION_DISCONNECTED);
-      conn->disconnectpending = false;
+      switch (conn->disconnect_state) {
+      case disc_init:
+        if (conn->rbuffer_first_read || conn->wbuffer_first_written) {
+          pni_raw_put_event(conn, PN_RAW_CONNECTION_DRAIN_BUFFERS);
+        }
+        conn->disconnect_state = disc_drain_msg;
+        break;
+      // TODO: We'll leave the read/written events in here for the moment for backward compatibility
+      // remove them soon (after dispatch uses DRAIN_BUFFER)
+      case disc_drain_msg:
+        if (conn->rbuffer_first_read) {
+          pni_raw_put_event(conn, PN_RAW_CONNECTION_READ);
+        }
+        conn->disconnect_state = disc_read_msg;
+        break;
+      case disc_read_msg:
+        if (conn->wbuffer_first_written) {
+          pni_raw_put_event(conn, PN_RAW_CONNECTION_WRITTEN);
+        }
+        conn->disconnect_state = disc_written_msg;
+        break;
+      case disc_written_msg:
+        pni_raw_put_event(conn, PN_RAW_CONNECTION_DISCONNECTED);
+        conn->disconnectpending = false;
+        conn->disconnect_state = disc_fini;
+        break;
+      }
     } else if (!pni_raw_wdrained(conn) && !conn->wbuffer_first_towrite && !conn->wrequestedbuffers) {
       // Ran out of write buffers
       pni_raw_put_event(conn, PN_RAW_CONNECTION_NEED_WRITE_BUFFERS);

@@ -62,6 +62,14 @@ typedef enum {
   conn_fini  = 10,
 } raw_conn_state;
 
+typedef enum {
+  disc_init        = 0,
+  disc_drain_msg   = 1,
+  disc_read_msg    = 2,
+  disc_written_msg = 3,
+  disc_fini        = 4
+} raw_disconnect_state;
+
 typedef uint16_t buff_ptr; // This is always the index+1 so that 0 can be special
 
 typedef struct pbuffer_t {
@@ -97,6 +105,8 @@ struct pn_raw_connection_t {
   buff_ptr wbuffer_last_written;
 
   uint8_t state; // really raw_conn_state
+  uint8_t disconnect_state; // really raw_disconnect_state
+
   bool rrequestedbuffers;
   bool wrequestedbuffers;
 
@@ -104,8 +114,6 @@ struct pn_raw_connection_t {
   bool wpending;
   bool rclosedpending;
   bool wclosedpending;
-  bool rdrainpending;
-  bool wdrainpending;
   bool disconnectpending;
   bool wakepending;
 };

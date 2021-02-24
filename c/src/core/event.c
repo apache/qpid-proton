@@ -361,6 +361,7 @@ const char *pn_event_type_name(pn_event_type_t type)
   CASE(PN_RAW_CONNECTION_READ);
   CASE(PN_RAW_CONNECTION_WRITTEN);
   CASE(PN_RAW_CONNECTION_WAKE);
+  CASE(PN_RAW_CONNECTION_DRAIN_BUFFERS);
   default:
     return "PN_UNKNOWN";
   }

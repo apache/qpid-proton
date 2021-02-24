@@ -128,6 +128,13 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
 
 #define WRITE_BUFFERS 4
 
+static void free_buffers(pn_raw_buffer_t buffs[], size_t n) {
+  unsigned i;
+  for (i=0; i<n; ++i) {
+    free(buffs[i].bytes);
+  }
+}
+
 /* This function handles events when we are acting as the sender */
 static void handle_send(app_data_t* app, pn_event_t* event) {
   switch (pn_event_type(event)) {
@@ -148,6 +155,18 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
       check_condition(event, pn_raw_connection_condition(c), app);
     } break;
 
+    case PN_RAW_CONNECTION_DRAIN_BUFFERS: {
+      pn_raw_connection_t *c = pn_event_raw_connection(event);
+      pn_raw_buffer_t buffs[READ_BUFFERS];
+      size_t n;
+      while ( (n = pn_raw_connection_take_read_buffers(c, buffs, READ_BUFFERS)) ) {
+        free_buffers(buffs, n);
+      }
+      while ( (n = pn_raw_connection_take_written_buffers(c, buffs, READ_BUFFERS)) ) {
+        free_buffers(buffs, n);
+      }
+    }
+
     case PN_RAW_CONNECTION_NEED_WRITE_BUFFERS: {
       pn_raw_connection_t *c = pn_event_raw_connection(event);
       char line[120];
@@ -161,7 +180,7 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
       }
     } break;
 
-    /* This path handles both received bytes and freeing buffers at close */
+    /* This path handles received bytes */
     case PN_RAW_CONNECTION_READ: {
       pn_raw_connection_t *c = pn_event_raw_connection(event);
       pn_raw_buffer_t buffs[READ_BUFFERS];

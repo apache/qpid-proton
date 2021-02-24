@@ -125,6 +125,13 @@ void free_conn_data(conn_data_t *c) {
 
 #define READ_BUFFERS 4
 
+static void free_buffers(pn_raw_buffer_t buffs[], size_t n) {
+  unsigned i;
+  for (i=0; i<n; ++i) {
+    free(buffs[i].bytes);
+  }
+}
+
 /* This function handles events when we are acting as the receiver */
 static void handle_receive(app_data_t *app, pn_event_t* event) {
   switch (pn_event_type(event)) {
@@ -170,10 +177,21 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
       free_conn_data(cd);
     } break;
 
+    case PN_RAW_CONNECTION_DRAIN_BUFFERS: {
+      pn_raw_connection_t *c = pn_event_raw_connection(event);
+      pn_raw_buffer_t buffs[READ_BUFFERS];
+      size_t n;
+      while ( (n = pn_raw_connection_take_read_buffers(c, buffs, READ_BUFFERS)) ) {
+        free_buffers(buffs, n);
+      }
+      while ( (n = pn_raw_connection_take_written_buffers(c, buffs, READ_BUFFERS)) ) {
+        free_buffers(buffs, n);
+      }
+    }
+
     case PN_RAW_CONNECTION_NEED_READ_BUFFERS: {
     } break;
 
-    /* This path handles both received bytes and freeing buffers at close */
     case PN_RAW_CONNECTION_READ: {
       pn_raw_connection_t *c = pn_event_raw_connection(event);
       conn_data_t *cd = (conn_data_t *) pn_raw_connection_get_context(c);
@@ -188,15 +206,13 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
         }
         cd->buffers += n;
 
+        // Echo back if we can
         if (!pn_raw_connection_is_write_closed(c)) {
           pn_raw_connection_write_buffers(c, buffs, n);
         } else if (!pn_raw_connection_is_read_closed(c)) {
           pn_raw_connection_give_read_buffers(c, buffs, n);
         } else {
-          unsigned i;
-          for (i=0; i<n && buffs[i].bytes; ++i) {
-            free(buffs[i].bytes);
-          }
+          free_buffers(buffs, n);
         }
       }
     } break;
@@ -217,10 +233,7 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
         if (!pn_raw_connection_is_read_closed(c)) {
           pn_raw_connection_give_read_buffers(c, buffs, n);
         } else {
-          unsigned i;
-          for (i=0; i<n && buffs[i].bytes; ++i) {
-            free(buffs[i].bytes);
-          }
+          free_buffers(buffs, n);
         }
       };
     } break;

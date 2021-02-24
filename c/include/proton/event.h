@@ -459,7 +459,18 @@ typedef enum {
    *
    * Events of this type point to a @ref pn_raw_connection_t
    */
-  PN_RAW_CONNECTION_WAKE
+  PN_RAW_CONNECTION_WAKE,
+
+  /**
+   * The raw connection is returning all the remaining buffers to the application.
+   *
+   * The raw connection is about to disconnect and shutdown. To avoid leaking the buffers
+   * the application must take the buffers back used @ref pn_raw_connection_take_read_buffers
+   * and @ref pn_raw_connection_take_write_buffers.
+   *
+   * Events of this type point to a @ref pn_raw_connection_t
+   */
+  PN_RAW_CONNECTION_DRAIN_BUFFERS
 
 } pn_event_type_t;
 
