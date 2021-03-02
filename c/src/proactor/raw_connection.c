@@ -104,6 +104,7 @@ static inline uint8_t pni_raw_new_state(pn_raw_connection_t *conn, raw_event eve
   return new_state == 0 ? old_state : new_state;
 }
 
+// Open for read by application
 static inline bool pni_raw_ropen(pn_raw_connection_t *conn) {
   switch (conn->state) {
     case conn_ro_wo:
@@ -116,6 +117,7 @@ static inline bool pni_raw_ropen(pn_raw_connection_t *conn) {
   }
 }
 
+// Closed for reading by application
 static inline bool pni_raw_rclosed(pn_raw_connection_t *conn) {
   switch (conn->state) {
     case conn_rc_wo:
@@ -130,6 +132,7 @@ static inline bool pni_raw_rclosed(pn_raw_connection_t *conn) {
   }
 }
 
+// Not yet sent read closed event
 static inline bool pni_raw_rclosing(pn_raw_connection_t *conn) {
   switch (conn->state) {
     case conn_rc_wo:
@@ -140,6 +143,9 @@ static inline bool pni_raw_rclosing(pn_raw_connection_t *conn) {
   }
 }
 
+// Unused code
+#if 0
+// Open for write by application
 static inline bool pni_raw_wopen(pn_raw_connection_t *conn) {
   switch (conn->state) {
     case conn_ro_wo:
@@ -150,6 +156,7 @@ static inline bool pni_raw_wopen(pn_raw_connection_t *conn) {
       return false;
   }
 }
+#endif
 
 // Return whether closed for writing by application (name a little confusing!)
 // NB Initial state is NOT closed for writing - app can write before connecting
@@ -168,7 +175,7 @@ static inline bool pni_raw_wclosed(pn_raw_connection_t *conn) {
   }
 }
 
-// Return whether closed and all writes drained
+// Return whether closed for application and all writes drained
 static inline bool pni_raw_wdrained(pn_raw_connection_t *conn) {
   switch (conn->state) {
     case conn_ro_wc:
@@ -181,6 +188,7 @@ static inline bool pni_raw_wdrained(pn_raw_connection_t *conn) {
   }
 }
 
+// Not yet sent write closed event
 static inline bool pni_raw_wclosing(pn_raw_connection_t *conn) {
   switch (conn->state) {
     case conn_ro_wc:
@@ -190,6 +198,7 @@ static inline bool pni_raw_wclosing(pn_raw_connection_t *conn) {
   }
 }
 
+// Fully closed for read/write - sent both closed events 
 static inline bool pni_raw_rwclosed(pn_raw_connection_t *conn) {
   switch (conn->state) {
     case conn_rs_ws:
