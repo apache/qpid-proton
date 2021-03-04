@@ -10,10 +10,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
         buildType: [RelWithDebInfo]
+        proactor: [default]
         include:
         - os: ubuntu-latest
-          cmake_extra: '-DPROACTOR=epoll'
-        - os: ubuntu-latest
+          proactor: libuv
           cmake_extra: '-DPROACTOR=libuv'
         - os: windows-latest
           cmake_extra: '-A x64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
