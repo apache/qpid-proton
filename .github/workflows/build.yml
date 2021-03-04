@@ -52,7 +52,7 @@ jobs:
     - name: Install Linux dependencies
       if: runner.os == 'Linux'
       run: |
-        sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libuv-dev
+        sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libuv1-dev
     - name: Install Windows dependencies
       if: runner.os == 'Windows'
       run: |
