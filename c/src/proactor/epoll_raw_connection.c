@@ -351,6 +351,7 @@ static void  set_error(pn_raw_connection_t *conn, const char *msg, int err) {
 
 pn_event_batch_t *pni_raw_connection_process(task_t *t, bool sched_ready) {
   praw_connection_t *rc = containerof(t, praw_connection_t, task);
+  lock(&rc->task.mutex);
   int events = rc->psocket.sched_io_events;
   int fd = rc->psocket.epoll_io.fd;
   if (!rc->connected) {
@@ -359,13 +360,16 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, bool sched_ready) {
     }
     if (rc->disconnected) {
       pni_raw_connect_failed(&rc->raw_connection);
+      unlock(&rc->task.mutex);
       return &rc->batch;
     }
     if (events & (EPOLLHUP | EPOLLERR)) {
+      unlock(&rc->task.mutex);
       return NULL;
     }
     praw_connection_connected_lh(rc);
   }
+  unlock(&rc->task.mutex);
 
   bool wake = false;
   lock(&t->mutex);

@@ -38,7 +38,6 @@ typedef struct app_data_t {
   pn_listener_t *listener;
 
   int64_t first_idle_time;
-  int64_t try_accept_time;
   int64_t wake_conn_time;
   int connects;
   int disconnects;
@@ -153,7 +152,8 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
         }
         pn_raw_connection_give_read_buffers(c, buffers, READ_BUFFERS);
       } else {
-        printf("**raw connection connected: not connected\n");
+        printf("**too many raw connections connected: closing\n");
+        pn_raw_connection_close(c);
       }
     } break;
 
@@ -167,11 +167,11 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
       pn_raw_connection_t *c = pn_event_raw_connection(event);
       conn_data_t *cd = (conn_data_t *) pn_raw_connection_get_context(c);
       if (cd) {
+        app->disconnects++;
         printf("**raw connection %tu disconnected: bytes: %d, buffers: %d\n", cd-conn_data, cd->bytes, cd->buffers);
       } else {
         printf("**raw connection disconnected: not connected\n");
       }
-      app->disconnects++;
       check_condition(event, pn_raw_connection_condition(c), app);
       pn_raw_connection_wake(c);
       free_conn_data(cd);
@@ -219,7 +219,9 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
 
     case PN_RAW_CONNECTION_CLOSED_READ: {
       pn_raw_connection_t *c = pn_event_raw_connection(event);
-      send_message(c, "** Goodbye **");
+      if (!pn_raw_connection_is_write_closed(c)) {
+        send_message(c, "** Goodbye **");
+      }
     }
     case PN_RAW_CONNECTION_CLOSED_WRITE:{
       pn_raw_connection_t *c = pn_event_raw_connection(event);
@@ -265,7 +267,6 @@ static bool handle(app_data_t* app, pn_event_t* event) {
 
       if (cd) {
         app->first_idle_time = 0;
-        app->try_accept_time = 0;
         if (app->wake_conn_time < now) {
           app->wake_conn_time = now + 5000;
           pn_proactor_set_timeout(pn_listener_proactor(listener), 5000);
@@ -276,9 +277,9 @@ static bool handle(app_data_t* app, pn_event_t* event) {
       } else {
         printf("**too many connections, trying again later...\n");
 
-        /* No other way to reject connection */
+        /* No other sensible/correct way to reject connection - have to defer closing to event handler */
+        pn_raw_connection_set_context(c, 0);
         pn_listener_raw_accept(listener, c);
-        pn_raw_connection_close(c);
       }
 
     } break;
