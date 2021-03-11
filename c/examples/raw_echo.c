@@ -375,7 +375,7 @@ int main(int argc, char **argv) {
   pn_proactor_listen(app.proactor, app.listener, addr, 16);
 
   size_t thread_count = 3; 
-  pthread_t threads[thread_count];
+  pthread_t* threads = (pthread_t*)calloc(sizeof(pthread_t), thread_count);
   int n;
   for (n=0; n<thread_count; n++) {
     int rc = pthread_create(&threads[n], 0, run, (void*)&app);
