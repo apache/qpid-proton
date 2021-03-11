@@ -356,6 +356,7 @@ void* run(void *arg) {
     }
     pn_proactor_done(app->proactor, events);
   } while(again);
+  return NULL;
 }
 
 
@@ -375,7 +376,8 @@ int main(int argc, char **argv) {
 
   size_t thread_count = 3; 
   pthread_t threads[thread_count];
-  for (int n=0; n<thread_count; n++) {
+  int n;
+  for (n=0; n<thread_count; n++) {
     int rc = pthread_create(&threads[n], 0, run, (void*)&app);
     if (rc) {
       fprintf(stderr, "Failed to create thread\n");
@@ -384,7 +386,7 @@ int main(int argc, char **argv) {
   }
   run(&app);
 
-  for (int n=0; n<thread_count; n++) {
+  for (n=0; n<thread_count; n++) {
     pthread_join(threads[n], 0);
   }
 
