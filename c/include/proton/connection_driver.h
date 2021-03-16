@@ -177,7 +177,7 @@ PN_EXTERN bool pn_connection_driver_read_closed(pn_connection_driver_t *);
  * Call when the first n bytes of pn_connection_driver_write_buffer() have been
  * written to IO. Reclaims the buffer space and reset the write buffer.
  */
-PN_EXTERN void pn_connection_driver_write_done(pn_connection_driver_t *, size_t n);
+PN_EXTERN pn_bytes_t pn_connection_driver_write_done(pn_connection_driver_t *, size_t n);
 
 /**
  * Close the write side. Call when IO can no longer be written to.

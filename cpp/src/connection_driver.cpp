@@ -126,8 +126,9 @@ const_buffer connection_driver::write_buffer() {
     return const_buffer(buffer.start, buffer.size);
 }
 
-void connection_driver::write_done(size_t n) {
-    return pn_connection_driver_write_done(&driver_, n);
+const_buffer connection_driver::write_done(size_t n) {
+    pn_bytes_t buffer = pn_connection_driver_write_done(&driver_, n);
+    return const_buffer(buffer.start, buffer.size);
 }
 
 void connection_driver::write_close() {

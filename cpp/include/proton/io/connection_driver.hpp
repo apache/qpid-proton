@@ -138,7 +138,7 @@ PN_CPP_CLASS_EXTERN connection_driver {
 
     /// Indicate that the first n bytes of write_buffer() have been written successfully.
     /// This changes the buffer, call write_buffer() to get the updated buffer.
-    PN_CPP_EXTERN void write_done(size_t n);
+    PN_CPP_EXTERN const_buffer write_done(size_t n);
 
     /// Indicate that the write side of the transport has closed and no more data can be written.
     /// Note that there may still be events to dispatch() or data to read.

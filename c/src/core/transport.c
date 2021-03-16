@@ -3145,14 +3145,13 @@ void pn_transport_pop(pn_transport_t *transport, size_t size)
     transport->output_pending -= size;
     transport->bytes_output += size;
     if (transport->output_pending) {
+      // TODO: This could be potentially inefficient if we often pop the output without emptying it
+      // TODO: as we rotate the buffer here if we have any bytes left to write.
       memmove( transport->output_buf,  &transport->output_buf[size],
                transport->output_pending );
-    }
-
-    if (transport->output_pending==0 && pn_transport_pending(transport) < 0) {
-      // TODO: It looks to me that this is a NOP as iff we ever get here
-      // TODO: pni_close_head() will always have been already called before leaving pn_transport_pending()
-      pni_close_head(transport);
+    } else {
+      // If we emptied the output buffer then see if there's more output pending
+      pn_transport_pending(transport);
     }
   }
 }

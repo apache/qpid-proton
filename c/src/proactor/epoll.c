@@ -1050,11 +1050,9 @@ static bool pconnection_write(pconnection_t *pc) {
     }
     else {
       // write_done also calls pn_transport_pending(), so the transport knows all current output
-      pn_connection_driver_write_done(&pc->driver, pc->wbuf_completed);
-      pc->wbuf_completed = 0;
-      pn_transport_t *t = pc->driver.transport;
-      set_wbuf(pc, t->output_buf, t->output_pending);
-      if (t->output_pending == 0)
+      pn_bytes_t bytes = pn_connection_driver_write_done(&pc->driver, pc->wbuf_completed);
+      set_wbuf(pc, bytes.start, bytes.size);
+      if (bytes.size == 0)
         pc->output_drained = true;
       // TODO: revise transport API to allow similar efficient access to transport output
     }
@@ -1074,8 +1072,6 @@ static void write_flush(pconnection_t *pc) {
   while(!pc->write_blocked && !pc->output_drained && !pconnection_wclosed(pc)) {
     if (pc->wbuf_remaining == 0) {
       ensure_wbuf(pc);
-      if (pc->wbuf_remaining == 0)
-        pc->output_drained = true;
     } else {
       // Check if we are doing multiple small writes in a row, possibly worth growing the transport output buffer.
       if (prev_wbuf_remaining
