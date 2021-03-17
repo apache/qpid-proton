@@ -315,7 +315,9 @@ static inline void pmutex_init(pthread_mutex_t *pm){
   pthread_mutexattr_t attr;
 
   pthread_mutexattr_init(&attr);
+#ifdef PTHREAD_MUTEX_ADAPTIVE_NP
   pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ADAPTIVE_NP);
+#endif
   if (pthread_mutex_init(pm, &attr)) {
     perror("pthread failure");
     abort();
