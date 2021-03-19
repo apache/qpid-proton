@@ -553,8 +553,8 @@ static int pni_normalize_multiple(pn_data_t *data, pn_data_t *src) {
    d: double (double)
    Z: binary (size_t, char*) - must not be NULL
    z: binary (size_t, char*) - encode as AMQP null if NULL
-   S: symbol (char*)
-   s: string (char*)
+   S: string (char*)
+   s: symbol (char*)
    D: described - next two codes are [descriptor, body]
    @: enter array. If followed by D, a described array. Following codes to matching ']' are elements.
    T: type (pn_type_t) - set array type while in array
@@ -636,8 +636,8 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         }
       }
       break;
-    case 'S':                   /* encode symbol or null if NULL */
-    case 's':                   /* encode string or null if NULL */
+    case 'S':                   /* encode string or null if NULL */
+    case 's':                   /* encode symbol or null if NULL */
       {
         char *start = va_arg(ap, char *);
         size_t size;
