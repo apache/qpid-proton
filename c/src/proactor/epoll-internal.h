@@ -315,6 +315,8 @@ static inline void pmutex_init(pthread_mutex_t *pm){
   pthread_mutexattr_t attr;
 
   pthread_mutexattr_init(&attr);
+  // PROTON-2346: Some stdlibs (e.g., musl) don't implement PTHREAD_MUTEX_ADAPTIVE_NP
+  //  Since this option is a performance hint, it should be harmless to drop it when it's not available.
 #ifdef PTHREAD_MUTEX_ADAPTIVE_NP
   pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ADAPTIVE_NP);
 #endif
