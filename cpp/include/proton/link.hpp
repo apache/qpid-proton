@@ -27,6 +27,7 @@
 #include "./endpoint.hpp"
 #include "./internal/object.hpp"
 
+#include <map>
 #include <string>
 
 /// @file
@@ -89,6 +90,9 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
 
     /// The session that owns this link.
     PN_CPP_EXTERN class session session() const;
+
+    /// **Unsettled API** - Properties supplied by the remote link endpoint.
+    PN_CPP_EXTERN std::map<symbol, value> properties() const;
 
   protected:
     /// @cond INTERNAL
