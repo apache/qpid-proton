@@ -146,9 +146,14 @@ endif()
 
 # MacOS has a bunch of differences in build tools and process and so we have to turn some things
 # off if building there:
-if (APPLE)
+if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set (NOENABLE_WARNING_ERROR ON)
-endif (APPLE)
+  set (NOENABLE_HIDE_UNEXPORTED_SYMBOLS ON)
+  set (LIB_SUFFIX "")
+  if (POLICY CMP0042)
+    cmake_policy (SET CMP0042 NEW)
+  endif ()
+endif ()
 
 # Benchmarks should be disabled by default
 set (NOENABLE_BENCHMARKS ON)
@@ -234,14 +239,6 @@ set (COMPILE_WARNING_FLAGS "${WERROR} ${COMMON_WARNING_FLAGS} ${CC_WARNING_${CMA
 if (MSVC)
   set(CMAKE_DEBUG_POSTFIX "d")
 endif (MSVC)
-
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  if (NOT CMAKE_OSX_ARCHITECTURES)
-    set(CMAKE_OSX_ARCHITECTURES "x86_64")
-    set(LIB_SUFFIX "")
-    set(CMAKE_MACOSX_RPATH ON)
-  endif ()
-endif ()
 
 file(READ VERSION.txt PN_VERSION_FILE)
 string(STRIP ${PN_VERSION_FILE} PN_VERSION_LINE)

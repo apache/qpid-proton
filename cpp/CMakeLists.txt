@@ -16,7 +16,6 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-cmake_minimum_required(VERSION 2.8.12)
 
 include(CMakeDependentOption)
 enable_language(CXX)
