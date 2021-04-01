@@ -274,14 +274,10 @@ std::string to_string(const url& u) {
 std::istream& operator>>(std::istream& i, url& u) {
     std::string s;
     i >> s;
-    if (!i.fail() && !i.bad()) {
-        if (!s.empty()) {
-            url::impl* p = new url::impl(s);
-            p->defaults();
-            u.impl_.reset(p);
-        } else {
-            i.clear(std::ios::failbit);
-        }
+    if (!i.fail()) {
+        url::impl* p = new url::impl(s);
+        p->defaults();
+        u.impl_.reset(p);
     }
     return i;
 }

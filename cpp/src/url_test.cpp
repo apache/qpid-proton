@@ -22,6 +22,7 @@
 
 namespace {
 using proton::url;
+using proton::url_error;
 
 #define CHECK_URL(U, SCHEME, USER, PWD, HOST, PORT, PATH, S) do { \
         url u(U);                                             \
@@ -102,6 +103,10 @@ TEST_CASE("parse URL","[url]") {
         CHECK_URL(url("amqps://user%2F%3A=:pass%2F%3A=@example.net/some_topic"),
                   "amqps", "user/:=", "pass/:=", "example.net", "amqps", "some_topic",
                   "amqps://user%2F%3A=:pass%2F%3A=@example.net:amqps/some_topic");
+        // Unquoted % at the end of a percent encoded string
+        CHECK_URL(url("amqp://username%:password@host:1234/path"),
+                  "amqp", "username%", "password", "host", "1234", "path",
+                  "amqp://username%25:password@host:1234/path");
     }
     SECTION("ipv6") {
         CHECK_URL(url("[fe80::c662:ab36:1ef1:1596]:5672/path"),
@@ -110,6 +115,50 @@ TEST_CASE("parse URL","[url]") {
         CHECK_URL(url("amqp://user:pass@[::1]:1234/path"),
                   "amqp", "user", "pass", "::1", "1234", "path",
                   "amqp://user:pass@[::1]:1234/path");
+    }
+    SECTION("port") {
+        CHECK("host:1234" == url("amqp://host:1234/path").host_port());
+        CHECK(5672 == url("amqp://foo/path").port_int());
+        CHECK(5671 == url("amqps://foo/path").port_int());
+        CHECK(1234 == url("amqps://foo:1234/path").port_int());
+
+        url u("amqps://foo:xyz/path");
+        CHECK_THROWS_AS(u.port_int(), url_error &);
+        CHECK_THROWS_WITH(u.port_int(), "invalid port 'xyz'");
+    }
+    SECTION("constructors") {
+        url u1("amqp://foo:xyz/path");
+        url u2 = u1;
+        CHECK("amqp://foo:xyz/path" == std::string(u2));
+    }
+    SECTION("methods") {
+        SECTION("check empty") {
+            url u("amqp://foo:1234/path");
+            CHECK(u.empty());
+            CHECK("amqp://foo:1234/path" == std::string(u));
+            CHECK(!u.empty());
+        }
+    }
+    SECTION("operators") {
+        SECTION("assignment") {
+            url u1("amqp://foo:xyz/path");
+            url u3("amqp://foo:xyz/pathdontcare");
+            u3 = u1;
+            CHECK("amqp://foo:xyz/path" == std::string(u3));
+        }
+        SECTION("output stream") {
+            url u("amqp://foo:xyz/path");
+            std::ostringstream o;
+            o << u;
+            CHECK("amqp://foo:xyz/path" == std::string(o.str()));
+            CHECK("amqp://foo:xyz/path" == to_string(u));
+        }
+        SECTION("input stream") {
+            url u("amqp://foo:xyz/pathdontcare");
+            std::istringstream i("amqp://foo:xyz/path");
+            i >> u;
+            CHECK("amqp://foo:xyz/path" == std::string(u));
+        }
     }
 }
 
