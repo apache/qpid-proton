@@ -433,6 +433,7 @@ if (qpid-proton-proactor)
     COMPILE_FLAGS "${LTO}"
     LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
   target_compile_definitions(qpid-proton-proactor-objects PRIVATE qpid_proton_proactor_EXPORTS)
+  set(TARGET_OBJECTS_qpid-proton-proactor-objects "$<TARGET_OBJECTS:qpid-proton-proactor-objects>")
 
   # Can't use target_link_libraries() because cmake 2.8.12 doesn't allow object libraries as the first param
   # otherwise for cmake 3.9 and on this would be:
@@ -467,7 +468,7 @@ set(qpid-proton-noncore-src
 add_library (qpid-proton SHARED
   $<TARGET_OBJECTS:qpid-proton-core-objects>
   $<TARGET_OBJECTS:qpid-proton-platform-io-objects>
-  $<$<BOOL:${HAS_PROACTOR}>:$<TARGET_OBJECTS:qpid-proton-proactor-objects>>
+  ${TARGET_OBJECTS_qpid-proton-proactor-objects}
   ${qpid-proton-noncore-src})
 target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 set_target_properties (qpid-proton
