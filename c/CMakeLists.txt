@@ -467,7 +467,7 @@ set(qpid-proton-noncore-src
 add_library (qpid-proton SHARED
   $<TARGET_OBJECTS:qpid-proton-core-objects>
   $<TARGET_OBJECTS:qpid-proton-platform-io-objects>
-  $<$<TARGET_EXISTS:qpid-proton-proactor-objects>:$<TARGET_OBJECTS:qpid-proton-proactor-objects>>
+  $<$<BOOL:${HAS_PROACTOR}>:$<TARGET_OBJECTS:qpid-proton-proactor-objects>>
   ${qpid-proton-noncore-src})
 target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 set_target_properties (qpid-proton
@@ -486,7 +486,7 @@ if (BUILD_STATIC_LIBS)
   target_compile_definitions(qpid-proton-static PUBLIC PROTON_DECLARE_STATIC)
   target_link_libraries (qpid-proton-static
     qpid-proton-core-static
-    $<$<TARGET_EXISTS:qpid-proton-proactor-static>:qpid-proton-proactor-static>
+    $<$<BOOL:${HAS_PROACTOR}>:qpid-proton-proactor-static>
     ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 endif(BUILD_STATIC_LIBS)
 
