@@ -148,7 +148,6 @@ endif()
 # off if building there:
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set (NOENABLE_WARNING_ERROR ON)
-  set (NOENABLE_HIDE_UNEXPORTED_SYMBOLS ON)
   set (LIB_SUFFIX "")
   if (POLICY CMP0042)
     cmake_policy (SET CMP0042 NEW)

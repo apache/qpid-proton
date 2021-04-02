@@ -22,9 +22,12 @@
 namespace proton {
 
 error::error(const std::string& msg) : std::runtime_error(msg) {}
+error::~error() {}
 
 timeout_error::timeout_error(const std::string& msg) : error(msg) {}
+timeout_error::~timeout_error() {}
 
 conversion_error::conversion_error(const std::string& msg) : error(msg) {}
+conversion_error::~conversion_error() {}
 
 }

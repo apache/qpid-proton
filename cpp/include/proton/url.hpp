@@ -45,6 +45,7 @@ PN_CPP_CLASS_EXTERN url_error : public error {
     /// @cond INTERNAL
     /// Construct a URL error with a message.
     PN_CPP_EXTERN explicit url_error(const std::string&);
+    PN_CPP_EXTERN ~url_error();
     /// @endcond
 };
 

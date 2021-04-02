@@ -41,6 +41,7 @@ struct
 PN_CPP_CLASS_EXTERN error : public std::runtime_error {
     /// Construct the error with a message.
     PN_CPP_EXTERN explicit error(const std::string&);
+    PN_CPP_EXTERN ~error();
 };
 
 /// An operation timed out.
@@ -48,6 +49,7 @@ struct
 PN_CPP_CLASS_EXTERN timeout_error : public error {
     /// Construct the error with a message.
     PN_CPP_EXTERN explicit timeout_error(const std::string&);
+    PN_CPP_EXTERN ~timeout_error();
 };
 
 /// An error converting between AMQP and C++ data.
@@ -55,6 +57,7 @@ struct
 PN_CPP_CLASS_EXTERN conversion_error : public error {
     /// Construct the error with a message.
     PN_CPP_EXTERN explicit conversion_error(const std::string&);
+    PN_CPP_EXTERN ~conversion_error();
 };
 
 } // proton
