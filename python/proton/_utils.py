@@ -440,11 +440,16 @@ class BlockingConnection(Handler):
                 self.conn.close()
                 self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_ACTIVE),
                           msg="Closing connection")
+                if self.conn.transport:
+                    # Close tail to force transport cleanup without waiting/hanging for peer close frame.
+                    self.conn.transport.close_tail()
         finally:
             self.conn.free()
             # Nothing left to block on.  Allow reactor to clean up.
             self.run()
-            self.conn = None
+            if self.conn:
+                self.conn.handler = None  # break cyclical reference
+                self.conn = None
             self.container.global_handler = None  # break circular ref: container to cadapter.on_error
             self.container.stop_events()
             self.container = None
@@ -502,9 +507,6 @@ class BlockingConnection(Handler):
                         raise Timeout(txt)
             finally:
                 self.container.timeout = container_timeout
-        if self.disconnected or self._is_closed():
-            self.container.stop()
-            self.conn.handler = None  # break cyclical reference
         if self.disconnected and not self._is_closed():
             raise ConnectionException(
                 "Connection %s disconnected: %s" % (self.url, self.disconnected))
@@ -534,7 +536,8 @@ class BlockingConnection(Handler):
         self.on_transport_closed(event)
 
     def on_transport_closed(self, event):
-        self.disconnected = event.transport.condition or "unknown"
+        if not self.closing:
+            self.disconnected = event.transport.condition or "unknown"
 
 
 class AtomicCount(object):
