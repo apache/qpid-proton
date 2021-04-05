@@ -220,7 +220,7 @@ const char* const url::impl::default_host = "localhost";
 
 
 url_error::url_error(const std::string& s) : error(s) {}
-url_error::~url_error() {}
+url_error::~url_error() throw() {}
 
 url::url(const std::string &s) : impl_(new impl(s)) { impl_->defaults(); }
 
