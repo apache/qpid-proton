@@ -66,8 +66,15 @@ uint64_t tag_counter = 0;
 
 tracker sender::send(const message &message) {
     uint64_t id = ++tag_counter;
-    pn_delivery_t *dlv =
-        pn_delivery(pn_object(), pn_dtag(reinterpret_cast<const char*>(&id), sizeof(id)));
+    const uint8_t *begin = reinterpret_cast<const uint8_t *>(&id);
+    const binary tag(begin, begin + sizeof(id));
+    return send(message, tag);
+}
+
+tracker sender::send(const message &message, const binary &tag) {
+    pn_delivery_t *dlv = pn_delivery(
+        pn_object(),
+        pn_dtag((reinterpret_cast<const char *>(&tag[0])), tag.size()));
     std::vector<char> buf;
     message.encode(buf);
     assert(!buf.empty());

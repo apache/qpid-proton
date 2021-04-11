@@ -56,6 +56,7 @@ PN_CPP_CLASS_EXTERN sender : public link {
 
     /// Send a message on the sender.
     PN_CPP_EXTERN tracker send(const message &m);
+    PN_CPP_EXTERN tracker send(const message &m, const binary &tag);
 
     /// Get the source node.
     PN_CPP_EXTERN class source source() const;

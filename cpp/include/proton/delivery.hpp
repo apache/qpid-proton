@@ -22,6 +22,7 @@
  *
  */
 
+#include "./binary.hpp"
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./internal/object.hpp"
@@ -63,6 +64,9 @@ class delivery : public transfer {
 
     /// Settle with MODIFIED state.
     PN_CPP_EXTERN void modify();
+
+    /// Return the tag for this delivery.
+    PN_CPP_EXTERN binary tag() const;
 
     /// @cond INTERNAL
   friend class internal::factory<delivery>;
