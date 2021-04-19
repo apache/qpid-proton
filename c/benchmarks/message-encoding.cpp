@@ -18,38 +18,28 @@
  * under the License.
  *
  */
-#include <unistd.h>
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "proton/connection_driver.h"
-#include "proton/engine.h"
-#include "proton/log.h"
 #include "proton/message.h"
 
 #include <benchmark/benchmark.h>
 #include <core/data.h>
-#include <proton/listener.h>
 #include <proton/netaddr.h>
-#include <proton/proactor.h>
-#include <proton/sasl.h>
-#include <wait.h>
+
+#include <cstdlib>
+#include <cstring>
 
 /** Initialize message, don't decode?
  * Issues:
  *   PROTON-2229 pn_data_t initialization lead to low performance
  */
 static void BM_Encode10MbMessage(benchmark::State &state) {
-    const size_t size = 10*1024*1024;
-    char * payload = static_cast<char *>(malloc(size));
+    const size_t size = 10 * 1024 * 1024;
+    char *payload = static_cast<char *>(malloc(size));
     pn_bytes_t bytes = pn_bytes(size, payload);
 
     for (auto _ : state) {
         pn_message_t *message = pn_message();
-        pn_data_t *   body = pn_message_body(message);
+        pn_data_t *body = pn_message_body(message);
         for (size_t i = 0; i < state.range(0); i++) {
             pn_data_put_binary(body, bytes);
         }
@@ -61,7 +51,7 @@ static void BM_Encode10MbMessage(benchmark::State &state) {
 }
 
 BENCHMARK(BM_Encode10MbMessage)
-->Arg(1)
-->Arg(10)
-->ArgName("put_binary count")
-->Unit(benchmark::kMillisecond);
+        ->Arg(1)
+        ->Arg(2)
+        ->ArgName("put_binary count")
+        ->Unit(benchmark::kMillisecond);
