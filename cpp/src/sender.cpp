@@ -59,11 +59,6 @@ class target sender::target() const {
     return proton::target(*this);
 }
 
-namespace {
-// TODO: revisit if thread safety required
-uint64_t tag_counter = 0;
-}
-
 tracker sender::send(const message &message) {
     uint64_t id = ++tag_counter;
     const uint8_t *begin = reinterpret_cast<const uint8_t *>(&id);

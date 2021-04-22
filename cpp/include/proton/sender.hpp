@@ -73,8 +73,13 @@ PN_CPP_CLASS_EXTERN sender : public link {
     PN_CPP_EXTERN void return_credit();
 
     /// @cond INTERNAL
-  friend class internal::factory<sender>;
-  friend class sender_iterator;
+    friend class internal::factory<sender>;
+    friend class sender_iterator;
+    /// @endcond
+
+  private:
+    /// @cond INTERNAL
+    uint64_t tag_counter = 0;
     /// @endcond
 };
 
