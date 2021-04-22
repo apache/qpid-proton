@@ -27,6 +27,10 @@
 
 #include <proton/delivery.h>
 
+#include "types_internal.hpp"
+
+#include "proton/binary.hpp"
+
 namespace {
 
 void settle_delivery(pn_delivery_t* o, uint64_t state) {
@@ -40,6 +44,7 @@ namespace proton {
 
 delivery::delivery(pn_delivery_t* d): transfer(make_wrapper(d)) {}
 receiver delivery::receiver() const { return make_wrapper<class receiver>(pn_delivery_link(pn_object())); }
+binary delivery::tag() const { return bin(pn_delivery_tag(pn_object())); }
 delivery::~delivery() {}
 void delivery::accept() { settle_delivery(pn_object(), ACCEPTED); }
 void delivery::reject() { settle_delivery(pn_object(), REJECTED); }
