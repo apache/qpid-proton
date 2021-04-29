@@ -37,7 +37,7 @@ install:
 - vcpkg integrate install
 # https://pythonhosted.org/CodeChat/appveyor.yml.html
 - "%PYTHON%\\python.exe -m pip install --user --upgrade pip"
-- "%PYTHON%\\python.exe -m pip install --user --upgrade setuptools wheel tox flake8"
+- "%PYTHON%\\python.exe -m pip install --user --upgrade setuptools wheel tox flake8 cffi"
 cache:
 - C:\ProgramData\chocolatey\bin -> .appveyor.yml
 - C:\ProgramData\chocolatey\lib -> .appveyor.yml
