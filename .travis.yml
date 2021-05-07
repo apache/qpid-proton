@@ -156,8 +156,8 @@ addons:
 
 before_install:
   # https://travis-ci.community/t/clang-10-was-recently-broken-on-linux-unmet-dependencies-for-clang-10-clang-tidy-10-valgrind/11527
-  - if [[ "${OSTYPE}" == "linux"* ]]; then sudo apt-get install -yq --allow-downgrades libc6=2.31-0ubuntu9.2 libc6-dev=2.31-0ubuntu9.2; fi
-  - if [[ "${OSTYPE}" == "linux"* ]]; then sudo -E apt-get -yq --no-install-suggests --no-install-recommends --allow-downgrades --allow-remove-essential --allow-change-held-packages install valgrind -o Debug::pkgProblemResolver=yes; fi
+  - if [[ "${TRAVIS_DIST}" == "focal" ]]; then sudo apt-get install -yq --allow-downgrades libc6=2.31-0ubuntu9.2 libc6-dev=2.31-0ubuntu9.2; fi
+  - if [[ "${TRAVIS_DIST}" == "focal" ]]; then sudo -E apt-get -yq --no-install-suggests --no-install-recommends --allow-downgrades --allow-remove-essential --allow-change-held-packages install valgrind -o Debug::pkgProblemResolver=yes; fi
 
 install:
 - echo "Using PYTHON=${PYTHON:=python}"
