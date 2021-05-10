@@ -24,7 +24,7 @@ from sys import version_info
 
 from proton import *
 
-from . import common
+import common
 
 
 class Test(common.Test):

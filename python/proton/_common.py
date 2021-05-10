@@ -34,6 +34,8 @@ try:
 except NameError:
     unicode = str
 
+from _proton_core import ffi
+
 
 def isinteger(value):
     return isinstance(value, (int, long))
@@ -80,7 +82,7 @@ def unicode2utf8(string):
 
 def utf82unicode(string):
     """Convert C strings returned from proton-c into python unicode"""
-    if string is None:
+    if string is None or string == ffi.NULL:
         return None
     elif isinstance(string, unicode):
         # py2 unicode, py3 str (via hack definition)
@@ -88,4 +90,8 @@ def utf82unicode(string):
     elif isinstance(string, bytes):
         # py2 str (via hack definition), py3 bytes
         return string.decode('utf8')
-    raise TypeError("Unrecognized string type")
+    elif isinstance(string, ffi.CData):
+        # ffi.string return bytes for cdata type <check this comment pleaseeeeeeeeeeeeeeeeeeee>
+        return ffi.string(string).decode()
+
+    raise TypeError("Unrecognized string type", string)
