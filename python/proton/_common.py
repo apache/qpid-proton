@@ -19,6 +19,8 @@
 
 from typing import Optional, Union, Any
 
+from _proton_core import ffi
+
 
 def isinteger(value: Any) -> bool:
     return isinstance(value, int)
@@ -61,10 +63,14 @@ def unicode2utf8(string: Optional[str]) -> Optional[str]:
 
 def utf82unicode(string: Optional[Union[str, bytes]]) -> Optional[str]:
     """Convert C strings returned from proton-c into python unicode"""
-    if string is None:
+    if string is None or string == ffi.NULL:
         return None
     elif isinstance(string, str):
         return string
     elif isinstance(string, bytes):
         return string.decode('utf8')
-    raise TypeError("Unrecognized string type")
+    elif isinstance(string, ffi.CData):
+        # ffi.string return bytes for cdata type <check this comment pleaseeeeeeeeeeeeeeeeeeee>
+        return ffi.string(string).decode()
+
+    raise TypeError("Unrecognized string type", string)

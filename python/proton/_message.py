@@ -19,8 +19,22 @@
 
 from __future__ import absolute_import
 
-from cproton import PN_DEFAULT_PRIORITY, PN_STRING, PN_UUID, PN_OVERFLOW, pn_error_text, pn_message, \
-    pn_message_annotations, pn_message_body, pn_message_clear, pn_message_decode, \
+# from cproton import PN_DEFAULT_PRIORITY, PN_STRING, PN_UUID, PN_OVERFLOW, pn_error_text, pn_message, \
+#     pn_message_annotations, pn_message_body, pn_message_clear, pn_message_decode, \
+#     pn_message_encode, pn_message_error, pn_message_free, pn_message_get_address, pn_message_get_content_encoding, \
+#     pn_message_get_content_type, pn_message_get_creation_time, pn_message_get_delivery_count, \
+#     pn_message_get_expiry_time, pn_message_get_group_id, pn_message_get_group_sequence, pn_message_get_priority, \
+#     pn_message_get_reply_to, pn_message_get_reply_to_group_id, pn_message_get_subject, pn_message_get_ttl, \
+#     pn_message_get_user_id, pn_message_id, pn_message_instructions, pn_message_is_durable, pn_message_is_first_acquirer, \
+#     pn_message_is_inferred, pn_message_properties, pn_message_set_address, pn_message_set_content_encoding, \
+#     pn_message_set_content_type, pn_message_set_creation_time, pn_message_set_delivery_count, pn_message_set_durable, \
+#     pn_message_set_expiry_time, pn_message_set_first_acquirer, pn_message_set_group_id, pn_message_set_group_sequence, \
+#     pn_message_set_inferred, pn_message_set_priority, pn_message_set_reply_to, pn_message_set_reply_to_group_id, \
+#     pn_message_set_subject, pn_message_set_ttl, pn_message_set_user_id
+
+from _proton_core import ffi
+from _proton_core.lib import PN_DEFAULT_PRIORITY, PN_OVERFLOW, pn_error_text, pn_message, \
+    pn_message_annotations, pn_message_body, pn_message_clear, pn_message_correlation_id, pn_message_decode, \
     pn_message_encode, pn_message_error, pn_message_free, pn_message_get_address, pn_message_get_content_encoding, \
     pn_message_get_content_type, pn_message_get_correlation_id, pn_message_get_creation_time, pn_message_get_delivery_count, \
     pn_message_get_expiry_time, pn_message_get_group_id, pn_message_get_group_sequence, pn_message_get_id, pn_message_get_priority, \
@@ -33,6 +47,9 @@ from cproton import PN_DEFAULT_PRIORITY, PN_STRING, PN_UUID, PN_OVERFLOW, pn_err
     pn_message_set_reply_to, pn_message_set_reply_to_group_id, pn_message_set_subject, \
     pn_message_set_ttl, pn_message_set_user_id
 
+
+
+from . import _compat
 from ._common import isinteger, millis2secs, secs2millis, unicode2utf8, utf82unicode
 from ._data import char, Data, symbol, ulong, AnnotationDict
 from ._endpoints import Link
@@ -307,7 +324,7 @@ class Message(object):
 
     @address.setter
     def address(self, value: str) -> None:
-        self._check(pn_message_set_address(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_address(self._msg, unicode2utf8(value).encode()))
 
     @property
     def subject(self) -> Optional[str]:
@@ -319,7 +336,7 @@ class Message(object):
 
     @subject.setter
     def subject(self, value: str) -> None:
-        self._check(pn_message_set_subject(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_subject(self._msg, unicode2utf8(value).encode()))
 
     @property
     def reply_to(self) -> Optional[str]:
@@ -331,7 +348,7 @@ class Message(object):
 
     @reply_to.setter
     def reply_to(self, value: str) -> None:
-        self._check(pn_message_set_reply_to(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_reply_to(self._msg, unicode2utf8(value).encode()))
 
     @property
     def correlation_id(self) -> Optional[Union['UUID', ulong, str, bytes]]:
@@ -368,7 +385,7 @@ class Message(object):
 
     @content_type.setter
     def content_type(self, value: str) -> None:
-        self._check(pn_message_set_content_type(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_content_type(self._msg, unicode2utf8(value).encode()))
 
     @property
     def content_encoding(self) -> symbol:
@@ -380,7 +397,7 @@ class Message(object):
 
     @content_encoding.setter
     def content_encoding(self, value: str) -> None:
-        self._check(pn_message_set_content_encoding(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_content_encoding(self._msg, unicode2utf8(value).encode()))
 
     @property
     def expiry_time(self) -> float:  # TODO doc said int
@@ -416,7 +433,7 @@ class Message(object):
 
     @group_id.setter
     def group_id(self, value: str) -> None:
-        self._check(pn_message_set_group_id(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_group_id(self._msg, unicode2utf8(value).encode()))
 
     @property
     def group_sequence(self) -> int:
@@ -440,7 +457,7 @@ class Message(object):
 
     @reply_to_group_id.setter
     def reply_to_group_id(self, value: str) -> None:
-        self._check(pn_message_set_reply_to_group_id(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_reply_to_group_id(self._msg, unicode2utf8(value).encode()))
 
     @property
     def instructions(self) -> Optional[AnnotationDict]:

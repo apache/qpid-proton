@@ -67,7 +67,7 @@ jobs:
         brew install libuv swig pkgconfig jsoncpp
     - name: cmake configure
       working-directory: ${{env.BuildDir}}
-      run: cmake "${{github.workspace}}" "-DCMAKE_BUILD_TYPE=${BuildType}" "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" -DRUNTIME_CHECK=${{matrix.runtimeCheck}} -DBUILD_BINDINGS=python3 ${{matrix.cmake_extra}}
+      run: cmake "${{github.workspace}}" "-DCMAKE_BUILD_TYPE=${BuildType}" "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" -DRUNTIME_CHECK=${{matrix.runtimeCheck}} -DBUILD_BINDINGS="python" ${{matrix.cmake_extra}}
       shell: bash
     - name: cmake build/install
       run: cmake --build "${BuildDir}" --config ${BuildType} -t install --parallel 2
@@ -85,7 +85,7 @@ jobs:
     - id: ctest
       name: ctest
       working-directory: ${{env.BuildDir}}
-      run: ctest -C ${BuildType} -V -T Test --no-compress-output -R python3-test ${{matrix.ctest_extra}}
+      run: ctest -C ${BuildType} -V -T Test --no-compress-output -R python-test ${{matrix.ctest_extra}}
       shell: bash
     - name: Upload Test results
       if: always() && (steps.ctest.outcome == 'failure' || steps.ctest.outcome == 'success')
