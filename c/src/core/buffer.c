@@ -291,24 +291,37 @@ int pn_buffer_defrag(pn_buffer_t *buf)
 
 pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
 {
-  if (buf) {
-    pn_buffer_defrag(buf);
-    return pn_bytes(buf->size, buf->bytes);
-  } else {
-    return pn_bytes(0, NULL);
+  if (!buf) {
+    return (pn_bytes_t){0, NULL};
   }
+  pn_buffer_defrag(buf);
+  return (pn_bytes_t){.size=buf->size, .start=buf->bytes};
 }
 
 pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
 {
-  if (buf) {
-    pn_buffer_defrag(buf);
-    pn_rwbytes_t r = {buf->size, buf->bytes};
-    return r;
-  } else {
-    pn_rwbytes_t r = {0, NULL};
-    return r;
+  if (!buf) {
+    return (pn_rwbytes_t){0, NULL};
   }
+  pn_buffer_defrag(buf);
+  return (pn_rwbytes_t){.size=buf->size, .start=buf->bytes};
+}
+
+pn_rwbytes_t pn_buffer_free_memory(pn_buffer_t *buf)
+{
+  if (!buf) {
+    return (pn_rwbytes_t){0, NULL};
+  }
+  size_t free_size = buf->capacity-buf->size;
+  if (buf->start == 0) {
+    return (pn_rwbytes_t){.size=free_size, .start=buf->bytes};
+  }
+  // If free memory in one single blob don't need to defragment
+  if (buf->start+buf->size > buf->capacity) {
+    return (pn_rwbytes_t){.size=free_size, .start=buf->bytes+buf->start-free_size};
+  }
+  pn_buffer_defrag(buf);
+  return (pn_rwbytes_t){.size=free_size, .start=buf->bytes+buf->start+buf->size};
 }
 
 int pn_buffer_quote(pn_buffer_t *buf, pn_string_t *str, size_t n)
