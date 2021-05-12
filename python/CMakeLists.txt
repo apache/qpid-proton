@@ -17,7 +17,20 @@
 # under the License.
 #
 
+set(CMAKE_SWIG_FLAGS "-threads" "-DUINTPTR_SIZE=${CMAKE_SIZEOF_VOID_P}")
+
 include_directories (${PN_C_INCLUDE_DIR} ${Python_INCLUDE_DIRS})
+
+set_source_files_properties(cproton.i PROPERTIES CPLUSPLUS NO)
+
+# Suppress warnings in swig generated code.
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+
+
+list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
+    ${CMAKE_SOURCE_DIR}/c/include/proton/cproton.i
+    ${PROTON_HEADERS}
+)
 
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/_proton_core.c
@@ -29,6 +42,13 @@ if (WIN32)
 else ()
   set(python_suffix .so)
 endif()
+
+swig_add_library(cproton LANGUAGE python SOURCES cproton.i)
+swig_link_libraries(cproton ${BINDING_DEPS} ${Python_LIBRARIES} -lm)
+set_target_properties(${SWIG_MODULE_cproton_REAL_NAME}
+    PROPERTIES
+    LINK_FLAGS "${CATCH_UNDEFINED}")
+
 
 add_library(_proton_core SHARED ${CMAKE_CURRENT_BINARY_DIR}/_proton_core.c)
 target_link_directories(_proton_core PRIVATE ${Python_LIBRARY_DIRS})  # TODO: this will not work on older cmake
@@ -54,6 +74,8 @@ endif ()
 if (NOT PYTHON_SITEARCH_PACKAGES)
   set (PYTHON_SITEARCH_PACKAGES ${PYTHON_SITEARCH_PACKAGES_DEFAULT})
 endif()
+
+set (pysrc-generated cproton.py)
 
 set (pysrc
    proton/__init__.py
@@ -95,11 +117,18 @@ macro (py_compile directory files artifacts)
   endforeach (src_file)
 endmacro(py_compile)
 
+py_compile(${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated} CPROTON_ARTIFACTS)
+
 py_compile(${CMAKE_CURRENT_SOURCE_DIR} "${pysrc}" PROTON_ARTIFACTS)
 
 install(FILES ${PROTON_ARTIFACTS}
         DESTINATION "${PYTHON_SITEARCH_PACKAGES}/proton/"
         COMPONENT Python)
+
+install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
+        DESTINATION ${PYTHON_SITEARCH_PACKAGES}
+        COMPONENT Python)
+
 install(TARGETS _proton_core
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)
@@ -107,6 +136,7 @@ install(TARGETS _proton_core
 # python test: python3/tests/proton-test
 set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
 set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
+set (py_dll "$<TARGET_FILE_DIR:_cproton>")
 set (py_dll "$<TARGET_FILE_DIR:_proton_core>")
 set (py_bld "$<TARGET_FILE_DIR:qpid-proton-core>") # For windows
 set (py_tests "${py_src}/tests")
@@ -121,8 +151,6 @@ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
   set (python_coverage_options -m coverage run --parallel-mode)
 endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
-# set(PYTHON_TEST_COMMAND "-m" "unittest" "discover" "-v" "-s" "-p" "*.py" )
-
 set(PYTHON_TEST_COMMAND "-m" "unittest" "discover" "-v" )
 pn_add_test(
   INTERPRETED
@@ -132,5 +160,4 @@ pn_add_test(
     "PYTHONPATH=${py_pythonpath}"
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
   COMMAND ${Python_EXECUTABLE} ${python_coverage_options} ${PYTHON_TEST_COMMAND} "${py_tests}/proton_tests")
-  # COMMAND ${Python_EXECUTABLE} ${python_coverage_options} "${py_tests}/proton-test")~
 set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Ran .+ tests in .*\n\nOK")
