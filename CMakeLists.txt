@@ -348,7 +348,7 @@ add_subdirectory(c)
 
 # Add bindings that do not require swig here - the directory name must be the same as the binding name
 # See below for swig bindings
-set(BINDINGS cpp go python3)
+set(BINDINGS cpp go)
 
 if (CMAKE_CXX_COMPILER)
   set (DEFAULT_CPP ON)
