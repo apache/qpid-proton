@@ -259,13 +259,9 @@ if (NOT TOX_MODULE_FOUND)
 else ()
   option(ENABLE_TOX_TEST "Enable multi-version python testing with TOX" ON)
 
-  set(tox_default "pep8,py27,py35,py36,py37,py38")
   set(TOX_ENVLIST "" CACHE STRING "List of python environments for TOX tests" )
   mark_as_advanced(TOX_ENVLIST)
 
-  if (NOT TOX_ENVLIST)
-    set (TOX_ENVLIST ${tox_default})
-  endif()
   if (ENABLE_TOX_TEST)
     if (CMAKE_BUILD_TYPE MATCHES "Coverage")
       message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
