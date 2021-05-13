@@ -24,6 +24,7 @@ import json
 import logging
 import re
 import os
+import queue
 import time
 import traceback
 import uuid
@@ -45,9 +46,6 @@ from ._selectable import Selectable
 from ._handlers import OutgoingMessageHandler, IOHandler
 
 from ._io import IO
-
-from . import _compat
-from ._compat import queue
 
 
 _logger = logging.getLogger("proton")
@@ -217,7 +215,12 @@ class Reactor(object):
             for exc, value, tb in self.errors[:-1]:
                 traceback.print_exception(exc, value, tb)
             exc, value, tb = self.errors[-1]
-            _compat.raise_(exc, value, tb)
+            if value is None:
+                value = exc()
+            if tb is None:
+                raise value
+            else:
+                raise value.with_traceback(tb)
 
     def process(self):
         # result = pn_reactor_process(self._impl)

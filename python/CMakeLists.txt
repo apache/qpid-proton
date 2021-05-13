@@ -62,7 +62,6 @@ endif()
 set (pysrc-generated cproton.py)
 set (pysrc
     proton/__init__.py
-    proton/_compat.py
     proton/_common.py
     proton/_condition.py
     proton/_data.py

@@ -21,7 +21,7 @@ from __future__ import absolute_import
 
 import socket
 
-from ._compat import urlparse, urlunparse, quote, unquote
+from urllib.parse import urlparse, urlunparse, quote, unquote
 
 
 class Url(object):
@@ -168,7 +168,7 @@ class Url(object):
             port = None
         if not host:
             host = None
-        return (host, port)
+        return host, port
 
     @property
     def path(self):

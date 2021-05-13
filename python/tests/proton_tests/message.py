@@ -110,21 +110,14 @@ class AccessorsTest(Test):
         self._test_str("reply_to_group_id")
 
 
-try:
-    long()
-except NameError:
-    long = int
-try:
-    unicode()
-except NameError:
-    unicode = str
+long = int
+unicode = str
 
 
 class CodecTest(Test):
 
     def testProperties(self):
-        self.msg.properties = {}
-        self.msg.properties['key'] = 'value'
+        self.msg.properties = {'key': 'value'}
         data = self.msg.encode()
 
         msg2 = Message()
@@ -199,7 +192,9 @@ class CodecTest(Test):
             for k in msg2.properties:
                 assert type(k) is unicode, 'non-string key %s %s' % (k, type(k))
 
-    def testAnnotationsSymbolicAndUlongKey(self, a={symbol('one'): 1, 'two': 2, ulong(3): 'three'}):
+    def testAnnotationsSymbolicAndUlongKey(self, a=None):
+        if a is None:
+            a = {symbol('one'): 1, 'two': 2, ulong(3): 'three'}
         self.msg.annotations = a
         data = self.msg.encode()
 

@@ -25,25 +25,18 @@ from cproton import PN_DEFAULT_PRIORITY, PN_OVERFLOW, pn_error_text, pn_message,
     pn_message_get_content_type, pn_message_get_creation_time, pn_message_get_delivery_count, \
     pn_message_get_expiry_time, pn_message_get_group_id, pn_message_get_group_sequence, pn_message_get_priority, \
     pn_message_get_reply_to, pn_message_get_reply_to_group_id, pn_message_get_subject, pn_message_get_ttl, \
-    pn_message_get_user_id, pn_message_id, pn_message_instructions, pn_message_is_durable, pn_message_is_first_acquirer, \
-    pn_message_is_inferred, pn_message_properties, pn_message_set_address, pn_message_set_content_encoding, \
-    pn_message_set_content_type, pn_message_set_creation_time, pn_message_set_delivery_count, pn_message_set_durable, \
-    pn_message_set_expiry_time, pn_message_set_first_acquirer, pn_message_set_group_id, pn_message_set_group_sequence, \
-    pn_message_set_inferred, pn_message_set_priority, pn_message_set_reply_to, pn_message_set_reply_to_group_id, \
-    pn_message_set_subject, pn_message_set_ttl, pn_message_set_user_id
+    pn_message_get_user_id, pn_message_id, pn_message_instructions, pn_message_is_durable, \
+    pn_message_is_first_acquirer, pn_message_is_inferred, pn_message_properties, pn_message_set_address, \
+    pn_message_set_content_encoding, pn_message_set_content_type, pn_message_set_creation_time, \
+    pn_message_set_delivery_count, pn_message_set_durable, pn_message_set_expiry_time, pn_message_set_first_acquirer, \
+    pn_message_set_group_id, pn_message_set_group_sequence, pn_message_set_inferred, pn_message_set_priority, \
+    pn_message_set_reply_to, pn_message_set_reply_to_group_id, pn_message_set_subject, \
+    pn_message_set_ttl, pn_message_set_user_id
 
-from . import _compat
 from ._common import isinteger, millis2secs, secs2millis, unicode2utf8, utf82unicode
-from ._data import char, Data, decimal128, symbol, ulong, AnnotationDict
+from ._data import char, Data, symbol, ulong, AnnotationDict
 from ._endpoints import Link
 from ._exceptions import EXCEPTIONS, MessageException
-
-#
-# Hack to provide Python2 <---> Python3 compatibility
-try:
-    unicode()
-except NameError:
-    unicode = str
 
 
 class Message(object):
@@ -72,7 +65,7 @@ class Message(object):
         self.annotations = None
         self.properties = None
         self.body = body
-        for k, v in _compat.iteritems(kwargs):
+        for k, v in kwargs.items():
             getattr(self, k)  # Raise exception if it's not a valid attribute.
             setattr(self, k, v)
 
@@ -89,35 +82,27 @@ class Message(object):
             return err
 
     def _check_property_keys(self):
-        '''
+        """
         AMQP allows only string keys for properties. This function checks that this requirement is met
         and raises a MessageException if not. However, in certain cases, conversions to string are
         automatically performed:
 
-        1. When a key is a user-defined (non-AMQP) subclass of unicode/str (py2/py3).
-           AMQP types symbol and char, although derived from unicode/str, are not converted,
+        1. When a key is a user-defined (non-AMQP) subclass of str.
+           AMQP types symbol and char, although derived from str, are not converted,
            and result in an exception.
-
-        2. In Py2, when a key is binary. This is a convenience for Py2 users that encode
-           string literals without using the u'' prefix. In Py3, this is not the case, and
-           using a binary key will result in an error. AMQP type decimal128, which is derived
-           from binary, will not be converted, and will result in an exception.
-        '''
+        """
         # We cannot make changes to the dict while iterating, so we
         # must save and make the changes afterwards
         changed_keys = []
         for k in self.properties.keys():
-            if isinstance(k, unicode):
-                # Py2 & Py3 strings and their subclasses
+            if isinstance(k, str):
+                # strings and their subclasses
                 if type(k) is symbol or type(k) is char:
                     # Exclude symbol and char
                     raise MessageException('Application property key is not string type: key=%s %s' % (str(k), type(k)))
-                if type(k) is not unicode:
+                if type(k) is not str:
                     # Only for string subclasses, convert to string
-                    changed_keys.append((k, unicode(k)))
-            elif isinstance(k, str) and not (type(k) is decimal128):
-                # Py2 only: If key is binary string then convert to unicode. Exclude bytes subclass decimal128.
-                changed_keys.append((k, k.decode('utf-8')))
+                    changed_keys.append((k, str(k)))
             else:
                 # Anything else: raise exception
                 raise MessageException('Application property key is not string type: key=%s %s' % (str(k), type(k)))
@@ -222,7 +207,8 @@ class Message(object):
         higher priority. The number of available priorities depends
         on the implementation, but AMQP defines the default priority as
         the value ``4``. See the
-        `OASIS AMQP 1.0 standard <http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-messaging-v1.0-os.html#type-header>`_
+        `OASIS AMQP 1.0 standard
+        <http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-messaging-v1.0-os.html#type-header>`_
         for more details on message priority.
 
         :type: ``int``

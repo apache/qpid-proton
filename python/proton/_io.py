@@ -24,7 +24,6 @@ import socket
 import select
 import time
 
-from ._compat import socket_errno
 
 PN_INVALID_SOCKET = -1
 
@@ -62,7 +61,7 @@ class IO(object):
         try:
             s.connect(addr[4])
         except socket.error as e:
-            if socket_errno(e) not in (errno.EINPROGRESS, errno.EWOULDBLOCK, errno.EAGAIN):
+            if e.errno not in (errno.EINPROGRESS, errno.EWOULDBLOCK, errno.EAGAIN):
                 raise
         return s
 
@@ -158,7 +157,7 @@ class IO(object):
             try:
                 r, w, ex = select_inner(timeout)
             except select.error as e:
-                if socket_errno(e) != errno.EINTR:
+                if e.errno != errno.EINTR:
                     raise
                 r, w, ex = ([], [], [])
 

@@ -23,7 +23,6 @@ import sys
 from uuid import uuid4
 
 from proton import *
-from proton._compat import raise_
 
 from . import common
 
@@ -131,7 +130,12 @@ class DataTest(Test):
             putter(v)
         except Exception:
             etype, value, trace = sys.exc_info()
-            raise_(etype, etype("%s(%r): %s" % (putter.__name__, v, value)), trace)
+            v = etype("%s(%r): %s" % (putter.__name__, v, value))
+            if trace is None:
+                raise v
+            else:
+                raise v.with_traceback(trace)
+
         return putter
 
     # (bits, signed) for each integer type

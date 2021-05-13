@@ -37,25 +37,11 @@ from cproton import PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE, PN_CHAR, PN_DECIMAL12
     pn_data_put_string, pn_data_put_symbol, pn_data_put_timestamp, pn_data_put_ubyte, pn_data_put_uint, \
     pn_data_put_ulong, pn_data_put_ushort, pn_data_put_uuid, pn_data_rewind, pn_data_type, pn_data_widen, pn_error_text
 
-from . import _compat
 from ._common import Constant
 from ._exceptions import DataException, EXCEPTIONS
 
-#
-# Hacks to provide Python2 <---> Python3 compatibility
-#
-# The results are
-# |       |long|unicode|
-# |Python2|long|unicode|
-# |Python3| int|    str|
-try:
-    long()
-except NameError:
-    long = int
-try:
-    unicode()
-except NameError:
-    unicode = str
+long = int
+unicode = str
 
 
 class UnmappedType:
@@ -644,8 +630,8 @@ class Data:
         """
         Return a string name for an AMQP type.
 
-        :param type: Numeric Proton AMQP type (`enum pn_type_t`)
-        :type type: integer
+        :param amqptype: Numeric Proton AMQP type (`enum pn_type_t`)
+        :type amqptype: integer
         :rtype: String describing the AMQP type with numeric value `amqptype`
         """
         return Data.type_names[amqptype]
@@ -1000,7 +986,7 @@ class Data:
         Puts a signed long value.
 
         :param l: an integral value in the range :math:`-(2^{63})` to :math:`2^{63} - 1` inclusive.
-        :type ul: ``int``, ``long``
+        :type l: ``int``, ``long``
         :raise: * ``AssertionError`` if parameter is out of the range :math:`-(2^{63})` to :math:`2^{63} - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
@@ -1296,7 +1282,7 @@ class Data:
         :return: If the current node is a char, its value, 0 otherwise.
         :rtype: :class:`char`
         """
-        return char(_compat.unichr(pn_data_get_char(self._data)))
+        return char(chr(pn_data_get_char(self._data)))
 
     def get_ulong(self):
         """
@@ -1636,21 +1622,9 @@ class Data:
         Array: put_py_array,
         AnnotationDict: put_dict,
         PropertyDict: put_dict,
-        SymbolList: put_sequence
+        SymbolList: put_sequence,
+        memoryview: put_memoryview
     }
-    # for Python 3.x, long is merely an alias for int, but for Python 2.x
-    # we need to add an explicit int since it is a different type
-    if int not in put_mappings:
-        put_mappings[int] = put_int
-    # Python >=3.0 has 'memoryview', <=2.5 has 'buffer', >=2.6 has both.
-    try:
-        put_mappings[memoryview] = put_memoryview
-    except NameError:
-        pass
-    try:
-        put_mappings[buffer] = put_buffer
-    except NameError:
-        pass
     get_mappings = {
         NULL: lambda s: None,
         BOOL: get_bool,
