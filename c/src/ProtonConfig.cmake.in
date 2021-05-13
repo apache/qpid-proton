@@ -22,50 +22,49 @@
 # Version: @PN_VERSION@
 # URL: http://qpid.apache.org/proton/
 
-set (Proton_VERSION       @PN_VERSION@)
-
-set (Proton_INCLUDE_DIRS  @INCLUDEDIR@)
-set (Proton_LIBRARIES     optimized @LIBDIR@/@PROTONLIB@ debug @LIBDIR@/@PROTONLIBDEBUG@)
-set (Proton_FOUND True)
-
-set (Proton_Core_INCLUDE_DIRS  @INCLUDEDIR@)
-set (Proton_Core_LIBRARIES     optimized @LIBDIR@/@PROTONCORELIB@ debug @LIBDIR@/@PROTONCORELIBDEBUG@)
-
-# Add modular target in a way compatible with cmake 2.8.12
-if (NOT TARGET Proton::core)
-  add_library(Proton::core UNKNOWN IMPORTED)
-  set_target_properties(Proton::core
-    PROPERTIES
-      IMPORTED_LOCATION "@LIBDIR@/@PROTONCORELIB@"
-      IMPORTED_LOCATION_DEBUG "@LIBDIR@/@PROTONCORELIBDEBUG@"
-      INTERFACE_INCLUDE_DIRECTORIES "${Proton_Core_INCLUDE_DIRS}")
+@PACKAGE_INIT@
+if (NOT Proton_USE_STATIC_LIBS)
+  include("${CMAKE_CURRENT_LIST_DIR}/ProtonTargets.cmake")
+else()
+  include("${CMAKE_CURRENT_LIST_DIR}/ProtonTargetsStatic.cmake")
 endif()
 
+set(Proton_VERSION @PN_VERSION@)
+
+# find dependencies, because static libs don't transitively pull them
+if (Proton_USE_STATIC_LIBS)
+    set(CMAKE_MODULE_PATH_OLD ${CMAKE_MODULE_PATH})
+    set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
+
+    set(CyrusSASL_FOUND @CyrusSASL_FOUND@)
+    if (CyrusSASL_FOUND)
+        find_package (CyrusSASL REQUIRED)
+    endif()
+
+    set(OPENSSL_FOUND @OPENSSL_FOUND@)
+    set(OpenSSL_FOUND @OpenSSL_FOUND@)
+    if (OPENSSL_FOUND OR OpenSSL_FOUND)
+        find_package (OpenSSL REQUIRED)
+    endif()
+
+    find_package (Threads REQUIRED)
+
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH_OLD})
+endif()
+
+set(Proton_INCLUDE_DIRS @INCLUDEDIR@)
+set (Proton_LIBRARIES Proton::qpid-proton)
+set (Proton_FOUND True)
+
+set (Proton_Core_INCLUDE_DIRS @INCLUDEDIR@)
+set (Proton_Core_LIBRARIES Proton::core)
 set (Proton_Core_FOUND True)
 
 set (HAS_PROACTOR @HAS_PROACTOR@)
 if (HAS_PROACTOR)
   set (Proton_Proactor_INCLUDE_DIRS  @INCLUDEDIR@)
-  set (Proton_Proactor_LIBRARIES     optimized @LIBDIR@/@PROTONPROACTORLIB@ debug @LIBDIR@/@PROTONPROACTORLIBDEBUG@)
-  # Add modular target in a way compatible with cmake 2.8.12
-  if (NOT TARGET Proton::proactor)
-    add_library(Proton::proactor UNKNOWN IMPORTED)
-    set_target_properties(Proton::proactor
-      PROPERTIES
-        IMPORTED_LOCATION "@LIBDIR@/@PROTONPROACTORLIB@"
-        IMPORTED_LOCATION_DEBUG "@LIBDIR@/@PROTONPROACTORLIBDEBUG@"
-        INTERFACE_INCLUDE_DIRECTORIES "${Proton_Proactor_INCLUDE_DIRS}")
-  endif()
-
+  set (Proton_Proactor_LIBRARIES Proton::proactor)
   set (Proton_Proactor_FOUND True)
 endif()
 
-# Check for all required components
-foreach(comp ${Proton_FIND_COMPONENTS})
-  if(NOT Proton_${comp}_FOUND)
-    if(Proton_FIND_REQUIRED_${comp})
-      set(Proton_FOUND FALSE)
-      set(Proton_NOT_FOUND_MESSAGE "Didn't find required component ${comp}")
-    endif()
-  endif()
-endforeach()
+check_required_components(Proton)
