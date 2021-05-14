@@ -461,7 +461,7 @@ if (qpid-proton-proactor)
     target_link_libraries (qpid-proton-proactor-static PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
     set_target_properties(qpid-proton-proactor-static PROPERTIES
       POSITION_INDEPENDENT_CODE ON)
-    set(TARTET_qpid-proton-proactor-static qpid-proton-proactor-static)
+    set(TARGET_qpid-proton-proactor-static qpid-proton-proactor-static)
   endif(BUILD_STATIC_LIBS)
 endif()
 
@@ -493,7 +493,7 @@ if (BUILD_STATIC_LIBS)
   target_compile_definitions(qpid-proton-static PUBLIC PROTON_DECLARE_STATIC)
   target_link_libraries (qpid-proton-static
     qpid-proton-core-static
-    ${TARTET_qpid-proton-proactor-static}
+    ${TARGET_qpid-proton-proactor-static}
     ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
   set_target_properties(qpid-proton-static PROPERTIES
     POSITION_INDEPENDENT_CODE ON)
