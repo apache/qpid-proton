@@ -1,4 +1,7 @@
 {
+  "CA": {
+    "expiry": "876000h"
+  },
   "CN": "Custom Widgets Root CA",
   "key": {
     "algo": "rsa",

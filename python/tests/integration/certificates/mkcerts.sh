@@ -24,7 +24,7 @@ set -Eeuxo pipefail
 # it is bit more approachable than openssl
 
 cfssl gencert -initca ca.json | cfssljson -bare ca1
-cfssl gencert -ca ca1.pem -ca-key ca1-key.pem localhost.json | cfssljson -bare localhost_ca1
+cfssl gencert -ca ca1.pem -ca-key ca1-key.pem -config=ca-config.json localhost.json | cfssljson -bare localhost_ca1
 
 cfssl gencert -initca ca.json | cfssljson -bare ca2
-cfssl gencert -ca ca2.pem -ca-key ca2-key.pem localhost.json | cfssljson -bare localhost_ca2
+cfssl gencert -ca ca2.pem -ca-key ca2-key.pem -config=ca-config.json localhost.json | cfssljson -bare localhost_ca2
