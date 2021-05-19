@@ -569,7 +569,15 @@ endif(HAS_PROACTOR)
 #  https://gitlab.kitware.com/cmake/cmake/-/issues/19560
 #  https://cmake.org/cmake/help/latest/manual/cmake-packages.7.html#creating-packages
 #  https://cmake.org/cmake/help/latest/module/CMakePackageConfigHelpers.html#example-generating-package-files
-export(EXPORT ProtonTargets
+set(exported_targets qpid-proton qpid-proton-core)
+if (BUILD_STATIC_LIBS)
+  set(exported_targets ${exported_targets} qpid-proton-static qpid-proton-core-static)
+endif(BUILD_STATIC_LIBS)
+if(HAS_PROACTOR)
+  set(exported_targets ${exported_targets} qpid-proton-proactor ${TARGET_qpid-proton-proactor-static})
+endif(HAS_PROACTOR)
+
+export(TARGETS ${exported_targets}
         FILE "${CMAKE_CURRENT_BINARY_DIR}/ProtonTargets.cmake"
         NAMESPACE Proton::)
 install(EXPORT ProtonTargets
