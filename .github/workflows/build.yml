@@ -72,16 +72,6 @@ jobs:
     - name: cmake build/install
       run: cmake --build "${BuildDir}" --config ${BuildType} -t install --parallel 2
       shell: bash
-    - name: Upload Install
-      uses: actions/upload-artifact@v2
-      with:
-        name: qpid_proton_pkg_${{matrix.os}}_${{matrix.buildType}}
-        path: ${{env.InstallPrefix}}
-    - name: Upload python packages
-      uses: actions/upload-artifact@v2
-      with:
-        name: python-pkgs
-        path: ${{env.BuildDir}}/python/pkgs
     - id: ctest
       name: ctest
       working-directory: ${{env.BuildDir}}
