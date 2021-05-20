@@ -35,7 +35,7 @@ if (CMAKE_VERSION VERSION_LESS "3.15.0")
         set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
     endif ()
 
-    find_package (PythonInterp REQUIRED)
+    find_package (PythonInterp ${Python_FIND_VERSION} REQUIRED)
     # forward compatibility with FindPython
     set(Python_VERSION_STRING "${PYTHON_VERSION_STRING}")
     set(Python_EXECUTABLE "${PYTHON_EXECUTABLE}")
