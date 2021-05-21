@@ -31,8 +31,6 @@
 
 #include <iostream>
 
-#include "fake_cpp11.hpp"
-
 // Send messages at a constant rate one per interval. cancel after a timeout.
 class scheduled_sender : public proton::messaging_handler {
   private:
@@ -55,11 +53,11 @@ class scheduled_sender : public proton::messaging_handler {
 
     // The awkward looking double lambda is necessary because the scheduled lambdas run in the container context
     // and must arrange lambdas for send and close to happen in the connection context.
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         c.open_sender(url);
     }
 
-    void on_sender_open(proton::sender &s) OVERRIDE {
+    void on_sender_open(proton::sender &s) override {
         sender = s;
         work_queue = &s.work_queue();
         // Call this->cancel after timeout.
@@ -83,7 +81,7 @@ class scheduled_sender : public proton::messaging_handler {
             ready = true;  // Set the ready flag, send as soon as we get credit.
     }
 
-    void on_sendable(proton::sender &) OVERRIDE {
+    void on_sendable(proton::sender &) override {
         if (ready)              // We have been ticked since the last send.
             send();
     }

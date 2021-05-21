@@ -36,7 +36,6 @@
 #include <iostream>
 #include <sstream>
 
-#include "fake_cpp11.hpp"
 
 namespace {
 
@@ -72,14 +71,14 @@ class flow_sender : public proton::messaging_handler {
         }
     }
 
-    void on_sendable(proton::sender &s) OVERRIDE {
+    void on_sendable(proton::sender &s) override {
         if (verbose)
             std::cout << "flow_sender in \"on_sendable\" with credit " << s.credit()
                       << " and " << available << " available messages" << std::endl;
         send_available_messages(s);
     }
 
-    void on_sender_drain_start(proton::sender &s) OVERRIDE {
+    void on_sender_drain_start(proton::sender &s) override {
         if (verbose)
             std::cout << "flow_sender in \"on_drain_start\" with credit " << s.credit()
                       << " and " << available << " available messages" << std::endl;
@@ -174,11 +173,11 @@ class flow_receiver : public proton::messaging_handler {
         stage++;
     }
 
-    void on_receiver_open(proton::receiver &r) OVERRIDE {
+    void on_receiver_open(proton::receiver &r) override {
         run_stage(r, "on_receiver_open");
     }
 
-    void on_message(proton::delivery &d, proton::message &m) OVERRIDE {
+    void on_message(proton::delivery &d, proton::message &m) override {
         if (verbose)
             std::cout << "flow_receiver in \"on_message\" with " << m.body() << std::endl;
         proton::receiver r(d.receiver());
@@ -186,7 +185,7 @@ class flow_receiver : public proton::messaging_handler {
         run_stage(r, "on_message");
     }
 
-    void on_receiver_drain_finish(proton::receiver &r) OVERRIDE {
+    void on_receiver_drain_finish(proton::receiver &r) override {
         if (verbose)
             std::cout << "flow_receiver in \"on_receiver_drain_finish\"" << std::endl;
         run_stage(r, "on_receiver_drain_finish");
@@ -200,13 +199,13 @@ class flow_listener : public proton::listen_handler {
         opts.handler(sh);
     }
 
-    void on_open(proton::listener& l) OVERRIDE {
+    void on_open(proton::listener& l) override {
         std::ostringstream url;
         url << "//:" << l.port() << "/example"; // Connect to the actual listening port
         l.container().connect(url.str());
     }
 
-    proton::connection_options on_accept(proton::listener&) OVERRIDE { return opts; }
+    proton::connection_options on_accept(proton::listener&) override { return opts; }
 };
 
 class flow_control : public proton::messaging_handler {
@@ -219,19 +218,19 @@ class flow_control : public proton::messaging_handler {
   public:
     flow_control() : receive_handler(send_handler), listen_handler(send_handler) {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         // Listen on a dynamic port on the local host.
         listener = c.listen("//:0", listen_handler);
     }
 
-    void on_connection_open(proton::connection &c) OVERRIDE {
+    void on_connection_open(proton::connection &c) override {
         if (c.active()) {
             // outbound connection
             c.open_receiver("flow_example", proton::receiver_options().handler(receive_handler).credit_window(0));
         }
     }
 
-    void on_connection_close(proton::connection &) OVERRIDE {
+    void on_connection_close(proton::connection &) override {
         listener.stop();
     }
 };

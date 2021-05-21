@@ -104,7 +104,6 @@ void null_test() {
     vm2[2] = n;
     ASSERT_EQUAL("{null=1, 2=null}", to_string(vm2));
 
-#if PN_CPP_HAS_CPP11
     proton::value nn = nullptr;
     ASSERT(n == nn);            // Don't use ASSERT_EQUAL, it will try to print
     ASSERT_EQUAL("null", to_string(nn));
@@ -114,7 +113,6 @@ void null_test() {
     ASSERT_EQUAL("{null=null}", to_string(m));
     std::map<proton::value, proton::value> m2 {{nullptr, nullptr}};
     ASSERT_EQUAL("{null=null}", to_string(m2));
-#endif
 }
 
 }
@@ -163,11 +161,10 @@ int main(int, char**) {
                               restricted_pairs, "{:a=0, :b=1, :c=2}")));
         RUN_TEST(failed, null_test());
 
-#if PN_CPP_HAS_CPP11
         RUN_TEST(failed, sequence_test<forward_list<binary> >(
                      ARRAY, many<binary>() + binary("xx") + binary("yy"), "@PN_BINARY[b\"xx\", b\"yy\"]"));
         RUN_TEST(failed, (map_test<unordered_map<string, uint64_t> >(si_pairs, "")));
-#endif
+
         return failed;
     } catch (const std::exception& e) {
         std::cout << "ERROR in main(): " << e.what() << std::endl;

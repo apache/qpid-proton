@@ -23,7 +23,6 @@
  */
 
 #include "./internal/export.hpp"
-#include "./internal/config.hpp"
 #include "./value.hpp"
 
 #include <string>
@@ -57,21 +56,17 @@ class error_condition {
     /// description, and informational properties.
     PN_CPP_EXTERN error_condition(std::string name, std::string description, proton::value properties);
 
-#if PN_CPP_HAS_DEFAULTED_FUNCTIONS && PN_CPP_HAS_DEFAULTED_MOVE_INITIALIZERS
     /// @cond INTERNAL
     error_condition(const error_condition&) = default;
     error_condition& operator=(const error_condition&) = default;
     error_condition(error_condition&&) = default;
     error_condition& operator=(error_condition&&) = default;
     /// @endcond
-#endif
 
-#if PN_CPP_HAS_EXPLICIT_CONVERSIONS
     /// If you are using a C++11 compiler, you may use an
     /// error_condition in boolean contexts. The expression will be
     /// true if the error_condition is set.
     PN_CPP_EXTERN explicit operator bool() const;
-#endif
 
     /// No condition set.
     PN_CPP_EXTERN bool operator!() const;

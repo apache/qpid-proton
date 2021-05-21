@@ -25,7 +25,6 @@
 /// @file
 /// @copybrief proton::null
 
-#include "./internal/config.hpp"
 #include "./internal/comparable.hpp"
 #include "./internal/export.hpp"
 
@@ -39,10 +38,9 @@ namespace proton {
 class null : private internal::comparable<null> {
   public:
     null() {}
-#if PN_CPP_HAS_NULLPTR
     /// Constructed from nullptr literal
     null(decltype(nullptr)) {}
-#endif
+
     /// null instances are always equal
   friend bool operator==(const null&, const null&) { return true; }
     /// null instances are never unequal

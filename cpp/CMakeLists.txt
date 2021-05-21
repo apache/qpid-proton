@@ -25,12 +25,9 @@ find_package(Threads)
 
 include(versions.cmake)
 
-set (BUILD_CPP_03 OFF CACHE BOOL "Compile the C++ binding as C++03 even when C++11 is available")
-
 # Check for JSON-CPP support for connection configuration
 find_package(JsonCpp)
-cmake_dependent_option(ENABLE_JSONCPP "Use jsoncpp parser for connection configuration" ${JsonCpp_FOUND}
-  "NOT BUILD_CPP_03" OFF)
+option(ENABLE_JSONCPP "Use jsoncpp parser for connection configuration" ${JsonCpp_FOUND})
 if (ENABLE_JSONCPP)
   include_directories(${JsonCpp_INCLUDE_DIRS})
   set(CONNECT_CONFIG_SRC src/connect_config.cpp)
@@ -39,46 +36,7 @@ else()
   set(CONNECT_CONFIG_SRC src/connect_config_dummy.cpp)
 endif()
 
-# This effectively checks for cmake version 3.1 or later
-if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
-  if (BUILD_CPP_03)
-    set(CMAKE_CXX_STANDARD 98)
-  else ()
-    set(CPP_DEFINITIONS "HAS_CPP11")
-  endif ()
-else ()
-  if (BUILD_CPP_03)
-    set(CXX_STANDARD "-std=c++98")
-  else ()
-    if (ACCEPTS_CXX11)
-      set(CPP_DEFINITIONS "HAS_CPP11")
-    else()
-      include(cpp.cmake) # Compiler checks needed as not all C++11 may be supported
-    endif()
-  endif()
-endif ()
-
 list(APPEND PLATFORM_LIBS Threads::Threads)
-
-# Construct #define lines to insert in config_presets.hpp
-foreach(d ${CPP_DEFINITIONS})
-  set(presets "${presets}#define PN_CPP_LIB_${d} 1\n")
-endforeach()
-# For Visual Studio define the app compile time macros now, for everything else don't
-if(MSVC)
-  set(presets "${presets}\n// Compiled for MSVC version ${CMAKE_CXX_COMPILER_VERSION} (${MSVC_VERSION})\n")
-  foreach(d ${CPP_DEFINITIONS})
-    set(presets "${presets}# define PN_CPP_${d} 1\n")
-  endforeach()
-else()
-  set(presets "${presets}\n#if qpid_proton_cpp_EXPORTS\n")
-  foreach(d ${CPP_DEFINITIONS})
-    set(presets "${presets}# define PN_CPP_${d} 1\n")
-  endforeach()
-  set(presets "${presets}#endif // qpid_proton_cpp_EXPORTS\n")
-endif()
-
-configure_file(config_presets.hpp.in config_presets.hpp @ONLY)
 
 set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CXX_STANDARD}")
 set(CXX_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}")
@@ -187,7 +145,6 @@ if (MSVC)
 endif (MSVC)
 
 install (DIRECTORY "include/proton" DESTINATION ${INCLUDE_INSTALL_DIR} FILES_MATCHING PATTERN "*.hpp")
-install (FILES "${CMAKE_CURRENT_BINARY_DIR}/config_presets.hpp" DESTINATION "${INCLUDE_INSTALL_DIR}/proton/internal")
 install (DIRECTORY "examples/"
   DESTINATION "${PROTON_SHARE}/examples/cpp"
   USE_SOURCE_PERMISSIONS

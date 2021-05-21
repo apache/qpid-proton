@@ -30,7 +30,6 @@
 #include <string>
 #include <cctype>
 
-#include "fake_cpp11.hpp"
 
 class server : public proton::messaging_handler {
     std::string conn_url_;
@@ -42,7 +41,7 @@ class server : public proton::messaging_handler {
     server(const std::string& u, const std::string& a) :
         conn_url_(u), addr_(a) {}
 
-    void on_container_start(proton::container& c) OVERRIDE {
+    void on_container_start(proton::container& c) override {
         conn_ = c.connect(conn_url_);
         conn_.open_receiver(addr_);
 
@@ -60,7 +59,7 @@ class server : public proton::messaging_handler {
         return uc;
     }
 
-    void on_message(proton::delivery&, proton::message& m) OVERRIDE {
+    void on_message(proton::delivery&, proton::message& m) override {
         std::cout << "Received " << m.body() << std::endl;
 
         std::string reply_to = m.reply_to();

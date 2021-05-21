@@ -79,13 +79,11 @@ class PN_CPP_CLASS_EXTERN map {
     /// Copy a map.
     PN_CPP_EXTERN map& operator=(const map&);
 
-#if PN_CPP_HAS_RVALUE_REFERENCES
     /// Move a map.
     PN_CPP_EXTERN map(map&&);
 
     /// Move a map.
     PN_CPP_EXTERN map& operator=(map&&);
-#endif
     PN_CPP_EXTERN ~map();
 
     /// Type-safe assign from a compatible map, for instance

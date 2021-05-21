@@ -113,9 +113,7 @@ class decoder : public internal::data {
     PN_CPP_EXTERN decoder& operator>>(scalar&);
     PN_CPP_EXTERN decoder& operator>>(internal::value_base&);
     PN_CPP_EXTERN decoder& operator>>(null&);
-#if PN_CPP_HAS_NULLPTR
     PN_CPP_EXTERN decoder& operator>>(decltype(nullptr)&);
-#endif
     ///@}
 
     /// Start decoding a container type, such as an ARRAY, LIST or

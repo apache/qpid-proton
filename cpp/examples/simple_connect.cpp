@@ -29,7 +29,6 @@
 
 #include <iostream>
 
-#include "fake_cpp11.hpp"
 
 class simple_connect : public proton::messaging_handler {
   private:
@@ -48,7 +47,7 @@ class simple_connect : public proton::messaging_handler {
         url(a), user(u), password(p),
         reconnect(r), sasl(s), mechs(ms), insecure(in) {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         proton::connection_options co;
         if (!user.empty()) co.user(user);
         if (!password.empty()) co.password(password);
@@ -67,7 +66,7 @@ class simple_connect : public proton::messaging_handler {
         connection = c.connect(url, co);
     }
 
-    void on_connection_open(proton::connection &c) OVERRIDE {
+    void on_connection_open(proton::connection &c) override {
         if (!reconnect) c.close();
     }
 };

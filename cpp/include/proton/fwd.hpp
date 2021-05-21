@@ -25,7 +25,6 @@
 /// @file
 /// Forward declarations.
 
-#include "./internal/config.hpp"
 
 namespace proton {
 
@@ -62,13 +61,8 @@ class void_function0;
 class work_queue;
 
 namespace internal { namespace v03 { class work; } }
-
-#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 namespace internal { namespace v11 { class work; } }
 using internal::v11::work;
-#else
-using internal::v03::work;
-#endif
 
 namespace io {
 

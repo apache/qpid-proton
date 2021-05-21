@@ -35,12 +35,11 @@
 #include <iostream>
 #include <map>
 
-#include "fake_cpp11.hpp"
 
 class simple_send : public proton::messaging_handler {
   private:
     class listener_ready_handler : public proton::listen_handler {
-        void on_open(proton::listener& l) OVERRIDE {
+        void on_open(proton::listener& l) override {
             std::cout << "listening on " << l.port() << std::endl;
         }
     };
@@ -55,11 +54,11 @@ class simple_send : public proton::messaging_handler {
   public:
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         listener = c.listen(url, listen_handler);
     }
 
-    void on_sendable(proton::sender &sender) OVERRIDE {
+    void on_sendable(proton::sender &sender) override {
         while (sender.credit() && sent < total) {
             proton::message msg;
             std::map<std::string, int> m;
@@ -73,7 +72,7 @@ class simple_send : public proton::messaging_handler {
         }
     }
 
-    void on_tracker_accept(proton::tracker &t) OVERRIDE {
+    void on_tracker_accept(proton::tracker &t) override {
         confirmed++;
 
         if (confirmed == total) {
@@ -83,7 +82,7 @@ class simple_send : public proton::messaging_handler {
         }
     }
 
-    void on_transport_close(proton::transport &) OVERRIDE {
+    void on_transport_close(proton::transport &) override {
         sent = confirmed;
     }
 };

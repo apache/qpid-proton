@@ -29,10 +29,9 @@
 
 using proton::connection_options;
 
-#include "fake_cpp11.hpp"
 
 class handler_2 : public proton::messaging_handler {
-    void on_connection_open(proton::connection &c) OVERRIDE {
+    void on_connection_open(proton::connection &c) override {
         std::cout << "connection events going to handler_2" << std::endl;
         std::cout << "connection max_frame_size: " << c.max_frame_size() <<
             ", idle timeout: " << c.idle_timeout() << std::endl;
@@ -48,13 +47,13 @@ class main_handler : public proton::messaging_handler {
   public:
     main_handler(const std::string& u) : url(u) {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         // Connection options for this connection.  Merged with and overriding the container's
         // client_connection_options() settings.
         c.connect(url, connection_options().handler(conn_handler).max_frame_size(2468));
     }
 
-    void on_connection_open(proton::connection &c) OVERRIDE {
+    void on_connection_open(proton::connection &c) override {
         std::cout << "unexpected connection event on main handler" << std::endl;
         c.close();
     }

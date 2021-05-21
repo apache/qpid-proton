@@ -43,18 +43,11 @@
 #include <string>
 #include <vector>
 
-#if PN_CPP_SUPPORTS_THREADS
 #include <mutex>
 # define MUTEX(x) std::mutex x;
 # define GUARD(x) std::lock_guard<std::mutex> g(x)
 # define ONCE_FLAG(x) std::once_flag x;
 # define CALL_ONCE(x, ...) std::call_once(x, __VA_ARGS__)
-#else
-# define MUTEX(x)
-# define GUARD(x)
-# define ONCE_FLAG(x)
-# define CALL_ONCE(x, f, o) ((o)->*(f))()
-#endif
 
 struct pn_proactor_t;
 struct pn_listener_t;

@@ -36,10 +36,8 @@ using codec::start;
 value::value() {}
 value::value(pn_data_t *d) { data_ = make_wrapper(d); }
 value::value(const value& x) { *this = x; }
-#if PN_CPP_HAS_RVALUE_REFERENCES
 value::value(value&& x) { swap(*this, x); }
 value& value::operator=(value&& x) { swap(*this, x); return *this; }
-#endif
 
 value& value::operator=(const value& x) {
     if (this != &x) {

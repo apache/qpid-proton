@@ -27,7 +27,6 @@
 // Also provides workarounds for missing type_traits classes on older
 // C++ compilers.
 
-#include "./config.hpp"
 #include "../types_fwd.hpp"
 #include "../type_id.hpp"
 
@@ -72,12 +71,10 @@ template <> struct is_signed<signed short> : public true_type {};
 template <> struct is_signed<signed int> : public true_type {};
 template <> struct is_signed<signed long> : public true_type {};
 
-#if PN_CPP_HAS_LONG_LONG_TYPE
 template <> struct is_integral<unsigned long long> : public true_type {};
 template <> struct is_integral<signed long long> : public true_type {};
 template <> struct is_signed<unsigned long long> : public false_type {};
 template <> struct is_signed<signed long long> : public true_type {};
-#endif
 
 template <class T, class U> struct is_same { static const bool value=false; };
 template <class T> struct is_same<T,T> { static const bool value=true; };
@@ -94,9 +91,7 @@ template <type_id ID, class T> struct type_id_constant {
 /// @{
 template <class T> struct type_id_of;
 template<> struct type_id_of<null> : public type_id_constant<NULL_TYPE, null> {};
-#if PN_CPP_HAS_NULLPTR
 template<> struct type_id_of<decltype(nullptr)> : public type_id_constant<NULL_TYPE, null> {};
-#endif
 template<> struct type_id_of<bool> : public type_id_constant<BOOLEAN, bool> {};
 template<> struct type_id_of<uint8_t> : public type_id_constant<UBYTE, uint8_t> {};
 template<> struct type_id_of<int8_t> : public type_id_constant<BYTE, int8_t> {};

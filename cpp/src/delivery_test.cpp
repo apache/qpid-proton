@@ -56,7 +56,7 @@ int listener_port;
 class test_recv : public proton::messaging_handler {
   private:
     class listener_ready_handler : public proton::listen_handler {
-        void on_open(proton::listener &l) PN_CPP_OVERRIDE {
+        void on_open(proton::listener &l) override {
             {
                 std::lock_guard<std::mutex> lk(m);
                 listener_port = l.port();
@@ -73,11 +73,11 @@ class test_recv : public proton::messaging_handler {
   public:
     test_recv(const std::string &s) : url(s) {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) override {
         listener = c.listen(url, listen_handler);
     }
 
-    void on_message(proton::delivery &d, proton::message &msg) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery &d, proton::message &msg) override {
         proton::binary test_tag_recv("TESTTAG");
         ASSERT_EQUAL(test_tag_recv, d.tag());
         d.receiver().close();
@@ -94,12 +94,12 @@ class test_send : public proton::messaging_handler {
   public:
     test_send(const std::string &s) : url(s) {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) override {
         proton::connection_options co;
         sender = c.open_sender(url, co);
     }
 
-    void on_sendable(proton::sender &s) PN_CPP_OVERRIDE {
+    void on_sendable(proton::sender &s) override {
         proton::message msg;
         msg.body("message");
         proton::binary test_tag_send("TESTTAG");

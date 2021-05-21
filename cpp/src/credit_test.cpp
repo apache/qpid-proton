@@ -61,7 +61,7 @@ class server_connection_handler : public proton::messaging_handler {
             opts.handler(h);
         }
 
-        void on_open(proton::listener& l) PN_CPP_OVERRIDE {
+        void on_open(proton::listener& l) override {
             std::ostringstream o;
             o << "//:" << l.port(); // Connect to the actual listening port
             url = o.str();
@@ -70,7 +70,7 @@ class server_connection_handler : public proton::messaging_handler {
                                    proton::make_work(&waiter::done, &listen_waiter));
         }
 
-        proton::connection_options on_accept(proton::listener&) PN_CPP_OVERRIDE { return opts; }
+        proton::connection_options on_accept(proton::listener&) override { return opts; }
     };
 
     proton::listener listener_;
@@ -102,18 +102,18 @@ class server_connection_handler : public proton::messaging_handler {
         return listen_handler_.url;
     }
 
-    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
+    void on_connection_open(proton::connection &c) override {
         // Only listen for a single connection
         listener_.stop();
         c.open();
     }
 
-    void on_sender_open(proton::sender &s) PN_CPP_OVERRIDE {
+    void on_sender_open(proton::sender &s) override {
         s.open();
         sender_ = s;
     }
 
-    void on_sendable(proton::sender &s) PN_CPP_OVERRIDE {
+    void on_sendable(proton::sender &s) override {
         send_available_messages(s);
     }
 
@@ -133,13 +133,13 @@ class server_connection_handler : public proton::messaging_handler {
         notify_wq_->add(notify_work_);
     }
 
-    void on_tracker_accept(proton::tracker& d) PN_CPP_OVERRIDE {
+    void on_tracker_accept(proton::tracker& d) override {
         acked_++;
         if (acked_ == expect_ && (available_ == 0 || d.sender().credit() == 0))
             notify_idle();
     }
 
-    void on_transport_error(proton::transport & ) PN_CPP_OVERRIDE {
+    void on_transport_error(proton::transport & ) override {
         // If we get an error then (try to) stop the listener
         // - this will stop the listener if we didn't already accept a connection
         listener_.stop();
@@ -157,20 +157,20 @@ class tester : public proton::messaging_handler, public waiter {
     tester() : waiter(1), container_(*this, "credit_tester"),
                received_(0), initial_credit_(0) {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) override {
         srv_.reset(new server_connection_handler(c, 100000, *this));
     }
 
     // waiter::ready is called when listener can accept connections.
-    void ready() PN_CPP_OVERRIDE {
+    void ready() override {
         container_.connect(srv_->url());
     }
 
-    void on_connection_open(proton::connection& c) PN_CPP_OVERRIDE {
+    void on_connection_open(proton::connection& c) override {
         c.open_receiver("messages", proton::receiver_options().credit_window(0));
     }
 
-    void on_receiver_open(proton::receiver &r) PN_CPP_OVERRIDE {
+    void on_receiver_open(proton::receiver &r) override {
         receiver_ = r;
         next_idle_ = proton::make_work(&tester::first_idle, this);
         proton::work call_on_server_idle(make_work(&tester::on_server_idle, this));
@@ -178,7 +178,7 @@ class tester : public proton::messaging_handler, public waiter {
         r.add_credit(initial_credit_);
     }
 
-    void on_message(proton::delivery &d, proton::message &m) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery &d, proton::message &m) override {
         received_++;
         d.accept();
     }
@@ -204,7 +204,7 @@ class tester : public proton::messaging_handler, public waiter {
         receiver_.connection().close();
     }
 
-    void on_connection_close(proton::connection& c) PN_CPP_OVERRIDE {
+    void on_connection_close(proton::connection& c) override {
         if (!fail_msg_.empty())
             FAIL(fail_msg_);
     }
@@ -226,7 +226,7 @@ class basic_credit_tester : public tester {
   public:
     basic_credit_tester() { initial_credit_ = 3; }
 
-    void first_idle() PN_CPP_OVERRIDE {
+    void first_idle() override {
         if (received_ != 3) {
             fail(FAIL_MSG("messages received should be 3 not "), received_);
             return;
@@ -269,11 +269,11 @@ class drain_credit_tester : public tester {
   public:
     drain_credit_tester() : drain_finishes_(0) { initial_credit_ = 10; }
 
-    void on_receiver_drain_finish(proton::receiver &r) PN_CPP_OVERRIDE {
+    void on_receiver_drain_finish(proton::receiver &r) override {
         drain_finishes_++;
     }
 
-    void first_idle() PN_CPP_OVERRIDE {
+    void first_idle() override {
         if (received_ != 10) {
             fail(FAIL_MSG("messages received should be 10 not "), received_);
             return;

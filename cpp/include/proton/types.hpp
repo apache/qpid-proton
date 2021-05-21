@@ -27,7 +27,6 @@
 
 // TODO aconway 2016-03-15: described types, described arrays.
 
-#include "./internal/config.hpp"
 
 #include "./annotation_key.hpp"
 #include "./binary.hpp"
@@ -45,9 +44,7 @@
 #include "./codec/list.hpp"
 #include "./codec/map.hpp"
 #include "./codec/vector.hpp"
-#if PN_CPP_HAS_CPP11
 #include "./codec/forward_list.hpp"
 #include "./codec/unordered_map.hpp"
-#endif
 
 #endif // PROTON_TYPES_HPP

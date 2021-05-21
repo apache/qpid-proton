@@ -86,18 +86,9 @@ if (CMAKE_CXX_COMPILER)
   if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
     set(CMAKE_CXX_STANDARD 11)
     set(CMAKE_CXX_EXTENSIONS OFF)
-    # Every supported version of Visual Studio (2015 onwards) supports enough C++11 that we
-    # no longer need to run the individual feature tests
   else ()
-    include(CheckCXXCompilerFlag)
-    # These flags work with GCC/Clang/SunPro compilers
-    check_cxx_compiler_flag("-std=c++11" ACCEPTS_CXX11)
-    check_cxx_compiler_flag("-std=c++0x" ACCEPTS_CXX0X)
-    if (ACCEPTS_CXX11)
-      set(CXX_STANDARD "-std=c++11")
-    elseif(ACCEPTS_CXX0X)
-      set(CXX_STANDARD "-std=c++0x")
-    endif()
+    # This can only be a fairly old version of Linux in practice
+    set(CXX_STANDARD "-std=c++11")
   endif ()
 endif()
 
@@ -198,9 +189,6 @@ set (CC_WARNING_Clang "-Wno-unused-parameter -Wstrict-prototypes -Wvla -Wsign-co
 set (CC_WARNING_MSVC "/wd4244 /wd4267 /wd4800 /wd4996")
 
 set (CXX_WARNING_GNU "")
-# TODO aconway 2016-01-06: we should be able to clean up the code and turn on
-# some of these warnings.
-#set (CXX_WARNING_Clang "-Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-float-equal -Wno-padded -Wno-sign-conversion -Wno-switch-enum -Wno-weak-vtables -Wno-exit-time-destructors -Wno-global-constructors -Wno-shorten-64-to-32 -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast -Wno-missing-noreturn")
 set (CXX_WARNING_Clang "")
 set (CXX_WARNING_MSVC "")
 

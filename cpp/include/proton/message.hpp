@@ -64,13 +64,11 @@ class message {
     /// Copy a message.
     PN_CPP_EXTERN message& operator=(const message&);
 
-#if PN_CPP_HAS_RVALUE_REFERENCES
     /// Move a message.
     PN_CPP_EXTERN message(message&&);
 
     /// Move a message.
     PN_CPP_EXTERN message& operator=(message&&);
-#endif
 
     /// Create a message with its body set from any value that can be
     /// converted to a proton::value.

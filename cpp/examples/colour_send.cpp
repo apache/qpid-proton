@@ -34,7 +34,6 @@
 #include <sstream>
 #include <map>
 
-#include "fake_cpp11.hpp"
 
 class colour_send : public proton::messaging_handler {
   private:
@@ -50,14 +49,14 @@ class colour_send : public proton::messaging_handler {
     colour_send(const std::string &s, const std::string &u, const std::string &p, int c) :
         url(s), user(u), password(p), sent(0), confirmed(0), total(c) {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         proton::connection_options co;
         if (!user.empty()) co.user(user);
         if (!password.empty()) co.password(password);
         sender = c.open_sender(url, co);
     }
 
-    void on_sendable(proton::sender &s) OVERRIDE {
+    void on_sendable(proton::sender &s) override {
         while (s.credit() && sent < total) {
             proton::message msg;
 
@@ -73,7 +72,7 @@ class colour_send : public proton::messaging_handler {
         }
     }
 
-    void on_tracker_accept(proton::tracker &t) OVERRIDE {
+    void on_tracker_accept(proton::tracker &t) override {
         confirmed++;
 
         if (confirmed == total) {
@@ -82,7 +81,7 @@ class colour_send : public proton::messaging_handler {
         }
     }
 
-    void on_transport_close(proton::transport &) OVERRIDE {
+    void on_transport_close(proton::transport &) override {
         sent = confirmed;
     }
 };

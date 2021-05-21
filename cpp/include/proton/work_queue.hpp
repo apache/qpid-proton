@@ -25,15 +25,12 @@
 #include "./duration.hpp"
 #include "./fwd.hpp"
 #include "./function.hpp"
-#include "./internal/config.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 
 #include <functional>
 #include <utility>
-#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 #include <type_traits>
-#endif
 
 struct pn_connection_t;
 struct pn_session_t;
@@ -72,10 +69,8 @@ struct invocable_wrapper {
         std::swap(wrapped_, newthis.wrapped_);
         return *this;
     }
-#if PN_CPP_HAS_RVALUE_REFERENCES
     invocable_wrapper(invocable_wrapper&& w): wrapped_(w.wrapped_) {}
     invocable_wrapper& operator=(invocable_wrapper&& that) {delete wrapped_; wrapped_ = that.wrapped_; return *this; }
-#endif
     ~invocable_wrapper() { delete wrapped_; }
 
     invocable_wrapper(const invocable& i): wrapped_(&i.clone()) {}
@@ -263,7 +258,6 @@ work make_work(R (*f)(A, B, C), A a, B b, C c) {
 
 } } // internal::v03
 
-#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 
 namespace internal { namespace v11 {
 
@@ -311,12 +305,6 @@ work make_work(Rest&&... r) {
 using internal::v11::work;
 using internal::v11::make_work;
 
-#else
-
-using internal::v03::work;
-using internal::v03::make_work;
-
-#endif
 
 /// @endcond
 
@@ -380,10 +368,8 @@ class PN_CPP_CLASS_EXTERN work_queue {
   private:
     /// Declare both v03 and v11 if compiling with c++11 as the library contains both.
     /// A C++11 user should never call the v03 overload so it is private in this case
-#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
     PN_CPP_EXTERN bool add(internal::v03::work fn);
     PN_CPP_EXTERN void schedule(duration, internal::v03::work fn);
-#endif
 
     PN_CPP_EXTERN static work_queue& get(pn_connection_t*);
     PN_CPP_EXTERN static work_queue& get(pn_session_t*);

@@ -24,7 +24,6 @@
 
 #include "./fwd.hpp"
 #include "./error_condition.hpp"
-#include "./internal/config.hpp"
 #include "./internal/export.hpp"
 
 /// @file
@@ -60,9 +59,6 @@ PN_CPP_CLASS_EXTERN endpoint {
     /// Close the endpoint with an error condition.
     virtual void close(const error_condition&) = 0;
 
-#if PN_CPP_HAS_DEFAULTED_FUNCTIONS && PN_CPP_HAS_DEFAULTED_MOVE_INITIALIZERS
-    // Make everything explicit for C++11 compilers
-
     /// @cond INTERNAL
     endpoint() = default;
     endpoint& operator=(const endpoint&) = default;
@@ -70,7 +66,6 @@ PN_CPP_CLASS_EXTERN endpoint {
     endpoint& operator=(endpoint&&) = default;
     endpoint(endpoint&&) = default;
     /// @endcond
-#endif
 };
 
 namespace internal {

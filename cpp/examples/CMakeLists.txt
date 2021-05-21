@@ -42,35 +42,18 @@ if(NOT TARGET Threads::Threads)
   endif()
 endif()
 
-macro (has_cxx_features result)
-set(${result} OFF)
-if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
-  set(${result} ON)
-  foreach(feature ${ARGN})
-    list(FIND CMAKE_CXX_COMPILE_FEATURES cxx_${feature} N)
-    if (N EQUAL -1)
-      set(${result} OFF)
-      break()
-    endif()
-  endforeach()
-endif()
-endmacro()
-
-set (BUILD_CPP_03 OFF CACHE BOOL "Compile as C++03 even when C++11 is available")
 # This effectively checks for cmake version 3.1 or later
 if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
-  if (BUILD_CPP_03)
-    set(STD 98)
-  else ()
-    set(STD 11)
-    has_cxx_features(HAS_ENOUGH_CPP11 lambdas variadic_templates)
-    message(STATUS "Compiling C++11 examples: ${HAS_ENOUGH_CPP11}")
-  endif ()
-  set(CMAKE_CXX_STANDARD ${STD})
+  set(CMAKE_CXX_STANDARD 11)
   set(CMAKE_CXX_EXTENSIONS OFF)
+else ()
+  # This can only be a fairly old version of Linux in practice
+  set(CXX_STANDARD "-std=c++11")
+  add_definitions(${CXX_STANDARD})
 endif()
 
-# Single-threaded examples that work on C++03
+
+# Single-threaded examples
 foreach(example
     broker
     helloworld
@@ -92,27 +75,17 @@ foreach(example
     flow_control
     ssl
     ssl_client_cert
-    encode_decode)
+    encode_decode
+    scheduled_send
+    service_bus)
   add_executable(${example} ${example}.cpp)
   target_link_libraries(${example} Proton::cpp)
 endforeach()
 
-if(HAS_ENOUGH_CPP11)
-  # Examples that require C++11
-  foreach(example
-      scheduled_send
-      service_bus)
-    add_executable(${example} ${example}.cpp)
-    target_link_libraries(${example} Proton::cpp)
-  endforeach()
-
-  # Examples that use threads directly
-  if (Threads_FOUND)
-    foreach(example
-        multithreaded_client
-        multithreaded_client_flow_control)
-      add_executable(${example} ${example}.cpp)
-      target_link_libraries(${example} Proton::cpp Threads::Threads)
-    endforeach()
-  endif()
-endif()
+# Examples that use threads directly
+foreach(example
+    multithreaded_client
+    multithreaded_client_flow_control)
+  add_executable(${example} ${example}.cpp)
+  target_link_libraries(${example} Proton::cpp Threads::Threads)
+endforeach()

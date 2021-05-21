@@ -69,10 +69,8 @@ class value : public internal::value_base, private internal::comparable<value> {
     /// @{
     PN_CPP_EXTERN value(const value&);
     PN_CPP_EXTERN value& operator=(const value&);
-#if PN_CPP_HAS_RVALUE_REFERENCES
     PN_CPP_EXTERN value(value&&);
     PN_CPP_EXTERN value& operator=(value&&);
-#endif
     /// @}
 
     /// Copy from any allowed type T.
@@ -159,12 +157,11 @@ template<class T> void coerce(const value& v, T& x) {
 template<> inline void get<null>(const value& v, null&) {
     assert_type_equal(NULL_TYPE, v.type());
 }
-#if PN_CPP_HAS_NULLPTR
+
 /// @copybrief get<null>()
 template<> inline void get<decltype(nullptr)>(const value& v, decltype(nullptr)&) {
     assert_type_equal(NULL_TYPE, v.type());
 }
-#endif
 
 /// Return a readable string representation of x for display purposes.
 PN_CPP_EXTERN std::string to_string(const value& x);

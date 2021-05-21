@@ -34,7 +34,6 @@
 #include <iostream>
 #include <map>
 
-#include "fake_cpp11.hpp"
 
 class simple_recv : public proton::messaging_handler {
   private:
@@ -49,14 +48,14 @@ class simple_recv : public proton::messaging_handler {
     simple_recv(const std::string &s, const std::string &u, const std::string &p, int c) :
         url(s), user(u), password(p), expected(c), received(0) {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         proton::connection_options co;
         if (!user.empty()) co.user(user);
         if (!password.empty()) co.password(password);
         receiver = c.open_receiver(url, co);
     }
 
-    void on_message(proton::delivery &d, proton::message &msg) OVERRIDE {
+    void on_message(proton::delivery &d, proton::message &msg) override {
         if (!msg.id().empty() && proton::coerce<int>(msg.id()) < received) {
             return; // Ignore if no id or duplicate
         }

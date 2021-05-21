@@ -38,12 +38,11 @@
 #include <sstream>
 #include <cctype>
 
-#include "fake_cpp11.hpp"
 
 class server : public proton::messaging_handler {
   private:
     class listener_ready_handler : public proton::listen_handler {
-        void on_open(proton::listener& l) OVERRIDE {
+        void on_open(proton::listener& l) override {
             std::cout << "listening on " << l.port() << std::endl;
         }
     };
@@ -57,7 +56,7 @@ class server : public proton::messaging_handler {
   public:
     server(const std::string &u) : url(u), address_counter(0) {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         c.listen(url, listen_handler);
     }
 
@@ -78,7 +77,7 @@ class server : public proton::messaging_handler {
         return addr.str();
     }
 
-    void on_sender_open(proton::sender &sender) OVERRIDE {
+    void on_sender_open(proton::sender &sender) override {
         if (sender.source().dynamic()) {
             std::string addr = generate_address();
             sender.open(proton::sender_options().source(proton::source_options().address(addr)));
@@ -86,7 +85,7 @@ class server : public proton::messaging_handler {
         }
     }
 
-    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) override {
         std::cout << "Received " << m.body() << std::endl;
 
         std::string reply_to = m.reply_to();

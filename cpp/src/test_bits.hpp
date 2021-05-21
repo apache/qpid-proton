@@ -154,7 +154,6 @@ template <class U, class V> std::ostream& operator<<(std::ostream& o, const std:
     return o << "( " << p.first << " , " << p.second << " )";
 }
 
-#if PN_CPP_HAS_CPP11
 template <class K, class T> std::ostream& operator<<(std::ostream& o, const std::unordered_map<K, T>& x) {
     return o << test::many<std::pair<const K, T> >(x);
 }
@@ -162,7 +161,7 @@ template <class K, class T> std::ostream& operator<<(std::ostream& o, const std:
 template <class T> std::ostream& operator<<(std::ostream& o, const std::forward_list<T>& s) {
     return o << test::many<T>(s);
 }
-#endif
+
 }
 
 #endif // TEST_BITS_HPP

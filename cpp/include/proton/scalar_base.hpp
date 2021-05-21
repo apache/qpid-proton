@@ -100,9 +100,7 @@ class scalar_base : private internal::comparable<scalar_base> {
     PN_CPP_EXTERN void put_(const binary&);
     PN_CPP_EXTERN void put_(const char* s); ///< Treated as an AMQP string
     PN_CPP_EXTERN void put_(const null&);
-#if PN_CPP_HAS_NULLPTR
     PN_CPP_EXTERN void put_(decltype(nullptr));
-#endif
 
     template<class T> void put(const T& x) { putter<T>::put(*this, x); }
 
@@ -128,9 +126,7 @@ class scalar_base : private internal::comparable<scalar_base> {
     PN_CPP_EXTERN void get_(symbol&) const;
     PN_CPP_EXTERN void get_(binary&) const;
     PN_CPP_EXTERN void get_(null&) const;
-#if PN_CPP_HAS_NULLPTR
     PN_CPP_EXTERN void get_(decltype(nullptr)&) const;
-#endif
 
 
     // use template structs, functions cannot be  partially specialized.

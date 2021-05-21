@@ -34,7 +34,6 @@
 #include <iostream>
 #include <map>
 
-#include "fake_cpp11.hpp"
 
 class simple_send : public proton::messaging_handler {
   private:
@@ -51,7 +50,7 @@ class simple_send : public proton::messaging_handler {
     simple_send(const std::string &s, const std::string &u, const std::string &p, bool r, int c) :
         url(s), user(u), password(p), reconnect(r), sent(0), confirmed(0), total(c) {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         proton::connection_options co;
         if (!user.empty()) co.user(user);
         if (!password.empty()) co.password(password);
@@ -59,13 +58,13 @@ class simple_send : public proton::messaging_handler {
         sender = c.open_sender(url, co);
     }
 
-    void on_connection_open(proton::connection& c) OVERRIDE {
+    void on_connection_open(proton::connection& c) override {
         if (c.reconnected()) {
             sent = confirmed;   // Re-send unconfirmed messages after a reconnect
         }
     }
 
-    void on_sendable(proton::sender &s) OVERRIDE {
+    void on_sendable(proton::sender &s) override {
         while (s.credit() && sent < total) {
             proton::message msg;
             std::map<std::string, int> m;
@@ -79,7 +78,7 @@ class simple_send : public proton::messaging_handler {
         }
     }
 
-    void on_tracker_accept(proton::tracker &t) OVERRIDE {
+    void on_tracker_accept(proton::tracker &t) override {
         confirmed++;
 
         if (confirmed == total) {
@@ -88,7 +87,7 @@ class simple_send : public proton::messaging_handler {
         }
     }
 
-    void on_transport_close(proton::transport &) OVERRIDE {
+    void on_transport_close(proton::transport &) override {
         sent = confirmed;
     }
 };

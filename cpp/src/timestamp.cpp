@@ -19,7 +19,6 @@
 
 #include "proton/timestamp.hpp"
 
-#include "proton/internal/config.hpp"
 #include <proton/error.hpp>
 #include <proton/proactor.h>
 #include <proton/types.h>

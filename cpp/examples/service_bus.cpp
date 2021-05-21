@@ -99,7 +99,6 @@ Done. No more messages.
 #include <iostream>
 #include <sstream>
 
-#include "fake_cpp11.hpp"
 
 using proton::source_options;
 using proton::connection_options;
@@ -152,7 +151,7 @@ class session_receiver : public proton::messaging_handler {
         container = &c;
     }
 
-    void on_connection_open(proton::connection &connection) OVERRIDE {
+    void on_connection_open(proton::connection &connection) override {
         proton::source::filter_map sb_filter_map;
         proton::symbol key("com.microsoft:session-filter");
         sb_filter_map.put(key, session_identifier);
@@ -167,7 +166,7 @@ class session_receiver : public proton::messaging_handler {
         connection.work_queue().schedule(read_timeout, [this]() { this->process_timeout(); });
     }
 
-    void on_receiver_open(proton::receiver &r) OVERRIDE {
+    void on_receiver_open(proton::receiver &r) override {
         if (closed) return; // PROTON-1264
         proton::value actual_session_id = r.source().filters().get("com.microsoft:session-filter");
         std::cout << "receiving messages with session identifier \"" << actual_session_id
@@ -175,7 +174,7 @@ class session_receiver : public proton::messaging_handler {
         last_read = proton::timestamp::now();
     }
 
-    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) override {
         message_count++;
         std::cout << "   received message: " << m.body() << std::endl;
         last_read = proton::timestamp::now();
@@ -241,11 +240,11 @@ class session_sender : public proton::messaging_handler {
         }
     }
 
-    void on_sendable(proton::sender &s) OVERRIDE {
+    void on_sendable(proton::sender &s) override {
         send_remaining_messages(s);
     }
 
-    void on_tracker_accept(proton::tracker &t) OVERRIDE {
+    void on_tracker_accept(proton::tracker &t) override {
         accepts++;
         if (accepts == total) {
             // upload complete
@@ -274,7 +273,7 @@ class sequence : public proton::messaging_handler {
         the_sequence = this;
     }
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         container = &c;
         next_sequence();
     }

@@ -43,13 +43,11 @@ bool work_queue::add(internal::v03::work f) {
     return impl_->add(f);
 }
 
-#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 bool work_queue::add(internal::v11::work f) {
     // If we have no actual work queue, then can't defer
     if (!impl_) return false;
     return impl_->add(f);
 }
-#endif
 
 bool work_queue::add(void_function0& f) {
     return add(make_work(&void_function0::operator(), &f));
@@ -61,13 +59,11 @@ void work_queue::schedule(duration d, internal::v03::work f) {
     return impl_->schedule(d, f);
 }
 
-#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 void work_queue::schedule(duration d, internal::v11::work f) {
     // If we have no actual work queue, then can't defer
     if (!impl_) return;
     return impl_->schedule(d, f);
 }
-#endif
 
 void work_queue::schedule(duration d, void_function0& f) {
     schedule(d, make_work(&void_function0::operator(), &f));

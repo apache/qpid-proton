@@ -29,7 +29,6 @@
 
 #include <iostream>
 
-#include "fake_cpp11.hpp"
 
 class queue_browser : public proton::messaging_handler {
     std::string conn_url_;
@@ -39,7 +38,7 @@ class queue_browser : public proton::messaging_handler {
     queue_browser(const std::string& u, const std::string& a) :
         conn_url_(u), addr_(a) {}
 
-    void on_container_start(proton::container& c) OVERRIDE {
+    void on_container_start(proton::container& c) override {
         proton::receiver_options ropts;
         proton::source_options sopts;
         ropts.source(sopts.distribution_mode(proton::source::COPY));
@@ -48,7 +47,7 @@ class queue_browser : public proton::messaging_handler {
         conn.open_receiver(addr_, ropts);
     }
 
-    void on_message(proton::delivery&, proton::message& m) OVERRIDE {
+    void on_message(proton::delivery&, proton::message& m) override {
         std::cout << m.body() << std::endl;
     }
 };

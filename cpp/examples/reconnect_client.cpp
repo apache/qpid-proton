@@ -37,7 +37,6 @@
 #include <map>
 #include <string>
 
-#include "fake_cpp11.hpp"
 
 class reconnect_client : public proton::messaging_handler {
     std::string url;
@@ -53,7 +52,7 @@ class reconnect_client : public proton::messaging_handler {
         url(u), address(a), failovers(f), sent(0), expected(c), received(0) {}
 
   private:
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         proton::connection_options co;
         proton::reconnect_options ro;
 
@@ -62,7 +61,7 @@ class reconnect_client : public proton::messaging_handler {
         c.connect(url, co);
     }
 
-    void on_connection_open(proton::connection & c) OVERRIDE {
+    void on_connection_open(proton::connection & c) override {
         c.open_receiver(address);
         c.open_sender(address);
         // reconnect we probably lost the last message sent
@@ -70,7 +69,7 @@ class reconnect_client : public proton::messaging_handler {
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::delivery &d, proton::message &msg) OVERRIDE {
+    void on_message(proton::delivery &d, proton::message &msg) override {
         if (proton::coerce<int>(msg.id()) < received) {
             return; // Ignore duplicate
         }
@@ -106,11 +105,11 @@ class reconnect_client : public proton::messaging_handler {
         }
     }
 
-    void on_sender_open(proton::sender & s) OVERRIDE {
+    void on_sender_open(proton::sender & s) override {
         sender = s;
     }
 
-    void on_sendable(proton::sender &s) OVERRIDE {
+    void on_sendable(proton::sender &s) override {
         send(s);
     }
 };

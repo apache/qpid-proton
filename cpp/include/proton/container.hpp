@@ -26,7 +26,6 @@
 #include "./returned.hpp"
 #include "./types_fwd.hpp"
 
-#include "./internal/config.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 
@@ -161,7 +160,6 @@ class PN_CPP_CLASS_EXTERN container {
     /// `run(int count)`.
     PN_CPP_EXTERN void run();
 
-#if PN_CPP_SUPPORTS_THREADS
     /// Run the container with a pool of `count` threads, including the current thread.
     ///
     /// **C++ versions** - Available with C++11 or later.
@@ -169,7 +167,6 @@ class PN_CPP_CLASS_EXTERN container {
     /// The call returns when the container stops. See `auto_stop()`
     /// and `stop()`.
     PN_CPP_EXTERN void run(int count);
-#endif
 
     /// Enable or disable automatic container stop.  It is enabled by
     /// default.
@@ -314,9 +311,7 @@ class PN_CPP_CLASS_EXTERN container {
   private:
     /// Declare both v03 and v11 if compiling with c++11 as the library contains both.
     /// A C++11 user should never call the v03 overload so it is private in this case
-#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
     PN_CPP_EXTERN void schedule(duration dur, internal::v03::work fn);
-#endif
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 

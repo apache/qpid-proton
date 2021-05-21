@@ -32,7 +32,6 @@
 
 #include <iostream>
 
-#include "fake_cpp11.hpp"
 
 // Send messages at a constant rate one per interval. cancel after a timeout.
 // This example uses only C++03 features.
@@ -53,11 +52,11 @@ class scheduled_sender : public proton::messaging_handler {
         canceled(false)         // Canceled.
     {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         c.open_sender(url);
     }
 
-    void on_sender_open(proton::sender & s) OVERRIDE {
+    void on_sender_open(proton::sender & s) override {
         work_queue = &s.work_queue();
 
         work_queue->schedule(timeout, make_work(&scheduled_sender::cancel, this, s));
@@ -79,7 +78,7 @@ class scheduled_sender : public proton::messaging_handler {
         }
     }
 
-    void on_sendable(proton::sender &sender) OVERRIDE {
+    void on_sendable(proton::sender &sender) override {
         if (ready)              // We have been ticked since the last send.
             send(sender);
     }

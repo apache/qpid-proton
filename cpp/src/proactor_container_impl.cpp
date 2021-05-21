@@ -44,14 +44,8 @@
 
 #include <algorithm>
 #include <vector>
-
-#if PN_CPP_SUPPORTS_THREADS
-# include <thread>
-#endif
-
-#if PN_CPP_HAS_HEADER_RANDOM
-# include <random>
-#endif
+#include <thread>
+#include <random>
 
 // XXXX: Debug
 //#include <iostream>
@@ -270,19 +264,12 @@ void container::impl::reconnect(pn_connection_t* pnc) {
 }
 
 namespace {
-#if PN_CPP_HAS_HEADER_RANDOM && PN_CPP_HAS_THREAD_LOCAL
 duration random_between(duration min, duration max)
 {
     static thread_local std::default_random_engine gen;
     std::uniform_int_distribution<duration::numeric_type> dist{min.milliseconds(), max.milliseconds()};
     return duration(dist(gen));
 }
-#else
-duration random_between(duration, duration max)
-{
-    return max;
-}
-#endif
 
 duration next_delay(reconnect_context& rc) {
     // If we've not retried before do it immediately
@@ -800,7 +787,6 @@ void container::impl::run(int threads) {
     // Have to "manually" generate container events
     CALL_ONCE(start_once_, &impl::start_event, this);
 
-#if PN_CPP_SUPPORTS_THREADS
     // Run handler threads
     threads = std::max(threads, 1); // Ensure at least 1 thread
     typedef std::vector<std::thread*> vt; // pointer vector to work around failures in older compilers
@@ -816,10 +802,6 @@ void container::impl::run(int threads) {
         (*i)->join();
         delete *i;
     }
-#else
-    // Run a single handler thread (As we have no threading API)
-    thread();
-#endif
 
     bool last = false;
     {

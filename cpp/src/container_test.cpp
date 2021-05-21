@@ -37,12 +37,10 @@
 #include <string>
 #include <cstdio>
 #include <sstream>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
-#if PN_CPP_SUPPORTS_THREADS
-# include <thread>
-# include <mutex>
-# include <condition_variable>
-#endif
 
 namespace {
 
@@ -62,11 +60,11 @@ struct test_listen_handler : public proton::listen_handler {
                         const proton::connection_options& opts=proton::connection_options()
     ) : on_open_(false), on_accept_(false), on_close_(false), host_(host), opts_(opts) {}
 
-    proton::connection_options on_accept(proton::listener&) PN_CPP_OVERRIDE {
+    proton::connection_options on_accept(proton::listener&) override {
         on_accept_ = true;
         return proton::connection_options();
     }
-    void on_open(proton::listener& l) PN_CPP_OVERRIDE {
+    void on_open(proton::listener& l) override {
         on_open_ = true;
         ASSERT(!on_accept_);
         ASSERT(on_error_.empty());
@@ -74,12 +72,12 @@ struct test_listen_handler : public proton::listen_handler {
         l.container().connect(make_url(host_, l.port()), opts_);
     }
 
-    void on_close(proton::listener&) PN_CPP_OVERRIDE {
+    void on_close(proton::listener&) override {
         on_close_ = true;
         ASSERT(on_open_ || on_error_.size());
     }
 
-    void on_error(proton::listener&, const std::string& e) PN_CPP_OVERRIDE {
+    void on_error(proton::listener&, const std::string& e) override {
         on_error_ = e;
         ASSERT(!on_close_);
     }
@@ -102,11 +100,11 @@ class test_handler : public proton::messaging_handler {
         : closing(false), done(false), listen_handler(h, c_opts)
     {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) override {
         listener = c.listen("//:0", listen_handler);
     }
 
-    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
+    void on_connection_open(proton::connection &c) override {
         ASSERT(listen_handler.on_open_);
         ASSERT(!listen_handler.on_close_);
         ASSERT(listen_handler.on_error_.empty());
@@ -123,7 +121,7 @@ class test_handler : public proton::messaging_handler {
         closing = true;
     }
 
-    void on_connection_close(proton::connection &) PN_CPP_OVERRIDE {
+    void on_connection_close(proton::connection &) override {
         if (!done) listener.stop();
         done = true;
     }
@@ -228,7 +226,7 @@ class stop_tester : public proton::messaging_handler {
     test_listen_handler listen_handler;
 
     // Set up a listener which would block forever
-    void on_container_start(proton::container& c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container& c) override {
         ASSERT(state==0);
         listener = c.listen("//:0", listen_handler);
         c.auto_stop(false);
@@ -236,22 +234,22 @@ class stop_tester : public proton::messaging_handler {
     }
 
     // Get here twice - once for listener, once for connector
-    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
+    void on_connection_open(proton::connection &c) override {
         c.close();
         state++;
     }
 
-    void on_connection_close(proton::connection &c) PN_CPP_OVERRIDE {
+    void on_connection_close(proton::connection &c) override {
         ASSERT(state==3);
         c.container().stop();
         state = 4;
     }
-    void on_container_stop(proton::container & ) PN_CPP_OVERRIDE {
+    void on_container_stop(proton::container & ) override {
         ASSERT(state==4);
         state = 5;
     }
 
-    void on_transport_error(proton::transport & t) PN_CPP_OVERRIDE {
+    void on_transport_error(proton::transport & t) override {
         // Do nothing - ignore transport errors - we're going to get one when
         // the container stops.
     }
@@ -280,16 +278,16 @@ struct hang_tester : public proton::messaging_handler {
         c->connect(make_url("", listener.port()));
     }
 
-    void on_container_start(proton::container& c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container& c) override {
         listener = c.listen("//:0");
         c.schedule(proton::duration(250), proton::make_work(&hang_tester::connect, this, &c));
     }
 
-    void on_connection_open(proton::connection& c) PN_CPP_OVERRIDE {
+    void on_connection_open(proton::connection& c) override {
         c.close();
     }
 
-    void on_connection_close(proton::connection& c) PN_CPP_OVERRIDE {
+    void on_connection_close(proton::connection& c) override {
         if (!done) {
             done = true;
             listener.stop();
@@ -305,7 +303,7 @@ int test_container_schedule_nohang() {
 
 class immediate_stop_tester : public proton::messaging_handler {
 public:
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) override {
         c.stop();
     }
 };
@@ -327,7 +325,7 @@ int test_container_pre_stop() {
 struct schedule_tester : public proton::messaging_handler {
     void stop(proton::container* c) { c->stop(); }
 
-    void on_container_start(proton::container& c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container& c) override {
         c.schedule(proton::duration(250), proton::make_work(&schedule_tester::stop, this, &c));
     }
 };
@@ -362,11 +360,11 @@ class link_test_handler : public proton::messaging_handler {//, public proton::l
           sender_options(s_opts)
     {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) override {
         listener = c.listen("//:0", listen_handler);
     }
 
-    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
+    void on_connection_open(proton::connection &c) override {
         if (c.uninitialized()) {
             proton::messaging_handler::on_connection_open(c);
             c.open_receiver("", receiver_options);
@@ -382,14 +380,14 @@ class link_test_handler : public proton::messaging_handler {//, public proton::l
         }
     }
 
-    void on_receiver_open(proton::receiver &l) PN_CPP_OVERRIDE {
+    void on_receiver_open(proton::receiver &l) override {
         had_receiver = true;
         // When a client creates a sender then the server is notified about it as a receiver
         peer_sender_properties = l.properties();
         check_close(l);
     }
 
-    void on_sender_open(proton::sender &l) PN_CPP_OVERRIDE {
+    void on_sender_open(proton::sender &l) override {
         had_sender = true;
         // When a client creates a receiver then the server is notified about it as a sender
         peer_receiver_properties = l.properties();
@@ -432,8 +430,6 @@ int test_container_links_properties() {
     return 0;
 }
 
-#if PN_CPP_SUPPORTS_THREADS // Tests that require thread support
-
 class test_mt_handler : public proton::messaging_handler {
   public:
     std::mutex lock_;
@@ -456,11 +452,11 @@ class test_mt_handler : public proton::messaging_handler {
     }
 
     proton::error_condition error() const { return err_; }
-    void on_container_start(proton::container &) PN_CPP_OVERRIDE { set("start"); }
-    void on_connection_open(proton::connection &) PN_CPP_OVERRIDE { set("open"); }
+    void on_container_start(proton::container &) override { set("start"); }
+    void on_connection_open(proton::connection &) override { set("open"); }
 
     // Catch errors and save.
-    void on_error(const proton::error_condition& e) PN_CPP_OVERRIDE { err_ = e; }
+    void on_error(const proton::error_condition& e) override { err_ = e; }
 };
 
 class container_runner {
@@ -527,7 +523,7 @@ public:
 
     test_mt_handler_wq() : wq_(0) {}
 
-    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
+    void on_connection_open(proton::connection &c) override {
         {
             std::unique_lock<std::mutex> l(wqlock_);
             // Just record first connection side, inbound or outbound
@@ -546,7 +542,7 @@ public:
         wq_->add(call_do_close_);
     }
     void do_close() { connection_.close(); }
-    void on_connection_close(proton::connection &) PN_CPP_OVERRIDE { set("closed"); }
+    void on_connection_close(proton::connection &) override { set("closed"); }
 };
 
 void test_container_mt_close_race() {
@@ -578,8 +574,6 @@ void test_container_mt_close_race() {
     }
 }
 
-#endif
-
 } // namespace
 
 int main(int argc, char** argv) {
@@ -598,10 +592,8 @@ int main(int argc, char** argv) {
     RUN_ARGV_TEST(failed, test_container_schedule_stop());
     RUN_ARGV_TEST(failed, test_container_links_no_properties());
     RUN_ARGV_TEST(failed, test_container_links_properties());
-#if PN_CPP_SUPPORTS_THREADS
     RUN_ARGV_TEST(failed, test_container_mt_stop_empty());
     RUN_ARGV_TEST(failed, test_container_mt_stop());
     RUN_ARGV_TEST(failed, test_container_mt_close_race());
-#endif
     return failed;
 }

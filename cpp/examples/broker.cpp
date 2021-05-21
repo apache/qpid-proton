@@ -41,12 +41,8 @@
 #include <iostream>
 #include <map>
 #include <string>
-
-#if PN_CPP_HAS_STD_THREAD
 #include <thread>
-#endif
 
-#include "fake_cpp11.hpp"
 
 // This is a simplified model for a message broker, that only allows for
 // messages to go to a single receiver.
@@ -97,8 +93,8 @@ class Sender : public proton::messaging_handler {
     int pending_credit_;
 
     // Messaging handlers
-    void on_sendable(proton::sender &sender) OVERRIDE;
-    void on_sender_close(proton::sender &sender) OVERRIDE;
+    void on_sendable(proton::sender &sender) override;
+    void on_sender_close(proton::sender &sender) override;
 
 public:
     Sender(proton::sender s, senders& ss) :
@@ -232,7 +228,7 @@ class Receiver : public proton::messaging_handler {
     std::deque<proton::message> messages_;
 
     // A message is received.
-    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) override {
         messages_.push_back(m);
 
         if (queue_) {
@@ -322,12 +318,12 @@ public:
         queue_manager_(qm)
     {}
 
-    void on_connection_open(proton::connection& c) OVERRIDE {
+    void on_connection_open(proton::connection& c) override {
         c.open();            // Accept the connection
     }
 
     // A sender sends messages from a queue to a subscriber.
-    void on_sender_open(proton::sender &sender) OVERRIDE {
+    void on_sender_open(proton::sender &sender) override {
         std::string qn = sender.source().dynamic() ? "" : sender.source().address();
         Sender* s = new Sender(sender, senders_);
         senders_[sender] = s;
@@ -335,13 +331,13 @@ public:
     }
 
     // A receiver receives messages from a publisher to a queue.
-    void on_receiver_open(proton::receiver &receiver) OVERRIDE {
+    void on_receiver_open(proton::receiver &receiver) override {
         std::string qname = receiver.target().address();
         Receiver* r = new Receiver(receiver);
         queue_manager_.add(make_work(&QueueManager::findQueueReceiver, &queue_manager_, r, qname));
     }
 
-    void on_session_close(proton::session &session) OVERRIDE {
+    void on_session_close(proton::session &session) override {
         // Unsubscribe all senders that belong to session.
         for (proton::sender_iterator i = session.senders().begin(); i != session.senders().end(); ++i) {
             senders::iterator j = senders_.find(*i);
@@ -354,12 +350,12 @@ public:
         }
     }
 
-    void on_error(const proton::error_condition& e) OVERRIDE {
+    void on_error(const proton::error_condition& e) override {
         std::cout << "protocol error: " << e.what() << std::endl;
     }
 
     // The container calls on_transport_close() last.
-    void on_transport_close(proton::transport& t) OVERRIDE {
+    void on_transport_close(proton::transport& t) override {
         // Unsubscribe all senders.
         for (proton::sender_iterator i = t.connection().senders().begin(); i != t.connection().senders().end(); ++i) {
             senders::iterator j = senders_.find(*i);
@@ -382,26 +378,22 @@ class broker {
     }
 
     void run() {
-#if PN_CPP_HAS_STD_THREAD
         container_.run(std::thread::hardware_concurrency());
-#else
-        container_.run();
-#endif
     }
 
   private:
     struct listener : public proton::listen_handler {
         listener(QueueManager& c) : queues_(c) {}
 
-        proton::connection_options on_accept(proton::listener&) OVERRIDE{
+        proton::connection_options on_accept(proton::listener&) override{
             return proton::connection_options().handler(*(new connection_handler(queues_)));
         }
 
-        void on_open(proton::listener& l) OVERRIDE {
+        void on_open(proton::listener& l) override {
             std::cout << "broker listening on " << l.port() << std::endl;
         }
 
-        void on_error(proton::listener&, const std::string& s) OVERRIDE {
+        void on_error(proton::listener&, const std::string& s) override {
             std::cerr << "listen error: " << s << std::endl;
             throw std::runtime_error(s);
         }

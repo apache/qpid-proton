@@ -91,9 +91,7 @@ listener container::listen(const std::string& url, listen_handler& l) { return i
 
 void container::run() { impl_->run(1); }
 
-#if PN_CPP_SUPPORTS_THREADS
 void container::run(int threads) { impl_->run(threads); }
-#endif
 
 void container::auto_stop(bool set) { impl_->auto_stop(set); }
 
@@ -116,9 +114,7 @@ returned<receiver> container::open_receiver(
 std::string container::id() const { return impl_->id(); }
 
 void container::schedule(duration d, internal::v03::work f) { return impl_->schedule(d, f); }
-#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 void container::schedule(duration d, internal::v11::work f) { return impl_->schedule(d, f); }
-#endif
 
 void container::schedule(duration d, void_function0& f) { return impl_->schedule(d, make_work(&void_function0::operator(), &f)); }
 

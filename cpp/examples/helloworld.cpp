@@ -28,7 +28,6 @@
 
 #include <iostream>
 
-#include "fake_cpp11.hpp"
 
 class hello_world : public proton::messaging_handler {
     std::string conn_url_;
@@ -38,22 +37,22 @@ class hello_world : public proton::messaging_handler {
     hello_world(const std::string& u, const std::string& a) :
         conn_url_(u), addr_(a) {}
 
-    void on_container_start(proton::container& c) OVERRIDE {
+    void on_container_start(proton::container& c) override {
         c.connect(conn_url_);
     }
 
-    void on_connection_open(proton::connection& c) OVERRIDE {
+    void on_connection_open(proton::connection& c) override {
         c.open_receiver(addr_);
         c.open_sender(addr_);
     }
 
-    void on_sendable(proton::sender &s) OVERRIDE {
+    void on_sendable(proton::sender &s) override {
         proton::message m("Hello World!");
         s.send(m);
         s.close();
     }
 
-    void on_message(proton::delivery &d, proton::message &m) OVERRIDE {
+    void on_message(proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
         d.connection().close();
     }

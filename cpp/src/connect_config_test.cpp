@@ -150,7 +150,7 @@ void test_invalid_json() {
 class messaging_handler : public proton::messaging_handler {
     virtual void on_messaging_error(const error_condition&) = 0;
 
-    void on_error(const error_condition& c) PN_CPP_OVERRIDE {
+    void on_error(const error_condition& c) override {
         on_messaging_error(c);
     }
 };
@@ -158,7 +158,7 @@ class messaging_handler : public proton::messaging_handler {
 class listen_handler : public proton::listen_handler {
     virtual void on_listen_error(listener& , const string&) = 0;
 
-    void on_error(listener& l, const string& s) PN_CPP_OVERRIDE {
+    void on_error(listener& l, const string& s) override {
         on_listen_error(l, s);
     }
 };
@@ -168,19 +168,19 @@ class test_handler : public messaging_handler,  public listen_handler {
     connection_options connection_options_;
     listener listener_;
 
-    void on_open(listener& l) PN_CPP_OVERRIDE {
+    void on_open(listener& l) override {
         on_listener_start(l.container());
     }
 
-    connection_options on_accept(listener& l) PN_CPP_OVERRIDE {
+    connection_options on_accept(listener& l) override {
         return connection_options_;
     }
 
-    void on_container_start(container& c) PN_CPP_OVERRIDE {
+    void on_container_start(container& c) override {
         listener_ = c.listen("//:0", *this);
     }
 
-    void on_connection_open(connection& c) PN_CPP_OVERRIDE {
+    void on_connection_open(connection& c) override {
         if (!c.active()) {      // Server side
             opened_ = true;
             check_connection(c);
@@ -189,11 +189,11 @@ class test_handler : public messaging_handler,  public listen_handler {
         }
     }
 
-    void on_messaging_error(const error_condition& e) PN_CPP_OVERRIDE {
+    void on_messaging_error(const error_condition& e) override {
         FAIL("unexpected error " << e);
     }
 
-    void on_listen_error(listener&, const string& s) PN_CPP_OVERRIDE {
+    void on_listen_error(listener&, const string& s) override {
         FAIL("unexpected listen error " << s);
     }
 
@@ -229,14 +229,14 @@ class test_handler : public messaging_handler,  public listen_handler {
 class test_almost_default_connect : public test_handler {
   public:
 
-    void on_listener_start(container& c) PN_CPP_OVERRIDE {
+    void on_listener_start(container& c) override {
         ofstream os("connect.json");
         ASSERT(os << config_with_port(RAW_STRING("scheme":"amqp")));
         os.close();
         c.connect();
     }
 
-    void check_connection(connection& c) PN_CPP_OVERRIDE {
+    void check_connection(connection& c) override {
         ASSERT_EQUAL("localhost", c.virtual_host());
     }
 };
@@ -253,7 +253,7 @@ public:
 class test_default_connect : public test_handler {
   public:
 
-    void on_listener_start(container& c) PN_CPP_OVERRIDE {
+    void on_listener_start(container& c) override {
         c.connect();
     }
 
@@ -261,14 +261,14 @@ class test_default_connect : public test_handler {
     // connected or rejected due to error.
     //
     // We use a hacky way to get to the underlying C objects to check what's in them
-    void on_transport_open(proton::transport& transport) PN_CPP_OVERRIDE {
+    void on_transport_open(proton::transport& transport) override {
         proton::connection connection = transport.connection();
         internal_access_of<proton::connection, pn_connection_t> ic(connection);
         pn_connection_t* c = ic.pn_object();
         ASSERT_EQUAL(std::string("localhost"), pn_connection_get_hostname(c));
     }
 
-    void on_transport_error(proton::transport& t) PN_CPP_OVERRIDE {
+    void on_transport_error(proton::transport& t) override {
         ASSERT_SUBSTRING("localhost:5671", t.error().description());
         t.connection().container().stop();
     }
@@ -281,11 +281,11 @@ class test_default_connect : public test_handler {
 class test_host_user_pass : public test_handler {
   public:
 
-    void on_listener_start(proton::container & c) PN_CPP_OVERRIDE {
+    void on_listener_start(proton::container & c) override {
         connect(c, RAW_STRING("scheme":"amqp", "host":"127.0.0.1", "user":"user@proton", "password":"password"));
     }
 
-    void check_connection(connection& c) PN_CPP_OVERRIDE {
+    void check_connection(connection& c) override {
         ASSERT_EQUAL("127.0.0.1", c.virtual_host());
         if (pn_sasl_extended()) {
             ASSERT_EQUAL("user@proton", c.user());
@@ -309,7 +309,7 @@ class test_tls : public test_handler {
 
     test_tls() : test_handler(make_opts()) {}
 
-    void on_listener_start(proton::container & c) PN_CPP_OVERRIDE {
+    void on_listener_start(proton::container & c) override {
         connect(c, RAW_STRING("scheme":"amqps", "tls": { "verify":false }));
     }
 };
@@ -329,11 +329,11 @@ class test_tls_default_fail : public test_handler {
 
     test_tls_default_fail() : test_handler(make_opts()), failed_(false) {}
 
-    void on_listener_start(proton::container& c) PN_CPP_OVERRIDE {
+    void on_listener_start(proton::container& c) override {
         connect(c, RAW_STRING("scheme":"amqps"));
     }
 
-    void on_messaging_error(const proton::error_condition& c) PN_CPP_OVERRIDE {
+    void on_messaging_error(const proton::error_condition& c) override {
         if (failed_) return;
 
         ASSERT_SUBSTRING("verify failed", c.description());
@@ -365,7 +365,7 @@ class test_tls_external : public test_handler {
 
     test_tls_external() : test_handler(make_opts()) {}
 
-    void on_listener_start(container& c) PN_CPP_OVERRIDE {
+    void on_listener_start(container& c) override {
         connect(c, RAW_STRING(
                     "scheme":"amqps",
                     "sasl":{ "mechanisms": "EXTERNAL" },
@@ -395,7 +395,7 @@ class test_tls_plain : public test_handler {
 
     test_tls_plain() : test_handler(make_opts()) {}
 
-    void on_listener_start(container& c) PN_CPP_OVERRIDE {
+    void on_listener_start(container& c) override {
         connect(c, RAW_STRING(
                     "scheme":"amqps", "user":"user@proton", "password": "password",
                     "sasl":{ "mechanisms": "PLAIN" },

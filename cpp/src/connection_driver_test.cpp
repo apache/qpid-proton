@@ -171,34 +171,34 @@ struct record_handler : public messaging_handler {
 
     size_t link_count() const { return senders.size() + receivers.size(); }
 
-    void on_receiver_open(receiver &l) PN_CPP_OVERRIDE {
+    void on_receiver_open(receiver &l) override {
         messaging_handler::on_receiver_open(l);
         receivers.push_back(l);
     }
 
-    void on_sender_open(sender &l) PN_CPP_OVERRIDE {
+    void on_sender_open(sender &l) override {
         messaging_handler::on_sender_open(l);
         senders.push_back(l);
     }
 
-    void on_session_open(session &s) PN_CPP_OVERRIDE {
+    void on_session_open(session &s) override {
         messaging_handler::on_session_open(s);
         sessions.push_back(s);
     }
 
-    void on_transport_error(transport& t) PN_CPP_OVERRIDE {
+    void on_transport_error(transport& t) override {
         transport_errors.push_back(t.error().what());
     }
 
-    void on_connection_error(connection& c) PN_CPP_OVERRIDE {
+    void on_connection_error(connection& c) override {
         connection_errors.push_back(c.error().what());
     }
 
-    void on_error(const proton::error_condition& c) PN_CPP_OVERRIDE {
+    void on_error(const proton::error_condition& c) override {
         unhandled_errors.push_back(c.what());
     }
 
-    void on_message(proton::delivery&, proton::message& m) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery&, proton::message& m) override {
         messages.push_back(m);
     }
 };

@@ -32,7 +32,6 @@
 #include <iostream>
 #include <vector>
 
-#include "fake_cpp11.hpp"
 
 using proton::receiver_options;
 using proton::source_options;
@@ -47,7 +46,7 @@ class client : public proton::messaging_handler {
   public:
     client(const std::string &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         sender = c.open_sender(url);
         // Create a receiver requesting a dynamically created queue
         // for the message source.
@@ -62,11 +61,11 @@ class client : public proton::messaging_handler {
         sender.send(req);
     }
 
-    void on_receiver_open(proton::receiver &) OVERRIDE {
+    void on_receiver_open(proton::receiver &) override {
         send_request();
     }
 
-    void on_message(proton::delivery &d, proton::message &response) OVERRIDE {
+    void on_message(proton::delivery &d, proton::message &response) override {
         if (requests.empty()) return; // Spurious extra message!
 
         std::cout << requests.front() << " => " << response.body() << std::endl;

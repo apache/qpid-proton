@@ -22,7 +22,6 @@
  *
  */
 
-#include "./config.hpp"
 #include "./export.hpp"
 #include "./comparable.hpp"
 
@@ -47,10 +46,7 @@ template <class T> class pn_ptr : private pn_ptr_base, private comparable<pn_ptr
     pn_ptr() : ptr_(0) {}
     pn_ptr(T* p) : ptr_(p) { incref(ptr_); }
     pn_ptr(const pn_ptr& o) : ptr_(o.ptr_) { incref(ptr_); }
-
-#if PN_CPP_HAS_RVALUE_REFERENCES
     pn_ptr(pn_ptr&& o) : ptr_(0) { std::swap(ptr_, o.ptr_); }
-#endif
 
     ~pn_ptr() { decref(ptr_); }
 
@@ -60,10 +56,7 @@ template <class T> class pn_ptr : private pn_ptr_base, private comparable<pn_ptr
     T* release() { T *p = ptr_; ptr_ = 0; return p; }
 
     bool operator!() const { return !ptr_; }
-
-#if PN_CPP_HAS_EXPLICIT_CONVERSIONS
     explicit operator bool() const { return !!ptr_; }
-#endif
 
     std::string inspect() const { return pn_ptr_base::inspect(ptr_); }
 
@@ -86,9 +79,7 @@ template <class T> pn_ptr<T> take_ownership(T* p) { return pn_ptr<T>::take_owner
 template <class T> class object : private comparable<object<T> > {
   public:
     bool operator!() const { return !object_; }
-#if PN_CPP_HAS_EXPLICIT_CONVERSIONS
     explicit operator bool() const { return object_.get(); }
-#endif
 
   protected:
     typedef T pn_type;

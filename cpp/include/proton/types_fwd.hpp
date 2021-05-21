@@ -25,7 +25,6 @@
 /// @file
 /// Forward declarations for Proton types used to represent AMQP types.
 
-#include "./internal/config.hpp"
 
 namespace proton {
 

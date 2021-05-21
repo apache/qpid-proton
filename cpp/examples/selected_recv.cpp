@@ -28,7 +28,6 @@
 
 #include <iostream>
 
-#include "fake_cpp11.hpp"
 
 namespace {
 
@@ -61,14 +60,14 @@ class selected_recv : public proton::messaging_handler {
     selected_recv(const std::string& u, const std::string& a) :
         conn_url_(u), addr_(a) {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
+    void on_container_start(proton::container &c) override {
         proton::source_options opts;
         set_filter(opts, "colour = 'green'");
         proton::connection conn = c.connect(conn_url_);
         conn.open_receiver(addr_, proton::receiver_options().source(opts));
     }
 
-    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) override {
         std::cout << m.body() << std::endl;
     }
 };
