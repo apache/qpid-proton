@@ -46,13 +46,14 @@ namespace pn_test {
 template <class T, void (*Free)(T *)> class auto_free {
   T *ptr_;
   auto_free &operator=(auto_free &x);
-  auto_free(auto_free &x);
+public:
+  auto_free(auto_free &x) = delete;
 
 public:
-  auto_free(T *p = 0) : ptr_(p) {}
+  explicit auto_free(T *p = 0) : ptr_(p) {}
   ~auto_free() { Free(ptr_); }
   T *get() const { return ptr_; }
-  operator T *() const { return ptr_; }
+  operator T *() const { return ptr_; } // not marking explicit for convenience
 };
 
 // pn_free() works for some, but not all pn_xxx_t* types.
@@ -129,7 +130,7 @@ protected:
 struct driver : public ::pn_connection_driver_t {
   struct handler &handler;
 
-  driver(struct handler &h);
+  explicit driver(struct handler &h);
   ~driver();
 
   // Dispatch events till a handler returns true, the `stop` event is handled,
@@ -160,22 +161,22 @@ struct driver_pair {
 // description etc.
 
 struct cond_empty : public Catch::MatcherBase<pn_condition_t> {
-  std::string describe() const CATCH_OVERRIDE;
-  bool match(const pn_condition_t &cond) const CATCH_OVERRIDE;
+  std::string describe() const override;
+  bool match(const pn_condition_t &cond) const override;
 };
 
 class cond_matches : public Catch::MatcherBase<pn_condition_t> {
   std::string name_, desc_;
 
 public:
-  cond_matches(const std::string &name, const std::string &desc_contains = "");
-  std::string describe() const CATCH_OVERRIDE;
-  bool match(const pn_condition_t &cond) const CATCH_OVERRIDE;
+  explicit cond_matches(std::string name, std::string desc_contains = "");
+  std::string describe() const override;
+  bool match(const pn_condition_t &cond) const override;
 };
 
 struct error_empty : public Catch::MatcherBase<pn_error_t> {
-  std::string describe() const CATCH_OVERRIDE;
-  bool match(const pn_error_t &) const CATCH_OVERRIDE;
+  std::string describe() const override;
+  bool match(const pn_error_t &) const override;
 };
 
 class error_matches : public Catch::MatcherBase<pn_error_t> {
@@ -183,9 +184,9 @@ class error_matches : public Catch::MatcherBase<pn_error_t> {
   std::string desc_;
 
 public:
-  error_matches(int code, const std::string &desc_contains = "");
-  std::string describe() const CATCH_OVERRIDE;
-  bool match(const pn_error_t &) const CATCH_OVERRIDE;
+  explicit error_matches(int code, std::string desc_contains = "");
+  std::string describe() const override;
+  bool match(const pn_error_t &) const override;
 };
 
 } // namespace pn_test

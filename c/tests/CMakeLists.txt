@@ -29,8 +29,7 @@ endif()
 # NOTE: C library tests are written in C++ using the Catch2 framework.
 # The tests are more concise than with a native C framework and we can
 # use the same framework for C++ tests.
-# See https://github.com/catchorg/Catch2/blob/Catch1.x/docs/tutorial.md for more.
-# We will use the Catch2 1.x branch for as long as we must support C++03
+# See https://github.com/catchorg/Catch2/blob/v2.x/docs/tutorial.md for more.
 #
 # ${CMAKE_SOURCE_DIR}/include/tests/catch_extra.cpp has some general extensions to catch.
 # ./pn_test.hpp contains proton-C specific code to help with testing.

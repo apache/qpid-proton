@@ -39,7 +39,7 @@ namespace {
 /* Handler that replies to REMOTE_OPEN, stores the opened object on the handler
  */
 struct open_handler : pn_test::handler {
-  bool handle(pn_event_t *e) CATCH_OVERRIDE {
+  bool handle(pn_event_t *e) override {
     switch (pn_event_type(e)) {
     case PN_CONNECTION_REMOTE_OPEN:
       connection = pn_event_connection(e);
@@ -62,7 +62,7 @@ struct open_handler : pn_test::handler {
 
 /* Like open_handler but also reply to REMOTE_CLOSE */
 struct open_close_handler : public open_handler {
-  bool handle(pn_event_t *e) CATCH_OVERRIDE {
+  bool handle(pn_event_t *e) override {
     switch (pn_event_type(e)) {
     case PN_CONNECTION_REMOTE_CLOSE:
       pn_connection_open(pn_event_connection(e));
