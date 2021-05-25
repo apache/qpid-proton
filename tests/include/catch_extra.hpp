@@ -23,6 +23,7 @@
 // Extensions to the Catch2 framework
 
 #include <catch.hpp>
+#include <utility>
 
 namespace Catch {
 namespace Matchers {
@@ -44,17 +45,17 @@ struct CStringMatcherBase : MatcherBase<const char *> {
   const std::string m_operation;
   const char *m_comparator;
 
-  CStringMatcherBase(const std::string &operation, const char *comparator)
-      : m_operation(operation), m_comparator(comparator) {}
-  std::string describe() const CATCH_OVERRIDE {
-    return m_operation + ": " + Catch::toString(m_comparator);
+  CStringMatcherBase(std::string operation, const char *comparator)
+      : m_operation(std::move(operation)), m_comparator(comparator) {}
+  std::string describe() const override {
+    return m_operation + ": " + Catch::Detail::stringify(m_comparator);
   }
 };
 
 struct EqualsMatcher : CStringMatcherBase {
-  EqualsMatcher(const char *comparator)
+  explicit EqualsMatcher(const char *comparator)
       : CStringMatcherBase("equals", comparator) {}
-  bool match(const char *source) const CATCH_OVERRIDE {
+  bool match(const char * const &source) const override {
     // match if both null or both non-null and equal
     return source == m_comparator ||
            (source && m_comparator &&
@@ -63,25 +64,25 @@ struct EqualsMatcher : CStringMatcherBase {
 };
 
 struct ContainsMatcher : CStringMatcherBase {
-  ContainsMatcher(const char *comparator)
+  explicit ContainsMatcher(const char *comparator)
       : CStringMatcherBase("contains", comparator) {}
-  bool match(const char *source) const CATCH_OVERRIDE {
+  virtual bool match(const char * const &source) const override {
     return source && m_comparator && Catch::contains(source, m_comparator);
   }
 };
 
 struct StartsWithMatcher : CStringMatcherBase {
-  StartsWithMatcher(const char *comparator)
+  explicit StartsWithMatcher(const char *comparator)
       : CStringMatcherBase("starts with", comparator) {}
-  bool match(const char *source) const CATCH_OVERRIDE {
+  bool match(const char * const &source) const override {
     return source && m_comparator && Catch::startsWith(source, m_comparator);
   }
 };
 
 struct EndsWithMatcher : CStringMatcherBase {
-  EndsWithMatcher(const char *comparator)
+  explicit EndsWithMatcher(const char *comparator)
       : CStringMatcherBase("ends with", comparator) {}
-  bool match(const char *source) const CATCH_OVERRIDE {
+  bool match(const char *const &source) const override {
     return source && m_comparator && Catch::endsWith(source, m_comparator);
   }
 };

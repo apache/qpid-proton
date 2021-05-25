@@ -19,6 +19,7 @@
 
 #include <catch.hpp>
 #include <proton/url.hpp>
+#include <sstream>
 
 namespace {
 using proton::url;
@@ -123,7 +124,7 @@ TEST_CASE("parse URL","[url]") {
         CHECK(1234 == url("amqps://foo:1234/path").port_int());
 
         url u("amqps://foo:xyz/path");
-        CHECK_THROWS_AS(u.port_int(), url_error &);
+        CHECK_THROWS_AS(u.port_int(), url_error);
         CHECK_THROWS_WITH(u.port_int(), "invalid port 'xyz'");
     }
     SECTION("constructors") {

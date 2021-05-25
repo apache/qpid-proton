@@ -73,9 +73,9 @@ class common_handler : public handler {
   handler *accept_; // Handler for accepted connections
 
 public:
-  common_handler(handler *accept = 0) : accept_(accept) {}
+  explicit common_handler(handler *accept = 0) : accept_(accept) {}
 
-  bool handle(pn_event_t *e) CATCH_OVERRIDE {
+  bool handle(pn_event_t *e) override {
     switch (pn_event_type(e)) {
       /* Always stop on these noteworthy events */
     case PN_TRANSPORT_ERROR:
@@ -121,7 +121,7 @@ public:
 
 /* close a connection when it is remote open */
 struct close_on_open_handler : public common_handler {
-  bool handle(pn_event_t *e) CATCH_OVERRIDE {
+  bool handle(pn_event_t *e) override {
     switch (pn_event_type(e)) {
     case PN_CONNECTION_REMOTE_OPEN:
       pn_connection_close(pn_event_connection(e));
@@ -149,7 +149,7 @@ TEST_CASE("proactor_connect") {
 namespace {
 /* Return on connection open, close and return on wake */
 struct close_on_wake_handler : public common_handler {
-  bool handle(pn_event_t *e) CATCH_OVERRIDE {
+  bool handle(pn_event_t *e) override {
     switch (pn_event_type(e)) {
     case PN_CONNECTION_WAKE:
       pn_connection_close(pn_event_connection(e));
@@ -228,6 +228,7 @@ TEST_CASE("proactor_abort") {
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   common_handler ch; // Handle client side of connection
   pn_connection_t *c = p.connect(l, &ch);
+  REQUIRE(c != nullptr);
 
   /* server transport closes */
   REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
@@ -439,6 +440,7 @@ TEST_CASE("proactor_release_free") {
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   /* leave one connection to the proactor  */
   pn_connection_t *c = p.connect(l);
+  REQUIRE(c != nullptr);
   REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
 
@@ -680,12 +682,15 @@ TEST_CASE("proactor_disconnect") {
   pn_listener_t *l = server.listen();
   REQUIRE_RUN(server, PN_LISTENER_OPEN);
   pn_listener_t *l2 = server.listen();
+  REQUIRE(l2 != nullptr);
   REQUIRE_RUN(server, PN_LISTENER_OPEN);
 
   // Two connections from client
   pn_connection_t *c = client.connect(l);
+  REQUIRE(c != nullptr);
   CHECK_CORUN(client, server, PN_CONNECTION_REMOTE_OPEN);
   pn_connection_t *c2 = client.connect(l);
+  REQUIRE(c2 != nullptr);
   CHECK_CORUN(client, server, PN_CONNECTION_REMOTE_OPEN);
 
   /* Disconnect the client proactor */

@@ -25,6 +25,8 @@
 #include <proton/error.h>
 #include <proton/event.h>
 
+#include <sstream>
+
 using namespace pn_test;
 
 TEST_CASE("test_stringify") {
@@ -32,7 +34,7 @@ TEST_CASE("test_stringify") {
   SECTION("event_type") {
     o << PN_CONNECTION_INIT;
     CHECK(o.str() == "PN_CONNECTION_INIT");
-    CHECK(Catch::toString(PN_CONNECTION_INIT) == "PN_CONNECTION_INIT");
+    CHECK(Catch::Detail::stringify(PN_CONNECTION_INIT) == "PN_CONNECTION_INIT");
   }
   SECTION("condition") {
     pn_condition_t *c = pn_condition();

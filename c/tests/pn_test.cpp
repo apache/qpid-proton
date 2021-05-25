@@ -29,6 +29,9 @@
 #include <proton/object.h>
 #include <proton/transport.h>
 
+#include <sstream>
+#include <utility>
+
 std::ostream &operator<<(std::ostream &o, pn_event_type_t et) {
   return o << pn_event_type_name(et);
 }
@@ -74,7 +77,7 @@ etypes make_etypes_(int first, ...) {
 }
 
 std::ostream &operator<<(std::ostream &o, const etypes &et) {
-  return o << Catch::toString(static_cast<std::vector<pn_event_type_t> >(et));
+  return o << Catch::Detail::stringify(static_cast<std::vector<pn_event_type_t> >(et));
 }
 
 pn_bytes_t pn_bytes(const std::string &s) {
@@ -172,13 +175,13 @@ bool cond_empty::match(const pn_condition_t &cond) const {
   return !pn_condition_is_set(const_cast<pn_condition_t *>(&cond));
 }
 
-cond_matches::cond_matches(const std::string &name, const std::string &desc)
-    : name_(name), desc_(desc) {}
+cond_matches::cond_matches(std::string name, std::string desc)
+    : name_(std::move(name)), desc_(std::move(desc)) {}
 
 std::string cond_matches::describe() const {
   std::ostringstream o;
-  o << "matches " << Catch::toString(name_);
-  if (!desc_.empty()) o << ", " + Catch::toString(desc_);
+  o << "matches " << Catch::Detail::stringify(name_);
+  if (!desc_.empty()) o << ", " + Catch::Detail::stringify(desc_);
   return o.str();
 }
 
@@ -196,13 +199,13 @@ bool error_empty::match(const pn_error_t &err) const {
   return !pn_error_code(const_cast<pn_error_t *>(&err));
 }
 
-error_matches::error_matches(int code, const std::string &desc)
-    : code_(code), desc_(desc) {}
+error_matches::error_matches(int code, std::string desc)
+    : code_(code), desc_(std::move(desc)) {}
 
 std::string error_matches::describe() const {
   std::ostringstream o;
   o << "matches " << pn_code(code_);
-  if (!desc_.empty()) o << ", " + Catch::toString(desc_);
+  if (!desc_.empty()) o << ", " + Catch::Detail::stringify(desc_);
   return o.str();
 }
 

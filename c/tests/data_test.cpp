@@ -124,6 +124,7 @@ static void check_encode_decode(auto_free<pn_data_t, pn_data_free>& src) {
 	// Decode buf to data
 	int dec_size = pn_data_decode(data, buf, BUFSIZE - 1);
 	pn_error_t *dec_err = pn_data_error(data);
+	CHECK(pn_error_code(dec_err) == 0);
 	if (dec_size < 0) {
 		FAIL("pn_data_decode() error " << dec_size << ": " << pn_code(dec_size));
 	}

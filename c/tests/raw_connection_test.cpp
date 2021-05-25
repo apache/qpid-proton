@@ -226,7 +226,6 @@ namespace {
   const size_t WBUFFCOUNT = 32;
 
   char rbuffer_memory[BUFFMEMSIZE];
-  char *rbuffer_brk = rbuffer_memory;
 
   pn_raw_buffer_t rbuffs[RBUFFCOUNT];
   pn_raw_buffer_t wbuffs[WBUFFCOUNT];
