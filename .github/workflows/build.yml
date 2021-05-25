@@ -75,7 +75,7 @@ jobs:
     - id: ctest
       name: ctest
       working-directory: ${{env.BuildDir}}
-      run: ctest -C ${BuildType} -V -T Test --no-compress-output -R python-test ${{matrix.ctest_extra}}
+      run: ctest -C ${BuildType} -VV --output-on-failure --no-compress-output -R python-test ${{matrix.ctest_extra}}
       shell: bash
     - name: Upload Test results
       if: always() && (steps.ctest.outcome == 'failure' || steps.ctest.outcome == 'success')
