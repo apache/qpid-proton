@@ -67,7 +67,7 @@ def unicode2utf8(string):
     types to UTF8 to avoid zero bytes introduced by other multi-byte encodings.
     This method will throw if the string cannot be converted.
     """
-    if string is None:
+    if string is None or string == ffi.NULL:
         return None
     elif isinstance(string, str):
         # Must be py2 or py3 str
@@ -76,6 +76,8 @@ def unicode2utf8(string):
     elif isinstance(string, unicode):
         # This must be python2 unicode as we already detected py3 str above
         return string.encode('utf-8')
+    elif isinstance(string, ffi.CData):
+        return ffi.string(string)
     # Anything else illegal - specifically python3 bytes
     raise TypeError("Unrecognized string type: %r (%s)" % (string, type(string)))
 

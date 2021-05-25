@@ -21,7 +21,8 @@ from __future__ import absolute_import
 
 import uuid
 
-from cproton import PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE, PN_CHAR, PN_DECIMAL128, PN_DECIMAL32, PN_DECIMAL64, \
+from _proton_core import ffi
+from _proton_core.lib import PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE, PN_CHAR, PN_DECIMAL128, PN_DECIMAL32, PN_DECIMAL64, \
     PN_DESCRIBED, PN_DOUBLE, PN_FLOAT, PN_INT, PN_LIST, PN_LONG, PN_MAP, PN_NULL, PN_OVERFLOW, PN_SHORT, PN_STRING, \
     PN_SYMBOL, PN_TIMESTAMP, PN_UBYTE, PN_UINT, PN_ULONG, PN_USHORT, PN_UUID, pn_data, pn_data_clear, pn_data_copy, \
     pn_data_decode, pn_data_dump, pn_data_encode, pn_data_encoded_size, pn_data_enter, pn_data_error, pn_data_exit, \
@@ -35,10 +36,27 @@ from cproton import PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE, PN_CHAR, PN_DECIMAL12
     pn_data_put_decimal32, pn_data_put_decimal64, pn_data_put_described, pn_data_put_double, pn_data_put_float, \
     pn_data_put_int, pn_data_put_list, pn_data_put_long, pn_data_put_map, pn_data_put_null, pn_data_put_short, \
     pn_data_put_string, pn_data_put_symbol, pn_data_put_timestamp, pn_data_put_ubyte, pn_data_put_uint, \
-    pn_data_put_ulong, pn_data_put_ushort, pn_data_put_uuid, pn_data_rewind, pn_data_type, pn_data_widen, pn_error_text
+    pn_data_put_ulong, pn_data_put_ushort, pn_data_put_uuid, pn_data_rewind, pn_data_type, pn_data_widen, pn_error_text, pn_bytes
+
+
+# from cproton import PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE, PN_CHAR, PN_DECIMAL128, PN_DECIMAL32, PN_DECIMAL64, \
+#     PN_DESCRIBED, PN_DOUBLE, PN_FLOAT, PN_INT, PN_LIST, PN_LONG, PN_MAP, PN_NULL, PN_OVERFLOW, PN_SHORT, PN_STRING, \
+#     PN_SYMBOL, PN_TIMESTAMP, PN_UBYTE, PN_UINT, PN_ULONG, PN_USHORT, PN_UUID, pn_data, pn_data_clear, pn_data_copy, \
+#     pn_data_decode, pn_data_dump, pn_data_encode, pn_data_encoded_size, pn_data_enter, pn_data_error, pn_data_exit, \
+#     pn_data_format, pn_data_free, pn_data_get_array, pn_data_get_array_type, pn_data_get_binary, pn_data_get_bool, \
+#     pn_data_get_byte, pn_data_get_char, pn_data_get_decimal128, pn_data_get_decimal32, pn_data_get_decimal64, \
+#     pn_data_get_double, pn_data_get_float, pn_data_get_int, pn_data_get_list, pn_data_get_long, pn_data_get_map, \
+#     pn_data_get_short, pn_data_get_string, pn_data_get_symbol, pn_data_get_timestamp, pn_data_get_ubyte, \
+#     pn_data_get_uint, pn_data_get_ulong, pn_data_get_ushort, pn_data_get_uuid, pn_data_is_array_described, \
+#     pn_data_is_described, pn_data_is_null, pn_data_lookup, pn_data_narrow, pn_data_next, pn_data_prev, \
+#     pn_data_put_array, pn_data_put_binary, pn_data_put_bool, pn_data_put_byte, pn_data_put_char, pn_data_put_decimal128, \
+#     pn_data_put_decimal32, pn_data_put_decimal64, pn_data_put_described, pn_data_put_double, pn_data_put_float, \
+#     pn_data_put_int, pn_data_put_list, pn_data_put_long, pn_data_put_map, pn_data_put_null, pn_data_put_short, \
+#     pn_data_put_string, pn_data_put_symbol, pn_data_put_timestamp, pn_data_put_ubyte, pn_data_put_uint, \
+#     pn_data_put_ulong, pn_data_put_ushort, pn_data_put_uuid, pn_data_rewind, pn_data_type, pn_data_widen, pn_error_text
 
 from . import _compat
-from ._common import Constant
+from ._common import Constant, unicode2utf8, utf82unicode
 from ._exceptions import DataException, EXCEPTIONS
 
 #
@@ -666,7 +684,11 @@ class Data:
     def _check(self, err):
         if err < 0:
             exc = EXCEPTIONS.get(err, DataException)
-            raise exc("[%s]: %s" % (err, pn_error_text(pn_data_error(self._data))))
+            raise exc("[%s]: %s" % (
+                err,
+                ffi.string(pn_error_text(pn_data_error(self._data))).decode('utf8')
+            )
+        )
         else:
             return err
 
@@ -786,17 +808,19 @@ class Data:
         :rtype: ``int``
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        size = 1024
+        sz = 1024
         while True:
-            cd, enc = pn_data_encode(self._data, size)
-            if cd == PN_OVERFLOW:
-                size *= 2
-            elif cd >= 0:
-                return enc
+            size = ffi.new('size_t *',sz)
+            bytes = ffi.new('char []', sz)
+            encoded_size = pn_data_encode(self._data, bytes, size)
+            if encoded_size == PN_OVERFLOW:
+                sz *= 2
+            elif encoded_size >= 0:
+                return encoded_size
             else:
-                self._check(cd)
+                self._check(encoded_size)
 
-    def decode(self, encoded):
+    def decode(self, data):
         """
         Decodes the first value from supplied AMQP data and returns the
         number of bytes consumed.
@@ -805,7 +829,9 @@ class Data:
         :param encoded: AMQP encoded binary data
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        return self._check(pn_data_decode(self._data, encoded))
+        bytes = ffi.new('char []', data)
+        size = ffi.new('size_t *', len(data))
+        return self._check(pn_data_decode(self._data, bytes, size[0]))
 
     def put_list(self):
         """
@@ -1075,7 +1101,9 @@ class Data:
         :type u: ``uuid.UUID``
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        self._check(pn_data_put_uuid(self._data, u.bytes))
+        pn_uuid = ffi.new('pn_uuid_t *')
+        pn_uuid.bytes = u.bytes
+        self._check(pn_data_put_uuid(self._data, pn_uuid[0]))
 
     def put_binary(self, b):
         """
@@ -1114,8 +1142,10 @@ class Data:
         :param s: a unicode string
         :type s: ``str`` (Python 3.x) or ``unicode`` (Python 2.x)
         :raise: :exc:`DataException` if there is a Proton error.
-        """
-        self._check(pn_data_put_string(self._data, s.encode("utf8")))
+        """ 
+        pnbytes = pn_bytes(len(s), s.encode("utf8"))
+        self._check(pn_data_put_string(self._data, pnbytes))
+
 
     def put_symbol(self, s):
         """
@@ -1125,7 +1155,8 @@ class Data:
         :type s: string, :class:`symbol`
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        self._check(pn_data_put_symbol(self._data, s.encode('ascii')))
+        pnbytes = pn_bytes(len(s), s.encode('ascii'))
+        self._check(pn_data_put_symbol(self._data, pnbytes))
 
     def get_list(self):
         """
@@ -1381,7 +1412,9 @@ class Data:
         :rtype: ``uuid.UUID`` or ``None``
         """
         if pn_data_type(self._data) == Data.UUID:
-            return uuid.UUID(bytes=pn_data_get_uuid(self._data))
+            return uuid.UUID(
+                bytes=ffi.string(pn_data_get_uuid(self._data).bytes) 
+            )
         else:
             return None
 
@@ -1401,7 +1434,8 @@ class Data:
         :return: If the current node is a string, its value, ``""`` otherwise.
         :rtype: ``str``
         """
-        return pn_data_get_string(self._data).decode("utf8")
+        pn_bytes = pn_data_get_string(self._data)
+        return ffi.string(pn_bytes.start, pn_bytes.size).decode("utf8")
 
     def get_symbol(self):
         """
@@ -1409,8 +1443,11 @@ class Data:
 
         :return: If the current node is a symbol, its value, ``""`` otherwise.
         :rtype: :class:`symbol`
-        """
-        return symbol(pn_data_get_symbol(self._data).decode('ascii'))
+        # """
+        pnbytes = pn_data_get_symbol(self._data)
+        return symbol(ffi.string(pnbytes.start, pnbytes.size))
+
+        # return symbol(pn_data_get_symbol(self._data).decode('ascii'))
 
     def copy(self, src):
         """

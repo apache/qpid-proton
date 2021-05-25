@@ -35,6 +35,7 @@ typedef enum {
   PN_INVALID = ...
 } pn_type_t;
 
+
     typedef struct { ...; } pn_atom_t;
 
     typedef struct pn_data_t pn_data_t;
@@ -45,12 +46,12 @@ typedef enum {
     int pn_data_errno(pn_data_t *data);
     pn_error_t * pn_data_error(pn_data_t *data);
   
-  //  int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap);
+    int pn_data_vfill(pn_data_t *data, const char *fmt, ...);
     
-  //  int pn_data_fill(pn_data_t *data, const char *fmt, ...);
+    int pn_data_fill(pn_data_t *data, const char *fmt, ...);
     
-  //  int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap);
-   // int pn_data_scan(pn_data_t *data, const char *fmt, ...);
+    int pn_data_vscan(pn_data_t *data, const char *fmt, ...);
+    int pn_data_scan(pn_data_t *data, const char *fmt, ...);
     void pn_data_clear(pn_data_t *data);
     size_t pn_data_size(pn_data_t *data);
     void pn_data_rewind(pn_data_t *data);
@@ -135,29 +136,69 @@ typedef enum {
 
 
 type_h = """
-    typedef uint32_t  pn_sequence_t;
+typedef uint32_t  pn_sequence_t;
 
-    typedef uint32_t pn_millis_t;
-    
-    typedef uint32_t pn_seconds_t;
+typedef uint32_t pn_millis_t;
 
-    typedef int64_t pn_timestamp_t;
+#define PN_MILLIS_MAX ...
 
-    typedef uint32_t pn_char_t;
+typedef uint32_t pn_seconds_t;
 
-    typedef uint32_t pn_decimal32_t;
+typedef int64_t pn_timestamp_t;
 
-    typedef uint64_t pn_decimal64_t;
+typedef uint32_t pn_char_t;
 
-    typedef struct pn_decimal128_t { ...; } pn_decimal128_t;
+typedef uint32_t pn_decimal32_t;
 
-    typedef struct pn_uuid_t { ...; } pn_uuid_t;
+typedef uint64_t pn_decimal64_t;
 
-    typedef struct pn_bytes_t { ...; } pn_bytes_t;
+typedef struct {
+  char bytes[16];
+} pn_decimal128_t;
 
-    typedef struct pn_rwbytes_t { ...; } pn_rwbytes_t;
+typedef struct {
+  char bytes[16];
+} pn_uuid_t;
 
-    typedef struct pn_link_t pn_link_t;
+typedef struct pn_bytes_t {
+  size_t size;
+  const char *start;
+} pn_bytes_t;
+
+pn_bytes_t pn_bytes(size_t size, const char *start);
+
+extern const pn_bytes_t pn_bytes_null;
+
+typedef struct pn_rwbytes_t {
+  size_t size;
+  char *start;
+} pn_rwbytes_t;
+
+pn_rwbytes_t pn_rwbytes(size_t size, char *start);
+
+extern const pn_rwbytes_t pn_rwbytes_null;
+typedef int pn_state_t;
+typedef struct pn_connection_t pn_connection_t;
+
+typedef struct pn_session_t pn_session_t;
+typedef struct pn_link_t pn_link_t;
+
+typedef struct pn_delivery_t pn_delivery_t;
+
+typedef struct pn_collector_t pn_collector_t;
+typedef struct pn_listener_t pn_listener_t;
+
+typedef struct pn_transport_t pn_transport_t;
+
+typedef struct pn_proactor_t pn_proactor_t;
+
+typedef struct pn_raw_connection_t pn_raw_connection_t;
+
+
+typedef struct pn_event_batch_t pn_event_batch_t;
+
+
+typedef struct pn_handler_t pn_handler_t;
 
 """
 
@@ -254,8 +295,8 @@ error_h = """
     void pn_error_free(pn_error_t *error);
     void pn_error_clear(pn_error_t *error);
     int pn_error_set(pn_error_t *error, int code, const char *text);
-//    int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap);
- //   int pn_error_format(pn_error_t *error, int code, const char *fmt, ...);
+    int pn_error_vformat(pn_error_t *error, int code, const char *fmt, ...);
+    int pn_error_format(pn_error_t *error, int code, const char *fmt, ...);
     int pn_error_code(pn_error_t *error);
 
     const char *pn_error_text(pn_error_t *error);

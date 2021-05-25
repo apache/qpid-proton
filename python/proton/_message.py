@@ -44,7 +44,7 @@ from _proton_core.lib import PN_DEFAULT_PRIORITY, PN_OVERFLOW, pn_error_text, pn
     pn_message_set_content_type, pn_message_set_creation_time, pn_message_set_delivery_count, pn_message_set_durable, \
     pn_message_set_expiry_time, pn_message_set_first_acquirer, pn_message_set_group_id, pn_message_set_group_sequence, \
     pn_message_set_inferred, pn_message_set_priority, pn_message_set_reply_to, pn_message_set_reply_to_group_id, \
-    pn_message_set_subject, pn_message_set_ttl, pn_message_set_user_id
+    pn_message_set_subject, pn_message_set_ttl, pn_message_set_user_id, pn_bytes
 
 
 
@@ -100,7 +100,10 @@ class Message(object):
     def _check(self, err):
         if err < 0:
             exc = EXCEPTIONS.get(err, MessageException)
-            raise exc("[%s]: %s" % (err, pn_error_text(pn_message_error(self._msg))))
+            raise exc("[%s]: %s" % (
+                err,
+                ffi.string(pn_error_text(pn_message_error(self._msg))).decode('utf8')
+        ))
         else:
             return err
 
@@ -309,10 +312,14 @@ class Message(object):
         """)
 
     def _get_user_id(self):
-        return pn_message_get_user_id(self._msg)
+        r = pn_message_get_user_id(self._msg)
+        if r.start == ffi.NULL:
+            return b""
+        return ffi.buffer(r.start, r.size)[:]
 
     def _set_user_id(self, value):
-        self._check(pn_message_set_user_id(self._msg, value))
+        pnbytes = pn_bytes(len(value), value)
+        self._check(pn_message_set_user_id(self._msg, pnbytes))
 
     user_id = property(_get_user_id, _set_user_id, doc="""
         The user id of the message creator.
@@ -517,16 +524,20 @@ class Message(object):
         self._pre_encode()
         sz = 16
         while True:
-            err, data = pn_message_encode(self._msg, sz)
-            if err == PN_OVERFLOW:
+            size = ffi.new('size_t *', sz)
+            bytes = ffi.new("char []", sz)
+            status_code = pn_message_encode(self._msg, bytes, size)
+            if status_code == PN_OVERFLOW:
                 sz *= 2
                 continue
             else:
-                self._check(err)
-                return data
+                self._check(status_code)
+                return ffi.buffer(bytes, size[0])[:]
 
     def decode(self, data):
-        self._check(pn_message_decode(self._msg, data))
+        bytes = ffi.new('char []', data)
+        size = ffi.new("size_t *", len(data))
+        self._check(pn_message_decode(self._msg, bytes, size[0]))
         self._post_decode()
 
     def send(self, sender, tag=None):
@@ -589,3 +600,5 @@ class Message(object):
             if value:
                 props.append("%s=%r" % (attr, value))
         return "Message(%s)" % ", ".join(props)
+
+
