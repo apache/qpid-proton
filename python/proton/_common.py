@@ -52,11 +52,16 @@ def unicode2utf8(string: Optional[str]) -> Optional[str]:
     types to UTF8 to avoid zero bytes introduced by other multi-byte encodings.
     This method will throw if the string cannot be converted.
     """
-    if string is None:
+    if string is None or string == ffi.NULL:
         return None
     elif isinstance(string, str):
         # The swig binding converts py3 str -> utf8 char* and back automatically
         return string
+    elif isinstance(string, unicode):
+        # This must be python2 unicode as we already detected py3 str above
+        return string.encode('utf-8')
+    elif isinstance(string, ffi.CData):
+        return ffi.string(string)
     # Anything else illegal - specifically python3 bytes
     raise TypeError("Unrecognized string type: %r (%s)" % (string, type(string)))
 
