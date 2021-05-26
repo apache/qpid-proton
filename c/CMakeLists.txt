@@ -509,7 +509,7 @@ install(TARGETS qpid-proton qpid-proton-core
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 if (BUILD_STATIC_LIBS)
-  install(TARGETS qpid-proton-static qpid-proton-core-static}
+  install(TARGETS qpid-proton-static qpid-proton-core-static
     EXPORT  ProtonTargetsStatic
     RUNTIME DESTINATION bin
     ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
