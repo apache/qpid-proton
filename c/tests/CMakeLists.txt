@@ -39,6 +39,8 @@ endif()
 if (CMAKE_CXX_COMPILER)
 
   add_library(test_main OBJECT test_main.cpp)
+  set_target_properties(test_main PROPERTIES
+    COMPILE_FLAGS "${CXX_STANDARD} ${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS} ${LTO}")
 
   macro(add_c_test exe)
     add_executable(${exe} $<TARGET_OBJECTS:test_main> pn_test.cpp ${ARGN})
