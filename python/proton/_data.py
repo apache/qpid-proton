@@ -1443,11 +1443,9 @@ class Data:
 
         :return: If the current node is a symbol, its value, ``""`` otherwise.
         :rtype: :class:`symbol`
-        # """
+        """
         pnbytes = pn_data_get_symbol(self._data)
-        return symbol(ffi.string(pnbytes.start, pnbytes.size))
-
-        # return symbol(pn_data_get_symbol(self._data).decode('ascii'))
+        return symbol(ffi.string(pnbytes.start, pnbytes.size).decode('ascii'))
 
     def copy(self, src):
         """
