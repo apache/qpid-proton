@@ -165,7 +165,6 @@ struct pn_transport_t {
 
 
   /* scratch area */
-  pn_string_t *scratch;
   pn_data_t *args;
   pn_data_t *output_args;
   pn_buffer_t *frame;  // frame under construction
@@ -386,9 +385,9 @@ int pn_post_sasl_frame(pn_transport_t *transport, pn_bytes_t performative);
 
 typedef enum {IN, OUT} pn_dir_t;
 
-void pn_do_trace(pn_logger_t *logger, pn_string_t *scratch, uint16_t ch, pn_dir_t dir, pn_data_t *args);
-void pn_do_trace_payload(pn_logger_t *logger, pn_string_t *scratch, pn_bytes_t payload);
-void pn_do_raw_trace(pn_logger_t *logger, pn_string_t *scratch, pn_buffer_t *output, size_t size);
+void pn_do_tx_trace(pn_logger_t *logger, uint16_t ch, pn_data_t *args);
+void pn_do_rx_trace(pn_logger_t *logger, uint16_t ch, pn_data_t *args);
+void pn_do_trace_payload(pn_logger_t *logger, pn_bytes_t payload);
 
 #if __cplusplus
 }

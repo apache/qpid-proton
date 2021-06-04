@@ -75,44 +75,44 @@ static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode,
   return action(transport, frame_type, channel, args, payload);
 }
 
-static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_frame_t frame)
+
+static int pni_dispatch_frame(pn_frame_t frame, pn_logger_t *logger, pn_transport_t * transport, pn_data_t *args)
 {
   if (frame.size == 0) { // ignore null frames
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME, "%u <- (EMPTY FRAME)", frame.channel);
+    PN_LOG(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME, "%u <- (EMPTY FRAME)", frame.channel);
     return 0;
   }
 
   ssize_t dsize = pn_data_decode(args, frame.payload, frame.size);
   if (dsize < 0) {
-    pn_string_format(transport->scratch,
-                     "Error decoding frame: %s %s\n", pn_code(dsize),
-                     pn_error_text(pn_data_error(args)));
-    pn_quote(transport->scratch, frame.payload, frame.size);
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, pn_string_get(transport->scratch));
+    PN_LOG_MSG_DATA(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, (pn_bytes_t){.size=frame.size, .start=frame.payload},
+                    "Error decoding frame: %s %s\n", pn_code(dsize), pn_error_text(pn_data_error(args)));
     return dsize;
   }
 
-  uint8_t frame_type = frame.type;
-  uint16_t channel = frame.channel;
   // XXX: assuming numeric -
   // if we get a symbol we should map it to the numeric value and dispatch on that
   uint64_t lcode;
   bool scanned;
   int e = pn_data_scan(args, "D?L.", &scanned, &lcode);
   if (e) {
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Scan error");
+    PN_LOG(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Scan error");
     return e;
   }
   if (!scanned) {
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame");
+    PN_LOG(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame");
     return PN_ERR;
   }
+
   size_t payload_size = frame.size - dsize;
   const char *payload_mem = payload_size ? frame.payload + dsize : NULL;
-  pn_bytes_t payload = {payload_size, payload_mem};
+  pn_bytes_t payload = {.size=payload_size, .start=payload_mem};
 
-  pn_do_trace(&transport->logger, transport->scratch, channel, IN, args);
-  pn_do_trace_payload(&transport->logger, transport->scratch, payload);
+  uint8_t frame_type = frame.type;
+  uint16_t channel = frame.channel;
+
+  pn_do_rx_trace(logger, channel, args);
+  pn_do_trace_payload(logger, payload);
 
   int err = pni_dispatch_action(transport, lcode, frame_type, channel, args, &payload);
 
@@ -133,7 +133,7 @@ ssize_t pn_dispatcher_input(pn_transport_t *transport, const char *bytes, size_t
       read += n;
       available -= n;
       transport->input_frames_ct += 1;
-      int e = pni_dispatch_frame(transport, transport->args, frame);
+      int e = pni_dispatch_frame(frame, &transport->logger, transport, transport->args);
       if (e) return e;
     } else if (n < 0) {
       pn_do_error(transport, "amqp:connection:framing-error", "malformed frame");

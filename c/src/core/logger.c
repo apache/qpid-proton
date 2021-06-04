@@ -17,10 +17,11 @@
  * under the License.
  */
 
+#include "logger_private.h"
+
 #include <proton/logger.h>
 #include <proton/error.h>
 
-#include "logger_private.h"
 #include "memory.h"
 #include "util.h"
 
@@ -195,6 +196,34 @@ void pni_logger_log_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_l
   } else {
     pn_logger_logf(logger, subsystem, severity, "%s: cannot log data: %s", msg, pn_code(n));
   }
+}
+
+void pni_logger_log_raw(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_buffer_t *output, size_t size)
+{
+  pn_string_set(logger->scratch, "\"");
+  pn_buffer_quote(output, logger->scratch, size);
+  pn_string_addf(logger->scratch, "\"");
+  pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
+}
+
+void pni_logger_log_msg_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t data, const char *fmt, ...) {
+  va_list ap;
+
+  va_start(ap, fmt);
+  pn_string_vformat(logger->scratch, fmt, ap);
+  va_end(ap);
+  pn_quote(logger->scratch, data.start, data.size);
+  pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
+}
+
+void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, void* object, const char *fmt, ...) {
+  va_list ap;
+
+  va_start(ap, fmt);
+  pn_string_vformat(logger->scratch, fmt, ap);
+  va_end(ap);
+  pn_inspect(object, logger->scratch);
+  pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
 }
 
 void pni_logger_log(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *message)
