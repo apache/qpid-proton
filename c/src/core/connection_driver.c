@@ -43,9 +43,7 @@ static pn_event_t *batch_next(pn_connection_driver_t *d) {
   /* Log the next event that will be processed */
   pn_event_t *next = pn_collector_next(d->collector);
   if (next && PN_SHOULD_LOG(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG)) {
-    pn_string_clear(d->transport->scratch);
-    pn_inspect(next, d->transport->scratch);
-    pni_logger_log(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, pn_string_get(d->transport->scratch));
+    pni_logger_log_msg_inspect(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, next, "");
   }
   return next;
 }
@@ -151,9 +149,7 @@ bool pn_connection_driver_finished(pn_connection_driver_t *d) {
 void pn_connection_driver_verrorf(pn_connection_driver_t *d, const char *name, const char *fmt, va_list ap) {
   pn_transport_t *t = d->transport;
   pn_condition_t *cond = pn_transport_condition(t);
-  pn_string_vformat(t->scratch, fmt, ap);
-  pn_condition_set_name(cond, name);
-  pn_condition_set_description(cond, pn_string_get(t->scratch));
+  pn_condition_vformat(cond, name, fmt, ap);
 }
 
 void pn_connection_driver_errorf(pn_connection_driver_t *d, const char *name, const char *fmt, ...) {

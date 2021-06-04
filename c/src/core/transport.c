@@ -407,7 +407,6 @@ static void pn_transport_initialize(void *object)
   transport->sasl = NULL;
   transport->ssl = NULL;
 
-  transport->scratch = pn_string(NULL);
   transport->args = pn_data(16);
   transport->output_args = pn_data(16);
   transport->frame = pn_buffer(PN_TRANSPORT_INITIAL_FRAME_SIZE);
@@ -663,7 +662,6 @@ static void pn_transport_finalize(void *object)
   pn_free(transport->remote_channels);
   pni_mem_subdeallocate(pn_class(transport), transport, transport->input_buf);
   pni_mem_subdeallocate(pn_class(transport), transport, transport->output_buf);
-  pn_free(transport->scratch);
   pn_data_free(transport->args);
   pn_data_free(transport->output_args);
   pn_buffer_free(transport->frame);
