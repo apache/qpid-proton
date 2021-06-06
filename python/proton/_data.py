@@ -719,6 +719,7 @@ class Data:
         the first node.
         """
         assert self._data is not None
+        print(f"log _data 708: data {self._data}")
         pn_data_rewind(self._data)
 
     def next(self) -> Optional[int]:
