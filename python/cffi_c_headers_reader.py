@@ -5,7 +5,7 @@ import argparse
 def read_files_lines(file_path):
     lines = []
     if not os.path.basename(file_path).endswith(".h"):    raise Exception("Not a header file")
-    if not os.path.isfile(file_path):   raise Exception("Not a file")
+    # if not os.path.isfile(file_path):   raise Exception("Not a file")
     with open(file_path) as f:
         lines = f.readlines()
     return lines
