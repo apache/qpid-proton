@@ -51,4 +51,6 @@ int pn_framing_send_amqp(pn_transport_t *transport, uint16_t ch, pn_bytes_t perf
 int pn_framing_send_amqp_with_payload(pn_transport_t *transport, uint16_t ch, pn_bytes_t performative, pn_bytes_t payload);
 int pn_framing_send_sasl(pn_transport_t *transport, pn_bytes_t performative);
 
+ssize_t pn_framing_recv_amqp(pn_transport_t *transport, uint16_t ch, pn_bytes_t frame_payload);
+
 #endif /* framing.h */

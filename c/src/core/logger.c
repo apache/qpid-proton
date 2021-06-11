@@ -190,11 +190,9 @@ void pni_logger_log_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_l
   char buf[256];
   ssize_t n = pn_quote_data(buf, 256, bytes, size);
   if (n >= 0) {
-    pn_logger_logf(logger, subsystem, severity, "%s: %s", msg, buf);
+    pn_logger_logf(logger, subsystem, severity, "%s: \"%s\"", msg, buf);
   } else if (n == PN_OVERFLOW) {
-    pn_logger_logf(logger, subsystem, severity, "%s: %s (truncated)", msg, buf);
-  } else {
-    pn_logger_logf(logger, subsystem, severity, "%s: cannot log data: %s", msg, pn_code(n));
+    pn_logger_logf(logger, subsystem, severity, "%s: \"%s\"... (truncated)", msg, buf);
   }
 }
 

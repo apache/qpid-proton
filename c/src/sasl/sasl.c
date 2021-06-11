@@ -880,8 +880,19 @@ pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl0)
   return sasl ? sasl->outcome : PN_SASL_NONE;
 }
 
+static inline ssize_t pni_data_decode_with_error(pn_data_t* args, pn_logger_t* logger, const pn_bytes_t bytes)
+{
+  pn_data_clear(args);
+  ssize_t dsize = pn_data_decode(args, bytes.start, bytes.size);
+  if (dsize < 0) {
+    PN_LOG_MSG_DATA(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, bytes,
+                    "Error decoding frame: %s %s\n", pn_code(dsize), pn_error_text(pn_data_error(args)));
+  }
+  return dsize;
+}
+
 // Received Server side
-int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pni_sasl_t *sasl = transport->sasl;
 
@@ -894,6 +905,11 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   pn_bytes_t mech;
   pn_bytes_t recv;
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pni_data_decode_with_error(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
+
   int err = pn_data_scan(args, "D.[sz]", &mech, &recv);
   if (err) return err;
   sasl->selected_mechanism = pn_strndup(mech.start, mech.size);
@@ -913,7 +929,7 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 }
 
 // Received client side
-int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pni_sasl_t *sasl = transport->sasl;
 
@@ -930,6 +946,11 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
 
   // Try array of symbols for mechanism list
   bool array = false;
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pni_data_decode_with_error(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
+
   int err = pn_data_scan(args, "D.[?@[", &array);
   if (err) return err;
 
@@ -969,7 +990,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
 }
 
 // Received client side
-int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pni_sasl_t *sasl = transport->sasl;
 
@@ -981,6 +1002,11 @@ int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t chan
   if (!sasl->client) return PN_ERR;
 
   pn_bytes_t recv;
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pni_data_decode_with_error(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
+
   int err = pn_data_scan(args, "D.[z]", &recv);
   if (err) return err;
 
@@ -990,7 +1016,7 @@ int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t chan
 }
 
 // Received server side
-int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pni_sasl_t *sasl = transport->sasl;
 
@@ -1002,6 +1028,11 @@ int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   if (sasl->client) return PN_ERR;
 
   pn_bytes_t recv;
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pni_data_decode_with_error(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
+
   int err = pn_data_scan(args, "D.[z]", &recv);
   if (err) return err;
 
@@ -1011,7 +1042,7 @@ int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 }
 
 // Received client side
-int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pni_sasl_t *sasl = transport->sasl;
 
@@ -1024,6 +1055,11 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
 
   uint8_t outcome;
   pn_bytes_t recv;
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pni_data_decode_with_error(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
+
   int err = pn_data_scan(args, "D.[Bz]", &outcome, &recv);
   if (err) return err;
 
