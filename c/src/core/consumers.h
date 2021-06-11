@@ -93,6 +93,25 @@ static inline bool pni_consumer_readf32(pni_consumer_t *consumer, uint32_t* resu
   return true;
 }
 
+static inline bool pni_consumer_readf64(pni_consumer_t *consumer, uint64_t* result)
+{
+  uint32_t a;
+  if (!pni_consumer_readf32(consumer, &a)) return false;
+  uint32_t b;
+  if (!pni_consumer_readf32(consumer, &b)) return false;
+  *result = (uint64_t)a << 32 | (uint64_t)b;
+  return true;
+}
+
+static inline bool pni_consumer_readf128(pni_consumer_t *consumer, void *dst)
+{
+  if (consumer->position+16 > consumer->size) return false;
+
+  memcpy(dst, &consumer->output_start[consumer->position], 16);
+  consumer->position += 16;
+  return true;
+}
+
 static inline bool pni_consumer_read_value_not_described(pni_consumer_t* consumer, uint8_t type, pn_bytes_t *value) {
   uint8_t subcategory = type >> 4;
   switch (subcategory) {
@@ -159,6 +178,48 @@ static inline bool pni_consumer_read_value_not_described(pni_consumer_t* consume
   }
   consumer->position = consumer->size;
   return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static inline bool consume_expected_ubyte(pni_consumer_t* consumer, uint8_t expected)
+{
+    uint8_t e;
+    return pni_consumer_readf8(consumer, &e) && e==expected;
+}
+
+static inline bool consume_ulong(pni_consumer_t* consumer, uint64_t *ulong) {
+  uint8_t type;
+  if (!pni_consumer_readf8(consumer, &type)) return false;
+  switch (type) {
+    case PNE_SMALLULONG: {
+      uint8_t ul;
+      if (!pni_consumer_readf8(consumer, &ul)) return false;
+      *ulong = ul;
+      break;
+    }
+    case PNE_ULONG: {
+      uint64_t ul;
+      if (!pni_consumer_readf64(consumer, &ul)) return false;
+      *ulong = ul;
+      break;
+    }
+    case PNE_ULONG0: {
+      *ulong = 0;
+      break;
+    }
+    default:
+      return false;
+  }
+  return true;
+}
+
+// XXX: assuming numeric -
+// if we get a symbol we should map it to the numeric value and dispatch on that
+static inline bool consume_descriptor(pni_consumer_t* consumer, uint64_t *descriptor) {
+  return
+    consume_expected_ubyte(consumer, PNE_DESCRIPTOR) &&
+    consume_ulong(consumer, descriptor);
 }
 
 #endif // PROTON_CONSUMERS_H

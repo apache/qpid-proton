@@ -158,3 +158,15 @@ int pn_framing_send_sasl(pn_transport_t *transport, pn_bytes_t performative)
   transport->output_frames_ct += 1;
   return 0;
 }
+
+ssize_t pn_framing_recv_amqp(pn_data_t *args, pn_logger_t *logger, const pn_bytes_t bytes)
+{
+  pn_data_clear(args);
+  ssize_t dsize = pn_data_decode(args, bytes.start, bytes.size);
+  if (dsize < 0) {
+    PN_LOG_MSG_DATA(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, bytes,
+                    "Error decoding frame: %s %s\n", pn_code(dsize), pn_error_text(pn_data_error(args)));
+  }
+
+  return dsize;
+}

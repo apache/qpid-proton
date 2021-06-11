@@ -25,6 +25,7 @@
 #include "buffer.h"
 #include "logger_private.h"
 
+#include "proton/codec.h"
 #include "proton/types.h"
 
 #include <stddef.h>
@@ -50,5 +51,7 @@ size_t pn_write_frame(pn_buffer_t* buffer, pn_frame_t frame, pn_logger_t *logger
 int pn_framing_send_amqp(pn_transport_t *transport, uint16_t ch, pn_bytes_t performative);
 int pn_framing_send_amqp_with_payload(pn_transport_t *transport, uint16_t ch, pn_bytes_t performative, pn_bytes_t payload);
 int pn_framing_send_sasl(pn_transport_t *transport, pn_bytes_t performative);
+
+ssize_t pn_framing_recv_amqp(pn_data_t *args, pn_logger_t  *logger, const pn_bytes_t frame_payload);
 
 #endif /* framing.h */

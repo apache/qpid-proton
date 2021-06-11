@@ -1045,9 +1045,8 @@ static char *pn_bytes_strdup(pn_bytes_t str)
   return pn_strndup(str.start, str.size);
 }
 
-int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
-  pn_connection_t *conn = transport->connection;
   bool container_q, hostname_q, remote_channel_max_q, remote_max_frame_q;
   uint16_t remote_channel_max;
   uint32_t remote_max_frame;
@@ -1055,6 +1054,10 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   pn_data_clear(transport->remote_offered_capabilities);
   pn_data_clear(transport->remote_desired_capabilities);
   pn_data_clear(transport->remote_properties);
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
   int err = pn_data_scan(args, "D.[?S?S?I?HI..CCC]",
                          &container_q, &remote_container,
                          &hostname_q, &remote_hostname,
@@ -1087,6 +1090,7 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   pni_mem_deallocate(PN_CLASSCLASS(pn_strdup), transport->remote_hostname);
   transport->remote_hostname = hostname_q ? pn_bytes_strdup(remote_hostname) : NULL;
 
+  pn_connection_t *conn = transport->connection;
   if (conn) {
     PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_ACTIVE);
     pni_post_remote_open_events(transport, conn);
@@ -1098,11 +1102,16 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   return 0;
 }
 
-int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
+
   bool reply;
   uint16_t remote_channel;
   pn_sequence_t next;
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
   int err = pn_data_scan(args, "D.[?HI]", &reply, &remote_channel, &next);
   if (err) return err;
 
@@ -1206,7 +1215,7 @@ int pn_terminus_set_address_bytes(pn_terminus_t *terminus, pn_bytes_t address)
   return pn_string_setn(terminus->address, address.start, address.size);
 }
 
-int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pn_bytes_t name;
   uint32_t handle;
@@ -1222,6 +1231,10 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   uint8_t snd_settle_mode, rcv_settle_mode;
   uint64_t max_msgsz;
   bool has_props;
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
   pn_data_t *rem_props = pn_data(0);
   int err = pn_data_scan(args, "D.[SIo?B?BD.[SIsIo.s]D.[SIsIo]..IL..?C]", &name, &handle,
                          &is_sender,
@@ -1231,8 +1244,8 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
                          &target, &tgt_dr, &tgt_exp, &tgt_timeout, &tgt_dynamic,
                          &idc, &max_msgsz, &has_props, rem_props);
   if (err) {
-      pn_free(rem_props);
-      return err;
+    pn_free(rem_props);
+    return err;
   }
   char strbuf[128];      // avoid malloc for most link names
   char *strheap = (name.size >= sizeof(strbuf)) ? (char *) malloc(name.size + 1) : NULL;
@@ -1242,10 +1255,10 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
-      pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
-      if (strheap) free(strheap);
-      pn_free(rem_props);
-      return PN_EOS;
+    pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
+    if (strheap) free(strheap);
+    pn_free(rem_props);
+    return PN_EOS;
   }
   pn_link_t *link = pni_find_link(ssn, name, is_sender);
   if (link && (int32_t)link->state.remote_handle >= 0) {
@@ -1372,7 +1385,7 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
   pn_decref(delivery);
 }
 
-int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   // XXX: multi transfer
   uint32_t handle;
@@ -1385,10 +1398,17 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   bool resume, aborted, batchable;
   uint64_t type;
   pn_data_clear(transport->disp_data);
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
   int err = pn_data_scan(args, "D.[I?Iz.?oo.D?LCooo]", &handle, &id_present, &id, &tag,
                          &settled_set, &settled, &more, &has_type, &type, transport->disp_data,
                          &resume, &aborted, &batchable);
   if (err) return err;
+  payload.size -= dsize;
+  payload.start += dsize;
+
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
     return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
@@ -1458,7 +1478,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   }
 
   if (delivery) {
-    pn_buffer_append(delivery->bytes, payload->start, payload->size);
+    pn_buffer_append(delivery->bytes, payload.start, payload.size);
     if (more) {
       if (!link->more_pending) {
         // First frame of a multi-frame transfer. Remember at link level.
@@ -1488,7 +1508,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
     pn_collector_put(transport->connection->collector, PN_OBJECT, delivery, PN_DELIVERY);
   }
 
-  ssn->incoming_bytes += payload->size;
+  ssn->incoming_bytes += payload.size;
   ssn->state.incoming_transfer_count++;
   ssn->state.incoming_window--;
 
@@ -1500,12 +1520,16 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   return 0;
 }
 
-int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pn_sequence_t onext, inext, delivery_count;
   uint32_t iwin, owin, link_credit;
   uint32_t handle;
   bool inext_init, handle_init, dcount_init, drain;
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
   int err = pn_data_scan(args, "D.[?IIII?I?II.o]", &inext_init, &inext, &iwin,
                          &onext, &owin, &handle_init, &handle, &dcount_init,
                          &delivery_count, &link_credit, &drain);
@@ -1647,13 +1671,19 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
   return 0;
 }
 
-int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   bool role;
   pn_sequence_t first, last;
   uint64_t type = 0;
-  bool last_init, settled, type_init;
+  bool last_init, settled;
+
+  bool type_init;
   pn_data_clear(transport->disp_data);
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
   int err = pn_data_scan(args, "D.[oI?IoD?LC]", &role, &first, &last_init,
                          &last, &settled, &type_init, &type,
                          transport->disp_data);
@@ -1710,10 +1740,14 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
   return 0;
 }
 
-int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   uint32_t handle;
   bool closed;
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
   int err = pn_data_scan(args, "D.[Io]", &handle, &closed);
   if (err) return err;
 
@@ -1741,12 +1775,16 @@ int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   return 0;
 }
 
-int pn_do_end(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_end(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
     return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
   }
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
   int err = pn_scan_error(args, &ssn->endpoint.remote_condition, SCAN_ERROR_DEFAULT);
   if (err) return err;
   PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_CLOSED);
@@ -1755,9 +1793,13 @@ int pn_do_end(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, p
   return 0;
 }
 
-int pn_do_close(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_close(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pn_connection_t *conn = transport->connection;
+
+  pn_data_t *args = transport->args;
+  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
+  if (dsize < 0) return dsize;
   int err = pn_scan_error(args, &transport->remote_condition, SCAN_ERROR_DEFAULT);
   if (err) return err;
   transport->close_rcvd = true;
