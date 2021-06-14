@@ -24,8 +24,8 @@ import gc
 from time import time, sleep
 from proton import *
 from proton.reactor import Container
-from . import common
-from .common import pump, Skipped
+import common
+from common import pump, Skipped
 
 
 # older versions of gc do not provide the garbage list

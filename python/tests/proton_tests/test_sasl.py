@@ -23,9 +23,9 @@ import os
 
 from proton import *
 
-from . import common
-from . import engine
-from .common import pump, Skipped
+import common
+import engine
+from common import pump, Skipped
 
 
 def _sslCertpath(file):

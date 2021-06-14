@@ -24,6 +24,10 @@ from cproton import pn_incref, pn_decref, \
     pn_record_get, pn_record_def, pn_record_set, \
     PN_PYREF
 
+# from _proton_core.lib import pn_incref, pn_decref, \
+#     pn_record_get, pn_record_def, pn_record_set, \
+#     PN_PYREF
+
 from ._exceptions import ProtonException
 
 
@@ -78,11 +82,13 @@ class Wrapper(object):
 
         if get_context:
             record = get_context(impl)
+            # attrs = pn_record_get(record, PYCTX)
             attrs = pn_void2py(pn_record_get(record, PYCTX))
             if attrs is None:
                 attrs = {}
-                pn_record_def(record, PYCTX, PN_PYREF)
+                # pn_record_def(record, PYCTX, PN_PYREF)
                 pn_record_set(record, PYCTX, pn_py2void(attrs))
+                pn_record_set(record, PYCTX, attrs)
                 init = True
         else:
             attrs = EMPTY_ATTRS
@@ -134,6 +140,8 @@ class Wrapper(object):
                                         self.__class__.__name__,
                                         id(self), addressof(self._impl))
 
-
+print(f"log _wrapper line 144 {pn_py2void(Wrapper)=} ")
 PYCTX = int(pn_py2void(Wrapper))
+# print(f"log _wrapper line 144 : type {type(Wrapper)} \n wrapper {Wrapper}")
+PYCTX = int(Wrapper)
 addressof = int

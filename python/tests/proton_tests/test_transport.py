@@ -23,7 +23,7 @@ import sys
 
 from proton import *
 
-from . import common
+import common
 
 
 class Test(common.Test):
