@@ -1,7 +1,10 @@
-from cffi import FFI
-
 import argparse
 
+from cffi import FFI
+
+cstdlib = """
+typedef struct { ...; } va_list;
+"""
 
 codec_t = """
 
@@ -46,11 +49,11 @@ typedef enum {
     int pn_data_errno(pn_data_t *data);
     pn_error_t * pn_data_error(pn_data_t *data);
   
-    int pn_data_vfill(pn_data_t *data, const char *fmt, ...);
+    int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap);
     
     int pn_data_fill(pn_data_t *data, const char *fmt, ...);
     
-    int pn_data_vscan(pn_data_t *data, const char *fmt, ...);
+    int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap);
     int pn_data_scan(pn_data_t *data, const char *fmt, ...);
     void pn_data_clear(pn_data_t *data);
     size_t pn_data_size(pn_data_t *data);
@@ -134,7 +137,6 @@ typedef enum {
     void pn_data_dump(pn_data_t *data);
 """
 
-
 type_h = """
 typedef uint32_t  pn_sequence_t;
 
@@ -207,7 +209,6 @@ object_h = """
 typedef const void* pn_handle_t;
 
 """
-
 
 message_h = """
     typedef struct pn_message_t pn_message_t;
@@ -295,7 +296,7 @@ error_h = """
     void pn_error_free(pn_error_t *error);
     void pn_error_clear(pn_error_t *error);
     int pn_error_set(pn_error_t *error, int code, const char *text);
-    int pn_error_vformat(pn_error_t *error, int code, const char *fmt, ...);
+    int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap);
     int pn_error_format(pn_error_t *error, int code, const char *fmt, ...);
     int pn_error_code(pn_error_t *error);
 
@@ -307,7 +308,6 @@ error_h = """
 
 
 def run_cffi_compile(output_file):
-
     ffi_builder = FFI()
     ffi_builder.set_source(
         module_name="_proton_core",
@@ -324,7 +324,7 @@ def run_cffi_compile(output_file):
         # include_dirs=['/home/ArunaSudhan/OpenSourceProjects/RHOCS/qpid-proton/c/include']
     )
 
-    ffi_builder.cdef(  type_h + object_h + error_h + codec_t +  message_h)
+    ffi_builder.cdef(cstdlib + type_h + object_h + error_h + codec_t + message_h)
     ffi_builder.emit_c_code(output_file)
     # ffi_builder.compile(verbose=True)
 
@@ -340,6 +340,7 @@ def main():
     )
     args = parser.parse_args()
     run_cffi_compile(args.output_file)
+
 
 if __name__ == "__main__":
     main()
