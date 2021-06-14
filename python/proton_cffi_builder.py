@@ -7,7 +7,6 @@ typedef struct { ...; } va_list;
 """
 
 codec_t = """
-
 typedef enum {
   PN_NULL = ...,
   PN_BOOL = ...,
@@ -306,30 +305,28 @@ condition_h = """
 
 typedef struct pn_condition_t pn_condition_t;
 
- bool pn_condition_is_set(pn_condition_t *condition);
- void pn_condition_clear(pn_condition_t *condition);
- const char *pn_condition_get_name(pn_condition_t *condition);
- int pn_condition_set_name(pn_condition_t *condition, const char *name);
- const char *pn_condition_get_description(pn_condition_t *condition);
- int pn_condition_set_description(pn_condition_t *condition, const char *description);
- pn_data_t *pn_condition_info(pn_condition_t *condition);
- int pn_condition_vformat(pn_condition_t *, const char *name, const char *fmt, ...);
- int pn_condition_format(pn_condition_t *, const char *name, const char *fmt, ...);
- bool pn_condition_is_redirect(pn_condition_t *condition);
- const char *pn_condition_redirect_host(pn_condition_t *condition);
- int pn_condition_redirect_port(pn_condition_t *condition);
- int pn_condition_copy(pn_condition_t *dest, pn_condition_t *src);
- pn_condition_t *pn_condition(void);
- void pn_condition_free(pn_condition_t *);
-
+bool pn_condition_is_set(pn_condition_t *condition);
+void pn_condition_clear(pn_condition_t *condition);
+const char *pn_condition_get_name(pn_condition_t *condition);
+int pn_condition_set_name(pn_condition_t *condition, const char *name);
+const char *pn_condition_get_description(pn_condition_t *condition);
+int pn_condition_set_description(pn_condition_t *condition, const char *description);
+pn_data_t *pn_condition_info(pn_condition_t *condition);
+int pn_condition_vformat(pn_condition_t *, const char *name, const char *fmt, ...);
+int pn_condition_format(pn_condition_t *, const char *name, const char *fmt, ...);
+bool pn_condition_is_redirect(pn_condition_t *condition);
+const char *pn_condition_redirect_host(pn_condition_t *condition);
+int pn_condition_redirect_port(pn_condition_t *condition);
+int pn_condition_copy(pn_condition_t *dest, pn_condition_t *src);
+pn_condition_t *pn_condition(void);
+void pn_condition_free(pn_condition_t *); 
 """
 
 
 sasl_h = """
-#define PROTON_SASL_H ...
+//#define PROTON_SASL_H ...
 
 typedef struct pn_sasl_t pn_sasl_t;
-
 
 typedef enum {
   PN_SASL_NONE = -1,  /** negotiation not completed */
@@ -359,6 +356,8 @@ transport_h = """
 
 typedef int pn_trace_t;
 
+typedef void (*pn_tracer_t)(pn_transport_t *transport, const char *message);
+
 
 #define PN_TRACE_OFF ...
 
@@ -367,7 +366,7 @@ typedef int pn_trace_t;
 #define PN_TRACE_FRM ...
 
 #define PN_TRACE_DRV ...
-
+ 
 #define PN_TRACE_EVT ...
 
  pn_transport_t *pn_transport(void);
@@ -384,10 +383,8 @@ typedef int pn_trace_t;
  int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection);
  int pn_transport_unbind(pn_transport_t *transport);
  void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);
- 
- // void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t tracer);
- // pn_tracer_t pn_transport_get_tracer(pn_transport_t *transport);
- 
+ void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t tracer);
+ pn_tracer_t pn_transport_get_tracer(pn_transport_t *transport);
  void *pn_transport_get_context(pn_transport_t *transport);
  void pn_transport_set_context(pn_transport_t *transport, void *context);
  pn_record_t *pn_transport_attachments(pn_transport_t *transport);
@@ -424,36 +421,11 @@ typedef int pn_trace_t;
  uint64_t pn_transport_get_frames_input(const pn_transport_t *transport);
  pn_connection_t *pn_transport_connection(pn_transport_t *transport);
 
+
+
+
 """
 
-logger_private_h = """
-
-struct pn_logger_t {
-    pn_log_sink_t sink;
-    intptr_t      sink_context;
-    pn_string_t  *scratch;
-    uint16_t      sub_mask;
-    uint16_t      sev_mask;
-};
-
-void pni_init_default_logger(void);
-void pni_fini_default_logger(void);
-
-void pni_logger_init(pn_logger_t*);
-void pni_logger_fini(pn_logger_t*);
-
-void pni_logger_log(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *message);
-void pni_logger_vlogf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *fmt, ...);
-void pni_logger_log_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *msg, const char *bytes, size_t size);
-
-#define PN_SHOULD_LOG ...
-
-#define PN_LOG ...
-
-#define PN_LOG_DEFAULT ...
-
-#define PN_LOG_DATA ...
-"""
 
 logger_h = """
 
@@ -499,10 +471,19 @@ void pn_logger_logf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_le
 
 object_h = """
 
+// #define PN_CLASSCLASS ...
+//   
+// #define PN_CLASSDEF ...
+//   
+// #define PN_CLASS ...
+//   
+// #define PN_METACLASS ...
+//   
+// #define PN_STRUCT_CLASSDEF ...
+
 typedef const void* pn_handle_t;
 
 typedef intptr_t pn_shandle_t;
-
 
 typedef struct pn_class_t pn_class_t;
 
@@ -519,6 +500,8 @@ typedef void *(*pn_iterator_next_t)(void *state);
 typedef struct pn_iterator_t pn_iterator_t;
 
 typedef struct pn_record_t pn_record_t;
+
+
 
 struct pn_class_t {
   const char *name;
@@ -542,15 +525,6 @@ extern const pn_class_t PN_VOID[];
 
 extern const pn_class_t PN_WEAKREF[];
 
-#define PN_CLASSCLASS ...
-
-#define PN_CLASSDEF ...
-
-#define PN_CLASS ...
-
-#define PN_METACLASS ...
-
-#define PN_STRUCT_CLASSDEF ...
 
 pn_cid_t pn_class_id(const pn_class_t *clazz);
 const char *pn_class_name(const pn_class_t *clazz);
@@ -660,9 +634,11 @@ void *pn_iterator_start(pn_iterator_t *iterator,
                                   pn_iterator_next_t next, size_t size);
 void *pn_iterator_next(pn_iterator_t *iterator);
 
-#define PN_LEGCTX ...
+//#define PN_LEGCTX ...
+//#define PN_LEGCTX ((pn_handle_t) 0)
 
-#define PN_HANDLE ...
+
+//#define PN_HANDLE -1
 
 pn_record_t *pn_record(void);
 void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz);
@@ -718,9 +694,133 @@ typedef enum {
   CID_pn_listener_socket,
   CID_pn_raw_connection
 } pn_cid_t;
+"""
+
+
+ssl_h = """
+typedef struct pn_ssl_domain_t pn_ssl_domain_t;
+
+typedef struct pn_ssl_t pn_ssl_t;
+
+typedef enum {
+  PN_SSL_MODE_CLIENT = ...,
+  PN_SSL_MODE_SERVER
+} pn_ssl_mode_t;
+
+typedef enum {
+  PN_SSL_RESUME_UNKNOWN,
+  PN_SSL_RESUME_NEW,
+  PN_SSL_RESUME_REUSED
+} pn_ssl_resume_status_t;
+
+bool pn_ssl_present( void );
+
+pn_ssl_domain_t *pn_ssl_domain(pn_ssl_mode_t mode);
+
+void pn_ssl_domain_free(pn_ssl_domain_t *domain);
+int  pn_ssl_domain_set_credentials(pn_ssl_domain_t *domain,
+                                            const char *credential_1,
+                                            const char *credential_2,
+                                            const char *password);
+int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
+                                const char *certificate_db);
+
+typedef enum {
+  PN_SSL_VERIFY_NULL = ...,   
+  PN_SSL_VERIFY_PEER,
+  PN_SSL_ANONYMOUS_PEER,
+  PN_SSL_VERIFY_PEER_NAME
+} pn_ssl_verify_mode_t;
+
+int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
+                                                    const pn_ssl_verify_mode_t mode,
+                                                    const char *trusted_CAs);
+int pn_ssl_domain_set_protocols(pn_ssl_domain_t *domain, const char *protocols);
+int pn_ssl_domain_set_ciphers(pn_ssl_domain_t *domain, const char *ciphers);
+int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain);
+
+pn_ssl_t *pn_ssl(pn_transport_t *transport);
+int pn_ssl_init(pn_ssl_t *ssl,
+                          pn_ssl_domain_t *domain,
+                          const char *session_id);
+bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size);
+
+int pn_ssl_get_ssf(pn_ssl_t *ssl);
+bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
+pn_ssl_resume_status_t pn_ssl_resume_status(pn_ssl_t *ssl);
+int pn_ssl_set_peer_hostname(pn_ssl_t *ssl, const char *hostname);
+int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *hostname, size_t *bufsize);
+
+const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl);
+
+typedef enum {
+  PN_SSL_CERT_SUBJECT_COUNTRY_NAME,
+  PN_SSL_CERT_SUBJECT_STATE_OR_PROVINCE,
+  PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY,
+  PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME,
+  PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT,
+  PN_SSL_CERT_SUBJECT_COMMON_NAME
+} pn_ssl_cert_subject_subfield;
+
+typedef enum {
+  PN_SSL_SHA1,
+  PN_SSL_SHA256,
+  PN_SSL_SHA512, 
+  PN_SSL_MD5     
+} pn_ssl_hash_alg;
+
+int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0,
+                                          char *fingerprint,
+                                          size_t fingerprint_length,
+                                          pn_ssl_hash_alg hash_alg);
+const char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl0, pn_ssl_cert_subject_subfield field);
+
+"""
+
+disposition_h = """
+typedef struct pn_disposition_t pn_disposition_t;
 
 
 """
+
+
+delivery_h = """
+#define PROTON_DELIVERY_H 1
+
+typedef pn_bytes_t pn_delivery_tag_t;
+
+
+ pn_delivery_tag_t pn_dtag(const char *bytes, size_t size);
+ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
+ void *pn_delivery_get_context(pn_delivery_t *delivery);
+ void pn_delivery_set_context(pn_delivery_t *delivery, void *context);
+ pn_record_t *pn_delivery_attachments(pn_delivery_t *delivery);
+ pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery);
+ pn_link_t *pn_delivery_link(pn_delivery_t *delivery);
+ pn_disposition_t *pn_delivery_local(pn_delivery_t *delivery);
+ uint64_t pn_delivery_local_state(pn_delivery_t *delivery);
+ pn_disposition_t *pn_delivery_remote(pn_delivery_t *delivery);
+ uint64_t pn_delivery_remote_state(pn_delivery_t *delivery);
+ bool pn_delivery_settled(pn_delivery_t *delivery);
+ size_t pn_delivery_pending(pn_delivery_t *delivery);
+ bool pn_delivery_partial(pn_delivery_t *delivery);
+ bool pn_delivery_aborted(pn_delivery_t *delivery);
+ bool pn_delivery_writable(pn_delivery_t *delivery);
+ bool pn_delivery_readable(pn_delivery_t *delivery);
+ bool pn_delivery_updated(pn_delivery_t *delivery);
+ void pn_delivery_update(pn_delivery_t *delivery, uint64_t state);
+ void pn_delivery_clear(pn_delivery_t *delivery);
+ bool pn_delivery_current(pn_delivery_t *delivery);
+ void pn_delivery_abort(pn_delivery_t *delivery);
+ void pn_delivery_settle(pn_delivery_t *delivery);
+ void pn_delivery_dump(pn_delivery_t *delivery);
+ bool pn_delivery_buffered(pn_delivery_t *delivery);
+ pn_delivery_t *pn_work_head(pn_connection_t *connection);
+ pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
+"""
+
+
+
 
 
 def run_cffi_compile(output_file):
@@ -728,22 +828,56 @@ def run_cffi_compile(output_file):
     ffi_builder.set_source(
         module_name="_proton_core",
         source="""
+        #include <proton/import_export.h>
+        #include <proton/type_compat.h>
         #include <stdarg.h>
         #include <proton/types.h>
+        #include <proton/object.h>
         #include <proton/error.h>
         #include <proton/codec.h>
         #include <proton/message.h>
         #include <proton/logger.h>
         #include <proton/condition.h>
+        #include <proton/transport.h>
+        #include <proton/sasl.h>
+        #include <proton/ssl.h>
+        #include <proton/disposition.h>
+        #include <proton/delivery.h>
 
-#include <proton/import_export.h>
-#include <proton/type_compat.h>
+        static const char _PN_HANDLE_PNI_PYTRACER;
+        static const pn_handle_t PNI_PYTRACER = (pn_handle_t) &_PN_HANDLE_PNI_PYTRACER; 
+
+        const pn_class_t PN_PYREF[];
+
+        void pn_pytracer(pn_transport_t *transport, const char *message) {
+          pn_tracer_t pytracer = (void *) pn_record_get(pn_transport_attachments(transport), PNI_PYTRACER);
+          (*pytracer)(transport, message);
+        }
+
+        void *pn_transport_get_pytracer(pn_transport_t *transport) {
+          pn_record_t *record = pn_transport_attachments(transport);
+          void *obj = (void *)pn_record_get(record, PNI_PYTRACER);
+          if (obj) {
+            return obj;
+          } else {
+            NULL;
+          }
+        }
+
+        void pn_transport_set_pytracer(pn_transport_t *transport, void *obj) {
+          pn_record_t *record = pn_transport_attachments(transport);
+          pn_record_def(record, PNI_PYTRACER, PN_PYREF);
+          pn_record_set(record, PNI_PYTRACER, obj);
+          pn_transport_set_tracer(transport, pn_pytracer);
+        }
+
+
         """,
 
         #  ----------------------------
-        libraries=['qpid-proton-core'],
-        library_dirs=["/home/ArunaSudhan/OpenSourceProjects/RHOCS/qpid-proton/build/install/lib64/"],
-        include_dirs=['/home/ArunaSudhan/OpenSourceProjects/RHOCS/qpid-proton/c/include']
+        # libraries=['qpid-proton-core'],
+        # library_dirs=["/home/ArunaSudhan/OpenSourceProjects/RHOCS/qpid-proton/build/install/lib64/"],
+        # include_dirs=['/home/ArunaSudhan/OpenSourceProjects/RHOCS/qpid-proton/c/include']
     )
 
     ffi_builder.cdef(cstdlib + type_h + object_h + error_h + codec_t + message_h)
@@ -752,19 +886,40 @@ def run_cffi_compile(output_file):
 
     ffi_builder.cdef(cid_h)
     ffi_builder.cdef(type_h)
+    #  Error is raised from the object h file parsing
     ffi_builder.cdef(object_h)
-    # ffi_builder.cdef(sasl_h)
-    # ffi_builder.cdef(error_h)
-    # ffi_builder.cdef(codec_t)
-    # ffi_builder.cdef(message_h)
+    ffi_builder.cdef(sasl_h)
+    ffi_builder.cdef(error_h)
+    ffi_builder.cdef(codec_t)
+    ffi_builder.cdef(message_h)
     ffi_builder.cdef(logger_h)
-    ffi_builder.cdef(logger_private_h)
-    # ffi_builder.cdef(condition_h)
-    # ffi_builder.cdef(transport_h)
+    ffi_builder.cdef(condition_h) 
+    ffi_builder.cdef(transport_h)
+    ffi_builder.cdef(ssl_h)
+    ffi_builder.cdef(disposition_h)
+    ffi_builder.cdef(delivery_h)
+    ffi_builder.cdef(
+      """
+
+      const pn_class_t PN_PYREF[];
+
+
+      static const char _PN_HANDLE_PNI_PYTRACER;
+      static const pn_handle_t PNI_PYTRACER = (pn_handle_t) &_PN_HANDLE_PNI_PYTRACER; 
+      #define PN_LEGCTX ...
+
+      void pn_pytracer(pn_transport_t *transport, const char *message);
+      void *pn_transport_get_pytracer(pn_transport_t *transport);
+      void pn_transport_set_pytracer(pn_transport_t *transport, void *obj);
+      
+      // callback
+      // extern "Python" (void *) pn_void2py(void *object);
+      """
+    )
     
-    # ffi_builder.emit_c_code(output_file)
+    ffi_builder.emit_c_code(output_file)
     #  ----------------------------
-    ffi_builder.compile(verbose=True)
+    # ffi_builder.compile(verbose=True)
 
 
 def main():
