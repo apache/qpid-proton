@@ -195,7 +195,7 @@ PN_EXTERN int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
  * identity as contained in the certificate to be valid (see
  * ::pn_ssl_set_peer_hostname).
  *
- * ANONYMOUS_PEER is configured by default.
+ * VERIFY_PEER_NAME is configured by default.
  */
 typedef enum {
   PN_SSL_VERIFY_NULL = 0,   /**< internal use only */
@@ -208,7 +208,8 @@ typedef enum {
  * Configure the level of verification used on the peer certificate.
  *
  * This method controls how the peer's certificate is validated, if at all.  By default,
- * neither servers nor clients attempt to verify their peers (PN_SSL_ANONYMOUS_PEER).
+ * servers do not attempt to verify their peers (PN_SSL_ANONYMOUS_PEER) but
+ * clients attempt to verify both the certificate and peer name (PN_SSL_VERIFY_PEER_NAME).
  * Once certificates and trusted CAs are configured, peer verification can be enabled.
  *
  * @note In order to verify a peer, a trusted CA must be configured. See

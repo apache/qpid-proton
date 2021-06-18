@@ -832,7 +832,8 @@ class SSLDomain(object):
     def set_peer_authentication(self, verify_mode, trusted_CAs=None):
         """
         This method controls how the peer's certificate is validated, if at all.  By default,
-        neither servers nor clients attempt to verify their peers (PN_SSL_ANONYMOUS_PEER).
+        servers do not attempt to verify their peers (PN_SSL_ANONYMOUS_PEER) but
+        clients attempt to verify both the certificate and peer name (PN_SSL_VERIFY_PEER_NAME).
         Once certificates and trusted CAs are configured, peer verification can be enabled.
 
         .. note:: In order to verify a peer, a trusted CA must be configured. See

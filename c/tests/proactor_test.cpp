@@ -533,9 +533,21 @@ TEST_CASE("proactor_ssl") {
   pn_listener_t *l = p.listen(":0", &listener);
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
 
-  /* Basic SSL connection */
+  /* Not Anonymous by default */
   p.connect(l, &client);
-  /* Open ok at both ends */
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
+  CHECK_THAT(*client.last_condition,
+             cond_matches("amqp:connection:framing-error", "SSL"));
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+
+  /* Deliberate use of Anonymous */
+  pn_ssl_domain_t *cd = client.ssl_domain;
+  REQUIRE(0 == pn_ssl_domain_set_peer_authentication(
+                   cd, PN_SSL_ANONYMOUS_PEER, NULL));
+  pn_connection_t *c = pn_connection();
+  p.connect(l, &client, c);
   REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   CHECK_THAT(*server.last_condition, cond_empty());
@@ -544,11 +556,10 @@ TEST_CASE("proactor_ssl") {
   REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
 
   /* Verify peer with good hostname */
-  pn_ssl_domain_t *cd = client.ssl_domain;
   REQUIRE(0 == pn_ssl_domain_set_trusted_ca_db(cd, CERTIFICATE("tserver")));
   REQUIRE(0 == pn_ssl_domain_set_peer_authentication(
                    cd, PN_SSL_VERIFY_PEER_NAME, NULL));
-  pn_connection_t *c = pn_connection();
+  c = pn_connection();
   pn_connection_set_hostname(c, "test_server");
   p.connect(l, &client, c);
   REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
@@ -565,6 +576,22 @@ TEST_CASE("proactor_ssl") {
   REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
   CHECK_THAT(*client.last_condition,
              cond_matches("amqp:connection:framing-error", "SSL"));
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+
+  /* Can ignore bad hostname */
+  REQUIRE(0 == pn_ssl_domain_set_peer_authentication(
+                   cd, PN_SSL_VERIFY_PEER, NULL));
+  c = pn_connection();
+  pn_connection_set_hostname(c, "wrongname");
+  p.connect(l, &client, c);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  CHECK_THAT(*server.last_condition, cond_empty());
+  CHECK_THAT(*client.last_condition, cond_empty());
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
 }
 
 TEST_CASE("proactor_addr") {

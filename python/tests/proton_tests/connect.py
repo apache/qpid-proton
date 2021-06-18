@@ -68,10 +68,10 @@ class Client(MessagingHandler):
 class ConnectConfigTest(Test):
     def test_port(self):
         ensureCanTestExtendedSASL()
-        server = Server()
+        server = Server(scheme='amqp')
         container = Container(server)
         client = Client()
-        write_connect_conf({'port': server.port})
+        write_connect_conf({'port': server.port, 'scheme': 'amqp'})
         container.connect(handler=client, reconnect=False)
         container.run()
         assert client.opened
@@ -82,8 +82,20 @@ class ConnectConfigTest(Test):
         password = 'password'
         server = Server(user)
         container = Container(server)
+        container.ssl.server.set_credentials(_testpath('server-certificate.pem'),
+                                             _testpath('server-private-key.pem'),
+                                             'server-password')
         client = Client()
-        write_connect_conf({'port': server.port, 'user': user, 'password': password})
+        config = {
+            'user': user,
+            'password': password,
+            'port': server.port,
+            'tls': {
+                'verify': False,
+                'ca': _testpath('ca-certificate.pem')
+            }
+        }
+        write_connect_conf(config)
         container.connect(handler=client, reconnect=False)
         container.run()
         assert client.opened
@@ -93,15 +105,16 @@ class ConnectConfigTest(Test):
         ensureCanTestExtendedSASL()
         server = Server(scheme='amqps')
         container = Container(server)
-        container.ssl.server.set_credentials(_testpath('server-certificate.pem'),
-                                             _testpath('server-private-key.pem'),
+        container.ssl.server.set_credentials(_testpath('server-certificate-lh.pem'),
+                                             _testpath('server-private-key-lh.pem'),
                                              'server-password')
         client = Client()
         config = {
             'scheme': 'amqps',
             'port': server.port,
             'tls': {
-                'verify': False
+                'verify': True,
+                'ca': _testpath('ca-certificate.pem')
             }
         }
         write_connect_conf(config)

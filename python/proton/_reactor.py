@@ -1199,9 +1199,10 @@ class Container(Reactor):
         *   ``ca``: Path to a database of trusted CAs that the server will advertise.
         *   ``cert``: Path to a file/database containing the identifying certificate.
         *   ``key``: An optional key to access the identifying certificate.
-        *   ``verify``: If ``True``, verify the peer name
-            (:const:`proton.SSLDomain.VERIFY_PEER_NAME`) and certificate using the
-            ``ca`` above.
+        *   ``verify``: If ``False``, do not verify the peer name
+            (:const:`proton.SSLDomain.ANONYMOUS_PEER`) or certificate.  By default
+            (or if ``True``) verify the peer name and certificate using the
+            ``ca`` above (:const:`proton.SSLDomain.VERIFY_PEER_NAME`).
 
         :param url: URL string of process to connect to
         :type url: ``str``
@@ -1302,10 +1303,11 @@ class Container(Reactor):
                 ca = tls_config.get('ca')
                 cert = tls_config.get('cert')
                 key = tls_config.get('key')
+                verify = tls_config.get('verify', True)
                 if ca:
                     _ssl_domain.set_trusted_ca_db(str(ca))
-                    if tls_config.get('verify', True):
-                        _ssl_domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME, str(ca))
+                if not verify:
+                    _ssl_domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER, None)
                 if cert and key:
                     _ssl_domain.set_credentials(str(cert), str(key), None)
 

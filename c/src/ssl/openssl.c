@@ -562,12 +562,6 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     return NULL;
   }
 
-  // Insecure, but backward compatible client default
-  if (mode==PN_SSL_MODE_CLIENT &&
-      pn_ssl_domain_set_peer_authentication(domain, PN_SSL_ANONYMOUS_PEER, NULL)) {
-    free(domain);
-    return NULL;
-  }
   return domain;
 }
 

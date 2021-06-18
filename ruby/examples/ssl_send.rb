@@ -32,8 +32,9 @@ class SimpleSend < Qpid::Proton::MessagingHandler
   end
 
   def on_container_start(container)
-    # Use a default client SSL domain
+    # Use anonymous client SSL domain
     ssl_domain = Qpid::Proton::SSLDomain.new(Qpid::Proton::SSLDomain::MODE_CLIENT)
+    ssl_domain.peer_authentication(Qpid::Proton::SSLDomain::ANONYMOUS_PEER)
     c = container.connect(@url, { :ssl_domain => ssl_domain })
     c.open_sender(@address)
   end

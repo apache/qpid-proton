@@ -97,12 +97,13 @@ class SslTest(common.Test):
         server.connection.close()
         self._pump(client, server)
 
-    def test_defaults(self):
+    def test_anonymous_cipher(self):
         if os.name == "nt":
             raise Skipped("Windows SChannel lacks anonymous cipher support.")
         """ By default, both the server and the client support anonymous
         ciphers - they should connect without need for a certificate.
         """
+        self.client_domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER)
         server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
         client = SslTest.SslTestConnection(self.client_domain)
 

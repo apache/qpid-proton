@@ -105,9 +105,10 @@ module Qpid::Proton
     # Configures the level of verification used on the peer certificate.
     #
     # This method congtrols how the peer's certificate is validated, if at all.
-    # By default, neither servers nor clients attempt to verify their peers
-    # (*ANONYMOUS_PEER*). Once certficates and trusted CAs are configured, peer
-    # verification can be enabled.
+    # By default, servers do not attempt to verify their peers
+    # (*ANONYMOUS_PEER*) but clients attempt to verify both the certificate and
+    # peer name (*VERIFY_PEER_NAME*). Once certficates and trusted CAs are
+    # configured, peer verification can be enabled.
     #
     # *NOTE:* In order to verify a peer, a trusted CA must be configured.
     #

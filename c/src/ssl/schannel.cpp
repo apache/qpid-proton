@@ -486,6 +486,8 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     pn_ssl_domain_free(domain);
     return NULL;
   }
+  if (mode == PN_SSL_MODE_CLIENT)
+    domain->verify_mode == PN_SSL_VERIFY_PEER_NAME;
   return domain;
 }
 

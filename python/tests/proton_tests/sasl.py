@@ -412,6 +412,8 @@ class SSLSASLTest(Test):
         self.c1.password = 'password'
         self.c1.hostname = 'localhost'
 
+        self.client_domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER)
+
         ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
         ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
 
@@ -431,6 +433,8 @@ class SSLSASLTest(Test):
         self.c1.password = 'password'
         self.c1.hostname = 'localhost'
 
+        self.client_domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER)
+
         ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
         ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
 
@@ -447,6 +451,8 @@ class SSLSASLTest(Test):
         self.c1.user = clientUser
         self.c1.password = 'password'
         self.c1.hostname = 'localhost'
+
+        self.client_domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER)
 
         ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
         ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
