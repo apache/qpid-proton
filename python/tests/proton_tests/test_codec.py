@@ -25,7 +25,7 @@ from uuid import uuid4
 from proton import *
 from proton._compat import raise_
 
-from . import common
+import common
 
 
 class Test(common.Test):
@@ -373,7 +373,8 @@ class DataTest(Test):
     def _test_int(self, itype):
         self._test(itype, *self.int_values(itype))
 
-    def testByte(self): self._test_int("byte")
+    def testByte(self):
+        self._test_int("byte")
 
     def testUbyte(self):
         self._test_int("ubyte")
