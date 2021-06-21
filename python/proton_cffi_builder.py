@@ -634,11 +634,7 @@ void *pn_iterator_start(pn_iterator_t *iterator,
                                   pn_iterator_next_t next, size_t size);
 void *pn_iterator_next(pn_iterator_t *iterator);
 
-//#define PN_LEGCTX ...
-//#define PN_LEGCTX ((pn_handle_t) 0)
 
-
-//#define PN_HANDLE -1
 
 pn_record_t *pn_record(void);
 void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz);
@@ -822,7 +818,7 @@ typedef pn_bytes_t pn_delivery_tag_t;
 
 
 
-
+# TODO: 
 def run_cffi_compile(output_file):
     ffi_builder = FFI()
     ffi_builder.set_source(
@@ -848,6 +844,9 @@ def run_cffi_compile(output_file):
         static const pn_handle_t PNI_PYTRACER = (pn_handle_t) &_PN_HANDLE_PNI_PYTRACER; 
 
         const pn_class_t PN_PYREF[];
+
+        #define PN_LEGCTX (pn_handle_t 0)
+
 
         void pn_pytracer(pn_transport_t *transport, const char *message) {
           pn_tracer_t pytracer = (void *) pn_record_get(pn_transport_attachments(transport), PNI_PYTRACER);
@@ -880,10 +879,7 @@ def run_cffi_compile(output_file):
         # include_dirs=['/home/ArunaSudhan/OpenSourceProjects/RHOCS/qpid-proton/c/include']
     )
 
-    ffi_builder.cdef(cstdlib + type_h + object_h + error_h + codec_t + message_h)
-    ffi_builder.emit_c_code(output_file)
-    # ffi_builder.compile(verbose=True)
-
+    ffi_builder.cdef(cstdlib)
     ffi_builder.cdef(cid_h)
     ffi_builder.cdef(type_h)
     #  Error is raised from the object h file parsing
@@ -906,20 +902,20 @@ def run_cffi_compile(output_file):
 
       static const char _PN_HANDLE_PNI_PYTRACER;
       static const pn_handle_t PNI_PYTRACER = (pn_handle_t) &_PN_HANDLE_PNI_PYTRACER; 
-      #define PN_LEGCTX ...
 
       void pn_pytracer(pn_transport_t *transport, const char *message);
       void *pn_transport_get_pytracer(pn_transport_t *transport);
       void pn_transport_set_pytracer(pn_transport_t *transport, void *obj);
       
       // callback
-      // extern "Python" (void *) pn_void2py(void *object);
+      //extern "Python" void *pn_void2py(*object);
       """
     )
     
     ffi_builder.emit_c_code(output_file)
     #  ----------------------------
     # ffi_builder.compile(verbose=True)
+
 
 
 def main():
