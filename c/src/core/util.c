@@ -46,7 +46,7 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
         dst[idx++] = c;
       } else {
         if (idx > 0) {
-          dst[idx - 1] = '\0';
+          dst[idx] = '\0';
         }
         return PN_OVERFLOW;
       }
@@ -55,7 +55,7 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
         idx += sprintf(dst + idx, "\\x%.2x", c);
       } else {
         if (idx > 0) {
-          dst[idx - 1] = '\0';
+          dst[idx] = '\0';
         }
         return PN_OVERFLOW;
       }
