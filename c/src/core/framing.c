@@ -115,3 +115,46 @@ size_t pn_write_frame(pn_buffer_t* buffer, pn_frame_t frame, pn_logger_t *logger
     return 0;
   }
 }
+
+static inline void pn_post_frame(pn_buffer_t *output, pn_logger_t *logger, uint8_t type, uint16_t ch, pn_bytes_t performative, pn_bytes_t payload)
+{
+  pn_frame_t frame = {
+    .type = type,
+    .channel = ch,
+    .frame_payload0 = performative,
+    .frame_payload1 = payload
+  };
+  pn_buffer_ensure(output, AMQP_HEADER_SIZE+frame.extended.size+frame.frame_payload0.size+frame.frame_payload1.size);
+  pn_write_frame(output, frame, logger);
+}
+
+int pn_framing_send_amqp(pn_transport_t *transport, uint16_t ch, pn_bytes_t performative)
+{
+  if (!performative.start)
+    return PN_ERR;
+
+  pn_post_frame(transport->output_buffer, &transport->logger, AMQP_FRAME_TYPE, ch, performative, (pn_bytes_t){0, NULL});
+  transport->output_frames_ct += 1;
+  return 0;
+}
+
+int pn_framing_send_amqp_with_payload(pn_transport_t *transport, uint16_t ch, pn_bytes_t performative, pn_bytes_t payload)
+{
+  if (!performative.start)
+    return PN_ERR;
+
+  pn_post_frame(transport->output_buffer, &transport->logger, AMQP_FRAME_TYPE, ch, performative, payload);
+  transport->output_frames_ct += 1;
+  return 0;
+}
+
+int pn_framing_send_sasl(pn_transport_t *transport, pn_bytes_t performative)
+{
+  if (!performative.start)
+    return PN_ERR;
+
+  // All SASL frames go on channel 0
+  pn_post_frame(transport->output_buffer, &transport->logger, SASL_FRAME_TYPE, 0, performative, (pn_bytes_t){0, NULL});
+  transport->output_frames_ct += 1;
+  return 0;
+}
