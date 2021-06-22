@@ -379,12 +379,16 @@ void pn_link_unbound(pn_link_t* link);
 void pn_ep_incref(pn_endpoint_t *endpoint);
 void pn_ep_decref(pn_endpoint_t *endpoint);
 
-int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const char *fmt, ...);
+pn_bytes_t pn_fill_performative(pn_transport_t *transport, const char *fmt, ...);
+int pn_post_amqp_frame(pn_transport_t *transport, uint16_t ch, pn_bytes_t performative);
+int pn_post_amqp_payload_frame(pn_transport_t *transport, uint16_t ch, pn_bytes_t performative, pn_bytes_t payload);
+int pn_post_sasl_frame(pn_transport_t *transport, pn_bytes_t performative);
 
 typedef enum {IN, OUT} pn_dir_t;
 
-void pn_do_trace(pn_transport_t *transport, uint16_t ch, pn_dir_t dir,
-                 pn_data_t *args, const char *payload, size_t size);
+void pn_do_trace(pn_logger_t *logger, pn_string_t *scratch, uint16_t ch, pn_dir_t dir, pn_data_t *args);
+void pn_do_trace_payload(pn_logger_t *logger, pn_string_t *scratch, pn_bytes_t payload);
+void pn_do_raw_trace(pn_logger_t *logger, pn_string_t *scratch, pn_buffer_t *output, size_t size);
 
 #if __cplusplus
 }

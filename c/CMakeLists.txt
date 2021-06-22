@@ -227,6 +227,7 @@ set (qpid-proton-core
   src/core/types.c
 
   src/core/framing.c
+  src/core/post_frame.c
 
   src/core/codec.c
   src/core/decoder.c

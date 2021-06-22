@@ -32,6 +32,9 @@
 #define AMQP_MIN_MAX_FRAME_SIZE ((uint32_t)512) // minimum allowable max-frame
 #define AMQP_MAX_WINDOW_SIZE (2147483647)
 
+#define AMQP_FRAME_TYPE (0)
+#define SASL_FRAME_TYPE (1)
+
 typedef struct {
   uint8_t type;
   uint16_t channel;

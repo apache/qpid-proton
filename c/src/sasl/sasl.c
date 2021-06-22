@@ -22,7 +22,7 @@
 #include "sasl-internal.h"
 
 #include "core/autodetect.h"
-#include "core/dispatch_actions.h"
+#include "core/framing.h"
 #include "core/engine-internal.h"
 #include "core/util.h"
 #include "platform/platform_fmt.h"
@@ -484,11 +484,12 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
   enum pnx_sasl_state desired_state = sasl->desired_state;
   while (sasl->desired_state > sasl->last_state) {
     switch (desired_state) {
-    case SASL_POSTED_INIT:
-      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[szS]", SASL_INIT, sasl->selected_mechanism,
-                    out.size, out.start, sasl->local_fqdn);
+    case SASL_POSTED_INIT: {
+      pn_bytes_t buf = pn_fill_performative(transport, "DL[szS]", SASL_INIT, sasl->selected_mechanism, out.size, out.start, sasl->local_fqdn);
+      pn_post_sasl_frame(transport, buf);
       pni_emit(transport);
       break;
+    }
     case SASL_POSTED_MECHANISMS: {
       // TODO(PROTON-2122) Replace magic number 32 with dynamically sized memory
       char *mechs[32];
@@ -499,14 +500,16 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         pni_split_mechs(mechlist, sasl->included_mechanisms, mechs, &count);
       }
 
-      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[@T[*s]]", SASL_MECHANISMS, PN_SYMBOL, count, mechs);
+      pn_bytes_t buf = pn_fill_performative(transport, "DL[@T[*s]]", SASL_MECHANISMS, PN_SYMBOL, count, mechs);
       free(mechlist);
+      pn_post_sasl_frame(transport, buf);
       pni_emit(transport);
       break;
     }
     case SASL_POSTED_RESPONSE:
       if (sasl->last_state != SASL_POSTED_RESPONSE) {
-        pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[Z]", SASL_RESPONSE, out.size, out.start);
+        pn_bytes_t buf = pn_fill_performative(transport, "DL[Z]", SASL_RESPONSE, out.size, out.start);
+        pn_post_sasl_frame(transport, buf);
         pni_emit(transport);
       }
       break;
@@ -515,16 +518,18 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         desired_state = SASL_POSTED_MECHANISMS;
         continue;
       } else if (sasl->last_state != SASL_POSTED_CHALLENGE) {
-        pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[Z]", SASL_CHALLENGE, out.size, out.start);
+        pn_bytes_t buf = pn_fill_performative(transport, "DL[Z]", SASL_CHALLENGE, out.size, out.start);
+        pn_post_sasl_frame(transport, buf);
         pni_emit(transport);
       }
       break;
-    case SASL_POSTED_OUTCOME:
+    case SASL_POSTED_OUTCOME: {
       if (sasl->last_state < SASL_POSTED_MECHANISMS) {
         desired_state = SASL_POSTED_MECHANISMS;
         continue;
       }
-      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[Bz]", SASL_OUTCOME, sasl->outcome, out.size, out.start);
+      pn_bytes_t buf = pn_fill_performative(transport, "DL[Bz]", SASL_OUTCOME, sasl->outcome, out.size, out.start);
+      pn_post_sasl_frame(transport, buf);
       pni_emit(transport);
       if (sasl->outcome!=PN_SASL_OK) {
         pn_do_error(transport, "amqp:unauthorized-access", "Failed to authenticate client [mech=%s]",
@@ -532,6 +537,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         desired_state = SASL_ERROR;
       }
       break;
+    }
     case SASL_RECVED_SUCCESS:
       if (sasl->last_state < SASL_POSTED_INIT) {
         desired_state = SASL_POSTED_INIT;

@@ -111,7 +111,8 @@ static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_fr
   const char *payload_mem = payload_size ? frame.payload + dsize : NULL;
   pn_bytes_t payload = {payload_size, payload_mem};
 
-  pn_do_trace(transport, channel, IN, args, payload_mem, payload_size);
+  pn_do_trace(&transport->logger, transport->scratch, channel, IN, args);
+  pn_do_trace_payload(&transport->logger, transport->scratch, payload);
 
   int err = pni_dispatch_action(transport, lcode, frame_type, channel, args, &payload);
 
