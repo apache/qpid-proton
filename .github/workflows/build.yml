@@ -27,7 +27,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Create Build and Install directories
-      run: mkdir -p "${BuildDir}" "{InstallPrefix}"
+      run: mkdir -p "${BuildDir}" "${InstallPrefix}"
       shell: bash
 
     # PROTON-2295 avoid using go 1.15.3 on macOS, which is broken
