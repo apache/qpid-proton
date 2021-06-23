@@ -26,6 +26,10 @@
 #include "protocol.h"
 #include "util.h"
 
+#ifndef GENERATE_CODEC_CODE
+#include "core/frame_generators.h"
+#endif
+
 #include <proton/link.h>
 #include <proton/object.h>
 #include <proton/codec.h>
@@ -765,6 +769,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
   return 0;
 }
 
+#ifdef GENERATE_CODEC_CODE
 int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
 {
   if (!msg || !bytes || !size || !*size) return PN_ARG_ERR;
@@ -786,6 +791,113 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
   pn_data_clear(msg->data);
   return 0;
 }
+#else
+int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
+{
+  size_t remaining = *isize;
+  size_t last_size = 0;
+  size_t total = 0;
+
+  /* "DL[?o?B?I?o?I]" */
+  last_size = pn_amqp_encode_bytes_DLEQoQBQIQoQIe(bytes, remaining, HEADER,
+                        msg->durable, msg->durable,
+                         msg->priority!=HEADER_PRIORITY_DEFAULT, msg->priority,
+                         (bool)msg->ttl, msg->ttl,
+                         msg->first_acquirer, msg->first_acquirer,
+                         (bool)msg->delivery_count, msg->delivery_count);
+  if (last_size > remaining) return PN_OVERFLOW;
+
+  remaining -= last_size;
+  bytes += last_size;
+  total += last_size;
+
+
+  if (pn_data_size(msg->instructions)) {
+    pn_data_rewind(msg->instructions);
+    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, DELIVERY_ANNOTATIONS, msg->instructions);
+    if (last_size > remaining) return PN_OVERFLOW;
+
+    remaining -= last_size;
+    bytes += last_size;
+    total += last_size;
+  }
+
+  if (pn_data_size(msg->annotations)) {
+    pn_data_rewind(msg->annotations);
+    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, MESSAGE_ANNOTATIONS, msg->annotations);
+    if (last_size > remaining) return PN_OVERFLOW;
+
+    remaining -= last_size;
+    bytes += last_size;
+    total += last_size;
+  }
+
+  /* "DL[CzSSSCss?t?tS?IS]" */
+  last_size = pn_amqp_encode_bytes_DLECzSSSCssQtQtSQISe(bytes, remaining, PROPERTIES,
+                     msg->id,
+                     pn_string_size(msg->user_id), pn_string_get(msg->user_id),
+                     pn_string_get(msg->address),
+                     pn_string_get(msg->subject),
+                     pn_string_get(msg->reply_to),
+                     msg->correlation_id,
+                     pn_string_get(msg->content_type),
+                     pn_string_get(msg->content_encoding),
+                     (bool)msg->expiry_time, msg->expiry_time,
+                     (bool)msg->creation_time, msg->creation_time,
+                     pn_string_get(msg->group_id),
+                     /*
+                      * As a heuristic, null out group_sequence if there is no group_id and
+                      * group_sequence is 0. In this case it is extremely unlikely we want
+                      * group semantics
+                      */
+                     (bool)pn_string_get(msg->group_id) || (bool)msg->group_sequence , msg->group_sequence,
+                     pn_string_get(msg->reply_to_group_id));
+  if (last_size > remaining) return PN_OVERFLOW;
+
+  remaining -= last_size;
+  bytes += last_size;
+  total += last_size;
+
+  if (pn_data_size(msg->properties)) {
+    pn_data_rewind(msg->properties);
+    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, APPLICATION_PROPERTIES, msg->properties);
+    if (last_size > remaining) return PN_OVERFLOW;
+
+    remaining -= last_size;
+    bytes += last_size;
+    total += last_size;
+  }
+
+  if (pn_data_size(msg->body)) {
+    pn_data_rewind(msg->body);
+    pn_data_next(msg->body);
+    pn_type_t body_type = pn_data_type(msg->body);
+    pn_data_rewind(msg->body);
+
+    uint64_t descriptor = AMQP_VALUE;
+    if (msg->inferred) {
+      switch (body_type) {
+        case PN_BINARY:
+          descriptor = DATA;
+          break;
+        case PN_LIST:
+          descriptor = AMQP_SEQUENCE;
+          break;
+        default:
+          break;
+      }
+    }
+    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, descriptor, msg->body);
+    if (last_size > remaining) return PN_OVERFLOW;
+
+    remaining -= last_size;
+    bytes += last_size;
+    total += last_size;
+  }
+  *isize = total;
+  return 0;
+}
+#endif
 
 int pn_message_data(pn_message_t *msg, pn_data_t *data)
 {
@@ -801,27 +913,19 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
                            pn_error_text(pn_data_error(data)));
 
   if (pn_data_size(msg->instructions)) {
-    pn_data_put_described(data);
-    pn_data_enter(data);
-    pn_data_put_ulong(data, DELIVERY_ANNOTATIONS);
     pn_data_rewind(msg->instructions);
-    err = pn_data_append(data, msg->instructions);
+    err = pn_data_fill(data, "DLC", DELIVERY_ANNOTATIONS, msg->instructions);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
-    pn_data_exit(data);
   }
 
   if (pn_data_size(msg->annotations)) {
-    pn_data_put_described(data);
-    pn_data_enter(data);
-    pn_data_put_ulong(data, MESSAGE_ANNOTATIONS);
     pn_data_rewind(msg->annotations);
-    err = pn_data_append(data, msg->annotations);
+    err = pn_data_fill(data, "DLC", MESSAGE_ANNOTATIONS, msg->annotations);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
-    pn_data_exit(data);
   }
 
   err = pn_data_fill(data, "DL[CzSSSCss?t?tS?IS]", PROPERTIES,
@@ -848,41 +952,37 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
                            pn_error_text(pn_data_error(data)));
 
   if (pn_data_size(msg->properties)) {
-    pn_data_put_described(data);
-    pn_data_enter(data);
-    pn_data_put_ulong(data, APPLICATION_PROPERTIES);
     pn_data_rewind(msg->properties);
-    err = pn_data_append(data, msg->properties);
+    err = pn_data_fill(data, "DLC", APPLICATION_PROPERTIES, msg->properties);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
-    pn_data_exit(data);
   }
 
   if (pn_data_size(msg->body)) {
     pn_data_rewind(msg->body);
     pn_data_next(msg->body);
     pn_type_t body_type = pn_data_type(msg->body);
-    pn_data_rewind(msg->body);
 
-    pn_data_put_described(data);
-    pn_data_enter(data);
+    uint64_t descriptor = AMQP_VALUE;
     if (msg->inferred) {
       switch (body_type) {
-      case PN_BINARY:
-        pn_data_put_ulong(data, DATA);
-        break;
-      case PN_LIST:
-        pn_data_put_ulong(data, AMQP_SEQUENCE);
-        break;
-      default:
-        pn_data_put_ulong(data, AMQP_VALUE);
-        break;
+        case PN_BINARY:
+          descriptor = DATA;
+          break;
+        case PN_LIST:
+          descriptor = AMQP_SEQUENCE;
+          break;
+        default:
+          break;
       }
-    } else {
-      pn_data_put_ulong(data, AMQP_VALUE);
     }
-    pn_data_append(data, msg->body);
+
+    pn_data_rewind(msg->body);
+    err = pn_data_fill(data, "DLC", descriptor, msg->body);
+    if (err)
+      return pn_error_format(msg->error, err, "data error: %s",
+                             pn_error_text(pn_data_error(data)));
   }
   return 0;
 }

@@ -23,6 +23,9 @@
 
 #include "core/autodetect.h"
 #include "core/framing.h"
+#ifndef GENERATE_CODEC_CODE
+#include "core/frame_generators.h"
+#endif
 #include "core/engine-internal.h"
 #include "core/util.h"
 #include "platform/platform_fmt.h"
@@ -485,7 +488,12 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
   while (sasl->desired_state > sasl->last_state) {
     switch (desired_state) {
     case SASL_POSTED_INIT: {
+#ifdef GENERATE_CODEC_CODE
       pn_bytes_t buf = pn_fill_performative(transport, "DL[szS]", SASL_INIT, sasl->selected_mechanism, out.size, out.start, sasl->local_fqdn);
+#else
+      /* GENERATE_CODEC_CODE: "DL[szS]" */
+      pn_bytes_t buf = pn_amqp_encode_DLEszSe(transport->frame, SASL_INIT, sasl->selected_mechanism, out.size, out.start, sasl->local_fqdn);
+#endif
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       break;
@@ -499,8 +507,12 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       if (mechlist) {
         pni_split_mechs(mechlist, sasl->included_mechanisms, mechs, &count);
       }
-
+#ifdef GENERATE_CODEC_CODE
       pn_bytes_t buf = pn_fill_performative(transport, "DL[@T[*s]]", SASL_MECHANISMS, PN_SYMBOL, count, mechs);
+#else
+      /* GENERATE_CODEC_CODE: "DL[@T[*s]]" */
+      pn_bytes_t buf = pn_amqp_encode_DLEATEjsee(transport->frame, SASL_MECHANISMS, PN_SYMBOL, count, mechs);
+#endif
       free(mechlist);
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
@@ -508,7 +520,12 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     }
     case SASL_POSTED_RESPONSE:
       if (sasl->last_state != SASL_POSTED_RESPONSE) {
+#ifdef GENERATE_CODEC_CODE
         pn_bytes_t buf = pn_fill_performative(transport, "DL[Z]", SASL_RESPONSE, out.size, out.start);
+#else
+        /* "DL[Z]" */
+        pn_bytes_t buf = pn_amqp_encode_DLEZe(transport->frame, SASL_RESPONSE, out.size, out.start);
+#endif
         pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
@@ -518,7 +535,12 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         desired_state = SASL_POSTED_MECHANISMS;
         continue;
       } else if (sasl->last_state != SASL_POSTED_CHALLENGE) {
+#ifdef GENERATE_CODEC_CODE
         pn_bytes_t buf = pn_fill_performative(transport, "DL[Z]", SASL_CHALLENGE, out.size, out.start);
+#else
+        /* "DL[Z]" */
+        pn_bytes_t buf = pn_amqp_encode_DLEZe(transport->frame, SASL_CHALLENGE, out.size, out.start);
+#endif
         pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
@@ -528,7 +550,12 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         desired_state = SASL_POSTED_MECHANISMS;
         continue;
       }
+#ifdef GENERATE_CODEC_CODE
       pn_bytes_t buf = pn_fill_performative(transport, "DL[Bz]", SASL_OUTCOME, sasl->outcome, out.size, out.start);
+#else
+      /* "DL[Bz]" */
+      pn_bytes_t buf = pn_amqp_encode_DLEBze(transport->frame, SASL_OUTCOME, sasl->outcome, out.size, out.start);
+#endif
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       if (sasl->outcome!=PN_SASL_OK) {
