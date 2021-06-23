@@ -64,21 +64,65 @@ include_directories (
   )
 
 add_custom_command (
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  COMMAND ${PN_ENV_SCRIPT} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py
+  OUTPUT
+    ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  COMMAND
+    ${PN_ENV_SCRIPT} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py
   )
 
 add_custom_command (
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
-  COMMAND ${PN_ENV_SCRIPT} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
+  OUTPUT
+    ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+  COMMAND
+    ${PN_ENV_SCRIPT} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+  DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
+  )
+
+add_custom_command(
+  OUTPUT
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.c
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.h
+  COMMAND
+    ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/generate.py --emit -i ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/specs.json -o ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators
+  DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/generate.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/transport.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/sasl/sasl.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/message.c
+    ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+  )
+
+add_custom_command(
+  OUTPUT
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.c
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.h
+  COMMAND
+    ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/generate.py --consume -i ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/specs.json -o ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers
+  DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/generate.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/transport.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core/message.c
+    ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
   )
 
 add_custom_target(
   generated_c_files
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+    ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.c
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.h
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.c
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.h
   )
+
+option (ENABLE_GENERATED_CODEC "Use automatically generated codec code" ON)
+if (NOT ENABLE_GENERATED_CODEC)
+  add_compile_definitions(GENERATE_CODEC_CODE)
+endif ()
 
 file (GLOB_RECURSE source_files "src/*.h" "src/*.c" "src/*.cpp")
 
@@ -240,6 +284,9 @@ set (qpid-proton-core
   src/core/autodetect.c
   src/core/transport.c
   src/core/message.c
+
+  ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.c
+  ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.c
   )
 
 set (qpid-proton-include-generated
