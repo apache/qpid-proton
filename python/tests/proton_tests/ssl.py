@@ -100,8 +100,33 @@ class SslTest(common.Test):
     def test_anonymous_cipher(self):
         if os.name == "nt":
             raise Skipped("Windows SChannel lacks anonymous cipher support.")
-        """ By default, both the server and the client support anonymous
-        ciphers - they should connect without need for a certificate.
+        """ With no configuration at all, the client default
+        VERIFY_PEER_NAME should preclude anonymous cipher TLS negotiation.
+        """
+        server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
+        client = SslTest.SslTestConnection(self.client_domain)
+
+        # check that no SSL connection exists
+        assert not server.ssl.cipher_name()
+        assert not client.ssl.protocol_name()
+
+        # client.transport.trace(Transport.TRACE_DRV)
+        # server.transport.trace(Transport.TRACE_DRV)
+
+        client.connection.open()
+        server.connection.open()
+        self._pump(client, server)
+
+        assert client.transport.closed
+        assert server.transport.closed
+        assert client.connection.state & Endpoint.REMOTE_UNINIT
+        assert server.connection.state & Endpoint.REMOTE_UNINIT
+
+    def test_simple_anonymous(self):
+        if os.name == "nt":
+            raise Skipped("Windows SChannel lacks anonymous cipher support.")
+        """ The simplest SSL configuration using anonymous
+        ciphers.
         """
         self.client_domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER)
         server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
@@ -147,13 +172,33 @@ class SslTest(common.Test):
         server.connection.close()
         self._pump(client, server)
 
-    def test_server_certificate(self):
+    def test_server_certificate_fail(self):
+        """ Test that default configured clients cannot connect to a server that has
+        a certificate configured.
+        """
+        self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
+                                           self._testpath("server-private-key.pem"),
+                                           "server-password")
+        server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
+        client = SslTest.SslTestConnection(self.client_domain)
+
+        client.connection.open()
+        server.connection.open()
+        self._pump(client, server)
+
+        assert client.transport.closed
+        assert server.transport.closed
+        assert client.connection.state & Endpoint.REMOTE_UNINIT
+        assert server.connection.state & Endpoint.REMOTE_UNINIT
+
+    def test_server_certificate_no_verify(self):
         """ Test that anonymous clients can still connect to a server that has
         a certificate configured.
         """
         self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
                                            self._testpath("server-private-key.pem"),
                                            "server-password")
+        self.client_domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER)
         server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
         client = SslTest.SslTestConnection(self.client_domain)
 
