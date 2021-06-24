@@ -45,9 +45,7 @@ from _proton_core.lib import PN_DEFAULT_PRIORITY, PN_OVERFLOW, pn_error_text, pn
     pn_message_set_delivery_count, pn_message_set_durable, pn_message_set_expiry_time, pn_message_set_first_acquirer, \
     pn_message_set_group_id, pn_message_set_group_sequence, pn_message_set_id, pn_message_set_inferred, pn_message_set_priority, \
     pn_message_set_reply_to, pn_message_set_reply_to_group_id, pn_message_set_subject, \
-    pn_message_set_ttl, pn_message_set_user_id, pn_bytes
-
-
+    pn_message_set_ttl, pn_message_set_user_id
 
 from . import _compat
 from ._common import isinteger, millis2secs, secs2millis, unicode2utf8, utf82unicode
@@ -102,10 +100,7 @@ class Message(object):
     def _check(self, err: int) -> int:
         if err < 0:
             exc = EXCEPTIONS.get(err, MessageException)
-            raise exc("[%s]: %s" % (
-                err,
-                ffi.string(pn_error_text(pn_message_error(self._msg))).decode('utf8')
-        ))
+            raise exc("[%s]: %s" % (err, pn_error_text(pn_message_error(self._msg))))
         else:
             return err
 
@@ -311,15 +306,11 @@ class Message(object):
 
         :raise: :exc:`MessageException` if there is any Proton error when using the setter.
         """
-        r = pn_message_get_user_id(self._msg)
-        if r.start == ffi.NULL:
-            return b""
-        return ffi.buffer(r.start, r.size)[:]
+        return pn_message_get_user_id(self._msg)
 
     @user_id.setter
     def user_id(self, value: bytes) -> None:
-        pnbytes = pn_bytes(len(value), value)
-        self._check(pn_message_set_user_id(self._msg, pnbytes))
+        self._check(pn_message_set_user_id(self._msg, value))
 
     @property
     def address(self) -> Optional[str]:
@@ -331,7 +322,7 @@ class Message(object):
 
     @address.setter
     def address(self, value: str) -> None:
-        self._check(pn_message_set_address(self._msg, unicode2utf8(value).encode()))
+        self._check(pn_message_set_address(self._msg, unicode2utf8(value)))
 
     @property
     def subject(self) -> Optional[str]:
@@ -343,7 +334,7 @@ class Message(object):
 
     @subject.setter
     def subject(self, value: str) -> None:
-        self._check(pn_message_set_subject(self._msg, unicode2utf8(value).encode()))
+        self._check(pn_message_set_subject(self._msg, unicode2utf8(value)))
 
     @property
     def reply_to(self) -> Optional[str]:
@@ -355,7 +346,7 @@ class Message(object):
 
     @reply_to.setter
     def reply_to(self, value: str) -> None:
-        self._check(pn_message_set_reply_to(self._msg, unicode2utf8(value).encode()))
+        self._check(pn_message_set_reply_to(self._msg, unicode2utf8(value)))
 
     @property
     def correlation_id(self) -> Optional[Union['UUID', ulong, str, bytes]]:
@@ -392,7 +383,7 @@ class Message(object):
 
     @content_type.setter
     def content_type(self, value: str) -> None:
-        self._check(pn_message_set_content_type(self._msg, unicode2utf8(value).encode()))
+        self._check(pn_message_set_content_type(self._msg, unicode2utf8(value)))
 
     @property
     def content_encoding(self) -> symbol:
@@ -404,7 +395,7 @@ class Message(object):
 
     @content_encoding.setter
     def content_encoding(self, value: str) -> None:
-        self._check(pn_message_set_content_encoding(self._msg, unicode2utf8(value).encode()))
+        self._check(pn_message_set_content_encoding(self._msg, unicode2utf8(value)))
 
     @property
     def expiry_time(self) -> float:  # TODO doc said int
@@ -440,7 +431,7 @@ class Message(object):
 
     @group_id.setter
     def group_id(self, value: str) -> None:
-        self._check(pn_message_set_group_id(self._msg, unicode2utf8(value).encode()))
+        self._check(pn_message_set_group_id(self._msg, unicode2utf8(value)))
 
     @property
     def group_sequence(self) -> int:
@@ -464,7 +455,7 @@ class Message(object):
 
     @reply_to_group_id.setter
     def reply_to_group_id(self, value: str) -> None:
-        self._check(pn_message_set_reply_to_group_id(self._msg, unicode2utf8(value).encode()))
+        self._check(pn_message_set_reply_to_group_id(self._msg, unicode2utf8(value)))
 
     @property
     def instructions(self) -> Optional[AnnotationDict]:
@@ -512,20 +503,16 @@ class Message(object):
         self._pre_encode()
         sz = 16
         while True:
-            size = ffi.new('size_t *', sz)
-            bytes = ffi.new("char []", sz)
-            status_code = pn_message_encode(self._msg, bytes, size)
-            if status_code == PN_OVERFLOW:
+            err, data = pn_message_encode(self._msg, sz)
+            if err == PN_OVERFLOW:
                 sz *= 2
                 continue
             else:
-                self._check(status_code)
-                return ffi.buffer(bytes, size[0])[:]
+                self._check(err)
+                return data
 
     def decode(self, data: bytes) -> None:
-        bytes = ffi.new('char []', data)
-        size = ffi.new("size_t *", len(data))
-        self._check(pn_message_decode(self._msg, bytes, size[0]))
+        self._check(pn_message_decode(self._msg, data))
         self._post_decode()
 
     def send(self, sender: 'Sender', tag: Optional[str] = None) -> 'Delivery':
@@ -587,5 +574,3 @@ class Message(object):
             if value:
                 props.append("%s=%r" % (attr, value))
         return "Message(%s)" % ", ".join(props)
-
-

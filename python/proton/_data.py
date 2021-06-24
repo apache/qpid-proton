@@ -30,8 +30,7 @@ except ImportError:
     class Literal(metaclass=GenericMeta):  # type: ignore[no-redef]
         pass
 
-from _proton_core import ffi
-from _proton_core.lib import PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE, PN_CHAR, PN_DECIMAL128, PN_DECIMAL32, PN_DECIMAL64, \
+from ._cproton import PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE, PN_CHAR, PN_DECIMAL128, PN_DECIMAL32, PN_DECIMAL64, \
     PN_DESCRIBED, PN_DOUBLE, PN_FLOAT, PN_INT, PN_LIST, PN_LONG, PN_MAP, PN_NULL, PN_OVERFLOW, PN_SHORT, PN_STRING, \
     PN_SYMBOL, PN_TIMESTAMP, PN_UBYTE, PN_UINT, PN_ULONG, PN_USHORT, PN_UUID, pn_data, pn_data_clear, pn_data_copy, \
     pn_data_decode, pn_data_dump, pn_data_encode, pn_data_encoded_size, pn_data_enter, pn_data_error, pn_data_exit, \
@@ -703,11 +702,7 @@ class Data:
     def _check(self, err: int) -> int:
         if err < 0:
             exc = EXCEPTIONS.get(err, DataException)
-            raise exc("[%s]: %s" % (
-                err,
-                ffi.string(pn_error_text(pn_data_error(self._data))).decode('utf8')
-            )
-        )
+            raise exc("[%s]: %s" % (err, pn_error_text(pn_data_error(self._data))))
         else:
             return err
 
@@ -776,7 +771,7 @@ class Data:
         return pn_data_exit(self._data)
 
     def lookup(self, name: str) -> bool:
-        return pn_data_lookup(self._data, name.encode())
+        return pn_data_lookup(self._data, name)
 
     def narrow(self) -> None:
         """
@@ -813,23 +808,22 @@ class Data:
         """
         return pn_data_encoded_size(self._data)
 
-    def encode(self) -> bytes:
+    def encode(self):
         """
         Returns a binary representation of the data encoded in AMQP format.
 
         :return: The encoded data
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        sz = 1024
+        size = 1024
         while True:
-            dst = ffi.new('char *[]', sz)
-            encoded_size = pn_data_encode(self._data, dst, sz)
-            if encoded_size == PN_OVERFLOW:
-                sz *= 2
-            elif encoded_size >= 0:
-                return ffi.buffer(dst, encoded_size)
+            cd, enc = pn_data_encode(self._data, size)
+            if cd == PN_OVERFLOW:
+                size *= 2
+            elif cd >= 0:
+                return enc
             else:
-                self._check(encoded_size)
+                self._check(cd)
 
     def decode(self, data: bytes) -> int:
         """
@@ -1083,11 +1077,7 @@ class Data:
         :param d: a decimal128 value encoded in a 16-byte binary value.
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        pn_decimal128 = ffi.new('pn_decimal128_t *')
-        pn_decimal128.bytes = d
-        self._check(
-            pn_data_put_decimal128(self._data, pn_decimal128[0])
-        )
+        self._check(pn_data_put_decimal128(self._data, d))
 
     def put_uuid(self, u: uuid.UUID) -> None:
         """
@@ -1096,9 +1086,7 @@ class Data:
         :param u: a uuid value.
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        pn_uuid = ffi.new('pn_uuid_t *')
-        pn_uuid.bytes = u.bytes
-        self._check(pn_data_put_uuid(self._data, pn_uuid[0]))
+        self._check(pn_data_put_uuid(self._data, u.bytes))
 
     def put_binary(self, b: bytes) -> None:
         """
@@ -1107,7 +1095,7 @@ class Data:
         :param b: a binary value
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        self._check(pn_data_put_binary(self._data, pn_bytes(len(b), b)))
+        self._check(pn_data_put_binary(self._data, b))
 
     def put_memoryview(self, mv: memoryview) -> None:
         """
@@ -1134,9 +1122,7 @@ class Data:
         :param s: a unicode string
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        pnbytes = pn_bytes(len(s), s.encode("utf8"))
-        self._check(pn_data_put_string(self._data, pnbytes))
-
+        self._check(pn_data_put_string(self._data, s.encode("utf8")))
 
     def put_symbol(self, s: Union[str, symbol]) -> None:
         """
@@ -1145,8 +1131,7 @@ class Data:
         :param s: the symbol name
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        pnbytes = pn_bytes(len(s), s.encode('ascii'))
-        self._check(pn_data_put_symbol(self._data, pnbytes))
+        self._check(pn_data_put_symbol(self._data, s.encode('ascii')))
 
     def get_list(self) -> int:
         """
@@ -1371,7 +1356,7 @@ class Data:
 
         :return: If the current node is a decimal128, its value, 0 otherwise.
         """
-        return decimal128(ffi.string(pn_data_get_decimal128(self._data).bytes))
+        return decimal128(pn_data_get_decimal128(self._data))
 
     def get_uuid(self) -> Optional[uuid.UUID]:
         """
@@ -1380,9 +1365,7 @@ class Data:
         :return: If the current node is a UUID, its value, ``None`` otherwise.
         """
         if pn_data_type(self._data) == Data.UUID:
-            return uuid.UUID(
-                bytes=bytes(ffi.buffer(pn_data_get_uuid(self._data).bytes))
-            )
+            return uuid.UUID(bytes=pn_data_get_uuid(self._data))
         else:
             return None
 
@@ -1392,8 +1375,7 @@ class Data:
 
         :return: If the current node is binary, its value, ``b""`` otherwise.
         """
-        pn_bytes = pn_data_get_binary(self._data)
-        return ffi.buffer(pn_bytes.start, pn_bytes.size)[:]
+        return pn_data_get_binary(self._data)
 
     def get_string(self) -> str:
         """
@@ -1401,8 +1383,7 @@ class Data:
 
         :return: If the current node is a string, its value, ``""`` otherwise.
         """
-        pn_bytes = pn_data_get_string(self._data)
-        return ffi.string(pn_bytes.start, pn_bytes.size).decode("utf8")
+        return pn_data_get_string(self._data).decode("utf8")
 
     def get_symbol(self) -> symbol:
         """
@@ -1432,17 +1413,15 @@ class Data:
         :return: A Formatted string containing contents of this :class:`Data` object.
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        size = 16
+        sz = 16
         while True:
-            buffer = ffi.new('char []', size)
-            sz = ffi.new('size_t *', size)
-            err = pn_data_format(self._data, buffer, sz)
+            err, result = pn_data_format(self._data, sz)
             if err == PN_OVERFLOW:
-                size *= 2
+                sz *= 2
                 continue
             else:
                 self._check(err)
-                return ffi.buffer(buffer, sz[0])
+                return result
 
     def dump(self) -> None:
         """

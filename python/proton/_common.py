@@ -57,9 +57,6 @@ def unicode2utf8(string: Optional[str]) -> Optional[str]:
     elif isinstance(string, str):
         # The swig binding converts py3 str -> utf8 char* and back automatically
         return string
-    elif isinstance(string, unicode):
-        # This must be python2 unicode as we already detected py3 str above
-        return string.encode('utf-8')
     elif isinstance(string, ffi.CData):
         return ffi.string(string)
     # Anything else illegal - specifically python3 bytes
@@ -78,4 +75,4 @@ def utf82unicode(string: Optional[Union[str, bytes]]) -> Optional[str]:
         # ffi.string return bytes for cdata type <check this comment pleaseeeeeeeeeeeeeeeeeeee>
         return ffi.string(string).decode()
 
-    raise TypeError("Unrecognized string type", string)
+    raise TypeError(f"Unrecognized string type: {string!r} ({type(string)})", string)
