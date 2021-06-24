@@ -70,30 +70,21 @@ def unicode2utf8(string):
     if string is None or string == ffi.NULL:
         return None
     elif isinstance(string, str):
-        # Must be py2 or py3 str
-        # The swig binding converts py3 str -> utf8 char* and back sutomatically
         return string
-    elif isinstance(string, unicode):
-        # This must be python2 unicode as we already detected py3 str above
-        return string.encode('utf-8')
-    elif isinstance(string, ffi.CData):
-        return ffi.string(string)
     # Anything else illegal - specifically python3 bytes
-    raise TypeError("Unrecognized string type: %r (%s)" % (string, type(string)))
+    raise TypeError(f"Unrecognized string type: {string!r} ({type(string)})")
 
 
 def utf82unicode(string):
     """Convert C strings returned from proton-c into python unicode"""
     if string is None or string == ffi.NULL:
         return None
-    elif isinstance(string, unicode):
-        # py2 unicode, py3 str (via hack definition)
+    elif isinstance(string, str):
         return string
     elif isinstance(string, bytes):
-        # py2 str (via hack definition), py3 bytes
         return string.decode('utf8')
     elif isinstance(string, ffi.CData):
         # ffi.string return bytes for cdata type <check this comment pleaseeeeeeeeeeeeeeeeeeee>
         return ffi.string(string).decode()
 
-    raise TypeError("Unrecognized string type", string)
+    raise TypeError(f"Unrecognized string type: {string!r} ({type(string)})", string)

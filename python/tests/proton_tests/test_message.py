@@ -22,7 +22,6 @@ from __future__ import absolute_import
 from uuid import uuid4
 from sys import version_info
 
-from _proton_core import ffi
 from proton import *
 
 import common
@@ -45,7 +44,6 @@ class AccessorsTest(Test):
         for v in values:
             setattr(self.msg, name, v)
             gotten = getattr(self.msg, name)
-
             assert gotten == v, (gotten, v)
 
     def _test_symbol(self, name):
@@ -204,6 +202,7 @@ class CodecTest(Test):
     def testAnnotationsSymbolicAndUlongKey(self, a={symbol('one'): 1, 'two': 2, ulong(3): 'three'}):
         self.msg.annotations = a
         data = self.msg.encode()
+
         msg2 = Message()
         msg2.decode(data)
         # both keys must be symbols
@@ -253,11 +252,14 @@ class CodecTest(Test):
     def testCreationEncodeAsNull(self):
         self.msg.group_id = "A"  # Force creation and expiry fields to be present
         data = self.msg.encode()
+
         decoder = Data()
+
         # Skip past the headers
         consumed = decoder.decode(data)
         decoder.clear()
         data = data[consumed:]
+
         decoder.decode(data)
         dproperties = decoder.get_py_described()
         # Check we've got the correct described list
@@ -317,7 +319,6 @@ class CodecTest(Test):
 
         # The same message with LIST8s instead
         data = b'\x00\x53\x70\xc0\x07\x05\x42\x40\x40\x42\x52\x00\x00\x53\x73\xc0\x0f\x0d\x40\x40\x40\x40\x40\x40\x40\x40\x40\x40\x40\x52\x00\x40'
-
         msg3 = Message()
         msg3.decode(data)
         assert msg2.expiry_time == 0, (msg2.expiry_time)
@@ -355,7 +356,6 @@ class CodecTest(Test):
 
         # The same message with LIST8s instead
         data = b'\x00\x53\x70\xc0\x07\x05\x42\x40\x40\x42\x52\x00\x00\x53\x73\xc0\x1f\x0d\x40\x40\x40\x40\x40\x40\x40\x40\x83\x00\x00\x00\x00\x00\x00\x00\x00\x83\x00\x00\x00\x00\x00\x00\x00\x00\x40\x52\x00\x40'
-
         msg3 = Message()
         msg3.decode(data)
         assert msg3.priority == 4, (msg3.priority)
