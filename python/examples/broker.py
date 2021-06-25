@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -21,8 +21,6 @@
 import collections
 import optparse
 import uuid
-
-import unittest
 
 from proton import Endpoint
 from proton.handlers import MessagingHandler

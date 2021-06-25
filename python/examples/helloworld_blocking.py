@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,10 +18,8 @@
 # under the License.
 #
 
-from __future__ import print_function
 from proton import Message
 from proton.utils import BlockingConnection
-from proton.handlers import IncomingMessageHandler
 
 conn = BlockingConnection("localhost:5672")
 receiver = conn.create_receiver("examples")

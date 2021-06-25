@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -23,13 +23,9 @@ Demonstrates the client side of the synchronous request-response pattern
 (also known as RPC or Remote Procedure Call) using proton.
 
 """
-from __future__ import print_function, unicode_literals
-
 import optparse
-from proton import Message, Url, ConnectionException, Timeout
+from proton import Message, Url
 from proton.utils import SyncRequestResponse, BlockingConnection
-from proton.handlers import IncomingMessageHandler
-import sys
 
 parser = optparse.OptionParser(usage="usage: %prog [options]",
                                description="Send requests to the supplied address and print responses.")

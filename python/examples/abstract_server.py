@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,8 +17,6 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-
-from __future__ import print_function
 
 from proton_server import Server
 

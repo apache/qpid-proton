@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,13 +18,8 @@
 # under the License.
 #
 
-from __future__ import print_function, unicode_literals
 import optparse
-import time
-try:
-    import Queue
-except ImportError:
-    import queue as Queue
+import queue
 
 
 from proton import Message
@@ -41,7 +36,7 @@ class Send(MessagingHandler):
         self.sent = 0
         self.confirmed = 0
         self.load_count = 0
-        self.records = Queue.Queue(maxsize=50)
+        self.records = queue.Queue(maxsize=50)
         self.target = count
         self.db = Db("src_db", EventInjector())
 

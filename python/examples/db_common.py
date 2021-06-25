@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,12 +18,9 @@
 # under the License.
 #
 
-try:
-    import Queue
-except ImportError:
-    import queue as Queue
 
 import sqlite3
+import queue
 import threading
 
 
@@ -31,7 +28,7 @@ class Db(object):
     def __init__(self, db, injector):
         self.db = db
         self.injector = injector
-        self.tasks = Queue.Queue()
+        self.tasks = queue.Queue()
         self.position = None
         self.pending_events = []
         self.running = True
@@ -111,7 +108,7 @@ class Db(object):
                     while True:
                         f(conn)
                         f = self.tasks.get(False)
-                except Queue.Empty:
+                except queue.Empty:
                     pass
                 conn.commit()
                 for event in self.pending_events:

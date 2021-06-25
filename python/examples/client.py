@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,11 +18,10 @@
 # under the License.
 #
 
-from __future__ import print_function, unicode_literals
 import optparse
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties
+from proton.reactor import Container
 
 
 class Client(MessagingHandler):
