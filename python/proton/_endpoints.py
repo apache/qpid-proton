@@ -1297,8 +1297,21 @@ class Sender(Link):
         have a ``send()`` method on it that takes the sender and an optional
         tag as arguments.
 
+        The available credit count :attr:`Sender.credit` is decremented
+        immediately by 1 when the invocation has finished.
+
+        Message is registered for delivery but will be send eventually over the
+        wire when credit is available and the link is active. Will be buffered
+        until then.
+
         Where the object is a :class:`Message`, this will send the message over
         this link, creating a new delivery for the purpose.
+
+        :param tag: Use specified delivery tag is available. May be used in case
+            the message is retried and send again.
+        :type tag: ``bytes``
+        :param obj: The object to send.
+        :type obj: :class:`Message` or ``binary``
         """
         if hasattr(obj, 'send'):
             return obj.send(self, tag=tag)

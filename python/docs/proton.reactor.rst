@@ -11,7 +11,9 @@ Module Summary
 
 +---------------------------+----------------------------------------------------------------------------------------------------+
 | :class:`Container`        | A representation of the AMQP concept of a ‘container’, which loosely speaking is something that    |
-|                           | establishes links to or from another container, over which messages are transfered.                |
+|                           | establishes links to or from another container, over which messages are transferred. This class    |
+|                           | is NOT threadsafe. The :class:`EventInjector` class may be used for communication with external    |
+|                           | threads.                                                                                           |
 +---------------------------+----------------------------------------------------------------------------------------------------+
 | :class:`ApplicationEvent` | Application defined event, which can optionally be associated with an engine object and or an      |
 |                           | arbitrary subject.                                                                                 |
