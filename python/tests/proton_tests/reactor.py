@@ -636,6 +636,55 @@ class ContainerTest(Test):
         assert client_handler.connect_failed
         assert client_handler.server_addr is None, client_handler.server_addr
 
+    class _ClosingServerHandler(MessagingHandler):
+        def __init__(self, host):
+            super().__init__()
+            self.host = host
+            self.port = free_tcp_port()
+            self.client_addr = None
+            self.peer_hostname = None
+            self.closed = None
+            self.listener = None
+
+        def on_connection_opened(self, event):
+            self.client_addr = event.connected_address
+            self.peer_hostname = event.connection.remote_hostname
+            event.connection.close()
+            self.listener.close()
+
+        def on_connection_closed(self, event):
+            assert not self.closed
+            self.closed = True
+
+        def listen(self, container):
+            self.listener = container.listen("%s:%s" % (self.host, self.port))
+
+    class _ClosedClientHandler(MessagingHandler):
+        def __init__(self):
+            super().__init__()
+            self.server_addr = None
+            self.closed = None
+
+        def on_connection_opened(self, event):
+            self.server_addr = event.connected_address
+
+        def on_connection_closing(self, event):
+            event.connection.close()
+
+        def on_connection_closed(self, event):
+            assert not self.closed
+            self.closed = True
+
+    def test_closed_event(self):
+        server_handler = ContainerTest._ClosingServerHandler("localhost")
+        client_handler = ContainerTest._ClosedClientHandler()
+        container = Container(server_handler)
+        server_handler.listen(container)
+        container.connect(url="localhost:%s" % server_handler.port,
+                          handler=client_handler, reconnect=False)
+        container.run()
+        assert server_handler.closed
+        assert client_handler.closed
 
 class SelectorTest(Test):
     """Test the Selector"""

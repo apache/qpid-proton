@@ -406,6 +406,10 @@ class EndpointStateHandler(Handler):
             self.on_link_closing(event)
         event.link.close()
 
+    def on_link_local_close(self, event: Event) -> None:
+        if self.is_remote_closed(event.link):
+            self.on_link_closed(event)
+
     def on_session_remote_close(self, event: Event) -> None:
         if event.session.remote_condition:
             self.on_session_error(event)
@@ -414,6 +418,10 @@ class EndpointStateHandler(Handler):
         else:
             self.on_session_closing(event)
         event.session.close()
+
+    def on_session_local_close(self, event: Event) -> None:
+        if self.is_remote_closed(event.session):
+            self.on_session_closed(event)
 
     def on_connection_remote_close(self, event: Event) -> None:
         if event.connection.remote_condition:
@@ -427,6 +435,10 @@ class EndpointStateHandler(Handler):
         else:
             self.on_connection_closing(event)
         event.connection.close()
+
+    def on_connection_local_close(self, event: Event) -> None:
+        if self.is_remote_closed(event.connection):
+            self.on_connection_closed(event)
 
     def on_connection_local_open(self, event: Event) -> None:
         if self.is_remote_open(event.connection):
