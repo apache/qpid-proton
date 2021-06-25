@@ -17,6 +17,7 @@
 # under the License.
 #
 
+from __future__ import annotations
 from typing import Any, Callable, Optional, Union
 
 # from cproton import pn_incref, pn_decref, \
@@ -25,7 +26,8 @@ from typing import Any, Callable, Optional, Union
 #     PN_PYREF
 
 from _proton_core import ffi
-from _proton_core.lib import pn_incref, pn_decref, \
+from ._cproton import pn_incref, pn_decref, \
+    pn_py2void, pn_void2py, \
     pn_record_get, pn_record_def, pn_record_set, \
     PN_PYREF, pn_record
 

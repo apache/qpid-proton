@@ -21,10 +21,10 @@ from __future__ import absolute_import
 
 import os
 import gc
+import common
 from time import time, sleep
 from proton import *
 from proton.reactor import Container
-import common
 from common import pump, Skipped
 
 
