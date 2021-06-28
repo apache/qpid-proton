@@ -22,7 +22,7 @@ from __future__ import absolute_import
 
 import os
 
-from .common import Test, Skipped, free_tcp_ports, \
+from common import Test, Skipped, free_tcp_ports, \
     MessengerReceiverC, MessengerSenderC, \
     ReactorReceiverC, ReactorSenderC, \
     isSSLPresent

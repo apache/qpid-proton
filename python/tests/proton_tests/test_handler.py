@@ -26,7 +26,7 @@ import traceback
 from proton import *
 from proton.reactor import Container
 
-from . import common
+import common
 
 CUSTOM = EventType("custom")
 

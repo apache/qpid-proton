@@ -23,7 +23,7 @@ import os
 
 from proton import *
 
-from . import common
+import common
 
 
 def find_test_interop_dir():
