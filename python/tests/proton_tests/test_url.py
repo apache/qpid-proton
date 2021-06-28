@@ -21,7 +21,7 @@ from __future__ import absolute_import
 
 from proton import Url
 
-from . import common
+import common
 
 
 class UrlTest(common.Test):
