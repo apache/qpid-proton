@@ -26,7 +26,7 @@ from _proton_core import ffi
 from ._cproton import pn_incref, pn_decref, \
     pn_py2void, pn_void2py, \
     pn_record_get, pn_record_def, pn_record_set, \
-    PN_PYREF, pn_record
+    PN_PYREF
 
 from ._exceptions import ProtonException
 
