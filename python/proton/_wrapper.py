@@ -72,7 +72,7 @@ class Wrapper(object):
             get_context: Optional[Callable[[Any], Any]] = None,
     ) -> None:
         init = False
-        if callable(impl_or_constructor):
+        if callable(impl_or_constructor) and not isinstance(impl_or_constructor, ffi.CData):
             # we are constructing a new object
             impl = impl_or_constructor()
             if impl is None:
