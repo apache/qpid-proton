@@ -86,9 +86,9 @@ class Wrapper(object):
             attrs = pn_record_get(record, PYCTX)
             if attrs is None or attrs == ffi.NULL:
                 attrs = {}
-                attrs = ffi.new_handle({})
+                _attrs = ffi.new_handle({})
                 pn_record_def(record, PYCTX, PN_PYREF)
-                pn_record_set(record, PYCTX, attrs)
+                pn_record_set(record, PYCTX, _attrs)
                 init = True
         else:
             attrs = EMPTY_ATTRS
