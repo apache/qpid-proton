@@ -65,7 +65,7 @@ class Wrapper(object):
 
     def __init__(self, impl_or_constructor, get_context=None):
         init = False
-        if callable(impl_or_constructor):
+        if callable(impl_or_constructor) and not isinstance(impl_or_constructor, ffi.CData):
             # we are constructing a new object
             impl = impl_or_constructor()
             if impl is None:
