@@ -840,10 +840,43 @@ def run_cffi_compile(output_file):
         #include <proton/disposition.h>
         #include <proton/delivery.h>
 
+        extern const pn_class_t PN_PYREF[];
+
+        #define CID_pn_pyref CID_pn_void
+        #define pn_pyref_new NULL
+        #define pn_pyref_initialize NULL
+        #define pn_pyref_finalize NULL
+        #define pn_pyref_free NULL
+        #define pn_pyref_hashcode pn_void_hashcode
+        #define pn_pyref_compare pn_void_compare
+        #define pn_pyref_inspect pn_void_inspect
+
+  static void pn_pyref_incref(void *object) {
+    PyObject* p = (PyObject*) object;
+    // SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    //Py_XINCREF(p);
+    // SWIG_PYTHON_THREAD_END_BLOCK;
+  }
+
+  static void pn_pyref_decref(void *object) {
+    PyObject* p = (PyObject*) object;
+    // SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    //Py_XDECREF(p);
+    // SWIG_PYTHON_THREAD_END_BLOCK;
+  }
+
+  static int pn_pyref_refcount(void *object) {
+    return 1;
+  }
+
+  static const pn_class_t *pn_pyref_reify(void *object) {
+    return PN_PYREF;
+  }
+
         static const char _PN_HANDLE_PNI_PYTRACER;
         static const pn_handle_t PNI_PYTRACER = (pn_handle_t) &_PN_HANDLE_PNI_PYTRACER; 
 
-        const pn_class_t PN_PYREF[];
+        const pn_class_t PN_PYREF[] = {PN_METACLASS(pn_pyref)};
 
         #define PN_LEGCTX (pn_handle_t 0)
 
@@ -897,7 +930,7 @@ def run_cffi_compile(output_file):
     ffi_builder.cdef(
       """
 
-      const pn_class_t PN_PYREF[];
+      extern const pn_class_t PN_PYREF[];
 
 
       static const char _PN_HANDLE_PNI_PYTRACER;
