@@ -177,6 +177,7 @@ typedef struct pconnection_t {
   uv_timer_t timer;
   uv_write_t write;
   size_t writing;               /* size of pending write request, 0 if none pending */
+  bool read_started;
   uv_shutdown_t shutdown;
 
   /* Locked for thread-safe access */
@@ -936,9 +937,12 @@ static bool leader_process_pconnection(pconnection_t *pc) {
           uv_shutdown(&pc->shutdown, (uv_stream_t*)&pc->tcp, NULL);
         }
       }
-      if (!err && rbuf.size > 0) {
+      if (!err && !pc->read_started && rbuf.size > 0) {
         what = "read";
         err = uv_read_start((uv_stream_t*)&pc->tcp, alloc_read_buffer, on_read);
+        if (!err) {
+          pc->read_started = true;
+        }
       }
       if (err) {
         /* Some IO requests failed, generate the error events */
@@ -952,7 +956,10 @@ static bool leader_process_pconnection(pconnection_t *pc) {
 /* Detach a connection from the UV loop so it can be used safely by a worker */
 void pconnection_detach(pconnection_t *pc) {
   if (pc->connected && !pc->writing) {           /* Can't detach while a write is pending */
-    uv_read_stop((uv_stream_t*)&pc->tcp);
+    if (pc->read_started) {
+      uv_read_stop((uv_stream_t*)&pc->tcp);
+      pc->read_started = false;
+    }
     uv_timer_stop(&pc->timer);
   }
 }
