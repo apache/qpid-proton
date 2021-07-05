@@ -17,34 +17,35 @@
 # under the License.
 #
 
+from typing import Optional, Union, Any
 
 
-def isinteger(value):
-    return isinstance(value, (int, long))
+def isinteger(value: Any) -> bool:
+    return isinstance(value, int)
 
 
-def isstring(value):
-    return isinstance(value, (str, unicode))
+def isstring(value: Any) -> bool:
+    return isinstance(value, str)
 
 
 class Constant(object):
 
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         self.name = name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.name
 
 
-def secs2millis(secs):
-    return long(secs * 1000)
+def secs2millis(secs: Union[float, int]) -> int:
+    return int(secs * 1000)
 
 
-def millis2secs(millis):
+def millis2secs(millis: int) -> float:
     return float(millis) / 1000.0
 
 
-def unicode2utf8(string):
+def unicode2utf8(string: Optional[str]) -> Optional[str]:
     """Some Proton APIs expect a null terminated string. Convert python text
     types to UTF8 to avoid zero bytes introduced by other multi-byte encodings.
     This method will throw if the string cannot be converted.
@@ -58,7 +59,7 @@ def unicode2utf8(string):
     raise TypeError("Unrecognized string type: %r (%s)" % (string, type(string)))
 
 
-def utf82unicode(string):
+def utf82unicode(string: Optional[Union[str, bytes]]) -> Optional[str]:
     """Convert C strings returned from proton-c into python unicode"""
     if string is None:
         return None
