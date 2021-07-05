@@ -32,22 +32,28 @@ from ._condition import cond2obj, obj2cond
 from ._data import dat2obj, obj2dat
 from ._wrapper import Wrapper
 
+from typing import Dict, List, Optional, Type, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from ._condition import Condition
+    from ._endpoints import Receiver, Sender  # circular import
+    from ._reactor import Connection, Session, Transport
+
 
 class NamedInt(int):
-    values = {}  # type: Dict[int, str]  # noqa  # TODO(PROTON-2323) typing.Dict is not available on Python 2.7
+    values: Dict[int, str] = {}
 
     def __new__(cls, i, name):
         ni = super(NamedInt, cls).__new__(cls, i)
         cls.values[i] = ni
         return ni
 
-    def __init__(self, i, name):
+    def __init__(self, i: int, name: str) -> None:
         self.name = name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.name
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     @classmethod
@@ -311,7 +317,7 @@ class Delivery(Wrapper):
     def __init__(self, impl):
         Wrapper.__init__(self, impl, pn_delivery_attachments)
 
-    def _init(self):
+    def _init(self) -> None:
         self.local = Disposition(pn_delivery_local(self._impl), True)
         self.remote = Disposition(pn_delivery_remote(self._impl), False)
 
@@ -325,43 +331,36 @@ class Delivery(Wrapper):
         return pn_delivery_tag(self._impl)
 
     @property
-    def writable(self):
+    def writable(self) -> bool:
         """
         ``True`` for an outgoing delivery to which data can now be written,
         ``False`` otherwise..
-
-        :type: ``bool``
         """
         return pn_delivery_writable(self._impl)
 
     @property
-    def readable(self):
+    def readable(self) -> bool:
         """
         ``True`` for an incoming delivery that has data to read,
         ``False`` otherwise..
-
-        :type: ``bool``
         """
         return pn_delivery_readable(self._impl)
 
     @property
-    def updated(self):
+    def updated(self) -> bool:
         """
         ``True`` if the state of the delivery has been updated
         (e.g. it has been settled and/or accepted, rejected etc),
         ``False`` otherwise.
-
-        :type: ``bool``
         """
         return pn_delivery_updated(self._impl)
 
-    def update(self, state):
+    def update(self, state: Union[int, DispositionType]) -> None:
         """
         Set the local state of the delivery e.g. :const:`ACCEPTED`,
         :const:`REJECTED`, :const:`RELEASED`.
 
         :param state: State of delivery
-        :type state: ``int``
         """
         obj2dat(self.local._data, pn_disposition_data(self.local._impl))
         obj2dat(self.local._annotations, pn_disposition_annotations(self.local._impl))
@@ -369,21 +368,17 @@ class Delivery(Wrapper):
         pn_delivery_update(self._impl, state)
 
     @property
-    def pending(self):
+    def pending(self) -> int:
         """
         The amount of pending message data for a delivery.
-
-        :type: ``int``
         """
         return pn_delivery_pending(self._impl)
 
     @property
-    def partial(self):
+    def partial(self) -> bool:
         """
         ``True`` for an incoming delivery if not all the data is
         yet available, ``False`` otherwise.
-
-        :type: ``bool``
         """
         return pn_delivery_partial(self._impl)
 
@@ -407,16 +402,14 @@ class Delivery(Wrapper):
         return DispositionType.get(pn_delivery_remote_state(self._impl))
 
     @property
-    def settled(self):
+    def settled(self) -> bool:
         """
         ``True`` if the delivery has been settled by the remote peer,
         ``False`` otherwise.
-
-        :type: ``bool``
         """
         return pn_delivery_settled(self._impl)
 
-    def settle(self):
+    def settle(self) -> None:
         """
         Settles the delivery locally. This indicates the application
         considers the delivery complete and does not wish to receive any
@@ -425,15 +418,13 @@ class Delivery(Wrapper):
         pn_delivery_settle(self._impl)
 
     @property
-    def aborted(self):
+    def aborted(self) -> bool:
         """
         ``True`` if the delivery has been aborted, ``False`` otherwise.
-
-        :type: ``bool``
         """
         return pn_delivery_aborted(self._impl)
 
-    def abort(self):
+    def abort(self) -> None:
         """
         Aborts the delivery.  This indicates the application wishes to
         invalidate any data that may have already been sent on this delivery.
@@ -442,51 +433,41 @@ class Delivery(Wrapper):
         pn_delivery_abort(self._impl)
 
     @property
-    def work_next(self):
+    def work_next(self) -> Optional['Delivery']:
         """Deprecated: use on_message(), on_accepted(), on_rejected(),
         on_released(), and on_settled() instead.
 
         The next :class:`Delivery` on the connection that has pending
         operations.
-
-        :type: :class:`Delivery`
         """
         return Delivery.wrap(pn_work_next(self._impl))
 
     @property
-    def link(self):
+    def link(self) -> Union[Receiver, Sender]:
         """
         The :class:`Link` on which the delivery was sent or received.
-
-        :type: :class:`Link`
         """
         from . import _endpoints
         return _endpoints.Link.wrap(pn_delivery_link(self._impl))
 
     @property
-    def session(self):
+    def session(self) -> Session:
         """
         The :class:`Session` over which the delivery was sent or received.
-
-        :type: :class:`Session`
         """
         return self.link.session
 
     @property
-    def connection(self):
+    def connection(self) -> Connection:
         """
         The :class:`Connection` over which the delivery was sent or received.
-
-        :type: :class:`Connection`
         """
         return self.session.connection
 
     @property
-    def transport(self):
+    def transport(self) -> Transport:
         """
         The :class:`Transport` bound to the :class:`Connection` over which
         the delivery was sent or received.
-
-        :type: :class:`Transport`
         """
         return self.connection.transport
