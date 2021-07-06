@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 import threading
 
 from cproton import PN_CONNECTION_BOUND, PN_CONNECTION_FINAL, PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_CLOSE, \
@@ -35,40 +33,49 @@ from cproton import PN_CONNECTION_BOUND, PN_CONNECTION_FINAL, PN_CONNECTION_INIT
 from ._delivery import Delivery
 from ._endpoints import Connection, Link, Session
 from ._transport import Transport
+from typing import Any, List, Optional, Union, TYPE_CHECKING, Callable
+
+if TYPE_CHECKING:
+    from ._reactor import Container
+    from ._delivery import Delivery
+    from ._endpoints import Connection, Receiver, Sender, Session
+    from ._handlers import ConnectSelectable
+    from ._selectable import Selectable
+    from ._transport import Transport
 
 
 class Collector:
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._impl = pn_collector()
 
     def put(self, obj, etype):
         pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype.number)
 
-    def peek(self):
+    def peek(self) -> Optional['Event']:
         return Event.wrap(pn_collector_peek(self._impl))
 
-    def more(self):
+    def more(self) -> bool:
         return pn_collector_more(self._impl)
 
-    def pop(self):
+    def pop(self) -> None:
         ev = self.peek()
         pn_collector_pop(self._impl)
 
-    def release(self):
+    def release(self) -> None:
         pn_collector_release(self._impl)
 
-    def __del__(self):
+    def __del__(self) -> None:
         pn_collector_free(self._impl)
         del self._impl
 
 
 if "TypeExtender" not in globals():
     class TypeExtender:
-        def __init__(self, number):
+        def __init__(self, number: int) -> None:
             self.number = number
 
-        def next(self):
+        def next(self) -> int:
             try:
                 return self.number
             finally:
@@ -88,7 +95,7 @@ class EventType(object):
     _extended = TypeExtender(10000)
     TYPES = {}
 
-    def __init__(self, name=None, number=None, method=None):
+    def __init__(self, name: Optional[str] = None, number: Optional[int] = None, method: Optional[str] = None) -> None:
         if name is None and number is None:
             raise TypeError("extended events require a name")
         try:
@@ -127,7 +134,7 @@ def _dispatch(handler, method, *args):
 
 class EventBase(object):
 
-    def __init__(self, type):
+    def __init__(self, type: EventType) -> None:
         self._type = type
 
     @property
@@ -164,15 +171,15 @@ class EventBase(object):
             for h in handler.handlers:
                 self.dispatch(h, type)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "%s(%r)" % (self._type, self.context)
 
 
-def _core(number, method):
+def _core(number: int, method: str) -> EventType:
     return EventType(number=number, method=method)
 
 
-def _internal(name):
+def _internal(name: str) -> EventType:
     return EventType(name=name)
 
 
@@ -458,7 +465,7 @@ class Event(EventBase):
             self._transport = Transport.wrap(pn_event_transport(impl))
 
     @property
-    def clazz(self):
+    def clazz(self) -> str:
         """
         The name of the class associated with the event context.
 
@@ -515,14 +522,14 @@ class Event(EventBase):
         return h
 
     @property
-    def reactor(self):
+    def reactor(self) -> Container:
         """
         **Deprecated** - The :class:`reactor.Container` (was reactor) associated with the event.
         """
         return self.container
 
     @property
-    def container(self):
+    def container(self) -> Container:
         """
         The :class:`reactor.Container` associated with the event.
         """
@@ -542,54 +549,44 @@ class Event(EventBase):
         return getattr(c, name, None)
 
     @property
-    def transport(self):
+    def transport(self) -> Optional[Transport]:
         """
         The transport associated with the event, or ``None`` if none
         is associated with it.
-
-        :type: :class:`Transport`
         """
         return self._transport
 
     @property
-    def connection(self):
+    def connection(self) -> Optional[Connection]:
         """
         The connection associated with the event, or ``None`` if none
         is associated with it.
-
-        :type: :class:`Connection`
         """
         return self._connection
 
     @property
-    def session(self):
+    def session(self) -> Optional[Session]:
         """
         The session associated with the event, or ``None`` if none
         is associated with it.
-
-        :type: :class:`Session`
         """
         return self._session
 
     @property
-    def link(self):
+    def link(self) -> Optional[Union[Receiver, Sender]]:
         """
         The link associated with the event, or ``None`` if none
         is associated with it.
-
-        :type: :class:`Link`
         """
         return self._link
 
     @property
-    def sender(self):
+    def sender(self) -> Optional[Sender]:
         """
         The sender link associated with the event, or ``None`` if
         none is associated with it. This is essentially an alias for
         link(), that does an additional check on the type of the
         link.
-
-        :type: :class:`Sender` (**<-- CHECK!**)
         """
         l = self.link
         if l and l.is_sender:
@@ -598,13 +595,11 @@ class Event(EventBase):
             return None
 
     @property
-    def receiver(self):
+    def receiver(self) -> Optional[Receiver]:
         """
         The receiver link associated with the event, or ``None`` if
         none is associated with it. This is essentially an alias for
         link(), that does an additional check on the type of the link.
-
-        :type: :class:`Receiver` (**<-- CHECK!**)
         """
         l = self.link
         if l and l.is_receiver:
@@ -613,12 +608,10 @@ class Event(EventBase):
             return None
 
     @property
-    def delivery(self):
+    def delivery(self) -> Optional[Delivery]:
         """
         The delivery associated with the event, or ``None`` if none
         is associated with it.
-
-        :type: :class:`Delivery`
         """
         return self._delivery
 
@@ -649,13 +642,12 @@ class Handler(object):
         """
         self.handlers.append(handler)
 
-    def on_unhandled(self, method, *args):
+    def on_unhandled(self, method: str, *args) -> None:
         """
         The callback for handling events which are not handled by
         any other handler.
 
         :param method: The name of the intended handler method.
-        :type method: ``str``
         :param args: Arguments for the intended handler method.
         """
         pass
