@@ -23,7 +23,14 @@ import logging
 import re
 import os
 import queue
-from typing import Any, Dict, Iterator, Optional, List, Union, Literal, Callable
+from typing import Any, Dict, Iterator, Optional, List, Union, Callable
+try:
+    from typing import Literal
+except ImportError:
+    class Literal:
+        @classmethod
+        def __class_getitem__(cls, item):
+            pass
 
 import time
 import traceback
