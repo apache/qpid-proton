@@ -86,7 +86,7 @@ class IO(object):
             self._writing = set()
             self._deadline = None
 
-        def add(self, selectable: Selectable) -> None:
+        def add(self, selectable: 'Selectable') -> None:
             self._selectables.add(selectable)
             if selectable.reading:
                 self._reading.add(selectable)
@@ -98,7 +98,7 @@ class IO(object):
                 else:
                     self._deadline = min(selectable.deadline, self._deadline)
 
-        def remove(self, selectable: Selectable) -> None:
+        def remove(self, selectable: 'Selectable') -> None:
             self._selectables.discard(selectable)
             self._reading.discard(selectable)
             self._writing.discard(selectable)
@@ -116,7 +116,7 @@ class IO(object):
                     else:
                         self._deadline = min(sel.deadline, self._deadline)
 
-        def update(self, selectable: Selectable) -> None:
+        def update(self, selectable: 'Selectable') -> None:
             self._reading.discard(selectable)
             self._writing.discard(selectable)
             if selectable.reading:
