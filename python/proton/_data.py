@@ -18,7 +18,13 @@
 #
 
 import uuid
-from typing import Callable, List, Tuple, Union, Optional, Any, Dict, Iterable, overload, Literal, TypeVar
+from typing import Callable, List, Tuple, Union, Optional, Any, Dict, Iterable, overload, TypeVar
+try:
+    from typing import Literal
+except ImportError:
+    class Literal:
+        def __class_getitem__(cls, item):
+            pass
 
 from cproton import PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE, PN_CHAR, PN_DECIMAL128, PN_DECIMAL32, PN_DECIMAL64, \
     PN_DESCRIBED, PN_DOUBLE, PN_FLOAT, PN_INT, PN_LIST, PN_LONG, PN_MAP, PN_NULL, PN_OVERFLOW, PN_SHORT, PN_STRING, \
