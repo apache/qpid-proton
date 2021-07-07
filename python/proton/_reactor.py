@@ -55,14 +55,9 @@ from ._handlers import OutgoingMessageHandler, IOHandler
 from ._io import IO
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from proton._data import Described, symbol
-    from proton._endpoints import Connection, Receiver, Sender, Session
-    from proton._events import Event, EventType, Handler
-    from proton._handlers import ConnectSelectable, IOHandler, TransactionHandler
-    from proton._selectable import Selectable
-    from proton._transport import SSLDomain
-    from proton._url import Url
-    from proton._utils import BlockingConnection
+    from ._endpoints import Receiver, Sender
+    from ._handlers import ConnectSelectable, TransactionHandler
+    from ._utils import BlockingConnection
     from socket import socket
     from uuid import UUID
 
@@ -70,7 +65,7 @@ if TYPE_CHECKING:
 _logger = logging.getLogger("proton")
 
 
-def _generate_uuid() -> UUID:
+def _generate_uuid() -> 'UUID':
     return uuid.uuid4()
 
 
@@ -694,7 +689,7 @@ class SenderOption(LinkOption):
     Abstract class for sender options.
     """
 
-    def apply(self, sender: Sender) -> None:
+    def apply(self, sender: 'Sender') -> None:
         """
         Set the option on the sender.
 
@@ -711,7 +706,7 @@ class ReceiverOption(LinkOption):
     Abstract class for receiver options
     """
 
-    def apply(self, receiver: Receiver) -> None:
+    def apply(self, receiver: 'Receiver') -> None:
         """
         Set the option on the receiver.
 
@@ -765,7 +760,7 @@ class Filter(ReceiverOption):
     def __init__(self, filter_set={}):
         self.filter_set = filter_set
 
-    def apply(self, receiver: Receiver) -> None:
+    def apply(self, receiver: 'Receiver') -> None:
         """
         Set the filter on the specified receiver.
 
@@ -797,7 +792,7 @@ class DurableSubscription(ReceiverOption):
     :const:`proton.Terminus.EXPIRE_NEVER`.
     """
 
-    def apply(self, receiver: Receiver):
+    def apply(self, receiver: 'Receiver'):
         """
         Set durability on the specified receiver.
 
@@ -815,7 +810,7 @@ class Move(ReceiverOption):
     mode to :const:`proton.Terminus.DIST_MODE_MOVE`.
     """
 
-    def apply(self, receiver: Receiver):
+    def apply(self, receiver: 'Receiver'):
         """
         Set message move semantics on the specified receiver.
 
@@ -832,7 +827,7 @@ class Copy(ReceiverOption):
     :const:`proton.Terminus.DIST_MODE_COPY`.
     """
 
-    def apply(self, receiver: Receiver):
+    def apply(self, receiver: 'Receiver'):
         """
         Set message copy semantics on the specified receiver.
 
@@ -1406,7 +1401,7 @@ class Container(Reactor):
             handler: Optional[Handler] = None,
             tags: Optional[Callable[[], bytes]] = None,
             options: Optional[Union[SenderOption, List[SenderOption]]] = None
-    ) -> Sender:
+    ) -> 'Sender':
         """
         Initiates the establishment of a link over which messages can
         be sent.
@@ -1467,7 +1462,7 @@ class Container(Reactor):
             dynamic: bool = False,
             handler: Optional[Handler] = None,
             options: Optional[Union[ReceiverOption, List[ReceiverOption]]] = None
-    ) -> Receiver:
+    ) -> 'Receiver':
         """
         Initiates the establishment of a link over which messages can
         be received (aka a subscription).
@@ -1522,7 +1517,7 @@ class Container(Reactor):
     def declare_transaction(
             self,
             context: Connection,
-            handler: Optional[TransactionHandler] = None,
+            handler: Optional['TransactionHandler'] = None,
             settle_before_discharge: bool = False
     ) -> Transaction:
         """
