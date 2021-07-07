@@ -1400,7 +1400,7 @@ class Container(Reactor):
             name: Optional[str] = None,
             handler: Optional[Handler] = None,
             tags: Optional[Callable[[], bytes]] = None,
-            options: Optional[Union[SenderOption, List[SenderOption]]] = None
+            options: Optional[Union['SenderOption', List['SenderOption']]] = None
     ) -> 'Sender':
         """
         Initiates the establishment of a link over which messages can
