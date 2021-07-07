@@ -17,14 +17,17 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 from cproton import pn_incref, pn_decref, \
     pn_py2void, pn_void2py, \
     pn_record_get, pn_record_def, pn_record_set, \
     PN_PYREF
 
 from ._exceptions import ProtonException
+
+from typing import Any, Callable, Optional, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from ._delivery import Delivery  # circular import
+    from ._transport import SASL, Transport
 
 
 class EmptyAttrs:
@@ -94,26 +97,26 @@ class Wrapper(object):
         if init:
             self._init()
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         attrs = self.__dict__["_attrs"]
         if name in attrs:
             return attrs[name]
         else:
             raise AttributeError(name + " not in _attrs")
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
         if hasattr(self.__class__, name):
             object.__setattr__(self, name, value)
         else:
             attrs = self.__dict__["_attrs"]
             attrs[name] = value
 
-    def __delattr__(self, name):
+    def __delattr__(self, name: str) -> None:
         attrs = self.__dict__["_attrs"]
         if attrs:
             del attrs[name]
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(addressof(self._impl))
 
     def __eq__(self, other):
@@ -121,15 +124,15 @@ class Wrapper(object):
             return addressof(self._impl) == addressof(other._impl)
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         if isinstance(other, Wrapper):
             return addressof(self._impl) != addressof(other._impl)
         return True
 
-    def __del__(self):
+    def __del__(self) -> None:
         pn_decref(self._impl)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s.%s 0x%x ~ 0x%x>' % (self.__class__.__module__,
                                         self.__class__.__name__,
                                         id(self), addressof(self._impl))
