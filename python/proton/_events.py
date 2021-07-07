@@ -37,11 +37,9 @@ from typing import Any, List, Optional, Union, TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
     from ._reactor import Container
-    from ._delivery import Delivery
-    from ._endpoints import Connection, Receiver, Sender, Session
+    from ._endpoints import Receiver, Sender
     from ._handlers import ConnectSelectable
     from ._selectable import Selectable
-    from ._transport import Transport
 
 
 class Collector:
@@ -468,8 +466,6 @@ class Event(EventBase):
     def clazz(self) -> str:
         """
         The name of the class associated with the event context.
-
-        :type: ``str``
         """
         return self._clsname
 
@@ -522,14 +518,14 @@ class Event(EventBase):
         return h
 
     @property
-    def reactor(self) -> Container:
+    def reactor(self) -> 'Container':
         """
         **Deprecated** - The :class:`reactor.Container` (was reactor) associated with the event.
         """
         return self.container
 
     @property
-    def container(self) -> Container:
+    def container(self) -> 'Container':
         """
         The :class:`reactor.Container` associated with the event.
         """
@@ -573,7 +569,7 @@ class Event(EventBase):
         return self._session
 
     @property
-    def link(self) -> Optional[Union[Receiver, Sender]]:
+    def link(self) -> Optional[Union['Receiver', 'Sender']]:
         """
         The link associated with the event, or ``None`` if none
         is associated with it.
@@ -581,7 +577,7 @@ class Event(EventBase):
         return self._link
 
     @property
-    def sender(self) -> Optional[Sender]:
+    def sender(self) -> Optional['Sender']:
         """
         The sender link associated with the event, or ``None`` if
         none is associated with it. This is essentially an alias for
@@ -595,7 +591,7 @@ class Event(EventBase):
             return None
 
     @property
-    def receiver(self) -> Optional[Receiver]:
+    def receiver(self) -> Optional['Receiver']:
         """
         The receiver link associated with the event, or ``None`` if
         none is associated with it. This is essentially an alias for
