@@ -24,6 +24,10 @@ import socket
 import select
 import time
 
+from typing import TYPE_CHECKING, Tuple, List
+
+if TYPE_CHECKING:
+    from proton._selectable import Selectable
 
 PN_INVALID_SOCKET = -1
 
@@ -31,12 +35,12 @@ PN_INVALID_SOCKET = -1
 class IO(object):
 
     @staticmethod
-    def _setupsocket(s):
+    def _setupsocket(s: socket) -> None:
         s.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, True)
         s.setblocking(False)
 
     @staticmethod
-    def close(s):
+    def close(s: socket) -> None:
         s.close()
 
     @staticmethod
@@ -49,7 +53,7 @@ class IO(object):
         return s
 
     @staticmethod
-    def accept(s):
+    def accept(s: socket):
         n = s.accept()
         IO._setupsocket(n[0])
         return n
@@ -70,19 +74,19 @@ class IO(object):
         return select.select(*args, **kwargs)
 
     @staticmethod
-    def sleep(t):
+    def sleep(t: float) -> None:
         time.sleep(t)
         return
 
     class Selector(object):
 
-        def __init__(self):
+        def __init__(self) -> None:
             self._selectables = set()
             self._reading = set()
             self._writing = set()
             self._deadline = None
 
-        def add(self, selectable):
+        def add(self, selectable: Selectable) -> None:
             self._selectables.add(selectable)
             if selectable.reading:
                 self._reading.add(selectable)
@@ -94,17 +98,17 @@ class IO(object):
                 else:
                     self._deadline = min(selectable.deadline, self._deadline)
 
-        def remove(self, selectable):
+        def remove(self, selectable: Selectable) -> None:
             self._selectables.discard(selectable)
             self._reading.discard(selectable)
             self._writing.discard(selectable)
             self.update_deadline()
 
         @property
-        def selectables(self):
+        def selectables(self) -> int:
             return len(self._selectables)
 
-        def update_deadline(self):
+        def update_deadline(self) -> None:
             for sel in self._selectables:
                 if sel.deadline:
                     if self._deadline is None:
@@ -112,7 +116,7 @@ class IO(object):
                     else:
                         self._deadline = min(sel.deadline, self._deadline)
 
-        def update(self, selectable):
+        def update(self, selectable: Selectable) -> None:
             self._reading.discard(selectable)
             self._writing.discard(selectable)
             if selectable.reading:
