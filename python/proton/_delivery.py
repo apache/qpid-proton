@@ -451,21 +451,21 @@ class Delivery(Wrapper):
         return _endpoints.Link.wrap(pn_delivery_link(self._impl))
 
     @property
-    def session(self) -> Session:
+    def session(self) -> 'Session':
         """
         The :class:`Session` over which the delivery was sent or received.
         """
         return self.link.session
 
     @property
-    def connection(self) -> Connection:
+    def connection(self) -> 'Connection':
         """
         The :class:`Connection` over which the delivery was sent or received.
         """
         return self.session.connection
 
     @property
-    def transport(self) -> Transport:
+    def transport(self) -> 'Transport':
         """
         The :class:`Transport` bound to the :class:`Connection` over which
         the delivery was sent or received.
