@@ -133,7 +133,7 @@ class Endpoint(object):
         assert False, "Subclass must override this!"
 
     @property
-    def handler(self) -> Optional[Handler]:
+    def handler(self) -> Optional['Handler']:
         """Handler for events.
 
         :getter: Get the event handler, or return ``None`` if no handler has been set.
@@ -141,7 +141,7 @@ class Endpoint(object):
         return self._handler
 
     @handler.setter
-    def handler(self, handler: Optional[Handler]) -> None:
+    def handler(self, handler: Optional['Handler']) -> None:
         # TODO Hack This is here for some very odd (IMO) backwards compat behaviour
         from ._events import Handler
         if handler is None:
@@ -208,7 +208,7 @@ class Connection(Wrapper, Endpoint):
         return pn_connection_remote_condition(self._impl)
 
     # TODO: Blacklisted API call
-    def collect(self, collector: Collector) -> None:
+    def collect(self, collector: 'Collector') -> None:
         if collector is None:
             pn_connection_collect(self._impl, None)
         else:
