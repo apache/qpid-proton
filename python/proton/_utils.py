@@ -30,7 +30,13 @@ from ._url import Url
 from ._reactor import Container
 from ._handlers import MessagingHandler, IncomingMessageHandler
 
-from typing import Callable, Optional, Union, TYPE_CHECKING, List, Literal
+from typing import Callable, Optional, Union, TYPE_CHECKING, List
+try:
+    from typing import Literal
+except ImportError:
+    class Literal:
+        def __class_getitem__(cls, item):
+            pass
 
 if TYPE_CHECKING:
     from ._transport import SSLDomain
