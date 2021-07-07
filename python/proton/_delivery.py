@@ -443,7 +443,7 @@ class Delivery(Wrapper):
         return Delivery.wrap(pn_work_next(self._impl))
 
     @property
-    def link(self) -> Union[Receiver, Sender]:
+    def link(self) -> Union['Receiver', 'Sender']:
         """
         The :class:`Link` on which the delivery was sent or received.
         """
