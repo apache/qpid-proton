@@ -85,7 +85,7 @@ def obj2cond(obj, cond: Condition) -> None:
             info.put_object(obj.info)
 
 
-def cond2obj(cond):
+def cond2obj(cond) -> Optional[Condition]:
     if pn_condition_is_set(cond):
         return Condition(pn_condition_get_name(cond),
                          pn_condition_get_description(cond),
