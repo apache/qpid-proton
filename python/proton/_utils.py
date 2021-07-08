@@ -391,8 +391,8 @@ class BlockingConnection(Handler):
     def create_sender(
             self,
             address: Optional[str],
-            handler: Optional[Handler] =None,
-            name: Optional[str]=None,
+            handler: Optional[Handler] = None,
+            name: Optional[str] = None,
             options: Optional[Union['SenderOption', List['SenderOption']]] = None
     ) -> BlockingSender:
         """
