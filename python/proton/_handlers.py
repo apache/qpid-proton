@@ -36,11 +36,8 @@ from ._url import Url
 from typing import Any, List, Optional, Tuple, Union, TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
-    from ._delivery import Delivery
-    from ._message import Message
-    from ._selectable import Selectable
-    from ._reactor import Container
-    from socket import AddressFamily, SocketKind, socket
+    from ._reactor import Container, Transaction
+    from ._endpoints import Sender, Receiver
 
 log = logging.getLogger("proton")
 
@@ -487,7 +484,7 @@ class EndpointStateHandler(Handler):
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_connection_opened', event)
 
-    def on_session_opened(self, event):
+    def on_session_opened(self, event: Event) -> None:
         """
         Callback for when both the local and remote endpoints of a
         session have opened.
