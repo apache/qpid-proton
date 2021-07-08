@@ -66,7 +66,7 @@ from ._wrapper import Wrapper
 from typing import Callable, Dict, List, Optional, Union, TYPE_CHECKING
 if TYPE_CHECKING:
     from ._condition import Condition
-    from ._data import Array, Data, PropertyDict, SymbolList, symbol
+    from ._data import Array, symbol
     from ._events import Collector, Handler
     from ._message import Message
 
@@ -1107,7 +1107,7 @@ class Link(Wrapper, Endpoint):
         :type: ``bool``
         """)
 
-    def drained(self):
+    def drained(self) -> int:
         """
         Drain excess credit for this link.
 
@@ -1126,7 +1126,6 @@ class Link(Wrapper, Endpoint):
         to the receiver.
 
         :return: The number of credits drained.
-        :rtype: ``int``
         """
         return pn_link_drained(self._impl)
 
