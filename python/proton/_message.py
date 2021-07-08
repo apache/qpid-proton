@@ -40,7 +40,6 @@ from ._exceptions import EXCEPTIONS, MessageException
 from typing import Dict, Optional, Union, TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
-    from proton._data import AnnotationDict, symbol, ulong
     from proton._delivery import Delivery
     from proton._endpoints import Sender, Receiver
     from uuid import UUID
