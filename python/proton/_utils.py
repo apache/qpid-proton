@@ -393,7 +393,7 @@ class BlockingConnection(Handler):
             address: Optional[str],
             handler: Optional[Handler] =None,
             name: Optional[str]=None,
-            options: Optional[Union[SenderOption, List[SenderOption]]] = None
+            options: Optional[Union['SenderOption', List['SenderOption']]] = None
     ) -> BlockingSender:
         """
         Create a blocking sender.
