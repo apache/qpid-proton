@@ -48,6 +48,14 @@ from ._exceptions import DataException, EXCEPTIONS
 long = int
 unicode = str
 
+_T = TypeVar('_T')
+
+PythonAMQPData = Union[
+    Dict['PythonAMQPData', 'PythonAMQPData'],
+    List['PythonAMQPData'],
+    'Described', 'Array', int, str, 'symbol', bytes, float, None]
+"""This type annotation represents Python data structures that can be encoded as AMQP Data"""
+
 
 class UnmappedType:
 
@@ -239,13 +247,15 @@ class Described(object):
     """
     A described AMQP type.
 
-    :ivar descriptor: A symbol describing the value.
-    :vartype descriptor: :class:`symbol`
+    :ivar descriptor: Any AMQP value can be a descriptor
     :ivar value: The described value
-    :vartype value: Any AMQP value
     """
 
-    def __init__(self, descriptor, value):
+    def __init__(
+            self,
+            descriptor: PythonAMQPData,
+            value: PythonAMQPData,
+    ) -> None:
         self.descriptor = descriptor
         self.value = value
 
@@ -276,7 +286,12 @@ class Array(object):
     :ivar elements: A Python list of elements of the appropriate type.
     """
 
-    def __init__(self, descriptor, type, *elements):
+    def __init__(
+            self,
+            descriptor: PythonAMQPData,
+            type: int,
+            *elements
+    ) -> None:
         self.descriptor = descriptor
         self.type = type
         self.elements = elements
@@ -299,40 +314,46 @@ class Array(object):
             return False
 
 
-def _check_type(s, allow_ulong=False, raise_on_error=True):
+def _check_type(
+        s: _T,
+        allow_ulong: bool = False,
+        raise_on_error: bool = True
+) -> Union[symbol, ulong, str, _T]:
     if isinstance(s, symbol):
         return s
     if allow_ulong and isinstance(s, ulong):
         return s
     if isinstance(s, str):
-        # Must be py2 or py3 str
         return symbol(s)
-    if isinstance(s, unicode):
-        # This must be python2 unicode as we already detected py3 str above
-        return symbol(s.encode('utf-8'))
     if raise_on_error:
         raise TypeError('Non-symbol type %s: %s' % (type(s), s))
     return s
 
 
-def _check_is_symbol(s, raise_on_error=True):
+def _check_is_symbol(s: _T, raise_on_error: bool = True) -> Union[symbol, ulong, str, _T]:
     return _check_type(s, allow_ulong=False, raise_on_error=raise_on_error)
 
 
-def _check_is_symbol_or_ulong(s, raise_on_error=True):
+def _check_is_symbol_or_ulong(s: _T, raise_on_error: bool = True) -> Union[symbol, ulong, str, _T]:
     return _check_type(s, allow_ulong=True, raise_on_error=raise_on_error)
 
 
 class RestrictedKeyDict(dict):
     """Parent class for :class:`PropertyDict` and :class:`AnnotationDict`"""
 
-    def __init__(self, validation_fn, e=None, raise_on_error=True, **kwargs):
+    def __init__(
+            self,
+            validation_fn: Callable[[_T, bool], _T],
+            e: Optional[Any] = None,
+            raise_on_error: bool = True,
+            **kwargs
+    ) -> None:
         super(RestrictedKeyDict, self).__init__()
         self.validation_fn = validation_fn
         self.raise_on_error = raise_on_error
         self.update(e, **kwargs)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: Union[symbol, str], value: Any) -> None:
         """Checks if the key is a :class:`symbol` type before setting the value"""
         try:
             return super(RestrictedKeyDict, self).__setitem__(self.validation_fn(key, self.raise_on_error), value)
@@ -341,7 +362,7 @@ class RestrictedKeyDict(dict):
         # __setitem__() must raise a KeyError, not TypeError
         raise KeyError('invalid non-symbol key: %s: %s' % (type(key), key))
 
-    def update(self, e=None, **kwargs):
+    def update(self, e: Optional[Any] = None, **kwargs) -> None:
         """
         Equivalent to dict.update(), but it was needed to call :meth:`__setitem__()`
         instead of ``dict.__setitem__()``.
@@ -390,11 +411,10 @@ class PropertyDict(RestrictedKeyDict):
         is encountered as a key in the initialization, or in a subsequent operation which
         adds such an key. If ``False``, non-strings and non-symbols will be added as keys
         to the dictionary without an error.
-    :type raise_on_error: ``bool``
     :param kwargs: Keyword args for initializing a ``dict`` of the form key1=val1, key2=val2, ...
     """
 
-    def __init__(self, e=None, raise_on_error=True, **kwargs):
+    def __init__(self, e: Optional[Any] = None, raise_on_error: bool = True, **kwargs) -> None:
         super(PropertyDict, self).__init__(_check_is_symbol, e, raise_on_error, **kwargs)
 
     def __repr__(self):
@@ -429,17 +449,20 @@ class AnnotationDict(RestrictedKeyDict):
         >>> AnnotationDict({'one': 1, 2: 'two'}, raise_on_error=False)
         AnnotationDict({2: 'two', symbol(u'one'): 1})
 
-    :param e: Initialization for ``dict``
-    :type e: ``dict`` or ``list`` of ``tuple`` or ``zip`` object
+    :param e: Initializer for ``dict``: a ``dict`` or ``list`` of ``tuple`` or ``zip`` object
     :param raise_on_error: If ``True``, will raise an ``KeyError`` if a non-string, non-symbol or
         non-ulong is encountered as a key in the initialization, or in a subsequent
         operation which adds such an key. If ``False``, non-strings, non-ulongs and non-symbols
         will be added as keys to the dictionary without an error.
-    :type raise_on_error: ``bool``
     :param kwargs: Keyword args for initializing a ``dict`` of the form key1=val1, key2=val2, ...
     """
 
-    def __init__(self, e=None, raise_on_error=True, **kwargs):
+    def __init__(
+            self,
+            e: Optional[Union[Dict, List, Tuple, Iterable]] = None,
+            raise_on_error: bool = True,
+            **kwargs
+    ) -> None:
         super(AnnotationDict, self).__init__(_check_is_symbol_or_ulong, e, raise_on_error, **kwargs)
 
     def __repr__(self):
@@ -469,22 +492,24 @@ class SymbolList(list):
         >>> SymbolList(['one', symbol('two'), 3], raise_on_error=False)
         SymbolList([symbol(u'one'), symbol(u'two'), 3])
 
-    :param t: Initialization for list
-    :type t: ``list``
+    :param t: Initializer for list
     :param raise_on_error: If ``True``, will raise an ``TypeError`` if a non-string or non-symbol is
         encountered in the initialization list, or in a subsequent operation which adds such
         an element. If ``False``, non-strings and non-symbols will be added to the list without
         an error.
-    :type raise_on_error: ``bool``
     """
 
-    def __init__(self, t=None, raise_on_error=True):
+    def __init__(
+            self,
+            t: Optional[List[Any]] = None,
+            raise_on_error: bool = True
+    ) -> None:
         super(SymbolList, self).__init__()
         self.raise_on_error = raise_on_error
         if t:
             self.extend(t)
 
-    def _check_list(self, t):
+    def _check_list(self, t: Iterable[Any]) -> List[Any]:
         """ Check all items in list are :class:`symbol`s (or are converted to symbols). """
         l = []
         if t:
@@ -500,11 +525,11 @@ class SymbolList(list):
         """ Add all elements of an iterable t to the end of the list """
         return super(SymbolList, self).extend(self._check_list(t))
 
-    def insert(self, i: int, v: str):
+    def insert(self, i: int, v: str) -> None:
         """ Insert a value v at index i """
         return super(SymbolList, self).insert(i, _check_is_symbol(v, self.raise_on_error))
 
-    def __add__(self, t):
+    def __add__(self, t: Iterable[Any]) -> 'SymbolList':
         """ Handles list1 + list2 """
         return SymbolList(super(SymbolList, self).__add__(self._check_list(t)), raise_on_error=self.raise_on_error)
 
@@ -631,13 +656,12 @@ class Data:
     """
 
     @classmethod
-    def type_name(amqptype):
+    def type_name(cls, amqptype: int) -> str:
         """
         Return a string name for an AMQP type.
 
         :param amqptype: Numeric Proton AMQP type (`enum pn_type_t`)
-        :type amqptype: integer
-        :rtype: String describing the AMQP type with numeric value `amqptype`
+        :returns: String describing the AMQP type with numeric value `amqptype`
         """
         return Data.type_names[amqptype]
 
@@ -676,14 +700,13 @@ class Data:
         assert self._data is not None
         pn_data_rewind(self._data)
 
-    def next(self):
+    def next(self) -> Optional[int]:
         """
         Advances the current node to its next sibling and returns its
         type. If there is no next sibling the current node remains
         unchanged and ``None`` is returned.
 
         :return: Node type or ``None``
-        :rtype: ``int`` or ``None``
         """
         found = pn_data_next(self._data)
         if found:
@@ -691,14 +714,13 @@ class Data:
         else:
             return None
 
-    def prev(self):
+    def prev(self) -> Optional[int]:
         """
         Advances the current node to its previous sibling and returns its
         type. If there is no previous sibling the current node remains
         unchanged and ``None`` is returned.
 
         :return: Node type or ``None``
-        :rtype: ``int`` or ``None``
         """
         found = pn_data_prev(self._data)
         if found:
@@ -744,13 +766,12 @@ class Data:
         """ Reverse the effect of :meth:`narrow`. """
         pn_data_widen(self._data)
 
-    def type(self):
+    def type(self) -> Optional[int]:
         """
         Returns the type of the current node. Returns `None` if there is no
         current node.
 
         :return: The current node type enumeration.
-        :rtype: ``int`` or ``None``
         """
         dtype = pn_data_type(self._data)
         if dtype == -1:
@@ -828,7 +849,7 @@ class Data:
         """
         self._check(pn_data_put_map(self._data))
 
-    def put_array(self, described, element_type):
+    def put_array(self, described: bool, element_type: int) -> None:
         """
         Puts an array value. Elements may be filled by entering the array
         node and putting the element values. The values must all be of the
@@ -964,12 +985,11 @@ class Data:
         """
         self._check(pn_data_put_char(self._data, ord(c)))
 
-    def put_ulong(self, ul):
+    def put_ulong(self, ul: Union[ulong, int]) -> None:
         """
         Puts an unsigned long value.
 
         :param ul: an integral value in the range :math:`0` to :math:`2^{64} - 1` inclusive.
-        :type ul: ``int``, ``long``, :class:`ulong`
         :raise: * ``AssertionError`` if parameter is out of the range :math:`0` to :math:`2^{64} - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
@@ -1448,7 +1468,6 @@ class Data:
         A convenience method for decoding an AMQP list as a Python ``list``.
 
         :returns: The decoded list.
-        :rtype: ``list``
         """
         if self.enter():
             try:
