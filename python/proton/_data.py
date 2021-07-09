@@ -1275,7 +1275,7 @@ class Data:
 
     def get_ulong(self) -> ulong:
         """
-        Get the current node value as a :class:`long`.
+        Get the current node value as a :class:`ulong`.
 
         :return: If the current node is an unsigned long, its value, 0 otherwise.
         """
@@ -1283,7 +1283,7 @@ class Data:
 
     def get_long(self) -> long:
         """
-        Get the current node value as a :class:`ulong`.
+        Get the current node value as a :class:`long`.
 
         :return: If the current node is an signed long, its value, 0 otherwise.
         """
