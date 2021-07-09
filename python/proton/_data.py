@@ -1355,7 +1355,7 @@ class Data:
         """
         Get the current node value as ``bytes``.
 
-        :return: If the current node is binary, its value, ``""`` otherwise.
+        :return: If the current node is binary, its value, ``b""`` otherwise.
         """
         return pn_data_get_binary(self._data)
 
