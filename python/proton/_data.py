@@ -1015,7 +1015,7 @@ class Data:
         """
         self._check(pn_data_put_timestamp(self._data, t))
 
-    def put_float(self, f: Union[float, int]) -> None:
+    def put_float(self, f: Union[float32, float, int]) -> None:
         """
         Puts a float value.
 
