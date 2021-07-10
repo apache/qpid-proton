@@ -318,7 +318,7 @@ def _check_type(
         s: _T,
         allow_ulong: bool = False,
         raise_on_error: bool = True
-) -> Union[symbol, ulong, str, _T]:
+) -> Union[symbol, ulong, _T]:
     if isinstance(s, symbol):
         return s
     if allow_ulong and isinstance(s, ulong):
@@ -330,11 +330,11 @@ def _check_type(
     return s
 
 
-def _check_is_symbol(s: _T, raise_on_error: bool = True) -> Union[symbol, ulong, str, _T]:
+def _check_is_symbol(s: _T, raise_on_error: bool = True) -> Union[symbol, ulong, _T]:
     return _check_type(s, allow_ulong=False, raise_on_error=raise_on_error)
 
 
-def _check_is_symbol_or_ulong(s: _T, raise_on_error: bool = True) -> Union[symbol, ulong, str, _T]:
+def _check_is_symbol_or_ulong(s: _T, raise_on_error: bool = True) -> Union[symbol, ulong, _T]:
     return _check_type(s, allow_ulong=True, raise_on_error=raise_on_error)
 
 
