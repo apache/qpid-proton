@@ -1155,9 +1155,12 @@ class Container(Reactor):
     """
     A representation of the AMQP concept of a 'container', which
     loosely speaking is something that establishes links to or from
-    another container, over which messages are transfered. This is
+    another container, over which messages are transferred. This is
     an extension to the Reactor class that adds convenience methods
     for creating connections and sender- or receiver- links.
+
+    This class is NOT threadsafe. The :class:`EventInjector` class
+    may be used for communication with external threads.
     """
 
     def __init__(self, *handlers, **kwargs):
