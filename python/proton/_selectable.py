@@ -17,11 +17,15 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
-
 from ._events import Event
 from ._io import PN_INVALID_SOCKET
+
+from typing import Callable, Optional, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from ._events import EventType
+    from ._handlers import ConnectSelectable
+    from ._reactor import Container, EventInjector, TimerSelectable
+    from socket import socket
 
 
 class Selectable(object):
@@ -37,11 +41,11 @@ class Selectable(object):
         self._reactor = reactor
         self.push_event(self, Event.SELECTABLE_INIT)
 
-    def close(self):
+    def close(self) -> None:
         if self._delegate and not self._released:
             self._delegate.close()
 
-    def fileno(self):
+    def fileno(self) -> int:
         if self._delegate:
             return self._delegate.fileno()
         else:
@@ -68,7 +72,7 @@ class Selectable(object):
     def push_event(self, context, etype):
         self._reactor.push_event(context, etype)
 
-    def update(self):
+    def update(self) -> None:
         if not self._terminated:
             if self._terminal:
                 self._terminated = True
@@ -76,21 +80,21 @@ class Selectable(object):
             else:
                 self.push_event(self, Event.SELECTABLE_UPDATED)
 
-    def readable(self):
+    def readable(self) -> None:
         self.push_event(self, Event.SELECTABLE_READABLE)
 
-    def writable(self):
+    def writable(self) -> None:
         self.push_event(self, Event.SELECTABLE_WRITABLE)
 
-    def expired(self):
+    def expired(self) -> None:
         self.push_event(self, Event.SELECTABLE_EXPIRED)
 
     @property
-    def is_terminal(self):
+    def is_terminal(self) -> bool:
         return self._terminal
 
-    def terminate(self):
+    def terminate(self) -> None:
         self._terminal = True
 
-    def release(self):
+    def release(self) -> None:
         self._released = True

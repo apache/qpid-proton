@@ -17,14 +17,21 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 import heapq
 import json
 import logging
 import re
 import os
 import queue
+from typing import Any, Dict, Iterator, Optional, List, Union, Callable
+try:
+    from typing import Literal
+except ImportError:
+    class Literal:
+        @classmethod
+        def __class_getitem__(cls, item):
+            pass
+
 import time
 import traceback
 import uuid
@@ -46,55 +53,62 @@ from ._selectable import Selectable
 from ._handlers import OutgoingMessageHandler, IOHandler
 
 from ._io import IO
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ._endpoints import Receiver, Sender
+    from ._handlers import ConnectSelectable, TransactionHandler
+    from ._utils import BlockingConnection
+    from socket import socket
+    from uuid import UUID
 
 
 _logger = logging.getLogger("proton")
 
 
-def _generate_uuid():
+def _generate_uuid() -> 'UUID':
     return uuid.uuid4()
 
 
-def _now():
+def _now() -> float:
     return time.time()
 
 
 @total_ordering
 class Task(object):
 
-    def __init__(self, reactor, deadline, handler):
+    def __init__(self, reactor: 'Container', deadline: float, handler: Handler) -> None:
         self._deadline = deadline
         self._handler = handler
         self._reactor = reactor
         self._cancelled = False
 
-    def __lt__(self, rhs):
+    def __lt__(self, rhs: 'Task') -> bool:
         return self._deadline < rhs._deadline
 
-    def cancel(self):
+    def cancel(self) -> None:
         self._cancelled = True
 
     @property
-    def handler(self):
+    def handler(self) -> Handler:
         return self._handler
 
     @property
-    def container(self):
+    def container(self) -> 'Container':
         return self._reactor
 
 
 class TimerSelectable(Selectable):
 
-    def __init__(self, reactor):
+    def __init__(self, reactor: 'Container') -> None:
         super(TimerSelectable, self).__init__(None, reactor)
 
-    def readable(self):
+    def readable(self) -> None:
         pass
 
-    def writable(self):
+    def writable(self) -> None:
         pass
 
-    def expired(self):
+    def expired(self) -> None:
         self._reactor.timer_tick()
         self.deadline = self._reactor.timer_deadline
         self.update()
@@ -102,7 +116,7 @@ class TimerSelectable(Selectable):
 
 class Reactor(object):
 
-    def __init__(self, *handlers, **kwargs):
+    def __init__(self, *handlers, **kwargs) -> None:
         self._previous = PN_EVENT_NONE
         self._timeout = 0
         self.mark()
@@ -153,13 +167,13 @@ class Reactor(object):
     def yield_(self):
         self._yield = True
 
-    def mark(self):
+    def mark(self) -> float:
         """ This sets the reactor now instant to the current time """
         self._now = _now()
         return self._now
 
     @property
-    def now(self):
+    def now(self) -> float:
         return self._now
 
     def _get_handler(self):
@@ -186,12 +200,12 @@ class Reactor(object):
         self._handler = None
 
     # Cross thread reactor wakeup
-    def wakeup(self):
+    def wakeup(self) -> None:
         # TODO: Do this with pipe and write?
         #  os.write(self._wakeup[1], "x", 1);
         pass
 
-    def start(self):
+    def start(self) -> None:
         self.push_event(self, Event.REACTOR_INIT)
         self._selectable = TimerSelectable(self)
         self._selectable.deadline = self.timer_deadline
@@ -201,7 +215,7 @@ class Reactor(object):
         self.update(self._selectable)
 
     @property
-    def quiesced(self):
+    def quiesced(self) -> bool:
         event = self._collector.peek()
         if not event:
             return True
@@ -209,7 +223,7 @@ class Reactor(object):
             return False
         return event.type is Event.REACTOR_QUIESCED
 
-    def _check_errors(self):
+    def _check_errors(self) -> None:
         """ This """
         if self.errors:
             for exc, value, tb in self.errors[:-1]:
@@ -222,7 +236,7 @@ class Reactor(object):
             else:
                 raise value.with_traceback(tb)
 
-    def process(self):
+    def process(self) -> bool:
         # result = pn_reactor_process(self._impl)
         # self._check_errors()
         # return result
@@ -262,11 +276,11 @@ class Reactor(object):
                     _logger.debug('%s Stopping', self)
                     return False
 
-    def stop(self):
+    def stop(self) -> None:
         self._stop = True
         self._check_errors()
 
-    def stop_events(self):
+    def stop_events(self) -> None:
         self._collector.release()
 
     def schedule(self, delay, handler):
@@ -287,7 +301,7 @@ class Reactor(object):
             self.update(self._selectable)
         return task
 
-    def timer_tick(self):
+    def timer_tick(self) -> None:
         while self._timers > 0:
             t = self._timerheap[0]
             if t._cancelled:
@@ -301,7 +315,7 @@ class Reactor(object):
                 self.push_event(t, Event.TIMER_TASK)
 
     @property
-    def timer_deadline(self):
+    def timer_deadline(self) -> Optional[float]:
         while self._timers > 0:
             t = self._timerheap[0]
             if t._cancelled:
@@ -387,7 +401,7 @@ class EventInjector(object):
     needed, to allow the event loop to end if needed.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.queue = queue.Queue()
         self.pipe = os.pipe()
         self._transport = None
@@ -404,7 +418,7 @@ class EventInjector(object):
         self.queue.put(event)
         os.write(self.pipe[1], b"!")
 
-    def close(self):
+    def close(self) -> None:
         """
         Request that this EventInjector be closed. Existing events
         will be dispatched on the container's event dispatch thread,
@@ -413,16 +427,16 @@ class EventInjector(object):
         self._closed = True
         os.write(self.pipe[1], b"!")
 
-    def fileno(self):
+    def fileno(self) -> int:
         return self.pipe[0]
 
-    def on_selectable_init(self, event):
+    def on_selectable_init(self, event: Event) -> None:
         sel = event.context
         # sel.fileno(self.fileno())
         sel.reading = True
         sel.update()
 
-    def on_selectable_readable(self, event):
+    def on_selectable_readable(self, event: Event) -> None:
         s = event.context
         os.read(self.pipe[0], 512)
         while not self.queue.empty():
@@ -440,22 +454,24 @@ class ApplicationEvent(EventBase):
     extended event types - see :class:`proton.EventType` for details.
 
     :param typename: Event type name
-    :type typename: ``str``
     :param connection: Associates this event with a connection.
-    :type connection: :class:`proton.Connection`
     :param session: Associates this event with a session.
-    :type session: :class:`proton.Session`
     :param link: Associate this event with a link.
-    :type link: :class:`proton.Link` or one of its subclasses
     :param delivery: Associate this event with a delivery.
-    :type delivery: :class:`proton.Delivery`
     :param subject: Associate this event with an arbitrary object
-    :type subject: any
     """
 
     TYPES = {}
 
-    def __init__(self, typename, connection=None, session=None, link=None, delivery=None, subject=None):
+    def __init__(
+            self,
+            typename: str,
+            connection: Optional[Connection] = None,
+            session: Optional[Session] = None,
+            link: Optional[Link] = None,
+            delivery: Optional[Delivery] = None,
+            subject: Any = None
+    ) -> None:
         if isinstance(typename, EventType):
             eventtype = typename
         else:
@@ -485,7 +501,7 @@ class ApplicationEvent(EventBase):
         """
         return self
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         objects = [self.connection, self.session, self.link, self.delivery, self.subject]
         return "%s(%s)" % (self.type, ", ".join([str(o) for o in objects if o is not None]))
 
@@ -518,13 +534,13 @@ class Transaction(object):
         self.settle_before_discharge = settle_before_discharge
         self.declare()
 
-    def commit(self):
+    def commit(self) -> None:
         """
         Commit this transaction. Closes the transaction as a success.
         """
         self.discharge(False)
 
-    def abort(self):
+    def abort(self) -> None:
         """
         Abort or roll back this transaction. Closes the transaction as a failure,
         and reverses, or rolls back all actions (sent and received messages)
@@ -532,7 +548,7 @@ class Transaction(object):
         """
         self.discharge(True)
 
-    def declare(self):
+    def declare(self) -> None:
         self._declare = self._send_ctrl(symbol(u'amqp:declare:list'), [None])
 
     def discharge(self, failed):
@@ -562,12 +578,11 @@ class Transaction(object):
         dlv.update(0x34)
         return dlv
 
-    def accept(self, delivery):
+    def accept(self, delivery: Delivery) -> None:
         """
         Accept a received message under this transaction.
 
         :param delivery: Delivery object for the received message.
-        :type delivery: :class:`proton.Delivery`
         """
         self.update(delivery, PN_ACCEPTED)
         if self.settle_before_discharge:
@@ -618,14 +633,14 @@ class LinkOption(object):
     Abstract interface for link configuration options
     """
 
-    def apply(self, link):
+    def apply(self, link: Link) -> None:
         """
         Subclasses will implement any configuration logic in this
         method
         """
         pass
 
-    def test(self, link):
+    def test(self, link: Link) -> bool:
         """
         Subclasses can override this to selectively apply an option
         e.g. based on some link criteria
@@ -640,7 +655,7 @@ class AtMostOnce(LinkOption):
     (ie pre-settled).
     """
 
-    def apply(self, link):
+    def apply(self, link: Link) -> None:
         """
         Set the at-most-once delivery semantics on the link.
 
@@ -658,7 +673,7 @@ class AtLeastOnce(LinkOption):
     forces the receiver to settle all messages once they are successfully received.
     """
 
-    def apply(self, link):
+    def apply(self, link: Link) -> None:
         """
         Set the at-least-once delivery semantics on the link.
 
@@ -674,16 +689,15 @@ class SenderOption(LinkOption):
     Abstract class for sender options.
     """
 
-    def apply(self, sender):
+    def apply(self, sender: 'Sender') -> None:
         """
         Set the option on the sender.
 
         :param sender: The sender on which this option is to be applied.
-        :type sender: :class:`proton.Sender`
         """
         pass
 
-    def test(self, link):
+    def test(self, link: Link) -> bool:
         return link.is_sender
 
 
@@ -692,16 +706,15 @@ class ReceiverOption(LinkOption):
     Abstract class for receiver options
     """
 
-    def apply(self, receiver):
+    def apply(self, receiver: 'Receiver') -> None:
         """
         Set the option on the receiver.
 
         :param receiver: The receiver on which this option is to be applied.
-        :type receiver: :class:`proton.Receiver`
         """
         pass
 
-    def test(self, link):
+    def test(self, link: Link) -> bool:
         return link.is_receiver
 
 
@@ -723,12 +736,11 @@ class DynamicNodeProperties(LinkOption):
             else:
                 self.properties[symbol(k)] = props[k]
 
-    def apply(self, link):
+    def apply(self, link: Link) -> None:
         """
         Set the map of properties on the specified link.
 
         :param link: The link on which this property map is to be set.
-        :type link: :class:`proton.Link`
         """
         if link.is_receiver:
             link.source.properties.put_dict(self.properties)
@@ -748,12 +760,11 @@ class Filter(ReceiverOption):
     def __init__(self, filter_set={}):
         self.filter_set = filter_set
 
-    def apply(self, receiver):
+    def apply(self, receiver: 'Receiver') -> None:
         """
         Set the filter on the specified receiver.
 
         :param receiver: The receiver on which this filter is to be applied.
-        :type receiver: :class:`proton.Receiver`
         """
         receiver.source.filter.put_dict(self.filter_set)
 
@@ -781,12 +792,11 @@ class DurableSubscription(ReceiverOption):
     :const:`proton.Terminus.EXPIRE_NEVER`.
     """
 
-    def apply(self, receiver):
+    def apply(self, receiver: 'Receiver'):
         """
         Set durability on the specified receiver.
 
         :param receiver: The receiver on which durability is to be set.
-        :type receiver: :class:`proton.Receiver`
         """
         receiver.source.durability = Terminus.DELIVERIES
         receiver.source.expiry_policy = Terminus.EXPIRE_NEVER
@@ -800,12 +810,11 @@ class Move(ReceiverOption):
     mode to :const:`proton.Terminus.DIST_MODE_MOVE`.
     """
 
-    def apply(self, receiver):
+    def apply(self, receiver: 'Receiver'):
         """
         Set message move semantics on the specified receiver.
 
         :param receiver: The receiver on which message move semantics is to be set.
-        :type receiver: :class:`proton.Receiver`
         """
         receiver.source.distribution_mode = Terminus.DIST_MODE_MOVE
 
@@ -818,12 +827,11 @@ class Copy(ReceiverOption):
     :const:`proton.Terminus.DIST_MODE_COPY`.
     """
 
-    def apply(self, receiver):
+    def apply(self, receiver: 'Receiver'):
         """
         Set message copy semantics on the specified receiver.
 
         :param receiver: The receiver on which message copy semantics is to be set.
-        :type receiver: :class:`proton.Receiver`
         """
         receiver.source.distribution_mode = Terminus.DIST_MODE_COPY
 
@@ -839,13 +847,13 @@ def _apply_link_options(options, link):
                 options.apply(link)
 
 
-def _create_session(connection, handler=None):
+def _create_session(connection: Connection, handler: Optional[Handler] = None) -> Session:
     session = connection.session()
     session.open()
     return session
 
 
-def _get_attr(target, name):
+def _get_attr(target: Any, name: str) -> Optional[Any]:
     if hasattr(target, name):
         return getattr(target, name)
     else:
@@ -853,10 +861,10 @@ def _get_attr(target, name):
 
 
 class SessionPerConnection(object):
-    def __init__(self):
+    def __init__(self) -> None:
         self._default_session = None
 
-    def session(self, connection):
+    def session(self, connection: Connection) -> Session:
         if not self._default_session:
             self._default_session = _create_session(connection)
         return self._default_session
@@ -868,21 +876,21 @@ class GlobalOverrides(Handler):
     opened connection.
     """
 
-    def __init__(self, base):
+    def __init__(self, base: IOHandler) -> None:
         self.base = base
 
-    def on_unhandled(self, name, event):
+    def on_unhandled(self, name: str, event: Event) -> None:
         if not self._override(event):
             event.dispatch(self.base)
 
-    def _override(self, event):
+    def _override(self, event: Event) -> Optional[bool]:
         conn = event.connection
         return conn and hasattr(conn, '_overrides') and event.dispatch(conn._overrides)
 
 
 class Acceptor(Handler):
 
-    def __init__(self, reactor, host, port, handler=None):
+    def __init__(self, reactor: 'Container', host: str, port: int, handler: Optional[Handler] = None) -> None:
         self._ssl_domain = None
         self._reactor = reactor
         self._handler = handler
@@ -893,15 +901,15 @@ class Acceptor(Handler):
         self._selectable = s
         reactor.update(s)
 
-    def set_ssl_domain(self, ssl_domain):
+    def set_ssl_domain(self, ssl_domain: SSLDomain) -> None:
         self._ssl_domain = ssl_domain
 
-    def close(self):
+    def close(self) -> None:
         if not self._selectable.is_terminal:
             self._selectable.terminate()
             self._selectable.update()
 
-    def on_selectable_readable(self, event):
+    def on_selectable_readable(self, event: Event) -> None:
         s = event.selectable
 
         sock, name = IO.accept(self._selectable)
@@ -923,7 +931,12 @@ class Acceptor(Handler):
         IOHandler.update(t, s, r.now)
 
 
-def delay_iter(initial=0.1, factor=2.0, max_delay=10.0, max_tries=None):
+def delay_iter(
+        initial: float = 0.1,
+        factor: float = 2.0,
+        max_delay: float = 10.0,
+        max_tries: Optional[int] = None
+) -> Iterator[float]:
     """
     iterator yielding the next delay in the sequence of delays. The first
     delay is 0 seconds, the second 0.1 seconds, and each subsequent
@@ -947,11 +960,11 @@ class Backoff(object):
     with an initial value of 0 seconds.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         self.kwargs = kwargs
         self.iter = delay_iter(**self.kwargs)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[float]:
         return self.iter
 
 
@@ -984,7 +997,7 @@ class Urls(object):
     def __init__(self, values):
         self.values = [Url(v) for v in values]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Url]:
         return iter(self.values)
 
 
@@ -994,7 +1007,7 @@ class _Connector(Handler):
     opened connection.
     """
 
-    def __init__(self, connection):
+    def __init__(self, connection: Connection) -> None:
         self.connection = connection
         self.address = None
         self.heartbeat = None
@@ -1011,7 +1024,7 @@ class _Connector(Handler):
         self._connect_sequence = None
         self._next_url = None
 
-    def _connect(self, connection, url):
+    def _connect(self, connection: Connection, url: Url) -> None:
         connection.url = url
         # if virtual-host not set, use host from address as default
         if self.virtual_host is None:
@@ -1043,7 +1056,7 @@ class _Connector(Handler):
         if self.max_frame_size:
             transport.max_frame_size = self.max_frame_size
 
-    def on_connection_local_open(self, event):
+    def on_connection_local_open(self, event: Event) -> None:
         if self.reconnect is None:
             self._connect_sequence = ((delay, url) for delay in delay_iter() for url in self.address)
         elif self.reconnect is False:
@@ -1053,7 +1066,7 @@ class _Connector(Handler):
         _, url = next(self._connect_sequence)  # Ignore delay as we assume first delay must be 0
         self._connect(event.connection, url)
 
-    def on_connection_remote_open(self, event):
+    def on_connection_remote_open(self, event: Event) -> None:
         _logger.info("Connected to %s" % event.connection.hostname)
         if self.reconnect is None:
             self._connect_sequence = ((delay, url) for delay in delay_iter() for url in self.address)
@@ -1062,7 +1075,7 @@ class _Connector(Handler):
         else:
             self._connect_sequence = None  # Help take out the garbage
 
-    def on_transport_closed(self, event):
+    def on_transport_closed(self, event: Event) -> None:
         if self.connection is None:
 
             return
@@ -1090,14 +1103,14 @@ class _Connector(Handler):
         # See connector.cpp: conn.free()/pn_connection_release() here?
         self.connection = None
 
-    def on_timer_task(self, event):
+    def on_timer_task(self, event: Event) -> None:
         if self._next_url:
             self._connect(self.connection, self._next_url)
             self._next_url = None
 
 
 class SSLConfig(object):
-    def __init__(self):
+    def __init__(self) -> None:
         self.client = SSLDomain(SSLDomain.MODE_CLIENT)
         self.server = SSLDomain(SSLDomain.MODE_SERVER)
 
@@ -1110,7 +1123,7 @@ class SSLConfig(object):
         self.server.set_trusted_ca_db(certificate_db)
 
 
-def _find_config_file():
+def _find_config_file() -> Optional[str]:
     confname = 'connect.json'
     confpath = ['.', os.path.expanduser('~/.config/messaging'), '/etc/messaging']
     for d in confpath:
@@ -1131,7 +1144,7 @@ def _get_default_config():
         return {}
 
 
-def _strip_json_comments(json_text):
+def _strip_json_comments(json_text: str) -> str:
     """This strips c-style comments from text, taking into account '/*comments*/' and '//comments'
     nested inside a string etc."""
     def replacer(match):
@@ -1144,7 +1157,7 @@ def _strip_json_comments(json_text):
     return re.sub(pattern, replacer, json_text)
 
 
-def _get_default_port_for_scheme(scheme):
+def _get_default_port_for_scheme(scheme: str) -> int:
     if scheme == 'amqps':
         return 5671
     else:
@@ -1160,7 +1173,7 @@ class Container(Reactor):
     for creating connections and sender- or receiver- links.
     """
 
-    def __init__(self, *handlers, **kwargs):
+    def __init__(self, *handlers, **kwargs) -> None:
         super(Container, self).__init__(*handlers, **kwargs)
         if "impl" not in kwargs:
             try:
@@ -1366,7 +1379,7 @@ class Container(Reactor):
         else:
             return "%s-%s" % (container, str(_generate_uuid()))
 
-    def _get_session(self, context):
+    def _get_session(self, context: Connection) -> Session:
         if isinstance(context, Url):
             return self._get_session(self.connect(url=context))
         elif isinstance(context, Session):
@@ -1379,7 +1392,16 @@ class Container(Reactor):
         else:
             return context.session()
 
-    def create_sender(self, context, target=None, source=None, name=None, handler=None, tags=None, options=None):
+    def create_sender(
+            self,
+            context: Union[str, Connection],
+            target: Optional[str] = None,
+            source: Optional[str] = None,
+            name: Optional[str] = None,
+            handler: Optional[Handler] = None,
+            tags: Optional[Callable[[], bytes]] = None,
+            options: Optional[Union['SenderOption', List['SenderOption']]] = None
+    ) -> 'Sender':
         """
         Initiates the establishment of a link over which messages can
         be sent.
@@ -1404,28 +1426,14 @@ class Container(Reactor):
         attachment.
 
         :param context: A connection object or a URL.
-        :type context: :class:`proton.Connection` or ``str``
-
         :param target: Address of target node.
-        :type target: ``str``
-
         :param source: Address of source node.
-        :type source: ``str``
-
         :param name: Sender name.
-        :type name: ``str``
-
         :param handler: Event handler for this sender.
-        :type handler: Any child class of :class:`proton.Handler`
-
         :param tags: Function to generate tags for this sender of the form ``def simple_tags():`` and returns a ``bytes`` type
-        :type tags: function pointer
-
         :param options: A single option, or a list of sender options
-        :type options: :class:`SenderOption` or [SenderOption, SenderOption, ...]
 
         :return: New sender instance.
-        :rtype: :class:`proton.Sender`
         """
         if isstring(context):
             context = Url(context)
@@ -1445,7 +1453,16 @@ class Container(Reactor):
         snd.open()
         return snd
 
-    def create_receiver(self, context, source=None, target=None, name=None, dynamic=False, handler=None, options=None):
+    def create_receiver(
+            self,
+            context: Union[Connection, str],
+            source: Optional[str] = None,
+            target: Optional[str] = None,
+            name: Optional[str] = None,
+            dynamic: bool = False,
+            handler: Optional[Handler] = None,
+            options: Optional[Union[ReceiverOption, List[ReceiverOption]]] = None
+    ) -> 'Receiver':
         """
         Initiates the establishment of a link over which messages can
         be received (aka a subscription).
@@ -1470,28 +1487,14 @@ class Container(Reactor):
         attachment.
 
         :param context: A connection object or a URL.
-        :type context: :class:`proton.Connection` or ``str``
-
         :param source: Address of source node.
-        :type source: ``str``
-
         :param target: Address of target node.
-        :type target: ``str``
-
         :param name: Receiver name.
-        :type name: ``str``
-
         :param dynamic: If ``True``, indicates dynamic creation of the receiver.
-        :type dynamic: ``bool``
-
         :param handler: Event handler for this receiver.
-        :type handler: Any child class of :class:`proton.Handler`
-
         :param options: A single option, or a list of receiver options
-        :type options: :class:`ReceiverOption` or [ReceiverOption, ReceiverOption, ...]
 
         :return: New receiver instance.
-        :rtype: :class:`proton.Receiver`
         """
         if isstring(context):
             context = Url(context)
@@ -1511,17 +1514,19 @@ class Container(Reactor):
         rcv.open()
         return rcv
 
-    def declare_transaction(self, context, handler=None, settle_before_discharge=False):
+    def declare_transaction(
+            self,
+            context: Connection,
+            handler: Optional['TransactionHandler'] = None,
+            settle_before_discharge: bool = False
+    ) -> Transaction:
         """
         Declare a local transaction.
 
         :param context: Context for the transaction, usually the connection.
-        :type context: :class:`proton.Connection`
         :param handler: Handler for transactional events.
-        :type handler: :class:`proton.handlers.TransactionHandler`
         :param settle_before_discharge: Settle all transaction control messages before
             the transaction is discharged.
-        :type settle_before_discharge: ``bool``
         """
         if not _get_attr(context, '_txn_ctrl'):
             class InternalTransactionHandler(OutgoingMessageHandler):
@@ -1565,7 +1570,7 @@ class Container(Reactor):
             acceptor.set_ssl_domain(ssl_config)
         return acceptor
 
-    def do_work(self, timeout=None):
+    def do_work(self, timeout: Optional[float] = None) -> bool:
         if timeout:
             self.timeout = timeout
         return self.process()

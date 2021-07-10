@@ -21,8 +21,6 @@
 The proton.endpoints module
 """
 
-from __future__ import absolute_import
-
 import weakref
 
 from cproton import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN_DIST_MODE_COPY, PN_DIST_MODE_MOVE, \
@@ -65,6 +63,12 @@ from ._delivery import Delivery
 from ._exceptions import ConnectionException, EXCEPTIONS, LinkException, SessionException
 from ._transport import Transport
 from ._wrapper import Wrapper
+from typing import Callable, Dict, List, Optional, Union, TYPE_CHECKING
+if TYPE_CHECKING:
+    from ._condition import Condition
+    from ._data import Array, symbol
+    from ._events import Collector, Handler
+    from ._message import Message
 
 
 class Endpoint(object):
@@ -106,20 +110,18 @@ class Endpoint(object):
     REMOTE_CLOSED = PN_REMOTE_CLOSED
     """ The remote endpoint state is closed. """
 
-    def _init(self):
-        self.condition = None
-        self._handler = None
+    def _init(self) -> None:
+        self.condition: Optional['Condition'] = None
+        self._handler: Optional['Handler'] = None
 
-    def _update_cond(self):
+    def _update_cond(self) -> None:
         obj2cond(self.condition, self._get_cond_impl())
 
     @property
-    def remote_condition(self):
+    def remote_condition(self) -> Optional['Condition']:
         """
         The remote condition associated with the connection endpoint.
         See :class:`Condition` for more information.
-
-        :type: :class:`Condition`
         """
         return cond2obj(self._get_remote_cond_impl())
 
@@ -130,10 +132,16 @@ class Endpoint(object):
     def _get_remote_cond_impl(self):
         assert False, "Subclass must override this!"
 
-    def _get_handler(self):
+    @property
+    def handler(self) -> Optional['Handler']:
+        """Handler for events.
+
+        :getter: Get the event handler, or return ``None`` if no handler has been set.
+        :setter: Set the event handler."""
         return self._handler
 
-    def _set_handler(self, handler):
+    @handler.setter
+    def handler(self, handler: Optional['Handler']) -> None:
         # TODO Hack This is here for some very odd (IMO) backwards compat behaviour
         from ._events import Handler
         if handler is None:
@@ -143,14 +151,6 @@ class Endpoint(object):
         else:
             self._handler = Handler()
             self._handler.add(handler)
-
-    handler = property(_get_handler, _set_handler, doc="""
-        Handler for events.
-
-        :getter: Get the event handler, or return ``None`` if no handler has been set.
-        :setter: Set the event handler.
-        :type: :class:`Handler` or ``None``
-        """)
 
 
 class Connection(Wrapper, Endpoint):
@@ -168,7 +168,7 @@ class Connection(Wrapper, Endpoint):
     def __init__(self, impl=pn_connection):
         Wrapper.__init__(self, impl, pn_connection_attachments)
 
-    def _init(self):
+    def _init(self) -> None:
         Endpoint._init(self)
         self.offered_capabilities = None
         self.desired_capabilities = None
@@ -180,25 +180,21 @@ class Connection(Wrapper, Endpoint):
         return pn_connection_attachments(self._impl)
 
     @property
-    def connection(self):
+    def connection(self) -> 'Connection':
         """
         Get this connection.
-
-        :type: :class:`Connection`
         """
         return self
 
     @property
-    def transport(self):
+    def transport(self) -> Optional[Transport]:
         """
         The transport bound to this connection. If the connection
         is unbound, then this operation will return ``None``.
-
-        :type: :class:`Transport` or ``None``
         """
         return Transport.wrap(pn_connection_transport(self._impl))
 
-    def _check(self, err):
+    def _check(self, err: int) -> int:
         if err < 0:
             exc = EXCEPTIONS.get(err, ConnectionException)
             raise exc("[%s]: %s" % (err, pn_connection_error(self._impl)))
@@ -212,7 +208,7 @@ class Connection(Wrapper, Endpoint):
         return pn_connection_remote_condition(self._impl)
 
     # TODO: Blacklisted API call
-    def collect(self, collector):
+    def collect(self, collector: 'Collector') -> None:
         if collector is None:
             pn_connection_collect(self._impl, None)
         else:
@@ -402,7 +398,7 @@ class Connection(Wrapper, Endpoint):
         obj2dat(self.properties, pn_connection_properties(self._impl))
         pn_connection_open(self._impl)
 
-    def close(self):
+    def close(self) -> None:
         """
         Closes the connection.
 
@@ -429,7 +425,7 @@ class Connection(Wrapper, Endpoint):
             s.update()
 
     @property
-    def state(self):
+    def state(self) -> int:
         """
         The state of the connection as a bit field. The state has a local
         and a remote component. Each of these can be in one of three
@@ -439,12 +435,11 @@ class Connection(Wrapper, Endpoint):
         """
         return pn_connection_state(self._impl)
 
-    def session(self):
+    def session(self) -> 'Session':
         """
         Returns a new session on this connection.
 
         :return: New session
-        :rtype: :class:`Session`
         :raises: :class:`SessionException`
         """
         ssn = pn_session(self._impl)
@@ -453,7 +448,7 @@ class Connection(Wrapper, Endpoint):
         else:
             return Session(ssn)
 
-    def session_head(self, mask):
+    def session_head(self, mask: int) -> Optional['Session']:
         """
         Retrieve the first session from a given connection that matches the
         specified state mask.
@@ -468,11 +463,10 @@ class Connection(Wrapper, Endpoint):
         :param mask: State mask to match
         :return: The first session owned by the connection that matches the
             mask, else ``None`` if no sessions matches.
-        :rtype: :class:`Session` or ``None``
         """
         return Session.wrap(pn_session_head(self._impl, mask))
 
-    def link_head(self, mask):
+    def link_head(self, mask: int) -> Optional[Union['Sender', 'Receiver']]:
         """
         Retrieve the first link that matches the given state mask.
 
@@ -484,15 +478,13 @@ class Connection(Wrapper, Endpoint):
         set respectively. ``state==0`` matches all links.
 
         :param mask: State mask to match
-        :type mask: ``int``
         :return: The first link owned by the connection that matches the
             mask, else ``None`` if no link matches.
-        :rtype: :class:`Link` or ``None``
         """
         return Link.wrap(pn_link_head(self._impl, mask))
 
     @property
-    def work_head(self):
+    def work_head(self) -> Optional[Delivery]:
         """Deprecated: use on_message(), on_accepted(), on_rejected(),
         on_released(), and on_settled() instead.
 
@@ -526,7 +518,7 @@ class Connection(Wrapper, Endpoint):
         """
         return pn_error_code(pn_connection_error(self._impl))
 
-    def free(self):
+    def free(self) -> None:
         """
         Releases this connection object.
 
@@ -659,22 +651,20 @@ class Session(Wrapper, Endpoint):
         return pn_session_outgoing_bytes(self._impl)
 
     @property
-    def incoming_bytes(self):
+    def incoming_bytes(self) -> int:
         """
         The number of incoming bytes currently buffered.
-
-        :type: ``int`` (bytes)
         """
         return pn_session_incoming_bytes(self._impl)
 
-    def open(self):
+    def open(self) -> None:
         """
         Open a session. Once this operation has completed, the
         :const:`LOCAL_ACTIVE` state flag will be set.
         """
         pn_session_open(self._impl)
 
-    def close(self):
+    def close(self) -> None:
         """
         Close a session.
 
@@ -705,56 +695,44 @@ class Session(Wrapper, Endpoint):
         return Session.wrap(pn_session_next(self._impl, mask))
 
     @property
-    def state(self):
+    def state(self) -> int:
         """
         The endpoint state flags for this session. See :class:`Endpoint` for
         details of the flags.
-
-        :type: ``int``
         """
         return pn_session_state(self._impl)
 
     @property
-    def connection(self):
+    def connection(self) -> Connection:
         """
         The parent connection for this session.
-
-        :type: :class:`Connection`
         """
         return Connection.wrap(pn_session_connection(self._impl))
 
     @property
-    def transport(self):
+    def transport(self) -> Transport:
         """
         The transport bound to the parent connection for this session.
-
-        :type: :class:`Transport`
         """
         return self.connection.transport
 
-    def sender(self, name):
+    def sender(self, name: str) -> 'Sender':
         """
         Create a new :class:`Sender` on this session.
 
         :param name: Name of sender
-        :type name: ``str``
-        :return: New Sender object
-        :rtype: :class:`Sender`
         """
         return Sender(pn_sender(self._impl, unicode2utf8(name)))
 
-    def receiver(self, name):
+    def receiver(self, name: str) -> 'Receiver':
         """
         Create a new :class:`Receiver` on this session.
 
         :param name: Name of receiver
-        :type name: ``str``
-        :return: New Receiver object
-        :rtype: :class:`Receiver`
         """
         return Receiver(pn_receiver(self._impl, unicode2utf8(name)))
 
-    def free(self):
+    def free(self) -> None:
         """
         Free this session. When a session is freed it will no
         longer be retained by the connection once any internal
@@ -796,14 +774,14 @@ class Link(Wrapper, Endpoint):
     def __init__(self, impl):
         Wrapper.__init__(self, impl, pn_link_attachments)
 
-    def _init(self):
+    def _init(self) -> None:
         Endpoint._init(self)
         self.properties = None
 
     def _get_attachments(self):
         return pn_link_attachments(self._impl)
 
-    def _check(self, err):
+    def _check(self, err: int) -> int:
         if err < 0:
             exc = EXCEPTIONS.get(err, LinkException)
             raise exc("[%s]: %s" % (err, pn_error_text(pn_link_error(self._impl))))
@@ -816,7 +794,7 @@ class Link(Wrapper, Endpoint):
     def _get_remote_cond_impl(self):
         return pn_link_remote_condition(self._impl)
 
-    def open(self):
+    def open(self) -> None:
         """
         Opens the link.
 
@@ -828,7 +806,7 @@ class Link(Wrapper, Endpoint):
         obj2dat(self.properties, pn_link_properties(self._impl))
         pn_link_open(self._impl)
 
-    def close(self):
+    def close(self) -> None:
         """
         Closes the link.
 
@@ -844,7 +822,7 @@ class Link(Wrapper, Endpoint):
         pn_link_close(self._impl)
 
     @property
-    def state(self):
+    def state(self) -> int:
         """
         The state of the link as a bit field. The state has a local
         and a remote component. Each of these can be in one of three
@@ -853,81 +831,65 @@ class Link(Wrapper, Endpoint):
         :const:`LOCAL_ACTIVE`, :const:`LOCAL_CLOSED`,
         :const:`REMOTE_UNINIT`, :const:`REMOTE_ACTIVE` and
         :const:`REMOTE_CLOSED`.
-
-        :type: ``int``
         """
         return pn_link_state(self._impl)
 
     @property
-    def source(self):
+    def source(self) -> 'Terminus':
         """
         The source of the link as described by the local peer. The
         returned object is valid until the link is freed.
-
-        :type: :class:`Terminus`
         """
         return Terminus(pn_link_source(self._impl))
 
     @property
-    def target(self):
+    def target(self) -> 'Terminus':
         """
         The target of the link as described by the local peer. The
         returned object is valid until the link is freed.
-
-        :type: :class:`Terminus`
         """
         return Terminus(pn_link_target(self._impl))
 
     @property
-    def remote_source(self):
+    def remote_source(self) -> 'Terminus':
         """
         The source of the link as described by the remote peer. The
         returned object is valid until the link is freed. The remote
         :class:`Terminus` object will be empty until the link is
         remotely opened as indicated by the :const:`REMOTE_ACTIVE`
         flag.
-
-        :type: :class:`Terminus`
         """
         return Terminus(pn_link_remote_source(self._impl))
 
     @property
-    def remote_target(self):
+    def remote_target(self) -> 'Terminus':
         """
         The target of the link as described by the remote peer. The
         returned object is valid until the link is freed. The remote
         :class:`Terminus` object will be empty until the link is
         remotely opened as indicated by the :const:`REMOTE_ACTIVE`
         flag.
-
-        :type: :class:`Terminus`
         """
         return Terminus(pn_link_remote_target(self._impl))
 
     @property
-    def session(self):
+    def session(self) -> Session:
         """
         The parent session for this link.
-
-        :type: :class:`Session`
         """
         return Session.wrap(pn_link_session(self._impl))
 
     @property
-    def connection(self):
+    def connection(self) -> Connection:
         """
         The connection on which this link was attached.
-
-        :type: :class:`Connection`
         """
         return self.session.connection
 
     @property
-    def transport(self):
+    def transport(self) -> Transport:
         """
         The transport bound to the connection on which this link was attached.
-
-        :type: :class:`Transport`
         """
         return self.session.transport
 
@@ -945,7 +907,7 @@ class Link(Wrapper, Endpoint):
         return Delivery(pn_delivery(self._impl, tag))
 
     @property
-    def current(self):
+    def current(self) -> Optional[Delivery]:
         """
         The current delivery for this link.
 
@@ -958,12 +920,10 @@ class Link(Wrapper, Endpoint):
         current delivery remains the same until it is changed through
         use of :meth:`advance` or until it is settled via
         :meth:`Delivery.settle`.
-
-        :rtype: :class:`Delivery`
         """
         return Delivery.wrap(pn_link_current(self._impl))
 
-    def advance(self):
+    def advance(self) -> bool:
         """
         Advance the current delivery of this link to the next delivery.
 
@@ -984,21 +944,18 @@ class Link(Wrapper, Endpoint):
 
         :return: ``True`` if the value of the current delivery changed (even
             if it was set to ``NULL``, ``False`` otherwise.
-        :rtype: ``bool``
         """
         return pn_link_advance(self._impl)
 
     @property
-    def unsettled(self):
+    def unsettled(self) -> int:
         """
         The number of unsettled deliveries for this link.
-
-        :type: ``int``
         """
         return pn_link_unsettled(self._impl)
 
     @property
-    def credit(self):
+    def credit(self) -> int:
         """
         The amount of outstanding credit on this link.
 
@@ -1018,13 +975,11 @@ class Link(Wrapper, Endpoint):
             up being buffered by the link until enough credit is obtained from
             the receiver to send them over the wire. In this case the balance
             reported by :attr:`credit` will go negative.
-
-        :type: ``int``
         """
         return pn_link_credit(self._impl)
 
     @property
-    def available(self):
+    def available(self) -> int:
         """
         The available deliveries hint for this link.
 
@@ -1032,13 +987,11 @@ class Link(Wrapper, Endpoint):
         deliveries that might be able to be sent if sufficient credit were
         issued by the receiving link endpoint. See :meth:`Sender.offered` for
         more details.
-
-        :type: ``int``
         """
         return pn_link_available(self._impl)
 
     @property
-    def queued(self):
+    def queued(self) -> int:
         """
         The number of queued deliveries for a link.
 
@@ -1047,12 +1000,10 @@ class Link(Wrapper, Endpoint):
         :meth:`credit`), or they simply may not have yet had a chance to
         be written to the wire. This operation will return the number of
         queued deliveries on a link.
-
-        :type: ``int``
         """
         return pn_link_queued(self._impl)
 
-    def next(self, mask):
+    def next(self, mask: int) -> Optional[Union['Sender', 'Receiver']]:
         """
         Retrieve the next link that matches the given state mask.
 
@@ -1062,37 +1013,29 @@ class Link(Wrapper, Endpoint):
         match behavior.
 
         :param mask: State mask to match
-        :type mask: ``int``
         :return: The next link that matches the given state mask, or
                  ``None`` if no link matches.
-        :rtype: :class:`Link`
         """
         return Link.wrap(pn_link_next(self._impl, mask))
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
         The name of the link.
-
-        :type: ``str``
         """
         return utf82unicode(pn_link_name(self._impl))
 
     @property
-    def is_sender(self):
+    def is_sender(self) -> bool:
         """
         ``True`` if this link is a sender, ``False`` otherwise.
-
-        :type: ``bool``
         """
         return pn_link_is_sender(self._impl)
 
     @property
-    def is_receiver(self):
+    def is_receiver(self) -> bool:
         """
         ``True`` if this link is a receiver, ``False`` otherwise.
-
-        :type: ``bool``
         """
         return pn_link_is_receiver(self._impl)
 
@@ -1164,7 +1107,7 @@ class Link(Wrapper, Endpoint):
         :type: ``bool``
         """)
 
-    def drained(self):
+    def drained(self) -> int:
         """
         Drain excess credit for this link.
 
@@ -1183,20 +1126,17 @@ class Link(Wrapper, Endpoint):
         to the receiver.
 
         :return: The number of credits drained.
-        :rtype: ``int``
         """
         return pn_link_drained(self._impl)
 
     @property
-    def remote_max_message_size(self):
+    def remote_max_message_size(self) -> int:
         """
         Get the remote view of the maximum message size for this link.
 
         .. warning:: **Unsettled API**
 
         A zero value means the size is unlimited.
-
-        :type: ``long``
         """
         return pn_link_remote_max_message_size(self._impl)
 
@@ -1270,22 +1210,20 @@ class Sender(Link):
     A link over which messages are sent.
     """
 
-    def offered(self, n):
+    def offered(self, n: int) -> None:
         """
         Signal the availability of deliveries for this Sender.
 
         :param n: Credit the number of deliveries potentially
                   available for transfer.
-        :type n: ``int``
         """
         pn_link_offered(self._impl, n)
 
-    def stream(self, data):
+    def stream(self, data: bytes) -> int:
         """
         Send specified data as part of the current delivery.
 
         :param data: Data to send
-        :type data: ``binary``
         """
         return self._check(pn_link_send(self._impl, data))
 
@@ -1327,16 +1265,15 @@ class Receiver(Link):
     A link over which messages are received.
     """
 
-    def flow(self, n):
+    def flow(self, n: int) -> None:
         """
         Increases the credit issued to the remote sender by the specified number of messages.
 
         :param n: The credit to be issued to the remote sender.
-        :type n: ``int``
         """
         pn_link_flow(self._impl, n)
 
-    def recv(self, limit):
+    def recv(self, limit: int) -> Optional[bytes]:
         """
         Receive message data for the current delivery on this receiver.
 
@@ -1347,10 +1284,8 @@ class Receiver(Link):
             ``None`` is returned.
 
         :param limit: the max data size to receive of this message
-        :type limit: ``int``
         :return: The received message data, or ``None`` if the message
             has been completely received.
-        :rtype: ``binary`` or ``None``
         :raise: * :class:`Timeout` if timed out
                 * :class:`Interrupt` if interrupted
                 * :class:`LinkException` for all other exceptions
@@ -1362,7 +1297,7 @@ class Receiver(Link):
             self._check(n)
             return binary
 
-    def drain(self, n):
+    def drain(self, n: int) -> None:
         """
         Grant credit for incoming deliveries on this receiver, and
         set drain mode to true.
@@ -1370,18 +1305,16 @@ class Receiver(Link):
         Use :attr:`drain_mode` to set the drain mode explicitly.
 
         :param n: The amount by which to increment the link credit
-        :type n: ``int``
         """
         pn_link_drain(self._impl, n)
 
-    def draining(self):
+    def draining(self) -> bool:
         """
         Check if a link is currently draining. A link is defined
         to be draining when drain mode is set to ``True``, and the
         sender still has excess credit.
 
         :return: ``True`` if the link is currently draining, ``False`` otherwise.
-        :rtype: ``bool``
         """
         return pn_link_draining(self._impl)
 
@@ -1425,7 +1358,7 @@ class Terminus(object):
     def __init__(self, impl):
         self._impl = impl
 
-    def _check(self, err):
+    def _check(self, err: int) -> int:
         if err < 0:
             exc = EXCEPTIONS.get(err, LinkException)
             raise exc("[%s]" % err)
@@ -1565,12 +1498,11 @@ class Terminus(object):
         """
         return Data(pn_terminus_filter(self._impl))
 
-    def copy(self, src):
+    def copy(self, src: 'Terminus') -> None:
         """
         Copy another terminus object.
 
         :param src: The terminus to be copied from
-        :type src: :class:`Terminus`
         :raises: :class:`LinkException` if there is an error
         """
         self._check(pn_terminus_copy(self._impl, src._impl))

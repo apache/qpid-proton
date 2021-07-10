@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 from cproton import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM, PN_SASL_SYS, PN_SASL_TEMP, \
     PN_SSL_ANONYMOUS_PEER, PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY, PN_SSL_CERT_SUBJECT_COMMON_NAME, \
     PN_SSL_CERT_SUBJECT_COUNTRY_NAME, PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME, PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT, \
@@ -46,6 +44,12 @@ from ._common import millis2secs, secs2millis, unicode2utf8, utf82unicode
 from ._condition import cond2obj, obj2cond
 from ._exceptions import EXCEPTIONS, SSLException, SSLUnavailable, SessionException, TransportException
 from ._wrapper import Wrapper
+
+from typing import Callable, Optional, Type, Union, TYPE_CHECKING, List
+
+if TYPE_CHECKING:
+    from ._condition import Condition
+    from ._endpoints import Connection  # would produce circular import
 
 
 class TraceAdapter:
@@ -96,13 +100,13 @@ class Transport(Wrapper):
         else:
             raise TransportException("Cannot initialise Transport from mode: %s" % str(mode))
 
-    def _init(self):
+    def _init(self) -> None:
         self._sasl = None
         self._ssl = None
         self._reactor = None
         self._connect_selectable = None
 
-    def _check(self, err):
+    def _check(self, err: int) -> int:
         if err < 0:
             exc = EXCEPTIONS.get(err, TransportException)
             raise exc("[%s]: %s" % (err, pn_error_text(pn_transport_error(self._impl))))
@@ -138,7 +142,7 @@ class Transport(Wrapper):
         """
         pn_transport_log(self._impl, message)
 
-    def require_auth(self, bool):
+    def require_auth(self, bool: bool) -> None:
         """
         Set whether a non-authenticated transport connection is allowed.
 
@@ -151,12 +155,11 @@ class Transport(Wrapper):
         The default if this option is not set is to allow unauthenticated connections.
 
         :param bool: ``True`` when authenticated connections are required.
-        :type bool: ``bool``
         """
         pn_transport_require_auth(self._impl, bool)
 
     @property
-    def authenticated(self):
+    def authenticated(self) -> bool:
         """
         Indicate whether the transport connection is authenticated.
 
@@ -184,19 +187,17 @@ class Transport(Wrapper):
         pn_transport_require_encryption(self._impl, bool)
 
     @property
-    def encrypted(self):
+    def encrypted(self) -> bool:
         """
         Indicate whether the transport connection is encrypted.
 
         .. note:: This property may not be stable until the :const:`Event.CONNECTION_REMOTE_OPEN`
             event is received.
-
-        :type: ``bool``
         """
         return pn_transport_is_encrypted(self._impl)
 
     @property
-    def user(self):
+    def user(self) -> Optional[str]:
         """
         The authenticated user.
 
@@ -205,32 +206,28 @@ class Transport(Wrapper):
 
         The returned value is only reliable after the ``PN_TRANSPORT_AUTHENTICATED``
         event has been received.
-
-        :type: ``str``
         """
         return pn_transport_get_user(self._impl)
 
-    def bind(self, connection):
+    def bind(self, connection: 'Connection') -> None:
         """
         Assign a connection to the transport.
 
         :param connection: Connection to which to bind.
-        :type connection: :class:`Connection`
         :raise: :exc:`TransportException` if there is any Proton error.
         """
         self._check(pn_transport_bind(self._impl, connection._impl))
 
-    def bind_nothrow(self, connection):
+    def bind_nothrow(self, connection: 'Connection') -> None:
         """
         Assign a connection to the transport. Any failure is
         ignored rather than thrown.
 
         :param connection: Connection to which to bind.
-        :type connection: :class:`Connection`
         """
         pn_transport_bind(self._impl, connection._impl)
 
-    def unbind(self):
+    def unbind(self) -> None:
         """
         Unbinds a transport from its AMQP connection.
 
@@ -238,7 +235,7 @@ class Transport(Wrapper):
         """
         self._check(pn_transport_unbind(self._impl))
 
-    def trace(self, n):
+    def trace(self, n: int) -> None:
         """
         Update a transports trace flags.
 
@@ -248,11 +245,10 @@ class Transport(Wrapper):
         a bitwise or operation.
 
         :param n: Trace flags
-        :type n: ``int``
         """
         pn_transport_trace(self._impl, n)
 
-    def tick(self, now):
+    def tick(self, now: float) -> float:
         """
         Process any pending transport timer events (like heartbeat generation).
 
@@ -264,22 +260,19 @@ class Transport(Wrapper):
             from or written to the transport.
 
         :param now: seconds since epoch.
-        :type now: ``float``
         :return: If non-zero, then the monotonic expiration time of the next
                  pending timer event for the transport.  The caller must invoke
                  :meth:`tick` again at least once at or before this deadline
                  occurs. If ``0.0``, then there are no pending events.
-        :rtype: ``float``
         """
         return millis2secs(pn_transport_tick(self._impl, secs2millis(now)))
 
-    def capacity(self):
+    def capacity(self) -> int:
         """
         Get the amount of free space for input following the transport's
         tail pointer.
 
         :return: Available space for input in bytes.
-        :rtype: ``int``
         :raise: :exc:`TransportException` if there is any Proton error.
         """
         c = pn_transport_capacity(self._impl)
@@ -288,7 +281,7 @@ class Transport(Wrapper):
         else:
             return self._check(c)
 
-    def push(self, binary):
+    def push(self, binary: bytes) -> None:
         """
         Pushes the supplied bytes into the tail of the transport.
         Only some of the bytes will be copied if there is insufficient
@@ -296,7 +289,6 @@ class Transport(Wrapper):
         capacity the transport has.
 
         :param binary: Data to be pushed onto the transport tail.
-        :type binary: ``bytes``
         :raise: - :exc:`TransportException` if there is any Proton error.
                 - ``OverflowError`` if the size of the data exceeds the
                   transport capacity.
@@ -305,7 +297,7 @@ class Transport(Wrapper):
         if n != len(binary):
             raise OverflowError("unable to process all bytes: %s, %s" % (n, len(binary)))
 
-    def close_tail(self):
+    def close_tail(self) -> None:
         """
         Indicate that the input has reached End Of Stream (EOS).
 
@@ -315,13 +307,12 @@ class Transport(Wrapper):
         """
         self._check(pn_transport_close_tail(self._impl))
 
-    def pending(self):
+    def pending(self) -> int:
         """
         Get the number of pending output bytes following the transport's
         head pointer.
 
         :return: The number of pending output bytes.
-        :rtype: ``int``
         :raise: :exc:`TransportException` if there is any Proton error.
         """
         p = pn_transport_pending(self._impl)
@@ -330,7 +321,7 @@ class Transport(Wrapper):
         else:
             return self._check(p)
 
-    def peek(self, size):
+    def peek(self, size: int) -> Optional[bytes]:
         """
         Returns ``size`` bytes from the head of the transport.
 
@@ -338,10 +329,8 @@ class Transport(Wrapper):
         is greater than the value reported by :meth:`pending`.
 
         :param size: Number of bytes to return.
-        :type size: ``int``
         :return: ``size`` bytes from the head of the transport, or ``None``
                  if none are available.
-        :rtype: ``bytes``
         :raise: :exc:`TransportException` if there is any Proton error.
         """
         cd, out = pn_transport_peek(self._impl, size)
@@ -365,7 +354,7 @@ class Transport(Wrapper):
         """
         pn_transport_pop(self._impl, size)
 
-    def close_head(self):
+    def close_head(self) -> None:
         """
         Indicate that the output has closed.
 
@@ -376,12 +365,10 @@ class Transport(Wrapper):
         self._check(pn_transport_close_head(self._impl))
 
     @property
-    def closed(self):
+    def closed(self) -> bool:
         """
         ``True`` iff both the transport head and transport tail are closed
         using :meth:`close_head` and :meth:`close_tail` respectively.
-
-        :type: ``bool``
         """
         return pn_transport_closed(self._impl)
 
@@ -459,54 +446,44 @@ class Transport(Wrapper):
         """)
 
     @property
-    def remote_idle_timeout(self):
+    def remote_idle_timeout(self) -> float:
         """
         Get the idle timeout for a transport's remote peer in
         seconds. A zero idle timeout means heartbeats are disabled.
-
-        :type: ``float``
         """
         return millis2secs(pn_transport_get_remote_idle_timeout(self._impl))
 
     @property
-    def frames_output(self):
+    def frames_output(self) -> int:
         """
         Get the number of frames output by a transport.
-
-        :type: ``int``
         """
         return pn_transport_get_frames_output(self._impl)
 
     @property
-    def frames_input(self):
+    def frames_input(self) -> int:
         """
         Get the number of frames input by a transport.
-
-        :type: ``int``
         """
         return pn_transport_get_frames_input(self._impl)
 
-    def sasl(self):
+    def sasl(self) -> 'SASL':
         """
         Get the :class:`SASL` object associated with this transport.
 
         :return: SASL object associated with this transport.
-        :rtype: :class:`SASL`
         """
         return SASL(self)
 
-    def ssl(self, domain=None, session_details=None):
+    def ssl(self, domain: Optional['SSLDomain'] = None, session_details: Optional['SSLSessionDetails'] = None) -> 'SSL':
         """
         Get the :class:`SSL` session associated with this transport. If
         not set, then a new session will be created using ``domain`` and
         ``session_details``.
 
         :param domain: An SSL domain configuration object
-        :type domain: :class:`SSLDomain`
         :param session_details: A unique identifier for the SSL session.
-        :type session_details: :class:`SSLSessionDetails`
         :return: SSL session associated with this transport.
-        :rtype: :class:`SSL`
         """
         # SSL factory (singleton for this transport)
         if not self._ssl:
@@ -561,7 +538,7 @@ class SASL(Wrapper):
     TEMP = PN_SASL_TEMP
 
     @staticmethod
-    def extended():
+    def extended() -> bool:
         """
         Check for support of extended SASL negotiation.
 
@@ -576,7 +553,7 @@ class SASL(Wrapper):
         """
         return pn_sasl_extended()
 
-    def __init__(self, transport):
+    def __init__(self, transport: Transport) -> None:
         Wrapper.__init__(self, transport._impl, pn_transport_attachments)
         self._sasl = pn_sasl(transport._impl)
 
@@ -631,7 +608,7 @@ class SASL(Wrapper):
         return pn_sasl_get_authorization(self._sasl)
 
     @property
-    def mech(self):
+    def mech(self) -> str:
         """
         Return the selected SASL mechanism.
 
@@ -643,7 +620,7 @@ class SASL(Wrapper):
         return pn_sasl_get_mech(self._sasl)
 
     @property
-    def outcome(self):
+    def outcome(self) -> Optional[int]:
         """
         Retrieve the outcome of SASL negotiation.
 
@@ -656,7 +633,7 @@ class SASL(Wrapper):
         else:
             return outcome
 
-    def allowed_mechs(self, mechs):
+    def allowed_mechs(self, mechs: Union[str, List[str]]) -> None:
         """
         SASL mechanisms that are to be considered for authentication.
 
@@ -678,7 +655,6 @@ class SASL(Wrapper):
                       either a string containing a space-separated list of mechs
                       ``"mech1 mech2 ..."``, or a Python list of strings
                       ``["mech1", "mech2", ...]``.
-        :type mechs: string
         """
         if isinstance(mechs, list):
             mechs = " ".join(mechs)
@@ -702,7 +678,7 @@ Allow unencrypted cleartext passwords (PLAIN mech)
         """
         pn_sasl_done(self._sasl, outcome)
 
-    def config_name(self, name):
+    def config_name(self, name: str):
         """
         Set the SASL configuration name. This is used to construct the SASL
         configuration filename. In the current implementation ``".conf"`` is
@@ -713,11 +689,10 @@ Allow unencrypted cleartext passwords (PLAIN mech)
         and ``"proton-client"`` for a client.
 
         :param name: The configuration name.
-        :type name: string
         """
         pn_sasl_config_name(self._sasl, name)
 
-    def config_path(self, path):
+    def config_path(self, path: str):
         """
         Set the SASL configuration path. This is used to tell SASL where
         to look for the configuration file. In the current implementation
@@ -731,7 +706,6 @@ Allow unencrypted cleartext passwords (PLAIN mech)
 
         :param path: The configuration path, may contain colon-separated list
                      if more than one path is specified.
-        :type path: string
         """
         pn_sasl_config_path(self._sasl, path)
 
@@ -757,19 +731,19 @@ class SSLDomain(object):
     ANONYMOUS_PEER = PN_SSL_ANONYMOUS_PEER
     """Do not require a certificate nor cipher authorization."""
 
-    def __init__(self, mode):
+    def __init__(self, mode: int) -> None:
         self._domain = pn_ssl_domain(mode)
         if self._domain is None:
             raise SSLUnavailable()
 
-    def _check(self, err):
+    def _check(self, err: int) -> int:
         if err < 0:
             exc = EXCEPTIONS.get(err, SSLException)
             raise exc("SSL failure.")
         else:
             return err
 
-    def set_credentials(self, cert_file, key_file, password):
+    def set_credentials(self, cert_file: str, key_file: str, password: Optional[str]) -> int:
         """
         Set the certificate that identifies the local node to the remote.
 
@@ -785,25 +759,21 @@ class SSLDomain(object):
         :param cert_file: Specifier for the file/database containing the identifying
                certificate. For Openssl users, this is a PEM file. For Windows SChannel
                users, this is the PKCS#12 file or system store.
-        :type cert_file: ``str``
         :param key_file: An optional key to access the identifying certificate. For
                Openssl users, this is an optional PEM file containing the private key
                used to sign the certificate. For Windows SChannel users, this is the
                friendly name of the self-identifying certificate if there are multiple
                certificates in the store.
-        :type key_file: ``str``
         :param password: The password used to sign the key, else ``None`` if key is not
                protected.
-        :type password: ``str`` or ``None``
         :return: 0 on success
-        :rtype: ``int``
         :raise: :exc:`SSLException` if there is any Proton error
         """
         return self._check(pn_ssl_domain_set_credentials(self._domain,
                                                          cert_file, key_file,
                                                          password))
 
-    def set_trusted_ca_db(self, certificate_db):
+    def set_trusted_ca_db(self, certificate_db: str) -> int:
         """
         Configure the set of trusted CA certificates used by this domain to verify peers.
 
@@ -821,15 +791,13 @@ class SSLDomain(object):
             will be the users default trusted certificate store.
 
         :param certificate_db: Database of trusted CAs, used to authenticate the peer.
-        :type certificate_db: ``str``
         :return: 0 on success
-        :rtype: ``int``
         :raise: :exc:`SSLException` if there is any Proton error
         """
         return self._check(pn_ssl_domain_set_trusted_ca_db(self._domain,
                                                            certificate_db))
 
-    def set_peer_authentication(self, verify_mode, trusted_CAs=None):
+    def set_peer_authentication(self, verify_mode: int, trusted_CAs: Optional[str] = None) -> int:
         """
         This method controls how the peer's certificate is validated, if at all.  By default,
         servers do not attempt to verify their peers (PN_SSL_ANONYMOUS_PEER) but
@@ -848,18 +816,15 @@ class SSLDomain(object):
 
         :param verify_mode: The level of validation to apply to the peer, one of :const:`VERIFY_PEER`,
                             :const:`VERIFY_PEER_NAME`, :const:`ANONYMOUS_PEER`,
-        :type verify_mode: ``int``
         :param trusted_CAs: Path to a database of trusted CAs that the server will advertise.
-        :type trusted_CAs: ``str``
         :return: 0 on success
-        :rtype: ``int``
         :raise: :exc:`SSLException` if there is any Proton error
         """
         return self._check(pn_ssl_domain_set_peer_authentication(self._domain,
                                                                  verify_mode,
                                                                  trusted_CAs))
 
-    def allow_unsecured_client(self):
+    def allow_unsecured_client(self) -> int:
         """
         Permit a server to accept connection requests from non-SSL clients.
 
@@ -871,7 +836,7 @@ class SSLDomain(object):
         """
         return self._check(pn_ssl_domain_allow_unsecured_client(self._domain))
 
-    def __del__(self):
+    def __del__(self) -> None:
         pn_ssl_domain_free(self._domain)
 
 
@@ -882,16 +847,15 @@ class SSL(object):
     """
 
     @staticmethod
-    def present():
+    def present() -> bool:
         """
         Tests for an SSL implementation being present.
 
         :return: ``True`` if we support SSL, ``False`` if not.
-        :rtype: ``bool``
         """
         return pn_ssl_present()
 
-    def _check(self, err):
+    def _check(self, err: int) -> int:
         if err < 0:
             exc = EXCEPTIONS.get(err, SSLException)
             raise exc("SSL failure.")
@@ -923,7 +887,7 @@ class SSL(object):
             transport._ssl = obj
         return transport._ssl
 
-    def cipher_name(self):
+    def cipher_name(self) -> Optional[str]:
         """
         Get the name of the Cipher that is currently in use.
 
@@ -934,14 +898,13 @@ class SSL(object):
             or other changes to the SSL state.
 
         :return: The cypher name, or ``None`` if no cipher in use.
-        :rtype: ``str`` or ``None``
         """
         rc, name = pn_ssl_get_cipher_name(self._ssl, 128)
         if rc:
             return name
         return None
 
-    def protocol_name(self):
+    def protocol_name(self) -> Optional[str]:
         """
         Get the name of the SSL protocol that is currently in use.
 
@@ -952,7 +915,6 @@ class SSL(object):
 
         :return: The protocol name if SSL is active, or ``None`` if SSL connection
                  is not ready or active.
-        :rtype: ``str`` or ``None``
         """
         rc, name = pn_ssl_get_protocol_name(self._ssl, 128)
         if rc:
@@ -989,7 +951,7 @@ class SSL(object):
     CERT_COMMON_NAME = PN_SSL_CERT_SUBJECT_COMMON_NAME
     """Certificate common name or URL"""
 
-    def get_cert_subject_subfield(self, subfield_name):
+    def get_cert_subject_subfield(self, subfield_name: int) -> Optional[str]:
         """
         Returns a string that contains the value of the sub field of
         the subject field in the ssl certificate. The subject field
@@ -1004,86 +966,77 @@ class SSL(object):
 
         :param subfield_name: The enumeration representing the required
                               sub field listed above
-        :type subfield_name: ``int``
         :return: A string which contains the requested sub field value which
                  is valid until the ssl object is destroyed.
-        :rtype: ``str``
         """
         subfield_value = pn_ssl_get_remote_subject_subfield(self._ssl, subfield_name)
         return subfield_value
 
-    def get_cert_subject(self):
+    def get_cert_subject(self) -> str:
         """
         Get the subject from the peer's certificate.
 
         :return: A string containing the full subject.
-        :rtype: ``str``
         """
         subject = pn_ssl_get_remote_subject(self._ssl)
         return subject
 
-    def _get_cert_subject_unknown_subfield(self):
+    def _get_cert_subject_unknown_subfield(self) -> None:
         # Pass in an unhandled enum
         return self.get_cert_subject_subfield(10)
 
     # Convenience functions for obtaining the subfields of the subject field.
-    def get_cert_common_name(self):
+    def get_cert_common_name(self) -> str:
         """
         A convenience method to get a string that contains the :const:`CERT_COMMON_NAME`
         sub field of the subject field in the ssl certificate.
 
         :return: A string containing the :const:`CERT_COMMON_NAME` sub field.
-        :rtype: ``str``
         """
         return self.get_cert_subject_subfield(SSL.CERT_COMMON_NAME)
 
-    def get_cert_organization(self):
+    def get_cert_organization(self) -> str:
         """
         A convenience method to get a string that contains the :const:`CERT_ORGANIZATION_NAME`
         sub field of the subject field in the ssl certificate.
 
         :return: A string containing the :const:`CERT_ORGANIZATION_NAME` sub field.
-        :rtype: ``str``
         """
         return self.get_cert_subject_subfield(SSL.CERT_ORGANIZATION_NAME)
 
-    def get_cert_organization_unit(self):
+    def get_cert_organization_unit(self) -> str:
         """
         A convenience method to get a string that contains the :const:`CERT_ORGANIZATION_UNIT`
         sub field of the subject field in the ssl certificate.
 
         :return: A string containing the :const:`CERT_ORGANIZATION_UNIT` sub field.
-        :rtype: ``str``
         """
         return self.get_cert_subject_subfield(SSL.CERT_ORGANIZATION_UNIT)
 
-    def get_cert_locality_or_city(self):
+    def get_cert_locality_or_city(self) -> str:
         """
         A convenience method to get a string that contains the :const:`CERT_CITY_OR_LOCALITY`
         sub field of the subject field in the ssl certificate.
 
         :return: A string containing the :const:`CERT_CITY_OR_LOCALITY` sub field.
-        :rtype: ``str``
         """
         return self.get_cert_subject_subfield(SSL.CERT_CITY_OR_LOCALITY)
 
-    def get_cert_country(self):
+    def get_cert_country(self) -> str:
         """
         A convenience method to get a string that contains the :const:`CERT_COUNTRY_NAME`
         sub field of the subject field in the ssl certificate.
 
         :return: A string containing the :const:`CERT_COUNTRY_NAME` sub field.
-        :rtype: ``str``
         """
         return self.get_cert_subject_subfield(SSL.CERT_COUNTRY_NAME)
 
-    def get_cert_state_or_province(self):
+    def get_cert_state_or_province(self) -> str:
         """
         A convenience method to get a string that contains the :const:`CERT_STATE_OR_PROVINCE`
         sub field of the subject field in the ssl certificate.
 
         :return: A string containing the :const:`CERT_STATE_OR_PROVINCE` sub field.
-        :rtype: ``str``
         """
         return self.get_cert_subject_subfield(SSL.CERT_STATE_OR_PROVINCE)
 
@@ -1112,57 +1065,51 @@ class SSL(object):
         return None
 
     # Convenience functions for obtaining fingerprint for specific hashing algorithms
-    def _get_cert_fingerprint_unknown_hash_alg(self):
+    def _get_cert_fingerprint_unknown_hash_alg(self) -> None:
         return self.get_cert_fingerprint(41, 10)
 
-    def get_cert_fingerprint_sha1(self):
+    def get_cert_fingerprint_sha1(self) -> Optional[str]:
         """
         A convenience method to get the :const:`SHA1` fingerprint of the
         certificate.
 
         :return: Hex fingerprint in a string, or ``None`` if an error occurred.
-        :rtype: ``str`` or ``None``
         """
         return self.get_cert_fingerprint(41, SSL.SHA1)
 
-    def get_cert_fingerprint_sha256(self):
+    def get_cert_fingerprint_sha256(self) -> Optional[str]:
         """
         A convenience method to get the :const:`SHA256` fingerprint of the
         certificate.
 
         :return: Hex fingerprint in a string, or ``None`` if an error occurred.
-        :rtype: ``str`` or ``None``
         """
         # sha256 produces a fingerprint that is 64 characters long
         return self.get_cert_fingerprint(65, SSL.SHA256)
 
-    def get_cert_fingerprint_sha512(self):
+    def get_cert_fingerprint_sha512(self) -> Optional[str]:
         """
         A convenience method to get the :const:`SHA512` fingerprint of the
         certificate.
 
         :return: Hex fingerprint in a string, or ``None`` if an error occurred.
-        :rtype: ``str`` or ``None``
         """
         # sha512 produces a fingerprint that is 128 characters long
         return self.get_cert_fingerprint(129, SSL.SHA512)
 
-    def get_cert_fingerprint_md5(self):
+    def get_cert_fingerprint_md5(self) -> Optional[str]:
         """
         A convenience method to get the :const:`MD5` fingerprint of the
         certificate.
 
         :return: Hex fingerprint in a string, or ``None`` if an error occurred.
-        :rtype: ``str`` or ``None``
         """
         return self.get_cert_fingerprint(33, SSL.MD5)
 
     @property
-    def remote_subject(self):
+    def remote_subject(self) -> str:
         """
         The subject from the peers certificate.
-
-        :type: ``str``
         """
         return pn_ssl_get_remote_subject(self._ssl)
 
@@ -1231,14 +1178,13 @@ class SSLSessionDetails(object):
     session on a new SSL connection.
     """
 
-    def __init__(self, session_id):
+    def __init__(self, session_id: str) -> None:
         self._session_id = session_id
 
-    def get_session_id(self):
+    def get_session_id(self) -> str:
         """
         Get the unique identifier for this SSL session
 
         :return: Session identifier
-        :rtype: ``str``
         """
         return self._session_id

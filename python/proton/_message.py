@@ -37,6 +37,13 @@ from ._common import isinteger, millis2secs, secs2millis, unicode2utf8, utf82uni
 from ._data import char, Data, symbol, ulong, AnnotationDict
 from ._endpoints import Link
 from ._exceptions import EXCEPTIONS, MessageException
+from typing import Dict, Optional, Union, TYPE_CHECKING, overload
+
+if TYPE_CHECKING:
+    from proton._delivery import Delivery
+    from proton._endpoints import Sender, Receiver
+    from uuid import UUID
+    from proton._data import Described
 
 
 class Message(object):
@@ -69,19 +76,19 @@ class Message(object):
             getattr(self, k)  # Raise exception if it's not a valid attribute.
             setattr(self, k, v)
 
-    def __del__(self):
+    def __del__(self) -> None:
         if hasattr(self, "_msg"):
             pn_message_free(self._msg)
             del self._msg
 
-    def _check(self, err):
+    def _check(self, err: int) -> int:
         if err < 0:
             exc = EXCEPTIONS.get(err, MessageException)
             raise exc("[%s]: %s" % (err, pn_error_text(pn_message_error(self._msg))))
         else:
             return err
 
-    def _check_property_keys(self):
+    def _check_property_keys(self) -> None:
         """
         AMQP allows only string keys for properties. This function checks that this requirement is met
         and raises a MessageException if not. However, in certain cases, conversions to string are
@@ -110,7 +117,7 @@ class Message(object):
         for old_key, new_key in changed_keys:
             self.properties[new_key] = self.properties.pop(old_key)
 
-    def _pre_encode(self):
+    def _pre_encode(self) -> None:
         inst = Data(pn_message_instructions(self._msg))
         ann = Data(pn_message_annotations(self._msg))
         props = Data(pn_message_properties(self._msg))
@@ -130,7 +137,7 @@ class Message(object):
         if self.body is not None:
             body.put_object(self.body)
 
-    def _post_decode(self):
+    def _post_decode(self) -> None:
         inst = Data(pn_message_instructions(self._msg))
         ann = Data(pn_message_annotations(self._msg))
         props = Data(pn_message_properties(self._msg))
@@ -153,7 +160,7 @@ class Message(object):
         else:
             self.body = None
 
-    def clear(self):
+    def clear(self) -> None:
         """
         Clears the contents of the :class:`Message`. All fields will be reset to
         their default values.
@@ -495,7 +502,7 @@ class Message(object):
                 self._check(err)
                 return data
 
-    def decode(self, data):
+    def decode(self, data: bytes) -> None:
         self._check(pn_message_decode(self._msg, data))
         self._post_decode()
 
@@ -548,7 +555,7 @@ class Message(object):
         self.decode(dlv.encoded)
         return dlv
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         props = []
         for attr in ("inferred", "address", "reply_to", "durable", "ttl",
                      "priority", "first_acquirer", "delivery_count", "id",
