@@ -1434,7 +1434,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   pn_data_clear(link->remote_source.outcomes);
   pn_data_clear(link->remote_source.capabilities);
 
-  err = pn_data_scan(args, "D.[.....D.[.....C.C.CC]",
+  err = pn_data_scan(args, "D.[.....D.[.....C.C.CC]]",
                      link->remote_source.properties,
                      link->remote_source.filter,
                      link->remote_source.outcomes,
@@ -1456,7 +1456,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
                        link->remote_target.capabilities);
     if (err) return err;
   } else {
-    err = pn_data_scan(args, "D.[.....D..D.[.....CC]",
+    err = pn_data_scan(args, "D.[.....D..D.[.....CC]]",
                        link->remote_target.properties,
                        link->remote_target.capabilities);
     if (err) return err;
