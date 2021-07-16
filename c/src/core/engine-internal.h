@@ -379,15 +379,6 @@ void pn_ep_incref(pn_endpoint_t *endpoint);
 void pn_ep_decref(pn_endpoint_t *endpoint);
 
 pn_bytes_t pn_fill_performative(pn_transport_t *transport, const char *fmt, ...);
-int pn_post_amqp_frame(pn_transport_t *transport, uint16_t ch, pn_bytes_t performative);
-int pn_post_amqp_payload_frame(pn_transport_t *transport, uint16_t ch, pn_bytes_t performative, pn_bytes_t payload);
-int pn_post_sasl_frame(pn_transport_t *transport, pn_bytes_t performative);
-
-typedef enum {IN, OUT} pn_dir_t;
-
-void pn_do_tx_trace(pn_logger_t *logger, uint16_t ch, pn_data_t *args);
-void pn_do_rx_trace(pn_logger_t *logger, uint16_t ch, pn_data_t *args);
-void pn_do_trace_payload(pn_logger_t *logger, pn_bytes_t payload);
 
 #if __cplusplus
 }

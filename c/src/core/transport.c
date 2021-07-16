@@ -937,7 +937,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
       }
     }
     pn_bytes_t payload = {.size = available, .start = full_payload->start};
-    pn_post_amqp_payload_frame(transport, ch, performative, payload);
+    pn_framing_send_amqp_with_payload(transport, ch, performative, payload);
 
     full_payload->start += available;
     full_payload->size -= available;
@@ -963,7 +963,7 @@ static int pni_post_close(pn_transport_t *transport, pn_condition_t *cond)
 
   pn_bytes_t buf = pn_fill_performative(transport, "DL[?DL[sSC]]", CLOSE,
                        (bool) condition, ERROR, condition, description, info);
-  return pn_post_amqp_frame(transport, 0, buf);
+  return pn_framing_send_amqp(transport, 0, buf);
 }
 
 static pn_collector_t *pni_transport_collector(pn_transport_t *transport)
@@ -1861,7 +1861,7 @@ static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endp
                               connection->offered_capabilities,
                               connection->desired_capabilities,
                               connection->properties);
-      int err = pn_post_amqp_frame(transport, 0, buf);
+      int err = pn_framing_send_amqp(transport, 0, buf);
       if (err) return err;
       transport->open_sent = true;
     }
@@ -1942,7 +1942,7 @@ static int pni_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpo
                     state->outgoing_transfer_count,
                     state->incoming_window,
                     state->outgoing_window);
-      pn_post_amqp_frame(transport, state->local_channel, buf);
+      pn_framing_send_amqp(transport, state->local_channel, buf);
     }
   }
 
@@ -2013,7 +2013,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
                                 link->source.capabilities,
                                 COORDINATOR, link->target.capabilities,
                                 0);
-        int err = pn_post_amqp_frame(transport, ssn_state->local_channel, buf);
+        int err = pn_framing_send_amqp(transport, ssn_state->local_channel, buf);
         if (err) return err;
       } else {
         pn_bytes_t buf = pn_fill_performative(transport, "DL[SIoBB?DL[SIsIoC?sCnMM]?DL[SIsIoCM]nnILnnC]", ATTACH,
@@ -2047,8 +2047,8 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
                                 0,
                                 link->max_message_size,
                                 link->properties);
-        int err = pn_post_amqp_frame(transport, ssn_state->local_channel, buf);
-        if (err) return err;
+        int err = pn_framing_send_amqp(transport, ssn_state->local_channel, buf);
+                if (err) return err;
       }
     }
   }
@@ -2071,7 +2071,7 @@ static int pni_post_flow(pn_transport_t *transport, pn_session_t *ssn, pn_link_t
                        linkq, linkq ? state->delivery_count : 0,
                        linkq, linkq ? state->link_credit : 0,
                        linkq, linkq ? link->drain : false);
-  return pn_post_amqp_frame(transport, ssn->state.local_channel, buf);
+  return pn_framing_send_amqp(transport, ssn->state.local_channel, buf);
 }
 
 static int pni_process_flow_receiver(pn_transport_t *transport, pn_endpoint_t *endpoint)
@@ -2103,7 +2103,7 @@ static int pni_flush_disp(pn_transport_t *transport, pn_session_t *ssn)
                             ssn->state.disp_last!=ssn->state.disp_first, ssn->state.disp_last,
                             settled, settled,
                             (bool)code, code);
-    int err = pn_post_amqp_frame(transport, ssn->state.local_channel, buf);
+    int err = pn_framing_send_amqp(transport, ssn->state.local_channel, buf);
     if (err) return err;
     ssn->state.disp_type = 0;
     ssn->state.disp_code = 0;
@@ -2137,7 +2137,7 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
       role, state->id,
       delivery->local.settled, delivery->local.settled,
       (bool)code, code, transport->disp_data);
-    return pn_post_amqp_frame(transport, ssn->state.local_channel, buf);
+    return pn_framing_send_amqp(transport, ssn->state.local_channel, buf);
   }
 
   if (ssn_state->disp && code == ssn_state->disp_code &&
@@ -2375,7 +2375,7 @@ static int pni_process_link_teardown(pn_transport_t *transport, pn_endpoint_t *e
                                             state->local_handle,
                                             !link->detached, !link->detached,
                                             (bool)name, ERROR, name, description, info);
-      int err = pn_post_amqp_frame(transport, ssn_state->local_channel, buf);
+      int err = pn_framing_send_amqp(transport, ssn_state->local_channel, buf);
       if (err) return err;
       pni_unmap_local_handle(link);
     }
@@ -2449,7 +2449,7 @@ static int pni_process_ssn_teardown(pn_transport_t *transport, pn_endpoint_t *en
 
       pn_bytes_t buf = pn_fill_performative(transport, "DL[?DL[sSC]]", END,
                               (bool) name, ERROR, name, description, info);
-      int err = pn_post_amqp_frame(transport, state->local_channel, buf);
+      int err = pn_framing_send_amqp(transport, state->local_channel, buf);
       if (err) return err;
       pni_unmap_local_channel(session);
     }
@@ -2524,7 +2524,7 @@ static void pn_error_amqp(pn_transport_t* transport, unsigned int layer)
   if (!transport->close_sent) {
     if (!transport->open_sent) {
       pn_bytes_t buf = pn_fill_performative(transport, "DL[S]", OPEN, "");
-      pn_post_amqp_frame(transport, 0, buf);
+      pn_framing_send_amqp(transport, 0, buf);
     }
 
     pni_post_close(transport, &transport->condition);
@@ -2622,7 +2622,7 @@ static int64_t pn_tick_amqp(pn_transport_t* transport, unsigned int layer, int64
       if (pn_buffer_size(transport->output_buffer) == 0) {    // no outbound data pending
         // so send empty frame (and account for it!)
         pn_bytes_t buf = pn_bytes(0,"");
-        pn_post_amqp_frame(transport, 0, buf);
+        pn_framing_send_amqp(transport, 0, buf);
         transport->last_bytes_output += pn_buffer_size(transport->output_buffer);
       }
     }

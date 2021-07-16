@@ -486,7 +486,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     switch (desired_state) {
     case SASL_POSTED_INIT: {
       pn_bytes_t buf = pn_fill_performative(transport, "DL[szS]", SASL_INIT, sasl->selected_mechanism, out.size, out.start, sasl->local_fqdn);
-      pn_post_sasl_frame(transport, buf);
+      pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       break;
     }
@@ -502,14 +502,14 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
 
       pn_bytes_t buf = pn_fill_performative(transport, "DL[@T[*s]]", SASL_MECHANISMS, PN_SYMBOL, count, mechs);
       free(mechlist);
-      pn_post_sasl_frame(transport, buf);
+      pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       break;
     }
     case SASL_POSTED_RESPONSE:
       if (sasl->last_state != SASL_POSTED_RESPONSE) {
         pn_bytes_t buf = pn_fill_performative(transport, "DL[Z]", SASL_RESPONSE, out.size, out.start);
-        pn_post_sasl_frame(transport, buf);
+        pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
       break;
@@ -519,7 +519,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         continue;
       } else if (sasl->last_state != SASL_POSTED_CHALLENGE) {
         pn_bytes_t buf = pn_fill_performative(transport, "DL[Z]", SASL_CHALLENGE, out.size, out.start);
-        pn_post_sasl_frame(transport, buf);
+        pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
       break;
@@ -529,7 +529,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         continue;
       }
       pn_bytes_t buf = pn_fill_performative(transport, "DL[Bz]", SASL_OUTCOME, sasl->outcome, out.size, out.start);
-      pn_post_sasl_frame(transport, buf);
+      pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       if (sasl->outcome!=PN_SASL_OK) {
         pn_do_error(transport, "amqp:unauthorized-access", "Failed to authenticate client [mech=%s]",
