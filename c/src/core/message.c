@@ -28,6 +28,7 @@
 
 #ifndef GENERATE_CODEC_CODE
 #include "core/frame_generators.h"
+#include "core/frame_consumers.h"
 #endif
 
 #include <proton/link.h>
@@ -55,12 +56,13 @@ struct pn_message_t {
   pn_string_t *group_id;
   pn_string_t *reply_to_group_id;
 
-  pn_data_t *data;
   pn_data_t *instructions;
   pn_data_t *annotations;
   pn_data_t *properties;
   pn_data_t *body;
-
+#ifdef GENERATE_CODEC_CODE
+  pn_data_t *data;
+#endif
   pn_error_t *error;
 
   pn_sequence_t group_sequence;
@@ -87,7 +89,9 @@ void pn_message_finalize(void *obj)
   pn_free(msg->reply_to_group_id);
   pn_data_free(msg->id);
   pn_data_free(msg->correlation_id);
+#ifdef GENERATE_CODEC_CODE
   pn_data_free(msg->data);
+#endif
   pn_data_free(msg->instructions);
   pn_data_free(msg->annotations);
   pn_data_free(msg->properties);
@@ -333,7 +337,9 @@ static pn_message_t *pni_message_new(size_t size)
   msg->reply_to_group_id = pn_string(NULL);
 
   msg->inferred = false;
+#ifdef GENERATE_CODEC_CODE
   msg->data = pn_data(16);
+#endif
   msg->instructions = pn_data(16);
   msg->annotations = pn_data(16);
   msg->properties = pn_data(16);
@@ -387,7 +393,9 @@ void pn_message_clear(pn_message_t *msg)
   msg->group_sequence = 0;
   pn_string_clear(msg->reply_to_group_id);
   msg->inferred = false;
+#ifdef GENERATE_CODEC_CODE
   pn_data_clear(msg->data);
+#endif
   pn_data_clear(msg->instructions);
   pn_data_clear(msg->annotations);
   pn_data_clear(msg->properties);
@@ -652,6 +660,7 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
   return pn_string_set(msg->reply_to_group_id, reply_to_group_id);
 }
 
+#ifdef GENERATE_CODEC_CODE
 int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 {
   assert(msg && bytes && size);
@@ -729,31 +738,36 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       }
       break;
     case DELIVERY_ANNOTATIONS:
-      pn_data_narrow(msg->data);
-      err = pn_data_copy(msg->instructions, msg->data);
+      pn_data_clear(msg->instructions);
+      err = pn_data_scan(msg->data, "D.C", msg->instructions);
+      pn_data_rewind(msg->instructions);
       if (err) return err;
       break;
     case MESSAGE_ANNOTATIONS:
-      pn_data_narrow(msg->data);
-      err = pn_data_copy(msg->annotations, msg->data);
+      pn_data_clear(msg->annotations);
+      err = pn_data_scan(msg->data, "D.C", msg->annotations);
+      pn_data_rewind(msg->annotations);
       if (err) return err;
       break;
     case APPLICATION_PROPERTIES:
-      pn_data_narrow(msg->data);
-      err = pn_data_copy(msg->properties, msg->data);
+      pn_data_clear(msg->properties);
+      err = pn_data_scan(msg->data, "D.C", msg->properties);
+      pn_data_rewind(msg->properties);
       if (err) return err;
       break;
     case DATA:
     case AMQP_SEQUENCE:
       msg->inferred = true;
-      pn_data_narrow(msg->data);
-      err = pn_data_copy(msg->body, msg->data);
+      pn_data_clear(msg->body);
+      err = pn_data_scan(msg->data, "D.C", msg->body);
+      pn_data_rewind(msg->body);
       if (err) return err;
       break;
     case AMQP_VALUE:
       msg->inferred = false;
-      pn_data_narrow(msg->data);
-      err = pn_data_copy(msg->body, msg->data);
+      pn_data_clear(msg->body);
+      err = pn_data_scan(msg->data, "D.C", msg->body);
+      pn_data_rewind(msg->body);
       if (err) return err;
       break;
     case FOOTER:
@@ -768,6 +782,110 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
   pn_data_clear(msg->data);
   return 0;
 }
+#else
+int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
+{
+  assert(msg && bytes && size);
+
+  pn_bytes_t msg_bytes = {.size=size, .start=bytes};
+  while (msg_bytes.size) {
+    bool scanned;
+    uint64_t desc;
+    size_t section_size = pn_amqp_decode_DQLq(msg_bytes, &scanned, &desc);
+    if (!scanned) {
+      desc = 0;
+    }
+
+    switch (desc) {
+      case HEADER: {
+        bool priority_q;
+        uint8_t priority;
+        pn_amqp_decode_DqEoQBIoIe(msg_bytes,
+                                  &msg->durable,
+                                  &priority_q, &priority,
+                                  &msg->ttl,
+                                  &msg->first_acquirer,
+                                  &msg->delivery_count);
+        msg->priority = priority_q ? priority : HEADER_PRIORITY_DEFAULT;
+        break;
+      }
+      case PROPERTIES: {
+        pn_bytes_t user_id, address, subject, reply_to, ctype, cencoding,
+        group_id, reply_to_group_id;
+        pn_data_clear(msg->id);
+        pn_data_clear(msg->correlation_id);
+        pn_amqp_decode_DqECzSSSCssttSISe(msg_bytes,  msg->id,
+                           &user_id, &address, &subject, &reply_to,
+                           msg->correlation_id, &ctype, &cencoding,
+                           &msg->expiry_time, &msg->creation_time, &group_id,
+                           &msg->group_sequence, &reply_to_group_id);
+        int err = pn_string_set_bytes(msg->user_id, user_id);
+        if (err) return pn_error_format(msg->error, err, "error setting user_id");
+        err = pn_string_setn(msg->address, address.start, address.size);
+        if (err) return pn_error_format(msg->error, err, "error setting address");
+        err = pn_string_setn(msg->subject, subject.start, subject.size);
+        if (err) return pn_error_format(msg->error, err, "error setting subject");
+        err = pn_string_setn(msg->reply_to, reply_to.start, reply_to.size);
+        if (err) return pn_error_format(msg->error, err, "error setting reply_to");
+        err = pn_string_setn(msg->content_type, ctype.start, ctype.size);
+        if (err) return pn_error_format(msg->error, err, "error setting content_type");
+        err = pn_string_setn(msg->content_encoding, cencoding.start,
+                             cencoding.size);
+        if (err) return pn_error_format(msg->error, err, "error setting content_encoding");
+        err = pn_string_setn(msg->group_id, group_id.start, group_id.size);
+        if (err) return pn_error_format(msg->error, err, "error setting group_id");
+        err = pn_string_setn(msg->reply_to_group_id, reply_to_group_id.start,
+                             reply_to_group_id.size);
+        if (err) return pn_error_format(msg->error, err, "error setting reply_to_group_id");
+        break;
+      }
+      case DELIVERY_ANNOTATIONS: {
+        pn_data_clear(msg->instructions);
+        pn_amqp_decode_DqC(msg_bytes, msg->instructions);
+        pn_data_rewind(msg->instructions);
+        break;
+      }
+      case MESSAGE_ANNOTATIONS: {
+        pn_data_clear(msg->annotations);
+        pn_amqp_decode_DqC(msg_bytes, msg->annotations);
+        pn_data_rewind(msg->annotations);
+        break;
+      }
+      case APPLICATION_PROPERTIES: {
+        pn_data_clear(msg->properties);
+        pn_amqp_decode_DqC(msg_bytes, msg->properties);
+        pn_data_rewind(msg->properties);
+        break;
+      }
+      case DATA:
+      case AMQP_SEQUENCE: {
+        msg->inferred = true;
+        pn_data_clear(msg->body);
+        pn_amqp_decode_DqC(msg_bytes, msg->body);
+        pn_data_rewind(msg->body);
+        break;
+      }
+      case AMQP_VALUE: {
+        msg->inferred = false;
+        pn_data_clear(msg->body);
+        pn_amqp_decode_DqC(msg_bytes, msg->body);
+        pn_data_rewind(msg->body);
+        break;
+      }
+      case FOOTER:
+        break;
+      default: {
+        pn_data_clear(msg->body);
+        pn_data_decode(msg->body, msg_bytes.start, msg_bytes.size);
+        pn_data_rewind(msg->body);
+        break;
+      }
+    }
+    msg_bytes = (pn_bytes_t){.size=msg_bytes.size-section_size, .start=msg_bytes.start+section_size};
+  }
+  return 0;
+}
+#endif
 
 #ifdef GENERATE_CODEC_CODE
 int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)

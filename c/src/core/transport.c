@@ -23,6 +23,7 @@
 #include "framing.h"
 #ifndef GENERATE_CODEC_CODE
 #include "core/frame_generators.h"
+#include "core/frame_consumers.h"
 #endif
 #include "memory.h"
 #include "platform/platform.h"
@@ -1071,8 +1072,10 @@ static char *pn_bytes_strdup(pn_bytes_t str)
 
 int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
+#ifdef GENERATE_CODEC_CODE
   ssize_t dsize = pn_framing_recv_amqp(transport, channel, payload);
   if (dsize < 0) return dsize;
+#endif
 
   bool container_q, hostname_q, remote_channel_max_q, remote_max_frame_q;
   uint16_t remote_channel_max;
@@ -1082,6 +1085,7 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   pn_data_clear(transport->remote_desired_capabilities);
   pn_data_clear(transport->remote_properties);
 
+#ifdef GENERATE_CODEC_CODE
   pn_data_t *args = transport->args;
   int err = pn_data_scan(args, "D.[?S?S?I?HI..CCC]",
                          &container_q, &remote_container,
@@ -1093,6 +1097,17 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
                          transport->remote_desired_capabilities,
                          transport->remote_properties);
   if (err) return err;
+#else
+  pn_amqp_decode_DqEQSQSQIQHIqqCCCe(payload,
+                                    &container_q, &remote_container,
+                                    &hostname_q, &remote_hostname,
+                                    &remote_max_frame_q, &remote_max_frame,
+                                    &remote_channel_max_q, &remote_channel_max,
+                                    &transport->remote_idle_timeout,
+                                    transport->remote_offered_capabilities,
+                                    transport->remote_desired_capabilities,
+                                    transport->remote_properties);
+#endif
   /*
    * The default value is already stored in the variable.
    * But the scanner zeroes out values if it does not
@@ -1129,16 +1144,22 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
 int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
+#ifdef GENERATE_CODEC_CODE
   ssize_t dsize = pn_framing_recv_amqp(transport, channel, payload);
   if (dsize < 0) return dsize;
+#endif
 
   bool reply;
   uint16_t remote_channel;
   pn_sequence_t next;
 
+#ifdef GENERATE_CODEC_CODE
   pn_data_t *args = transport->args;
   int err = pn_data_scan(args, "D.[?HI]", &reply, &remote_channel, &next);
   if (err) return err;
+#else
+  pn_amqp_decode_DqEQHIe(payload, &reply, &remote_channel, &next);
+#endif
 
   // AMQP 1.0 section 2.7.1 - if the peer doesn't honor our channel_max --
   // express our displeasure by closing the connection with a framing error.
@@ -1242,8 +1263,10 @@ int pn_terminus_set_address_bytes(pn_terminus_t *terminus, pn_bytes_t address)
 
 int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
+#ifdef GENERATE_CODEC_CODE
   ssize_t dsize = pn_framing_recv_amqp(transport, channel, payload);
   if (dsize < 0) return dsize;
+#endif
 
   pn_bytes_t name;
   uint32_t handle;
@@ -1261,6 +1284,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   bool has_props;
   pn_data_t *rem_props = pn_data(0);
 
+#ifdef GENERATE_CODEC_CODE
   pn_data_t *args = transport->args;
   int err = pn_data_scan(args, "D.[SIo?B?BD.[SIsIo.s]D.[SIsIo]..IL..?C]", &name, &handle,
                          &is_sender,
@@ -1270,9 +1294,19 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
                          &target, &tgt_dr, &tgt_exp, &tgt_timeout, &tgt_dynamic,
                          &idc, &max_msgsz, &has_props, rem_props);
   if (err) {
-      pn_free(rem_props);
-      return err;
+    pn_free(rem_props);
+    return err;
   }
+#else
+    pn_amqp_decode_DqESIoQBQBDqESIsIoqseDqESIsIoeqqILqqQCe(payload,
+                                                           &name, &handle,
+                                                           &is_sender,
+                                                           &snd_settle, &snd_settle_mode,
+                                                           &rcv_settle, &rcv_settle_mode,
+                                                           &source, &src_dr, &src_exp, &src_timeout, &src_dynamic, &dist_mode,
+                                                           &target, &tgt_dr, &tgt_exp, &tgt_timeout, &tgt_dynamic,
+                                                           &idc, &max_msgsz, &has_props, rem_props);
+#endif
   char strbuf[128];      // avoid malloc for most link names
   char *strheap = (name.size >= sizeof(strbuf)) ? (char *) malloc(name.size + 1) : NULL;
   char *strname = strheap ? strheap : strbuf;
@@ -1335,8 +1369,12 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
     pn_terminus_set_dynamic(rtgt, tgt_dynamic);
   } else {
     uint64_t code = 0;
+#ifdef GENERATE_CODEC_CODE
     err = pn_data_scan(args, "D.[.....D..DL....]", &code);
     if (err) return err;
+#else
+    pn_amqp_decode_DqEqqqqqDqqDLqqqqe(payload, &code);
+#endif
     if (code == COORDINATOR) {
       pn_terminus_set_type(rtgt, PN_COORDINATOR);
     } else if (code == TARGET) {
@@ -1355,7 +1393,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   pn_data_clear(link->remote_source.filter);
   pn_data_clear(link->remote_source.outcomes);
   pn_data_clear(link->remote_source.capabilities);
-
+#ifdef GENERATE_CODEC_CODE
   err = pn_data_scan(args, "D.[.....D.[.....C.C.CC]]",
                      link->remote_source.properties,
                      link->remote_source.filter,
@@ -1363,6 +1401,13 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
                      link->remote_source.capabilities);
 
   if (err) return err;
+#else
+  pn_amqp_decode_DqEqqqqqDqEqqqqqCqCqCCee(payload,
+                                          link->remote_source.properties,
+                                          link->remote_source.filter,
+                                          link->remote_source.outcomes,
+                                          link->remote_source.capabilities);
+#endif
 
   pn_data_rewind(link->remote_source.properties);
   pn_data_rewind(link->remote_source.filter);
@@ -1374,14 +1419,25 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   if (pn_terminus_get_type(&link->remote_target) == PN_COORDINATOR) {
     // coordinator target only has a capabilities field
+#ifdef GENERATE_CODEC_CODE
     err = pn_data_scan(args, "D.[.....D..D.[C]...]",
                        link->remote_target.capabilities);
     if (err) return err;
+#else
+    pn_amqp_decode_DqEqqqqqDqqDqECeqqqe(payload,
+                                        link->remote_target.capabilities);
+#endif
   } else {
+#ifdef GENERATE_CODEC_CODE
     err = pn_data_scan(args, "D.[.....D..D.[.....CC]]",
                        link->remote_target.properties,
                        link->remote_target.capabilities);
     if (err) return err;
+#else
+    pn_amqp_decode_DqEqqqqqDqqDqEqqqqqCCee(payload,
+                                           link->remote_target.properties,
+                                           link->remote_target.capabilities);
+#endif
   }
 
   pn_data_rewind(link->remote_target.properties);
@@ -1413,11 +1469,10 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
+#ifdef GENERATE_CODEC_CODE
   ssize_t dsize = pn_framing_recv_amqp(transport, channel, payload);
   if (dsize < 0) return dsize;
-
-  payload.size -= dsize;
-  payload.start += dsize;
+#endif
 
   // XXX: multi transfer
   uint32_t handle;
@@ -1431,11 +1486,21 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   uint64_t type;
   pn_data_clear(transport->disp_data);
 
+#ifdef GENERATE_CODEC_CODE
   pn_data_t *args = transport->args;
   int err = pn_data_scan(args, "D.[I?Iz.?oo.D?LCooo]", &handle, &id_present, &id, &tag,
                          &settled_set, &settled, &more, &has_type, &type, transport->disp_data,
                          &resume, &aborted, &batchable);
   if (err) return err;
+#else
+  size_t dsize =
+    pn_amqp_decode_DqEIQIzqQooqDQLCoooe(payload, &handle, &id_present, &id, &tag,
+                                        &settled_set, &settled, &more, &has_type, &type, transport->disp_data,
+                                        &resume, &aborted, &batchable);
+#endif
+  payload.size -= dsize;
+  payload.start += dsize;
+
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
     return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
@@ -1549,19 +1614,27 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 
 int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
+#ifdef GENERATE_CODEC_CODE
   ssize_t dsize = pn_framing_recv_amqp(transport, channel, payload);
   if (dsize < 0) return dsize;
+#endif
 
   pn_sequence_t onext, inext, delivery_count;
   uint32_t iwin, owin, link_credit;
   uint32_t handle;
   bool inext_init, handle_init, dcount_init, drain;
 
+#ifdef GENERATE_CODEC_CODE
   pn_data_t *args = transport->args;
   int err = pn_data_scan(args, "D.[?IIII?I?II.o]", &inext_init, &inext, &iwin,
                          &onext, &owin, &handle_init, &handle, &dcount_init,
                          &delivery_count, &link_credit, &drain);
   if (err) return err;
+#else
+  pn_amqp_decode_DqEQIIIIQIQIIqoe(payload, &inext_init, &inext, &iwin,
+                                  &onext, &owin, &handle_init, &handle, &dcount_init,
+                                  &delivery_count, &link_credit, &drain);
+#endif
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
@@ -1701,20 +1774,28 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
 
 int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
+#ifdef GENERATE_CODEC_CODE
   ssize_t dsize = pn_framing_recv_amqp(transport, channel, payload);
   if (dsize < 0) return dsize;
+#endif
 
   bool role;
   pn_sequence_t first, last;
   uint64_t type = 0;
   bool last_init, settled, type_init;
   pn_data_clear(transport->disp_data);
-
+#ifdef GENERATE_CODEC_CODE
   pn_data_t *args = transport->args;
   int err = pn_data_scan(args, "D.[oI?IoD?LC]", &role, &first, &last_init,
                          &last, &settled, &type_init, &type,
                          transport->disp_data);
   if (err) return err;
+#else
+  pn_amqp_decode_DqEoIQIoDQLCe(payload, &role, &first, &last_init,
+                               &last, &settled, &type_init, &type,
+                               transport->disp_data);
+  int err;
+#endif
   if (!last_init) last = first;
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
@@ -1769,15 +1850,22 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
 
 int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
+//#ifdef GENERATE_CODEC_CODE
   ssize_t dsize = pn_framing_recv_amqp(transport, channel, payload);
   if (dsize < 0) return dsize;
+//#endif
 
   uint32_t handle;
   bool closed;
 
   pn_data_t *args = transport->args;
+#ifdef GENERATE_CODEC_CODE
   int err = pn_data_scan(args, "D.[Io]", &handle, &closed);
   if (err) return err;
+#else
+  pn_amqp_decode_DqEIoe(payload, &handle, &closed);
+  int err;
+#endif
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
