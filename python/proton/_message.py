@@ -506,18 +506,15 @@ class Message(object):
         self._check(pn_message_decode(self._msg, data))
         self._post_decode()
 
-    def send(self, sender, tag=None):
+    def send(self, sender: 'Sender', tag: Optional[str] = None) -> 'Delivery':
         """
         Encodes and sends the message content using the specified sender,
         and, if present, using the specified tag. Upon success, will
         return the :class:`Delivery` object for the sent message.
 
         :param sender: The sender to send the message
-        :type sender: :class:`Sender`
         :param tag: The delivery tag for the sent message
-        :type tag: ``bytes``
         :return: The delivery associated with the sent message
-        :rtype: :class:`Delivery`
         """
         dlv = sender.delivery(tag or sender.delivery_tag())
         encoded = self.encode()
@@ -527,7 +524,11 @@ class Message(object):
             dlv.settle()
         return dlv
 
-    def recv(self, link):
+    @overload
+    def recv(self, link: 'Sender') -> None:
+        ...
+
+    def recv(self, link: 'Receiver') -> Optional['Delivery']:
         """
         Receives and decodes the message content for the current :class:`Delivery`
         from the link. Upon success it will return the current delivery
@@ -536,9 +537,7 @@ class Message(object):
         return ``None``.
 
         :param link: The link to receive a message from
-        :type link: :class:`Link`
         :return: the delivery associated with the decoded message (or None)
-        :rtype: :class:`Delivery`
 
         """
         if link.is_sender:

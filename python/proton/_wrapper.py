@@ -17,17 +17,14 @@
 # under the License.
 #
 
+from typing import Any, Callable, Optional, Union
+
 from cproton import pn_incref, pn_decref, \
     pn_py2void, pn_void2py, \
     pn_record_get, pn_record_def, pn_record_set, \
     PN_PYREF
 
 from ._exceptions import ProtonException
-
-from typing import Any, Callable, Optional, Union, TYPE_CHECKING
-if TYPE_CHECKING:
-    from ._delivery import Delivery  # circular import
-    from ._transport import SASL, Transport
 
 
 class EmptyAttrs:
@@ -62,7 +59,11 @@ class Wrapper(object):
 
     """
 
-    def __init__(self, impl_or_constructor, get_context=None):
+    def __init__(
+            self,
+            impl_or_constructor: Union[Any, Callable[[], Any]],
+            get_context: Optional[Callable[[Any], Any]] = None,
+    ) -> None:
         init = False
         if callable(impl_or_constructor):
             # we are constructing a new object
@@ -119,7 +120,7 @@ class Wrapper(object):
     def __hash__(self) -> int:
         return hash(addressof(self._impl))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, Wrapper):
             return addressof(self._impl) == addressof(other._impl)
         return False

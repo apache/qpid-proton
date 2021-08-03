@@ -23,14 +23,17 @@ import logging
 import re
 import os
 import queue
-from typing import Any, Dict, Iterator, Optional, List, Union, Callable
+from typing import Any, Dict, Iterator, Optional, List, Union, Callable, TYPE_CHECKING
 try:
     from typing import Literal
 except ImportError:
-    class Literal:
-        @classmethod
-        def __class_getitem__(cls, item):
+    # https://www.python.org/dev/peps/pep-0560/#class-getitem
+    class GenericMeta(type):
+        def __getitem__(self, item):
             pass
+
+    class Literal(metaclass=GenericMeta):
+        pass
 
 import time
 import traceback
@@ -39,25 +42,22 @@ from functools import total_ordering
 
 from cproton import PN_PYREF, PN_ACCEPTED, PN_EVENT_NONE
 
+from ._common import isstring, unicode2utf8, utf82unicode
+from ._data import Described, symbol, ulong
 from ._delivery import Delivery
 from ._endpoints import Connection, Endpoint, Link, Session, Terminus
+from ._events import Collector, EventType, EventBase, Handler, Event
 from ._exceptions import SSLUnavailable
-from ._data import Described, symbol, ulong
+from ._handlers import OutgoingMessageHandler, IOHandler
+from ._io import IO
 from ._message import Message
 from ._transport import Transport, SSL, SSLDomain
 from ._url import Url
-from ._common import isstring, unicode2utf8, utf82unicode
-from ._events import Collector, EventType, EventBase, Handler, Event
 from ._selectable import Selectable
 
-from ._handlers import OutgoingMessageHandler, IOHandler
-
-from ._io import IO
-from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ._endpoints import Receiver, Sender
-    from ._handlers import ConnectSelectable, TransactionHandler
-    from ._utils import BlockingConnection
+    from ._handlers import TransactionHandler
     from socket import socket
     from uuid import UUID
 
@@ -140,7 +140,7 @@ class Reactor(object):
     # TODO: need to make this actually return a proxy which catches exceptions and calls
     # on error.
     # [Or arrange another way to deal with exceptions thrown by handlers]
-    def _make_handler(self, handler):
+    def _make_handler(self, handler: Handler) -> Handler:
         """
         Return a proxy handler that dispatches to the provided handler.
 
@@ -283,7 +283,7 @@ class Reactor(object):
     def stop_events(self) -> None:
         self._collector.release()
 
-    def schedule(self, delay, handler):
+    def schedule(self, delay: Union[float, int], handler: Handler) -> Task:
         """
         Schedule a task to run on this container after a given delay,
         and using the supplied handler.
@@ -325,7 +325,12 @@ class Reactor(object):
                 return t._deadline
         return None
 
-    def acceptor(self, host, port, handler=None):
+    def acceptor(
+            self,
+            host: str,
+            port: Union[str, Url.Port],
+            handler: Optional[Handler] = None,
+    ) -> 'Acceptor':
         impl = self._make_handler(handler)
         a = Acceptor(self, unicode2utf8(host), int(port), impl)
         if a:
@@ -333,7 +338,7 @@ class Reactor(object):
         else:
             raise IOError("%s (%s:%s)" % (str(self.errors), host, port))
 
-    def connection(self, handler=None):
+    def connection(self, handler: Optional[Handler] = None) -> Connection:
         """Deprecated: use connection_to_host() instead
         """
         impl = self._make_handler(handler)
@@ -360,7 +365,7 @@ class Reactor(object):
         """
         connection.set_address(host, port)
 
-    def get_connection_address(self, connection):
+    def get_connection_address(self, connection: Connection) -> str:
         """*Deprecated* in favor of the property proton.Connection.connected_address.
         This may be used to retrieve the remote peer address.
         :return: string containing the address in URL format or None if no
@@ -369,7 +374,11 @@ class Reactor(object):
         """
         return connection.connected_address
 
-    def selectable(self, handler=None, delegate=None):
+    def selectable(
+            self,
+            handler: Optional[Union['Acceptor', 'EventInjector']] = None,
+            delegate: Optional['socket'] = None
+    ) -> Selectable:
         """
         NO IDEA!
 
@@ -384,10 +393,14 @@ class Reactor(object):
         result.handler = handler
         return result
 
-    def update(self, selectable):
+    def update(self, selectable: Selectable) -> None:
         selectable.update()
 
-    def push_event(self, obj, etype):
+    def push_event(
+            self,
+            obj: Union[Task, 'Container', Selectable],
+            etype: EventType
+    ) -> None:
         self._collector.put(obj, etype)
 
 
@@ -407,7 +420,7 @@ class EventInjector(object):
         self._transport = None
         self._closed = False
 
-    def trigger(self, event):
+    def trigger(self, event: 'ApplicationEvent') -> None:
         """
         Request that the given event be dispatched on the event thread
         of the container to which this EventInjector was added.
@@ -495,7 +508,7 @@ class ApplicationEvent(EventBase):
         self.subject = subject
 
     @property
-    def context(self):
+    def context(self) -> 'ApplicationEvent':
         """
         A reference to this event.
         """
@@ -523,7 +536,12 @@ class Transaction(object):
     (for a successful transaction), or :meth:`abort` (for a failed transaction).
     """
 
-    def __init__(self, txn_ctrl, handler, settle_before_discharge=False):
+    def __init__(
+            self,
+            txn_ctrl: 'Sender',
+            handler: 'TransactionHandler',
+            settle_before_discharge: bool = False,
+    ) -> None:
         self.txn_ctrl = txn_ctrl
         self.handler = handler
         self.id = None
@@ -560,18 +578,19 @@ class Transaction(object):
         delivery.transaction = self
         return delivery
 
-    def send(self, sender, msg, tag=None):
+    def send(
+            self,
+            sender: 'Sender',
+            msg: Message,
+            tag: Optional[bytes] = None,
+    ) -> Delivery:
         """
         Send a message under this transaction.
 
         :param sender: Link over which to send the message.
-        :type sender: :class:`proton.Sender`
         :param msg: Message to be sent under this transaction.
-        :type msg: :class:`proton.Message`
         :param tag: The delivery tag
-        :type tag: ``bytes``
         :return: Delivery object for this message.
-        :rtype: :class:`proton.Delivery`
         """
         dlv = sender.send(msg, tag=tag)
         dlv.local.data = [self.id]
@@ -590,7 +609,7 @@ class Transaction(object):
         else:
             self._pending.append(delivery)
 
-    def update(self, delivery, state=None):
+    def update(self, delivery: Delivery, state: Optional[ulong] = None) -> None:
         if state:
             delivery.local.data = [self.id, Described(ulong(state), [])]
             delivery.update(0x34)
@@ -725,10 +744,9 @@ class DynamicNodeProperties(LinkOption):
     they will be converted to symbols before being applied).
 
     :param props: A map of link options to be applied to a link.
-    :type props: ``dict``
     """
 
-    def __init__(self, props={}):
+    def __init__(self, props: dict = {}) -> None:
         self.properties = {}
         for k in props:
             if isinstance(k, symbol):
@@ -774,12 +792,10 @@ class Selector(Filter):
     Configures a receiver with a message selector filter
 
     :param value: Selector filter string
-    :type value: ``str``
     :param name: Name of the selector, defaults to ``"selector"``.
-    :type name: ``str``
     """
 
-    def __init__(self, value, name='selector'):
+    def __init__(self, value: Union[bytes, str], name: str = 'selector') -> None:
         super(Selector, self).__init__({symbol(name): Described(
             symbol('apache.org:selector-filter:string'), utf82unicode(value))})
 
@@ -836,7 +852,10 @@ class Copy(ReceiverOption):
         receiver.source.distribution_mode = Terminus.DIST_MODE_COPY
 
 
-def _apply_link_options(options, link):
+def _apply_link_options(
+        options: Optional[Union[LinkOption, List[LinkOption]]],
+        link: Union['Sender', 'Receiver']
+) -> None:
     if options:
         if isinstance(options, list):
             for o in options:
@@ -994,7 +1013,7 @@ def make_backoff_wrapper(backoff):
 
 
 class Urls(object):
-    def __init__(self, values):
+    def __init__(self, values: List[Union[Url, str]]) -> None:
         self.values = [Url(v) for v in values]
 
     def __iter__(self) -> Iterator[Url]:
@@ -1133,7 +1152,7 @@ def _find_config_file() -> Optional[str]:
     return None
 
 
-def _get_default_config():
+def _get_default_config() -> Dict[str, Any]:
     conf = os.environ.get('MESSAGING_CONNECT_FILE') or _find_config_file()
     if conf and os.path.isfile(conf):
         with open(conf, 'r') as f:
@@ -1189,8 +1208,17 @@ class Container(Reactor):
             self.user = None
             self.password = None
 
-    def connect(self, url=None, urls=None, address=None, handler=None, reconnect=None, heartbeat=None, ssl_domain=None,
-                **kwargs):
+    def connect(
+            self,
+            url: Optional[Union[str, Url]] = None,
+            urls: Optional[List[str]] = None,
+            address: Optional[str] = None,
+            handler: Optional[Handler] = None,
+            reconnect: Union[None, Literal[False], Backoff] = None,
+            heartbeat: Optional[float] = None,
+            ssl_domain: Optional[SSLDomain] = None,
+            **kwargs
+    ) -> Connection:
         """
         Initiates the establishment of an AMQP connection.
 
@@ -1218,30 +1246,23 @@ class Container(Reactor):
             ``ca`` above (:const:`proton.SSLDomain.VERIFY_PEER_NAME`).
 
         :param url: URL string of process to connect to
-        :type url: ``str``
-
         :param urls: list of URL strings of process to try to connect to
-        :type urls: ``[str, str, ...]``
 
         :param reconnect: Reconnect is enabled by default.  You can
             pass in an instance of :class:`Backoff` to control reconnect behavior.
             A value of ``False`` will prevent the library from automatically
             trying to reconnect if the underlying socket is disconnected
             before the connection has been closed.
-        :type reconnect: :class:`Backoff` or ``bool``
 
         :param heartbeat: A value in seconds indicating the
             desired frequency of heartbeats used to test the underlying
             socket is alive.
-        :type heartbeat: ``float``
 
         :param ssl_domain: SSL configuration.
-        :type ssl_domain: :class:`proton.SSLDomain`
 
         :param handler: a connection scoped handler that will be
             called to process any events in the scope of this connection
             or its child links.
-        :type handler: Any child of :class:`proton.Events.Handler`
 
         :param kwargs:
 
@@ -1279,7 +1300,6 @@ class Container(Reactor):
                 peers.
 
         :return: A new connection object.
-        :rtype: :class:`proton.Connection`
 
         .. note:: Only one of ``url`` or ``urls`` should be specified.
 
@@ -1330,7 +1350,16 @@ class Container(Reactor):
             return self._connect(url=url, urls=urls, handler=handler, reconnect=reconnect,
                                  heartbeat=heartbeat, ssl_domain=ssl_domain, **kwargs)
 
-    def _connect(self, url=None, urls=None, handler=None, reconnect=None, heartbeat=None, ssl_domain=None, **kwargs):
+    def _connect(
+            self,
+            url: Optional[Union[str, Url]] = None,
+            urls: Optional[List[str]] = None,
+            handler: Optional['Handler'] = None,
+            reconnect: Optional[Union[List[Union[float, int]], bool, Backoff]] = None,
+            heartbeat: None = None,
+            ssl_domain: Optional[SSLDomain] = None,
+            **kwargs
+    ) -> Connection:
         conn = self.connection(handler)
         conn.container = self.container_id or str(_generate_uuid())
         conn.offered_capabilities = kwargs.get('offered_capabilities')
@@ -1369,7 +1398,7 @@ class Container(Reactor):
         conn.open()
         return conn
 
-    def _get_id(self, container, remote, local):
+    def _get_id(self, container: str, remote: Optional[str], local: Optional[str]) -> str:
         if local and remote:
             "%s-%s-%s" % (container, remote, local)
         elif local:
@@ -1394,13 +1423,13 @@ class Container(Reactor):
 
     def create_sender(
             self,
-            context: Union[str, Connection],
+            context: Union[str, Url, Connection],
             target: Optional[str] = None,
             source: Optional[str] = None,
             name: Optional[str] = None,
             handler: Optional[Handler] = None,
             tags: Optional[Callable[[], bytes]] = None,
-            options: Optional[Union['SenderOption', List['SenderOption']]] = None
+            options: Optional[Union['SenderOption', List['SenderOption'], 'LinkOption', List['LinkOption']]] = None
     ) -> 'Sender':
         """
         Initiates the establishment of a link over which messages can
@@ -1455,13 +1484,13 @@ class Container(Reactor):
 
     def create_receiver(
             self,
-            context: Union[Connection, str],
+            context: Union[Connection, Url, str],
             source: Optional[str] = None,
             target: Optional[str] = None,
             name: Optional[str] = None,
             dynamic: bool = False,
             handler: Optional[Handler] = None,
-            options: Optional[Union[ReceiverOption, List[ReceiverOption]]] = None
+            options: Optional[Union[ReceiverOption, List[ReceiverOption], LinkOption, List[LinkOption]]] = None
     ) -> 'Receiver':
         """
         Initiates the establishment of a link over which messages can
@@ -1547,15 +1576,13 @@ class Container(Reactor):
             context._txn_ctrl.target.capabilities.put_object(symbol(u'amqp:local-transactions'))
         return Transaction(context._txn_ctrl, handler, settle_before_discharge)
 
-    def listen(self, url, ssl_domain=None):
+    def listen(self, url: Union[str, Url], ssl_domain: Optional[SSLDomain] = None) -> Acceptor:
         """
         Initiates a server socket, accepting incoming AMQP connections
         on the interface and port specified.
 
         :param url: URL on which to listen for incoming AMQP connections.
-        :type url: ``str`` or :class:`Url`
         :param ssl_domain: SSL configuration object if SSL is to be used, ``None`` otherwise.
-        :type ssl_domain: :class:`proton.SSLDomain` or ``None``
         """
         url = Url(url)
         acceptor = self.acceptor(url.host, url.port)

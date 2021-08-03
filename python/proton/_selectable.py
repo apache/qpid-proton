@@ -17,20 +17,24 @@
 # under the License.
 #
 
+from typing import Optional, Union, TYPE_CHECKING, Any
+
 from ._events import Event
 from ._io import PN_INVALID_SOCKET
 
-from typing import Callable, Optional, Union, TYPE_CHECKING
 if TYPE_CHECKING:
     from ._events import EventType
-    from ._handlers import ConnectSelectable
-    from ._reactor import Container, EventInjector, TimerSelectable
+    from ._reactor import Container, EventInjector
     from socket import socket
 
 
 class Selectable(object):
 
-    def __init__(self, delegate, reactor):
+    def __init__(
+            self,
+            delegate: Optional[Union['EventInjector', 'socket']],
+            reactor: 'Container',
+    ) -> None:
         self._delegate = delegate
         self.reading = False
         self.writing = False
@@ -51,7 +55,7 @@ class Selectable(object):
         else:
             return PN_INVALID_SOCKET
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         return getattr(self._delegate, name)
 
     def _get_deadline(self):

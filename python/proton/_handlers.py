@@ -36,6 +36,7 @@ from ._url import Url
 from typing import Any, List, Optional, Tuple, Union, TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
+    from ._delivery import DispositionType
     from ._reactor import Container, Transaction
     from ._endpoints import Sender, Receiver
 
@@ -159,7 +160,7 @@ class Acking(object):
     A class containing methods for handling received messages.
     """
 
-    def accept(self, delivery: Delivery):
+    def accept(self, delivery: Delivery) -> None:
         """
         Accepts a received message.
 
@@ -171,7 +172,7 @@ class Acking(object):
         """
         self.settle(delivery, Delivery.ACCEPTED)
 
-    def reject(self, delivery: Delivery):
+    def reject(self, delivery: Delivery) -> None:
         """
         Rejects a received message that is considered invalid or
         unprocessable.
@@ -184,7 +185,7 @@ class Acking(object):
         """
         self.settle(delivery, Delivery.REJECTED)
 
-    def release(self, delivery: Delivery, delivered: bool = True):
+    def release(self, delivery: Delivery, delivered: bool = True) -> None:
         """
         Releases a received message, making it available at the source
         for any (other) interested receiver. The ``delivered``
@@ -207,16 +208,14 @@ class Acking(object):
         else:
             self.settle(delivery, Delivery.RELEASED)
 
-    def settle(self, delivery, state=None):
+    def settle(self, delivery: Delivery, state: Optional['DispositionType'] = None) -> None:
         """
         Settles the message delivery, and optionally updating the
         delivery state.
 
         :param delivery: The message delivery tracking object
-        :type delivery: :class:`proton.Delivery`
-        :param state: The delivery state, or ``None`` if not update
+        :param state: The delivery state, or ``None`` if no update
             is to be performed.
-        :type  state: ``int`` or ``None``
         """
         if state:
             delivery.update(state)
@@ -228,13 +227,12 @@ class IncomingMessageHandler(Handler, Acking):
     A utility for simpler and more intuitive handling of delivery
     events related to incoming i.e. received messages.
 
-    :type auto_accept: ``bool``
     :param auto_accept: If ``True``, accept all messages (default). Otherwise
         messages must be individually accepted or rejected.
     :param delegate: A client handler for the endpoint event
     """
 
-    def __init__(self, auto_accept=True, delegate=None):
+    def __init__(self, auto_accept: bool = True, delegate: Optional[Handler] = None) -> None:
         self.delegate = delegate
         self.auto_accept = auto_accept
 
@@ -316,11 +314,10 @@ class EndpointStateHandler(Handler):
     :param peer_close_is_error: If ``True``, a peer endpoint closing will be
         treated as an error with an error callback. Otherwise (default), the
         normal callbacks for the closing will occur.
-    :type peer_close_is_error:  ``bool``
     :param delegate: A client handler for the endpoint event
     """
 
-    def __init__(self, peer_close_is_error=False, delegate=None):
+    def __init__(self, peer_close_is_error: bool = False, delegate: Optional[Handler] = None) -> None:
         self.delegate = delegate
         self.peer_close_is_error = peer_close_is_error
 
