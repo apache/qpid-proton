@@ -323,8 +323,6 @@ class Delivery(Wrapper):
     def tag(self) -> str:
         """
         The identifier for the delivery.
-
-        :type: ``bytes``
         """
         return pn_delivery_tag(self._impl)
 
