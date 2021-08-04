@@ -2887,5 +2887,5 @@ pn_millis_t pn_proactor_now(void) {
 int64_t pn_proactor_now_64(void) {
   struct timespec t;
   clock_gettime(CLOCK_MONOTONIC, &t);
-  return t.tv_sec * 1000 + t.tv_nsec / 1000000;
+  return ((int64_t)t.tv_sec) * 1000 + t.tv_nsec / 1000000;
 }
