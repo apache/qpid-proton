@@ -17,12 +17,15 @@
 # under the License.
 #
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from cproton import pn_condition_clear, pn_condition_set_name, pn_condition_set_description, pn_condition_info, \
     pn_condition_is_set, pn_condition_get_name, pn_condition_get_description
 
 from ._data import Data, dat2obj
+
+if TYPE_CHECKING:
+    from ._data import PythonAMQPData
 
 
 class Condition:
@@ -48,16 +51,18 @@ class Condition:
     information relevant to the identified condition.
 
     :ivar ~.name: The name of the condition.
-    :vartype ~.name: ``str``
     :ivar ~.description: A description of the condition.
-    :vartype ~.description: ``str``
     :ivar ~.info: A data object that holds the additional information associated
         with the condition. The data object may be used both to access and to
         modify the additional information associated with the condition.
-    :vartype ~.info: :class:`Data`
     """
 
-    def __init__(self, name, description=None, info=None):
+    def __init__(
+            self,
+            name: str,
+            description: Optional[str] = None,
+            info: Optional['PythonAMQPData'] = None
+    ) -> None:
         self.name = name
         self.description = description
         self.info = info

@@ -34,14 +34,19 @@ from typing import Callable, Optional, Union, TYPE_CHECKING, List
 try:
     from typing import Literal
 except ImportError:
-    class Literal:
-        def __class_getitem__(cls, item):
+    # https://www.python.org/dev/peps/pep-0560/#class-getitem
+    class GenericMeta(type):
+        def __getitem__(self, item):
             pass
 
+    class Literal(metaclass=GenericMeta):
+        pass
+
 if TYPE_CHECKING:
+    from ._delivery import DispositionType
     from ._transport import SSLDomain
-    from ._reactor import Backoff, SenderOption, ReceiverOption, Connection
-    from ._endpoints import Receiver, Sender, Terminus
+    from ._reactor import SenderOption, ReceiverOption, Connection, LinkOption, Backoff
+    from ._endpoints import Receiver, Sender
     from ._events import Event
     from ._message import Message
 
@@ -112,7 +117,12 @@ class BlockingSender(BlockingLink):
             self.link.close()
             raise LinkException("Failed to open sender %s, target does not match" % self.link.name)
 
-    def send(self, msg, timeout=False, error_states=None):
+    def send(
+            self,
+            msg: 'Message',
+            timeout: Union[None, Literal[False], float] = False,
+            error_states: Optional[List['DispositionType']] = None,
+    ) -> Delivery:
         """
         Blocking send which will return only when the send is complete
         and the message settled.
@@ -120,13 +130,10 @@ class BlockingSender(BlockingLink):
         :param timeout: Timeout in seconds. If ``False``, the value of ``timeout`` used in the
             constructor of the :class:`BlockingConnection` object used in the constructor will be used.
             If ``None``, there is no timeout. Any other value is treated as a timeout in seconds.
-        :type timeout: ``None``, ``False``, ``float``
         :param error_states: List of delivery flags which when present in Delivery object
             will cause a :class:`SendException` exception to be raised. If ``None``, these
             will default to a list containing :const:`proton.Delivery.REJECTED` and :const:`proton.Delivery.RELEASED`.
-        :type error_states: ``list``
         :return: Delivery object for this message.
-        :rtype: :class:`proton.Delivery`
         """
         delivery = self.link.send(msg)
         self.connection.wait(lambda: _is_settled(delivery), msg="Sending on sender %s" % self.link.name,
@@ -144,14 +151,9 @@ class BlockingSender(BlockingLink):
 class Fetcher(MessagingHandler):
     """
     A message handler for blocking receivers.
-
-    :param connection:
-    :type connection: :class:
-    :param prefetch:
-    :type prefetch:
     """
 
-    def __init__(self, connection, prefetch):
+    def __init__(self, connection: 'Connection', prefetch: int):
         super(Fetcher, self).__init__(prefetch=prefetch, auto_accept=False)
         self.connection = connection
         self.incoming = collections.deque([])
@@ -236,7 +238,10 @@ class BlockingReceiver(BlockingLink):
         if hasattr(self, "container"):
             self.link.handler = None  # implicit call to reactor
 
-    def receive(self, timeout=False):
+    def receive(
+            self,
+            timeout: Union[None, Literal[False], float] = False
+    ) -> 'Message':
         """
         Blocking receive call which will return only when a message is received or
         a timeout (if supplied) occurs.
@@ -244,7 +249,6 @@ class BlockingReceiver(BlockingLink):
         :param timeout: Timeout in seconds. If ``False``, the value of ``timeout`` used in the
             constructor of the :class:`BlockingConnection` object used in the constructor will be used.
             If ``None``, there is no timeout. Any other value is treated as a timeout in seconds.
-        :type timeout: ``None``, ``False``, ``float``
         """
         if not self.fetcher:
             raise Exception("Can't call receive on this receiver as a handler was not provided")
@@ -282,7 +286,7 @@ class BlockingReceiver(BlockingLink):
         else:
             self.settle(Delivery.RELEASED)
 
-    def settle(self, state=None):
+    def settle(self, state: Optional['DispositionType'] = None):
         """
         Settle any received messages.
 
@@ -349,23 +353,28 @@ class BlockingConnection(Handler):
     always executed on exit.
 
     :param url: The connection URL.
-    :type url: ``str``
     :param timeout: Connection timeout in seconds. If ``None``, defaults to 60 seconds.
-    :type timeout: ``None`` or float
     :param container: Container to process the events on the connection. If ``None``,
         a new :class:`proton.Container` will be created.
     :param ssl_domain:
     :param heartbeat: A value in seconds indicating the desired frequency of
         heartbeats used to test the underlying socket is alive.
-    :type heartbeat: ``float``
     :param urls: A list of connection URLs to try to connect to.
-    :type urls: ``list``[``str``]
     :param kwargs: Container keyword arguments. See :class:`proton.reactor.Container`
         for a list of the valid kwargs.
     """
 
-    def __init__(self, url=None, timeout=None, container=None, ssl_domain=None, heartbeat=None, urls=None,
-                 reconnect=None, **kwargs):
+    def __init__(
+            self,
+            url: Optional[Union[str, Url]] = None,
+            timeout: Optional[float] = None,
+            container: Optional[Container] = None,
+            ssl_domain: Optional['SSLDomain'] = None,
+            heartbeat: Optional[float] = None,
+            urls: Optional[List[str]] = None,
+            reconnect: Union[None, Literal[False], 'Backoff'] = None,
+            **kwargs
+    ) -> None:
         self.disconnected = False
         self.timeout = timeout or 60
         self.container = container or Container()
@@ -393,21 +402,16 @@ class BlockingConnection(Handler):
             address: Optional[str],
             handler: Optional[Handler] = None,
             name: Optional[str] = None,
-            options: Optional[Union['SenderOption', List['SenderOption']]] = None
+            options: Optional[Union['SenderOption', List['SenderOption'], 'LinkOption', List['LinkOption']]] = None
     ) -> BlockingSender:
         """
         Create a blocking sender.
 
         :param address: Address of target node.
-        :type address: ``str``
         :param handler: Event handler for this sender.
-        :type handler: Any child class of :class:`proton.Handler`
         :param name: Sender name.
-        :type name: ``str``
         :param options: A single option, or a list of sender options
-        :type options: :class:`SenderOption` or [SenderOption, SenderOption, ...]
         :return: New blocking sender instance.
-        :rtype: :class:`BlockingSender`
         """
         return BlockingSender(self, self.container.create_sender(self.conn, address, name=name, handler=handler,
                                                                  options=options))
@@ -419,7 +423,7 @@ class BlockingConnection(Handler):
             dynamic: bool = False,
             handler: Optional[Handler] = None,
             name: Optional[str] = None,
-            options: Optional[Union['ReceiverOption', List['ReceiverOption']]] = None
+            options: Optional[Union['ReceiverOption', List['ReceiverOption'], 'LinkOption', List['LinkOption']]] = None
     ) -> BlockingReceiver:
         """
         Create a blocking receiver.
@@ -490,18 +494,20 @@ class BlockingConnection(Handler):
         self.container.stop()
         self.container.process()
 
-    def wait(self, condition, timeout=False, msg=None):
+    def wait(
+            self,
+            condition: Callable[[], bool],
+            timeout: Union[None, Literal[False], float] = False,
+            msg: Optional[str] = None
+    ) -> None:
         """
         Process events until ``condition()`` returns ``True``.
 
         :param condition: Condition which determines when the wait will end.
-        :type condition: Function which returns ``bool``
         :param timeout: Timeout in seconds. If ``False``, the value of ``timeout`` used in the
             constructor of this object will be used. If ``None``, there is no timeout. Any other
             value is treated as a timeout in seconds.
-        :type timeout: ``None``, ``False``, ``float``
         :param msg: Context message for :class:`proton.Timeout` exception
-        :type msg: ``str``
         """
         if timeout is False:
             timeout = self.timeout

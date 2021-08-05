@@ -125,7 +125,7 @@ class IO(object):
                 self._writing.add(selectable)
             self.update_deadline()
 
-        def select(self, timeout):
+        def select(self, timeout: float) -> Tuple[List, List, List]:
 
             def select_inner(timeout):
                 # This inner select adds the writing fds to the exception fd set

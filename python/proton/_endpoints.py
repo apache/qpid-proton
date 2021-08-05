@@ -63,7 +63,8 @@ from ._delivery import Delivery
 from ._exceptions import ConnectionException, EXCEPTIONS, LinkException, SessionException
 from ._transport import Transport
 from ._wrapper import Wrapper
-from typing import Callable, Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Callable, Dict, List, Optional, Union, TYPE_CHECKING, Any
+
 if TYPE_CHECKING:
     from ._condition import Condition
     from ._data import Array, symbol
@@ -165,7 +166,7 @@ class Connection(Wrapper, Endpoint):
         else:
             return Connection(impl)
 
-    def __init__(self, impl=pn_connection):
+    def __init__(self, impl: Callable[[], Any] = pn_connection) -> None:
         Wrapper.__init__(self, impl, pn_connection_attachments)
 
     def _init(self) -> None:
@@ -375,15 +376,11 @@ class Connection(Wrapper, Endpoint):
         return dat2obj(pn_connection_remote_properties(self._impl))
 
     @property
-    def connected_address(self):
-        """
-        The address for this connection.
-
-        :type: ``str``
-        """
+    def connected_address(self) -> str:
+        """The address for this connection."""
         return self.url and str(self.url)
 
-    def open(self):
+    def open(self) -> None:
         """
         Opens the connection.
 
@@ -893,7 +890,7 @@ class Link(Wrapper, Endpoint):
         """
         return self.session.transport
 
-    def delivery(self, tag):
+    def delivery(self, tag: str) -> Delivery:
         """
         Create a delivery. Every delivery object within a
         link must be supplied with a unique tag. Links
@@ -901,8 +898,6 @@ class Link(Wrapper, Endpoint):
         they are created.
 
         :param tag: Delivery tag unique for this link.
-        :type tag: ``bytes``
-        :rtype: :class:`Delivery`
         """
         return Delivery(pn_delivery(self._impl, tag))
 
@@ -1040,23 +1035,19 @@ class Link(Wrapper, Endpoint):
         return pn_link_is_receiver(self._impl)
 
     @property
-    def remote_snd_settle_mode(self):
+    def remote_snd_settle_mode(self) -> int:
         """
         The remote sender settle mode for this link. One of
         :const:`SND_UNSETTLED`, :const:`SND_SETTLED` or
         :const:`SND_MIXED`.
-
-        :type: ``int``
         """
         return pn_link_remote_snd_settle_mode(self._impl)
 
     @property
-    def remote_rcv_settle_mode(self):
+    def remote_rcv_settle_mode(self) -> int:
         """
         The remote receiver settle mode for this link. One of
         :const:`RCV_FIRST` or :const:`RCV_SECOND`.
-
-        :type: ``int``
         """
         return pn_link_remote_rcv_settle_mode(self._impl)
 
@@ -1161,7 +1152,7 @@ class Link(Wrapper, Endpoint):
         """
         return pn_link_detach(self._impl)
 
-    def free(self):
+    def free(self) -> None:
         """
         Free this link object. When a link object is freed,
         all :class:`Delivery` objects associated with the session (**<-- CHECK THIS**)

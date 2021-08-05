@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 class NamedInt(int):
     values: Dict[int, str] = {}
 
-    def __new__(cls, i, name):
+    def __new__(cls: Type['DispositionType'], i: int, name: str) -> 'DispositionType':
         ni = super(NamedInt, cls).__new__(cls, i)
         cls.values[i] = ni
         return ni
@@ -55,7 +55,7 @@ class NamedInt(int):
         return self.name
 
     @classmethod
-    def get(cls, i):
+    def get(cls, i: int) -> Union[int, 'DispositionType']:
         return cls.values.get(i, i)
 
 
@@ -320,11 +320,9 @@ class Delivery(Wrapper):
         self.remote = Disposition(pn_delivery_remote(self._impl), False)
 
     @property
-    def tag(self):
+    def tag(self) -> str:
         """
         The identifier for the delivery.
-
-        :type: ``bytes``
         """
         return pn_delivery_tag(self._impl)
 

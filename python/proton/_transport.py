@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from typing import Callable, Optional, Type, Union, TYPE_CHECKING, List
+
 from cproton import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM, PN_SASL_SYS, PN_SASL_TEMP, \
     PN_SSL_ANONYMOUS_PEER, PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY, PN_SSL_CERT_SUBJECT_COMMON_NAME, \
     PN_SSL_CERT_SUBJECT_COUNTRY_NAME, PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME, PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT, \
@@ -45,8 +47,6 @@ from ._condition import cond2obj, obj2cond
 from ._exceptions import EXCEPTIONS, SSLException, SSLUnavailable, SessionException, TransportException
 from ._wrapper import Wrapper
 
-from typing import Callable, Optional, Type, Union, TYPE_CHECKING, List
-
 if TYPE_CHECKING:
     from ._condition import Condition
     from ._endpoints import Connection  # would produce circular import
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 
 class TraceAdapter:
 
-    def __init__(self, tracer):
+    def __init__(self, tracer: Callable[['Transport', str], None]) -> None:
         self.tracer = tracer
 
     def __call__(self, trans_impl, message):
@@ -85,13 +85,17 @@ class Transport(Wrapper):
     """ Transport mode is as a server. """
 
     @staticmethod
-    def wrap(impl):
+    def wrap(impl: Optional[Callable]) -> Optional['Transport']:
         if impl is None:
             return None
         else:
             return Transport(_impl=impl)
 
-    def __init__(self, mode=None, _impl=pn_transport):
+    def __init__(
+            self,
+            mode: 'Optional[int]' = None,
+            _impl: 'Callable' = pn_transport,
+    ) -> None:
         Wrapper.__init__(self, _impl, pn_transport_attachments)
         if mode == Transport.SERVER:
             pn_transport_set_server(self._impl)
@@ -862,7 +866,12 @@ class SSL(object):
         else:
             return err
 
-    def __new__(cls, transport, domain, session_details=None):
+    def __new__(
+            cls: Type['SSL'],
+            transport: Transport,
+            domain: SSLDomain,
+            session_details: Optional['SSLSessionDetails'] = None
+    ) -> 'SSL':
         """Enforce a singleton SSL object per Transport"""
         if transport._ssl:
             # unfortunately, we've combined the allocation and the configuration in a
@@ -1122,7 +1131,7 @@ class SSL(object):
     RESUME_REUSED = PN_SSL_RESUME_REUSED
     """Session resumed from previous session."""
 
-    def resume_status(self):
+    def resume_status(self) -> int:
         """
         Check whether the state has been resumed.
 
