@@ -17,7 +17,7 @@
 # under the License.
 #
 
-import re
+import os
 import subprocess
 import time
 import unittest
@@ -27,12 +27,16 @@ class Popen(subprocess.Popen):
 
     # We always use these options
     def __init__(self, args, **kwargs):
+        # Add the module directory to the path to be able to find the examples
+        path = f"{os.path.dirname(__file__)}{os.pathsep}{os.environ['PATH']}"
         super(Popen, self).\
             __init__(args,
                      shell=False,
                      stderr=subprocess.STDOUT,
                      stdout=subprocess.PIPE,
-                     universal_newlines=True, **kwargs)
+                     universal_newlines=True,
+                     env={'PATH': path},
+                     **kwargs)
 
 
 # Like subprocess.run with our defaults but returning the Popen object
@@ -40,6 +44,13 @@ def run(args, **kwargs):
     p = Popen(args, **kwargs)
     p.wait()
     return p
+
+
+def check_call(args, **kwargs):
+    # Add the module directory to the path to be able to find the examples
+    path = f"{os.path.dirname(__file__)}{os.pathsep}{os.environ['PATH']}"
+    return subprocess.check_call(args, env={'PATH': path}, **kwargs)
+
 
 class ExamplesTest(unittest.TestCase):
     def test_helloworld(self, example="helloworld.py"):
@@ -101,8 +112,8 @@ class ExamplesTest(unittest.TestCase):
     def test_db_send_recv(self):
         self.maxDiff = None
         # setup databases
-        subprocess.check_call(['db_ctrl.py', 'init', './src_db'])
-        subprocess.check_call(['db_ctrl.py', 'init', './dst_db'])
+        check_call(['db_ctrl.py', 'init', './src_db'])
+        check_call(['db_ctrl.py', 'init', './dst_db'])
         with Popen(['db_ctrl.py', 'insert', './src_db'], stdin=subprocess.PIPE) as fill:
             for i in range(100):
                 fill.stdin.write("Message-%i\n" % (i + 1))
