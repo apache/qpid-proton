@@ -276,21 +276,17 @@ set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
 mark_as_advanced (INCLUDE_INSTALL_DIR LIB_INSTALL_DIR SYSCONF_INSTALL_DIR SHARE_INSTALL_DIR MAN_INSTALL_DIR)
 
-macro (pn_absolute_install_dir NAME VALUE PREFIX)
+# ${PACKAGE_PREFIX_DIR} is expanded from @PACKAGE_INIT@
+# by configure_package_config_file(), and available in ProtonConfig.cmake
+macro (pn_relative_install_dir NAME VALUE)
   if (IS_ABSOLUTE ${VALUE})
-    set (${NAME} "${VALUE}")
-  elseif (IS_ABSOLUTE ${PREFIX})
-    set (${NAME} "${PREFIX}/${VALUE}")
-  else ()
-    set (${NAME} "${CMAKE_BINARY_DIR}/${PREFIX}/${VALUE}")
+    message(FATAL_ERROR "pn_relative_install_dir requires relative directory")
   endif ()
-  get_filename_component (${NAME} ${${NAME}} ABSOLUTE)
+
+  set (${NAME} "\${PACKAGE_PREFIX_DIR}/${VALUE}")
 endmacro ()
 
-pn_absolute_install_dir (PREFIX "." ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir (EXEC_PREFIX "." ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir (LIBDIR ${LIB_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir (INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
+pn_relative_install_dir (INCLUDEDIR ${INCLUDE_INSTALL_DIR})
 
 ## LANGUAGE BINDINGS
 
