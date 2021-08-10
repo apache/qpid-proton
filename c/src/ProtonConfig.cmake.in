@@ -52,7 +52,7 @@ if (Proton_USE_STATIC_LIBS)
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH_OLD})
 endif()
 
-set(Proton_INCLUDE_DIRS @INCLUDEDIR@)
+set (Proton_INCLUDE_DIRS @INCLUDEDIR@)
 set (Proton_LIBRARIES Proton::qpid-proton)
 set (Proton_FOUND True)
 
