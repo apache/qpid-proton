@@ -62,7 +62,7 @@ set (Proton_Core_FOUND True)
 
 set (HAS_PROACTOR @HAS_PROACTOR@)
 if (HAS_PROACTOR)
-  set (Proton_Proactor_INCLUDE_DIRS  @INCLUDEDIR@)
+  set (Proton_Proactor_INCLUDE_DIRS @INCLUDEDIR@)
   set (Proton_Proactor_LIBRARIES Proton::proactor)
   set (Proton_Proactor_FOUND True)
 endif()
