@@ -413,12 +413,15 @@ set_target_properties (qpid-proton-core
   VERSION   "${PN_LIB_CORE_VERSION}"
   SOVERSION "${PN_LIB_CORE_MAJOR_VERSION}"
   COMPILE_FLAGS "${LTO}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
+  EXPORT_NAME core)
 
 if (BUILD_STATIC_LIBS)
   add_library (qpid-proton-core-static STATIC ${qpid-proton-core-src})
   target_compile_definitions(qpid-proton-core-static PUBLIC PROTON_DECLARE_STATIC)
   target_link_libraries (qpid-proton-core-static ${SSL_LIB} ${SASL_LIB} ${PLATFORM_LIBS})
+  set_target_properties(qpid-proton-core-static PROPERTIES
+    EXPORT_NAME core)
 endif(BUILD_STATIC_LIBS)
 
 if (qpid-proton-proactor)
@@ -451,11 +454,16 @@ if (qpid-proton-proactor)
     SOVERSION "${PN_LIB_PROACTOR_MAJOR_VERSION}"
     LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
     COMPILE_FLAGS "${LTO}"
+    EXPORT_NAME proactor
     )
   if (BUILD_STATIC_LIBS)
     add_library (qpid-proton-proactor-static STATIC ${qpid-proton-proactor})
     target_compile_definitions(qpid-proton-proactor-static PUBLIC PROTON_DECLARE_STATIC)
-    target_link_libraries (qpid-proton-proactor-static ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+    target_link_libraries (qpid-proton-proactor-static LINK_PUBLIC qpid-proton-core-static)
+    target_link_libraries (qpid-proton-proactor-static PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+    set_target_properties(qpid-proton-proactor-static PROPERTIES
+      EXPORT_NAME proactor)
+    set(TARGET_qpid-proton-proactor-static qpid-proton-proactor-static)
   endif(BUILD_STATIC_LIBS)
 endif()
 
@@ -477,6 +485,7 @@ set_target_properties (qpid-proton
   SOVERSION "${PN_LIB_LEGACY_MAJOR_VERSION}"
   LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
   COMPILE_FLAGS "${LTO}"
+  EXPORT_NAME qpid-proton
 )
 
 if (BUILD_STATIC_LIBS)
@@ -487,19 +496,25 @@ if (BUILD_STATIC_LIBS)
   target_compile_definitions(qpid-proton-static PUBLIC PROTON_DECLARE_STATIC)
   target_link_libraries (qpid-proton-static
     qpid-proton-core-static
-    $<$<BOOL:${HAS_PROACTOR}>:qpid-proton-proactor-static>
+    ${TARGET_qpid-proton-proactor-static}
     ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+  set_target_properties(qpid-proton-static PROPERTIES
+    EXPORT_NAME qpid-proton)
 endif(BUILD_STATIC_LIBS)
 
 # Install executables and libraries
-if (BUILD_STATIC_LIBS)
-  set(STATIC_LIBS qpid-proton-static qpid-proton-core-static)
-endif()
-install(TARGETS qpid-proton qpid-proton-core ${STATIC_LIBS}
-  EXPORT  proton
+install(TARGETS qpid-proton qpid-proton-core
+  EXPORT  ProtonTargets
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+if (BUILD_STATIC_LIBS)
+  install(TARGETS qpid-proton-static qpid-proton-core-static
+    EXPORT  ProtonTargetsStatic
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+endif()
 
 # Install windows pdb files
 if (MSVC)
@@ -512,14 +527,18 @@ if (MSVC)
 endif (MSVC)
 
 if (HAS_PROACTOR)
-  if (BUILD_STATIC_LIBS)
-    set(STATIC_LIBS qpid-proton-proactor-static)
-  endif()
   install(TARGETS qpid-proton-proactor ${STATIC_LIBS}
-    EXPORT  proton
+    EXPORT  ProtonTargets
     RUNTIME DESTINATION bin
     ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
     LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+  if (BUILD_STATIC_LIBS)
+    install(TARGETS qpid-proton-proactor-static
+      EXPORT  ProtonTargetsStatic
+      RUNTIME DESTINATION bin
+      ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+      LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+  endif()
 
   # Install windows pdb files
   if (MSVC)
@@ -557,11 +576,24 @@ if(HAS_PROACTOR)
   configure_lib(PROTONPROACTORLIB qpid-proton-proactor)
 endif(HAS_PROACTOR)
 
+install(EXPORT ProtonTargets
+  FILE ProtonTargets.cmake
+  NAMESPACE Proton::
+  DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
+if (BUILD_STATIC_LIBS)
+  install(EXPORT ProtonTargetsStatic
+    FILE ProtonTargetsStatic.cmake
+    NAMESPACE Proton::
+    DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
+endif()
+
+include(CMakePackageConfigHelpers)
 include(WriteBasicConfigVersionFile)
 
-configure_file(
+configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/ProtonConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfig.cmake @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfig.cmake
+  INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
 write_basic_config_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake
   VERSION ${PN_VERSION}
@@ -569,6 +601,11 @@ write_basic_config_version_file(
 install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake
+  DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
+install (FILES
+  ../tools/cmake/Modules/FindCyrusSASL.cmake
+  ../tools/cmake/Modules/FindOpenSSL.cmake
+  ../tools/cmake/Modules/FindThreads.cmake
   DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
 
 if (ENABLE_BENCHMARKS)
