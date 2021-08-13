@@ -67,7 +67,7 @@ from typing import Callable, Dict, List, Optional, Union, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ._condition import Condition
-    from ._data import Array, symbol
+    from ._data import Array, PythonAMQPData, symbol
     from ._events import Collector, Handler
     from ._message import Message
 
