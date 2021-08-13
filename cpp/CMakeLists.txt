@@ -185,12 +185,12 @@ install (FILES
 
 install(EXPORT ProtonCppTargets
   FILE ProtonCppTargets.cmake
-  NAMESPACE ProtonCpp::
+  NAMESPACE Proton::
   DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
 if (BUILD_STATIC_LIBS)
   install(EXPORT ProtonCppStaticTargets
     FILE ProtonCppTargets.cmake
-    NAMESPACE ProtonCpp::
+    NAMESPACE Proton::
     DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
 endif ()
 
