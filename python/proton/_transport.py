@@ -387,8 +387,6 @@ class Transport(Wrapper):
     def remote_max_frame_size(self) -> int:
         """
         The maximum frame size of a transport's remote peer (in bytes).
-
-        :type: ``int``
         """
         return pn_transport_get_remote_max_frame(self._impl)
 
