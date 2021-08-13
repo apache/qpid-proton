@@ -58,22 +58,26 @@ class Selectable(object):
     def __getattr__(self, name: str) -> Any:
         return getattr(self._delegate, name)
 
-    def _get_deadline(self):
+    @property
+    def deadline(self) -> Optional[float]:
         tstamp = self._deadline
         if tstamp:
             return tstamp
         else:
             return None
 
-    def _set_deadline(self, deadline):
+    @deadline.setter
+    def deadline(self, deadline: Optional[float]) -> None:
         if not deadline:
             self._deadline = 0
         else:
             self._deadline = deadline
 
-    deadline = property(_get_deadline, _set_deadline)
-
-    def push_event(self, context, etype):
+    def push_event(
+            self,
+            context: 'Selectable',
+            etype: 'EventType',
+    ) -> None:
         self._reactor.push_event(context, etype)
 
     def update(self) -> None:
