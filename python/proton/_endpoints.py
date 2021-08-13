@@ -593,14 +593,9 @@ class Session(Wrapper, Endpoint):
     def _get_remote_cond_impl(self):
         return pn_session_remote_condition(self._impl)
 
-    def _get_incoming_capacity(self):
-        return pn_session_get_incoming_capacity(self._impl)
-
-    def _set_incoming_capacity(self, capacity):
-        pn_session_set_incoming_capacity(self._impl, capacity)
-
-    incoming_capacity = property(_get_incoming_capacity, _set_incoming_capacity, doc="""
-        The incoming capacity of this session in bytes. The incoming capacity
+    @property
+    def incoming_capacity(self) -> int:
+        """The incoming capacity of this session in bytes. The incoming capacity
         of a session determines how much incoming message data the session
         can buffer.
 
@@ -609,29 +604,26 @@ class Session(Wrapper, Endpoint):
             frames when dividing remaining capacity at a given time by the connection
             max frame size. As such, capacity and max frame size should be chosen so
             as to ensure the frame window isn't unduly small and limiting performance.
+        """
+        return pn_session_get_incoming_capacity(self._impl)
 
-        :type: ``int`` (bytes)
-        """)
-
-    def _get_outgoing_window(self):
-        return pn_session_get_outgoing_window(self._impl)
-
-    def _set_outgoing_window(self, window):
-        pn_session_set_outgoing_window(self._impl, window)
-
-    outgoing_window = property(_get_outgoing_window, _set_outgoing_window, doc="""
-        The outgoing window for this session.
-
-        :type: ``int``
-        """)
+    @incoming_capacity.setter
+    def incoming_capacity(self, capacity: int) -> None:
+        pn_session_set_incoming_capacity(self._impl, capacity)
 
     @property
-    def outgoing_bytes(self):
-        """
-        The number of outgoing bytes currently buffered.
+    def outgoing_window(self) -> int:
+        """The outgoing window for this session."""
+        return pn_session_get_outgoing_window(self._impl)
 
-        :type: ``int`` (bytes)
+    @outgoing_window.setter
+    def outgoing_window(self, window: int) -> None:
+        pn_session_set_outgoing_window(self._impl, window)
+
+    @property
+    def outgoing_bytes(self) -> int:
         """
+        The number of outgoing bytes currently buffered."""
         return pn_session_outgoing_bytes(self._impl)
 
     @property
