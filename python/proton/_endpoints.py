@@ -216,42 +216,32 @@ class Connection(Wrapper, Endpoint):
             pn_connection_collect(self._impl, collector._impl)
         self._collector = weakref.ref(collector)
 
-    def _get_container(self):
+    @property
+    def container(self) -> str:
+        """The container name for this connection object."""
         return utf82unicode(pn_connection_get_container(self._impl))
 
-    def _set_container(self, name):
+    @container.setter
+    def container(self, name: str) -> None:
         pn_connection_set_container(self._impl, unicode2utf8(name))
 
-    container = property(_get_container, _set_container, doc="""
-        The container name for this connection object.
-
-        :type: ``str``
-        """)
-
-    def _get_hostname(self):
-        return utf82unicode(pn_connection_get_hostname(self._impl))
-
-    def _set_hostname(self, name):
-        pn_connection_set_hostname(self._impl, unicode2utf8(name))
-
-    hostname = property(_get_hostname, _set_hostname, doc="""
-        Set the name of the host (either fully qualified or relative) to which this
+    @property
+    def hostname(self) -> Optional[str]:
+        """Set the name of the host (either fully qualified or relative) to which this
         connection is connecting to.  This information may be used by the remote
         peer to determine the correct back-end service to connect the client to.
         This value will be sent in the Open performative, and will be used by SSL
         and SASL layers to identify the peer.
+        """
+        return utf82unicode(pn_connection_get_hostname(self._impl))
 
-        :type: ``str``
-        """)
+    @hostname.setter
+    def hostname(self, name: str) -> None:
+        pn_connection_set_hostname(self._impl, unicode2utf8(name))
 
-    def _get_user(self):
-        return utf82unicode(pn_connection_get_user(self._impl))
-
-    def _set_user(self, name):
-        pn_connection_set_user(self._impl, unicode2utf8(name))
-
-    user = property(_get_user, _set_user, doc="""
-        The authentication username for a client connection.
+    @property
+    def user(self) -> Optional[str]:
+        """The authentication username for a client connection.
 
         It is necessary to set the username and password before binding
         the connection to a transport and it isn't allowed to change
@@ -261,18 +251,16 @@ class Connection(Wrapper, Endpoint):
         client sasl layer is explicitly created (this would be for something
         like Kerberos where the credentials are implicit in the environment,
         or to explicitly use the ``ANONYMOUS`` SASL mechanism)
+        """
+        return utf82unicode(pn_connection_get_user(self._impl))
 
-        :type: ``str``
-        """)
+    @user.setter
+    def user(self, name: str) -> None:
+        pn_connection_set_user(self._impl, unicode2utf8(name))
 
-    def _get_authorization(self):
-        return utf82unicode(pn_connection_get_authorization(self._impl))
-
-    def _set_authorization(self, name):
-        pn_connection_set_authorization(self._impl, unicode2utf8(name))
-
-    authorization = property(_get_authorization, _set_authorization, doc="""
-        The authorization username for a client connection.
+    @property
+    def authorization(self) -> str:
+        """The authorization username for a client connection.
 
         It is necessary to set the authorization before binding
         the connection to a transport and it isn't allowed to change
@@ -280,18 +268,16 @@ class Connection(Wrapper, Endpoint):
 
         If not set then implicitly the requested authorization is the same as the
         authentication user.
+        """
+        return utf82unicode(pn_connection_get_authorization(self._impl))
 
-        :type: ``str``
-        """)
+    @authorization.setter
+    def authorization(self, name: str) -> None:
+        pn_connection_set_authorization(self._impl, unicode2utf8(name))
 
-    def _get_password(self):
-        return None
-
-    def _set_password(self, name):
-        pn_connection_set_password(self._impl, unicode2utf8(name))
-
-    password = property(_get_password, _set_password, doc="""
-        Set the authentication password for a client connection.
+    @property
+    def password(self) -> None:
+        """Set the authentication password for a client connection.
 
         It is necessary to set the username and password before binding the connection
         to a transport and it isn't allowed to change after the binding.
@@ -302,7 +288,7 @@ class Connection(Wrapper, Endpoint):
         """)
 
     @property
-    def remote_container(self):
+    def remote_container(self) -> Optional[str]:
         """
         The container identifier specified by the remote peer for this connection.
 
@@ -318,7 +304,7 @@ class Connection(Wrapper, Endpoint):
         return pn_connection_remote_container(self._impl)
 
     @property
-    def remote_hostname(self):
+    def remote_hostname(self) -> Optional[str]:
         """
         The hostname specified by the remote peer for this connection.
 
@@ -328,8 +314,6 @@ class Connection(Wrapper, Endpoint):
         Any (non ``None``) name returned by this operation will be valid until
         the connection object is unbound from a transport or freed,
         whichever happens sooner.
-
-        :type: ``str``
         """
         return pn_connection_remote_hostname(self._impl)
 
@@ -525,64 +509,64 @@ class Connection(Wrapper, Endpoint):
         """
         pn_connection_release(self._impl)
 
-    def _get_offered_capabilities(self):
+    @property
+    def offered_capabilities(self) -> Optional[Union['Array', SymbolList]]:
+        """Offered capabilities as a list of symbols. The AMQP 1.0 specification
+        restricts this list to symbol elements only. It is possible to use
+        the special ``list`` subclass :class:`SymbolList` as it will by
+        default enforce this restriction on construction. In addition, if a
+        string type is used, it will be silently converted into the required
+        symbol.
+        """
         return self.offered_capabilities_list
 
-    def _set_offered_capabilities(self, offered_capability_list):
+    @offered_capabilities.setter
+    def offered_capabilities(
+            self,
+            offered_capability_list: Optional[Union['Array', List['symbol'], SymbolList, List[str]]]
+    ) -> None:
         if isinstance(offered_capability_list, list):
             self.offered_capabilities_list = SymbolList(offered_capability_list, raise_on_error=False)
         else:
             self.offered_capabilities_list = offered_capability_list
 
-    offered_capabilities = property(_get_offered_capabilities, _set_offered_capabilities, doc="""
-    Offered capabilities as a list of symbols. The AMQP 1.0 specification
-    restricts this list to symbol elements only. It is possible to use
-    the special ``list`` subclass :class:`SymbolList` as it will by
-    default enforce this restriction on construction. In addition, if a
-    string type is used, it will be silently converted into the required
-    symbol.
-
-    :type: ``list`` containing :class:`symbol`.
-    """)
-
-    def _get_desired_capabilities(self):
+    @property
+    def desired_capabilities(self) -> Optional[Union['Array', SymbolList]]:
+        """Desired capabilities as a list of symbols. The AMQP 1.0 specification
+        restricts this list to symbol elements only. It is possible to use
+        the special ``list`` subclass :class:`SymbolList` which will by
+        default enforce this restriction on construction. In addition, if string
+        types are used, this class will be silently convert them into symbols.
+        """
         return self.desired_capabilities_list
 
-    def _set_desired_capabilities(self, desired_capability_list):
+    @desired_capabilities.setter
+    def desired_capabilities(
+            self,
+            desired_capability_list: Optional[Union['Array', List['symbol'], SymbolList, List[str]]]
+    ) -> None:
         if isinstance(desired_capability_list, list):
             self.desired_capabilities_list = SymbolList(desired_capability_list, raise_on_error=False)
         else:
             self.desired_capabilities_list = desired_capability_list
 
-    desired_capabilities = property(_get_desired_capabilities, _set_desired_capabilities, doc="""
-    Desired capabilities as a list of symbols. The AMQP 1.0 specification
-    restricts this list to symbol elements only. It is possible to use
-    the special ``list`` subclass :class:`SymbolList` which will by
-    default enforce this restriction on construction. In addition, if string
-    types are used, this class will be silently convert them into symbols.
-
-    :type: ``list`` containing :class:`symbol`.
-    """)
-
-    def _get_properties(self):
+    @property
+    def properties(self) -> Optional[PropertyDict]:
+        """Connection properties as a dictionary of key/values. The AMQP 1.0
+        specification restricts this dictionary to have keys that are only
+        :class:`symbol` types. It is possible to use the special ``dict``
+        subclass :class:`PropertyDict` which will by default enforce this
+        restrictions on construction. In addition, if strings type are used,
+        this will silently convert them into symbols.
+        """
         return self.properties_dict
 
-    def _set_properties(self, properties_dict):
+    @properties.setter
+    def properties(self, properties_dict: Optional[Union[PropertyDict, Dict[str, 'PythonAMQPData']]]) -> None:
         if isinstance(properties_dict, dict):
             self.properties_dict = PropertyDict(properties_dict, raise_on_error=False)
         else:
             self.properties_dict = properties_dict
-
-    properties = property(_get_properties, _set_properties, doc="""
-    Connection properties as a dictionary of key/values. The AMQP 1.0
-    specification restricts this dictionary to have keys that are only
-    :class:`symbol` types. It is possible to use the special ``dict``
-    subclass :class:`PropertyDict` which will by default enforce this
-    restrictions on construction. In addition, if strings type are used,
-    this will silently convert them into symbols.
-
-    :type: ``dict`` containing :class:`symbol`` keys.
-    """)
 
 
 class Session(Wrapper, Endpoint):
