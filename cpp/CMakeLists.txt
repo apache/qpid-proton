@@ -130,11 +130,18 @@ set_target_properties (
 
 ## Install
 
-install(TARGETS qpid-proton-cpp ${STATIC_LIBS}
-  EXPORT  proton-cpp
+install(TARGETS qpid-proton-cpp
+  EXPORT  ProtonCppTargets
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+if (BUILD_STATIC_LIBS)
+  install(TARGETS qpid-proton-cpp-static
+    EXPORT  ProtonCppStaticTargets
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+endif ()
 
 # Install windows qpid-proton-cpp pdb files
 if (MSVC)
@@ -172,11 +179,24 @@ install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc
   DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
+install(EXPORT ProtonCppTargets
+  FILE ProtonCppTargets.cmake
+  NAMESPACE ProtonCpp::
+  DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
+if (BUILD_STATIC_LIBS)
+  install(EXPORT ProtonCppStaticTargets
+    FILE ProtonCppTargets.cmake
+    NAMESPACE ProtonCpp::
+    DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
+endif ()
+
+include(CMakePackageConfigHelpers)
 include(WriteBasicConfigVersionFile)
 
-configure_file(
+configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake
+  INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
 write_basic_config_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
   VERSION ${PN_VERSION}
