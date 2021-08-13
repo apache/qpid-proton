@@ -283,9 +283,12 @@ class Connection(Wrapper, Endpoint):
         to a transport and it isn't allowed to change after the binding.
 
         .. note:: Getting the password always returns ``None``.
+        """
+        return None
 
-        :type: ``str``
-        """)
+    @password.setter
+    def password(self, name: str) -> None:
+        pn_connection_set_password(self._impl, unicode2utf8(name))
 
     @property
     def remote_container(self) -> Optional[str]:
