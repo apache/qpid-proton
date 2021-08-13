@@ -113,7 +113,10 @@ if(BUILD_STATIC_LIBS)
   target_compile_definitions(qpid-proton-cpp-static
     PRIVATE PROTON_DECLARE_STATIC
     PUBLIC PN_CPP_DECLARE_STATIC)
-  set(STATIC_LIBS qpid-proton-cpp-static)
+  set_target_properties (
+    qpid-proton-cpp-static
+    PROPERTIES
+    EXPORT_NAME cpp)
 endif(BUILD_STATIC_LIBS)
 
 target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS})
@@ -126,6 +129,7 @@ set_target_properties (
   SOVERSION "${PN_LIB_CPP_MAJOR_VERSION}"
   LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
   COMPILE_FLAGS "${LTO}"
+  EXPORT_NAME cpp
   )
 
 ## Install
