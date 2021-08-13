@@ -47,7 +47,7 @@ class Collector:
     def __init__(self) -> None:
         self._impl = pn_collector()
 
-    def put(self, obj, etype):
+    def put(self, obj: 'Selectable', etype: 'EventType') -> None:
         pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype.number)
 
     def peek(self) -> Optional['Event']:
