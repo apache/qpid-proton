@@ -1165,7 +1165,7 @@ class Link(Wrapper, Endpoint):
         return self._properties_dict
 
     @properties.setter
-    def properties(self, properties_dict: Optional[Dict['symbol', 'PythonAMQPData']]) -> None:  # TODO: str?
+    def properties(self, properties_dict: Optional[Dict['symbol', 'PythonAMQPData']]) -> None:
         if isinstance(properties_dict, dict):
             self._properties_dict = PropertyDict(properties_dict, raise_on_error=False)
         else:
