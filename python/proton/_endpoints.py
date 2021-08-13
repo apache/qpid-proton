@@ -1035,41 +1035,31 @@ class Link(Wrapper, Endpoint):
         """
         return pn_link_remote_rcv_settle_mode(self._impl)
 
-    def _get_snd_settle_mode(self):
-        return pn_link_snd_settle_mode(self._impl)
-
-    def _set_snd_settle_mode(self, mode):
-        pn_link_set_snd_settle_mode(self._impl, mode)
-
-    snd_settle_mode = property(_get_snd_settle_mode, _set_snd_settle_mode, doc="""
-        The local sender settle mode for this link. One of
+    @property
+    def snd_settle_mode(self) -> int:
+        """The local sender settle mode for this link. One of
         :const:`SND_UNSETTLED`, :const:`SND_SETTLED` or
         :const:`SND_MIXED`.
+        """
+        return pn_link_snd_settle_mode(self._impl)
 
-        :type: ``int``
-        """)
+    @snd_settle_mode.setter
+    def snd_settle_mode(self, mode: int) -> None:
+        pn_link_set_snd_settle_mode(self._impl, mode)
 
-    def _get_rcv_settle_mode(self):
+    @property
+    def rcv_settle_mode(self) -> int:
+        """The local receiver settle mode for this link. One of
+        :const:`RCV_FIRST` or :const:`RCV_SECOND`."""
         return pn_link_rcv_settle_mode(self._impl)
 
-    def _set_rcv_settle_mode(self, mode):
+    @rcv_settle_mode.setter
+    def rcv_settle_mode(self, mode: int) -> None:
         pn_link_set_rcv_settle_mode(self._impl, mode)
 
-    rcv_settle_mode = property(_get_rcv_settle_mode, _set_rcv_settle_mode, doc="""
-        The local receiver settle mode for this link. One of
-        :const:`RCV_FIRST` or :const:`RCV_SECOND`.
-
-        :type: ``int``
-        """)
-
-    def _get_drain(self):
-        return pn_link_get_drain(self._impl)
-
-    def _set_drain(self, b):
-        pn_link_set_drain(self._impl, bool(b))
-
-    drain_mode = property(_get_drain, _set_drain, doc="""
-        The drain mode on this link.
+    @property
+    def drain_mode(self) -> bool:
+        """The drain mode on this link.
 
         If a link is in drain mode (``True``), then the sending
         endpoint of a link must immediately use up all available
@@ -1078,9 +1068,12 @@ class Link(Wrapper, Endpoint):
         the receiving endpoint can set the drain mode.
 
         When ``False``, this link is not in drain mode.
+        """
+        return pn_link_get_drain(self._impl)
 
-        :type: ``bool``
-        """)
+    @drain_mode.setter
+    def drain_mode(self, b: bool):
+        pn_link_set_drain(self._impl, bool(b))
 
     def drained(self) -> int:
         """
@@ -1115,22 +1108,20 @@ class Link(Wrapper, Endpoint):
         """
         return pn_link_remote_max_message_size(self._impl)
 
-    def _get_max_message_size(self):
-        return pn_link_max_message_size(self._impl)
-
-    def _set_max_message_size(self, mode):
-        pn_link_set_max_message_size(self._impl, mode)
-
-    max_message_size = property(_get_max_message_size, _set_max_message_size, doc="""
-        The maximum message size for this link. A zero value means the
+    @property
+    def max_message_size(self) -> int:
+        """The maximum message size for this link. A zero value means the
         size is unlimited.
 
         .. warning:: **Unsettled API**
+        """
+        return pn_link_max_message_size(self._impl)
 
-        :type: ``long``
-        """)
+    @max_message_size.setter
+    def max_message_size(self, mode: int) -> None:
+        pn_link_set_max_message_size(self._impl, mode)
 
-    def detach(self):
+    def detach(self) -> None:
         """
         Detach this link.
         """
@@ -1159,25 +1150,23 @@ class Link(Wrapper, Endpoint):
         """
         return dat2obj(pn_link_remote_properties(self._impl))
 
-    def _get_properties(self):
+    @property
+    def properties(self) -> Optional[PropertyDict]:
+        """Link properties as a dictionary of key/values. The AMQP 1.0
+        specification restricts this dictionary to have keys that are only
+        :class:`symbol` types. It is possible to use the special ``dict``
+        subclass :class:`PropertyDict` which will by default enforce this
+        restrictions on construction. In addition, if strings type are used,
+        this will silently convert them into symbols.
+        """
         return self._properties_dict
 
-    def _set_properties(self, properties_dict):
+    @properties.setter
+    def properties(self, properties_dict: Optional[Dict['symbol', 'PythonAMQPData']]) -> None:  # TODO: str?
         if isinstance(properties_dict, dict):
             self._properties_dict = PropertyDict(properties_dict, raise_on_error=False)
         else:
             self._properties_dict = properties_dict
-
-    properties = property(_get_properties, _set_properties, doc="""
-    Link properties as a dictionary of key/values. The AMQP 1.0
-    specification restricts this dictionary to have keys that are only
-    :class:`symbol` types. It is possible to use the special ``dict``
-    subclass :class:`PropertyDict` which will by default enforce this
-    restrictions on construction. In addition, if strings type are used,
-    this will silently convert them into symbols.
-
-    :type: ``dict`` containing :class:`symbol`` keys.
-    """)
 
 
 class Sender(Link):
@@ -1340,100 +1329,78 @@ class Terminus(object):
         else:
             return err
 
-    def _get_type(self):
+    @property
+    def type(self) -> int:
+        """The terminus type, must be one of :const:`UNSPECIFIED`,
+        :const:`SOURCE`, :const:`TARGET` or :const:`COORDINATOR`.
+        """
         return pn_terminus_get_type(self._impl)
 
-    def _set_type(self, type):
+    @type.setter
+    def type(self, type: int) -> None:
         self._check(pn_terminus_set_type(self._impl, type))
 
-    type = property(_get_type, _set_type, doc="""
-        The terminus type, must be one of :const:`UNSPECIFIED`,
-        :const:`SOURCE`, :const:`TARGET` or :const:`COORDINATOR`
-
-        :type: ``int``
-        """)
-
-    def _get_address(self):
-        """
-        The address that identifies the source or target node
-        """
+    @property
+    def address(self) -> Optional[str]:
+        """The address that identifies the source or target node"""
         return utf82unicode(pn_terminus_get_address(self._impl))
 
-    def _set_address(self, address):
+    @address.setter
+    def address(self, address: str) -> None:
         self._check(pn_terminus_set_address(self._impl, unicode2utf8(address)))
 
-    address = property(_get_address, _set_address, doc="""
-        The terminus address.
-
-        :type: ``str``
-        """)
-
-    def _get_durability(self):
+    @property
+    def durability(self) -> int:
+        """The terminus durability mode, must be one of :const:`NONDURABLE`,
+        :const:`CONFIGURATION` or :const:`DELIVERIES`.
+        """
         return pn_terminus_get_durability(self._impl)
 
-    def _set_durability(self, seconds):
-        self._check(pn_terminus_set_durability(self._impl, seconds))
+    @durability.setter
+    def durability(self, mode: int):
+        self._check(pn_terminus_set_durability(self._impl, mode))
 
-    durability = property(_get_durability, _set_durability, doc="""
-        The terminus durability mode, must be one of :const:`NONDURABLE`,
-        :const:`CONFIGURATION` or :const:`DELIVERIES`.
-
-        :type: ``int``
-        """)
-
-    def _get_expiry_policy(self):
-        return pn_terminus_get_expiry_policy(self._impl)
-
-    def _set_expiry_policy(self, seconds):
-        self._check(pn_terminus_set_expiry_policy(self._impl, seconds))
-
-    expiry_policy = property(_get_expiry_policy, _set_expiry_policy, doc="""
-        The terminus expiry policy, must be one of :const:`EXPIRE_WITH_LINK`,
+    @property
+    def expiry_policy(self) -> int:
+        """The terminus expiry policy, must be one of :const:`EXPIRE_WITH_LINK`,
         :const:`EXPIRE_WITH_SESSION`, :const:`EXPIRE_WITH_CONNECTION` or
         :const:`EXPIRE_NEVER`.
+        """
+        return pn_terminus_get_expiry_policy(self._impl)
 
-        :type: ``int``
-        """)
+    @expiry_policy.setter
+    def expiry_policy(self, policy: int):
+        self._check(pn_terminus_set_expiry_policy(self._impl, policy))
 
-    def _get_timeout(self):
+    @property
+    def timeout(self) -> int:
+        """The terminus timeout in seconds."""
         return pn_terminus_get_timeout(self._impl)
 
-    def _set_timeout(self, seconds):
+    @timeout.setter
+    def timeout(self, seconds: int) -> None:
         self._check(pn_terminus_set_timeout(self._impl, seconds))
 
-    timeout = property(_get_timeout, _set_timeout, doc="""
-        The terminus timeout in seconds.
-
-        :type: ``int``
-        """)
-
-    def _is_dynamic(self):
+    @property
+    def dynamic(self) -> bool:
         """Indicates whether the source or target node was dynamically
         created"""
         return pn_terminus_is_dynamic(self._impl)
 
-    def _set_dynamic(self, dynamic):
+    @dynamic.setter
+    def dynamic(self, dynamic: bool) -> None:
         self._check(pn_terminus_set_dynamic(self._impl, dynamic))
 
-    dynamic = property(_is_dynamic, _set_dynamic, doc="""
-        The dynamic flag for this terminus object. This indicates if this
-        terminus was dynamically created.
-
-        :type: ``bool``
-        """)
-
-    def _get_distribution_mode(self):
+    @property
+    def distribution_mode(self) -> int:
+        """The terminus distribution mode, must be one of :const:`DIST_MODE_UNSPECIFIED`,
+        :const:`DIST_MODE_COPY` or :const:`DIST_MODE_MOVE`.
+        """
         return pn_terminus_get_distribution_mode(self._impl)
 
-    def _set_distribution_mode(self, mode):
+    @distribution_mode.setter
+    def distribution_mode(self, mode: int) -> None:
         self._check(pn_terminus_set_distribution_mode(self._impl, mode))
-
-    distribution_mode = property(_get_distribution_mode, _set_distribution_mode, doc="""
-        The terminus distribution mode, must be one of :const:`DIST_MODE_UNSPECIFIED`,
-        :const:`DIST_MODE_COPY` or :const:`DIST_MODE_MOVE`.
-
-        :type: ``int``
-        """)
 
     @property
     def properties(self):
@@ -1465,7 +1432,7 @@ class Terminus(object):
     @property
     def filter(self):
         """
-        A filter on a source allows the set of messages transfered over
+        A filter on a source allows the set of messages transferred over
         the link to be restricted. The symbol-keyed map represents a'
         filter set.
 
