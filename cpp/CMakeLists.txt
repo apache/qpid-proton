@@ -113,7 +113,10 @@ if(BUILD_STATIC_LIBS)
   target_compile_definitions(qpid-proton-cpp-static
     PRIVATE PROTON_DECLARE_STATIC
     PUBLIC PN_CPP_DECLARE_STATIC)
-  set(STATIC_LIBS qpid-proton-cpp-static)
+  set_target_properties (
+    qpid-proton-cpp-static
+    PROPERTIES
+    EXPORT_NAME cpp)
 endif(BUILD_STATIC_LIBS)
 
 target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS})
@@ -126,15 +129,23 @@ set_target_properties (
   SOVERSION "${PN_LIB_CPP_MAJOR_VERSION}"
   LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
   COMPILE_FLAGS "${LTO}"
+  EXPORT_NAME cpp
   )
 
 ## Install
 
-install(TARGETS qpid-proton-cpp ${STATIC_LIBS}
-  EXPORT  proton-cpp
+install(TARGETS qpid-proton-cpp
+  EXPORT  ProtonCppTargets
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+if (BUILD_STATIC_LIBS)
+  install(TARGETS qpid-proton-cpp-static
+    EXPORT  ProtonCppStaticTargets
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+endif ()
 
 # Install windows qpid-proton-cpp pdb files
 if (MSVC)
@@ -172,11 +183,24 @@ install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc
   DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
+install(EXPORT ProtonCppTargets
+  FILE ProtonCppTargets.cmake
+  NAMESPACE Proton::
+  DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
+if (BUILD_STATIC_LIBS)
+  install(EXPORT ProtonCppStaticTargets
+    FILE ProtonCppTargets.cmake
+    NAMESPACE Proton::
+    DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
+endif ()
+
+include(CMakePackageConfigHelpers)
 include(WriteBasicConfigVersionFile)
 
-configure_file(
+configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake
+  INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
 write_basic_config_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
   VERSION ${PN_VERSION}
