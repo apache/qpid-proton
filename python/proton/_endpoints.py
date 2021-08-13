@@ -1186,7 +1186,7 @@ class Sender(Link):
         """
         return self._check(pn_link_send(self._impl, data))
 
-    def send(self, obj, tag=None):
+    def send(self, obj: Union[bytes, 'Message'], tag: Optional[str] = None) -> Union[int, Delivery]:
         """
         A convenience method to send objects as message content.
 

@@ -582,7 +582,7 @@ class Transaction(object):
             self,
             sender: 'Sender',
             msg: Message,
-            tag: Optional[bytes] = None,
+            tag: Optional[str] = None,
     ) -> Delivery:
         """
         Send a message under this transaction.
