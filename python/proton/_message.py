@@ -65,7 +65,7 @@ class Message(object):
 
     def __init__(
             self,
-            body: Union[bytes, str, dict, list, int, float, 'UUID', 'Described'] = None,
+            body: Union[bytes, str, dict, list, int, float, 'UUID', 'Described', None] = None,
             **kwargs
     ) -> None:
         self._msg = pn_message()
