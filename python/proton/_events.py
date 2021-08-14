@@ -40,7 +40,6 @@ if TYPE_CHECKING:
     from ._endpoints import Receiver, Sender
     from ._handlers import ConnectSelectable
     from ._selectable import Selectable
-    from ._reactor import Handler
 
 
 class Collector:
