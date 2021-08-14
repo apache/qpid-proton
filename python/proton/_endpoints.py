@@ -67,7 +67,7 @@ from typing import Callable, Dict, List, Optional, Union, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ._condition import Condition
-    from ._data import Array, symbol
+    from ._data import Array, PythonAMQPData, symbol
     from ._events import Collector, Handler
     from ._message import Message
 
@@ -216,42 +216,32 @@ class Connection(Wrapper, Endpoint):
             pn_connection_collect(self._impl, collector._impl)
         self._collector = weakref.ref(collector)
 
-    def _get_container(self):
+    @property
+    def container(self) -> str:
+        """The container name for this connection object."""
         return utf82unicode(pn_connection_get_container(self._impl))
 
-    def _set_container(self, name):
+    @container.setter
+    def container(self, name: str) -> None:
         pn_connection_set_container(self._impl, unicode2utf8(name))
 
-    container = property(_get_container, _set_container, doc="""
-        The container name for this connection object.
-
-        :type: ``str``
-        """)
-
-    def _get_hostname(self):
-        return utf82unicode(pn_connection_get_hostname(self._impl))
-
-    def _set_hostname(self, name):
-        pn_connection_set_hostname(self._impl, unicode2utf8(name))
-
-    hostname = property(_get_hostname, _set_hostname, doc="""
-        Set the name of the host (either fully qualified or relative) to which this
+    @property
+    def hostname(self) -> Optional[str]:
+        """Set the name of the host (either fully qualified or relative) to which this
         connection is connecting to.  This information may be used by the remote
         peer to determine the correct back-end service to connect the client to.
         This value will be sent in the Open performative, and will be used by SSL
         and SASL layers to identify the peer.
+        """
+        return utf82unicode(pn_connection_get_hostname(self._impl))
 
-        :type: ``str``
-        """)
+    @hostname.setter
+    def hostname(self, name: str) -> None:
+        pn_connection_set_hostname(self._impl, unicode2utf8(name))
 
-    def _get_user(self):
-        return utf82unicode(pn_connection_get_user(self._impl))
-
-    def _set_user(self, name):
-        pn_connection_set_user(self._impl, unicode2utf8(name))
-
-    user = property(_get_user, _set_user, doc="""
-        The authentication username for a client connection.
+    @property
+    def user(self) -> Optional[str]:
+        """The authentication username for a client connection.
 
         It is necessary to set the username and password before binding
         the connection to a transport and it isn't allowed to change
@@ -261,18 +251,16 @@ class Connection(Wrapper, Endpoint):
         client sasl layer is explicitly created (this would be for something
         like Kerberos where the credentials are implicit in the environment,
         or to explicitly use the ``ANONYMOUS`` SASL mechanism)
+        """
+        return utf82unicode(pn_connection_get_user(self._impl))
 
-        :type: ``str``
-        """)
+    @user.setter
+    def user(self, name: str) -> None:
+        pn_connection_set_user(self._impl, unicode2utf8(name))
 
-    def _get_authorization(self):
-        return utf82unicode(pn_connection_get_authorization(self._impl))
-
-    def _set_authorization(self, name):
-        pn_connection_set_authorization(self._impl, unicode2utf8(name))
-
-    authorization = property(_get_authorization, _set_authorization, doc="""
-        The authorization username for a client connection.
+    @property
+    def authorization(self) -> str:
+        """The authorization username for a client connection.
 
         It is necessary to set the authorization before binding
         the connection to a transport and it isn't allowed to change
@@ -280,29 +268,30 @@ class Connection(Wrapper, Endpoint):
 
         If not set then implicitly the requested authorization is the same as the
         authentication user.
+        """
+        return utf82unicode(pn_connection_get_authorization(self._impl))
 
-        :type: ``str``
-        """)
+    @authorization.setter
+    def authorization(self, name: str) -> None:
+        pn_connection_set_authorization(self._impl, unicode2utf8(name))
 
-    def _get_password(self):
-        return None
-
-    def _set_password(self, name):
-        pn_connection_set_password(self._impl, unicode2utf8(name))
-
-    password = property(_get_password, _set_password, doc="""
-        Set the authentication password for a client connection.
+    @property
+    def password(self) -> None:
+        """Set the authentication password for a client connection.
 
         It is necessary to set the username and password before binding the connection
         to a transport and it isn't allowed to change after the binding.
 
         .. note:: Getting the password always returns ``None``.
+        """
+        return None
 
-        :type: ``str``
-        """)
+    @password.setter
+    def password(self, name: str) -> None:
+        pn_connection_set_password(self._impl, unicode2utf8(name))
 
     @property
-    def remote_container(self):
+    def remote_container(self) -> Optional[str]:
         """
         The container identifier specified by the remote peer for this connection.
 
@@ -318,7 +307,7 @@ class Connection(Wrapper, Endpoint):
         return pn_connection_remote_container(self._impl)
 
     @property
-    def remote_hostname(self):
+    def remote_hostname(self) -> Optional[str]:
         """
         The hostname specified by the remote peer for this connection.
 
@@ -328,8 +317,6 @@ class Connection(Wrapper, Endpoint):
         Any (non ``None``) name returned by this operation will be valid until
         the connection object is unbound from a transport or freed,
         whichever happens sooner.
-
-        :type: ``str``
         """
         return pn_connection_remote_hostname(self._impl)
 
@@ -525,64 +512,64 @@ class Connection(Wrapper, Endpoint):
         """
         pn_connection_release(self._impl)
 
-    def _get_offered_capabilities(self):
+    @property
+    def offered_capabilities(self) -> Optional[Union['Array', SymbolList]]:
+        """Offered capabilities as a list of symbols. The AMQP 1.0 specification
+        restricts this list to symbol elements only. It is possible to use
+        the special ``list`` subclass :class:`SymbolList` as it will by
+        default enforce this restriction on construction. In addition, if a
+        string type is used, it will be silently converted into the required
+        symbol.
+        """
         return self.offered_capabilities_list
 
-    def _set_offered_capabilities(self, offered_capability_list):
+    @offered_capabilities.setter
+    def offered_capabilities(
+            self,
+            offered_capability_list: Optional[Union['Array', List['symbol'], SymbolList, List[str]]]
+    ) -> None:
         if isinstance(offered_capability_list, list):
             self.offered_capabilities_list = SymbolList(offered_capability_list, raise_on_error=False)
         else:
             self.offered_capabilities_list = offered_capability_list
 
-    offered_capabilities = property(_get_offered_capabilities, _set_offered_capabilities, doc="""
-    Offered capabilities as a list of symbols. The AMQP 1.0 specification
-    restricts this list to symbol elements only. It is possible to use
-    the special ``list`` subclass :class:`SymbolList` as it will by
-    default enforce this restriction on construction. In addition, if a
-    string type is used, it will be silently converted into the required
-    symbol.
-
-    :type: ``list`` containing :class:`symbol`.
-    """)
-
-    def _get_desired_capabilities(self):
+    @property
+    def desired_capabilities(self) -> Optional[Union['Array', SymbolList]]:
+        """Desired capabilities as a list of symbols. The AMQP 1.0 specification
+        restricts this list to symbol elements only. It is possible to use
+        the special ``list`` subclass :class:`SymbolList` which will by
+        default enforce this restriction on construction. In addition, if string
+        types are used, this class will be silently convert them into symbols.
+        """
         return self.desired_capabilities_list
 
-    def _set_desired_capabilities(self, desired_capability_list):
+    @desired_capabilities.setter
+    def desired_capabilities(
+            self,
+            desired_capability_list: Optional[Union['Array', List['symbol'], SymbolList, List[str]]]
+    ) -> None:
         if isinstance(desired_capability_list, list):
             self.desired_capabilities_list = SymbolList(desired_capability_list, raise_on_error=False)
         else:
             self.desired_capabilities_list = desired_capability_list
 
-    desired_capabilities = property(_get_desired_capabilities, _set_desired_capabilities, doc="""
-    Desired capabilities as a list of symbols. The AMQP 1.0 specification
-    restricts this list to symbol elements only. It is possible to use
-    the special ``list`` subclass :class:`SymbolList` which will by
-    default enforce this restriction on construction. In addition, if string
-    types are used, this class will be silently convert them into symbols.
-
-    :type: ``list`` containing :class:`symbol`.
-    """)
-
-    def _get_properties(self):
+    @property
+    def properties(self) -> Optional[PropertyDict]:
+        """Connection properties as a dictionary of key/values. The AMQP 1.0
+        specification restricts this dictionary to have keys that are only
+        :class:`symbol` types. It is possible to use the special ``dict``
+        subclass :class:`PropertyDict` which will by default enforce this
+        restrictions on construction. In addition, if strings type are used,
+        this will silently convert them into symbols.
+        """
         return self.properties_dict
 
-    def _set_properties(self, properties_dict):
+    @properties.setter
+    def properties(self, properties_dict: Optional[Union[PropertyDict, Dict[str, 'PythonAMQPData']]]) -> None:
         if isinstance(properties_dict, dict):
             self.properties_dict = PropertyDict(properties_dict, raise_on_error=False)
         else:
             self.properties_dict = properties_dict
-
-    properties = property(_get_properties, _set_properties, doc="""
-    Connection properties as a dictionary of key/values. The AMQP 1.0
-    specification restricts this dictionary to have keys that are only
-    :class:`symbol` types. It is possible to use the special ``dict``
-    subclass :class:`PropertyDict` which will by default enforce this
-    restrictions on construction. In addition, if strings type are used,
-    this will silently convert them into symbols.
-
-    :type: ``dict`` containing :class:`symbol`` keys.
-    """)
 
 
 class Session(Wrapper, Endpoint):
@@ -606,14 +593,9 @@ class Session(Wrapper, Endpoint):
     def _get_remote_cond_impl(self):
         return pn_session_remote_condition(self._impl)
 
-    def _get_incoming_capacity(self):
-        return pn_session_get_incoming_capacity(self._impl)
-
-    def _set_incoming_capacity(self, capacity):
-        pn_session_set_incoming_capacity(self._impl, capacity)
-
-    incoming_capacity = property(_get_incoming_capacity, _set_incoming_capacity, doc="""
-        The incoming capacity of this session in bytes. The incoming capacity
+    @property
+    def incoming_capacity(self) -> int:
+        """The incoming capacity of this session in bytes. The incoming capacity
         of a session determines how much incoming message data the session
         can buffer.
 
@@ -622,29 +604,26 @@ class Session(Wrapper, Endpoint):
             frames when dividing remaining capacity at a given time by the connection
             max frame size. As such, capacity and max frame size should be chosen so
             as to ensure the frame window isn't unduly small and limiting performance.
+        """
+        return pn_session_get_incoming_capacity(self._impl)
 
-        :type: ``int`` (bytes)
-        """)
-
-    def _get_outgoing_window(self):
-        return pn_session_get_outgoing_window(self._impl)
-
-    def _set_outgoing_window(self, window):
-        pn_session_set_outgoing_window(self._impl, window)
-
-    outgoing_window = property(_get_outgoing_window, _set_outgoing_window, doc="""
-        The outgoing window for this session.
-
-        :type: ``int``
-        """)
+    @incoming_capacity.setter
+    def incoming_capacity(self, capacity: int) -> None:
+        pn_session_set_incoming_capacity(self._impl, capacity)
 
     @property
-    def outgoing_bytes(self):
-        """
-        The number of outgoing bytes currently buffered.
+    def outgoing_window(self) -> int:
+        """The outgoing window for this session."""
+        return pn_session_get_outgoing_window(self._impl)
 
-        :type: ``int`` (bytes)
+    @outgoing_window.setter
+    def outgoing_window(self, window: int) -> None:
+        pn_session_set_outgoing_window(self._impl, window)
+
+    @property
+    def outgoing_bytes(self) -> int:
         """
+        The number of outgoing bytes currently buffered."""
         return pn_session_outgoing_bytes(self._impl)
 
     @property
@@ -1051,41 +1030,31 @@ class Link(Wrapper, Endpoint):
         """
         return pn_link_remote_rcv_settle_mode(self._impl)
 
-    def _get_snd_settle_mode(self):
-        return pn_link_snd_settle_mode(self._impl)
-
-    def _set_snd_settle_mode(self, mode):
-        pn_link_set_snd_settle_mode(self._impl, mode)
-
-    snd_settle_mode = property(_get_snd_settle_mode, _set_snd_settle_mode, doc="""
-        The local sender settle mode for this link. One of
+    @property
+    def snd_settle_mode(self) -> int:
+        """The local sender settle mode for this link. One of
         :const:`SND_UNSETTLED`, :const:`SND_SETTLED` or
         :const:`SND_MIXED`.
+        """
+        return pn_link_snd_settle_mode(self._impl)
 
-        :type: ``int``
-        """)
+    @snd_settle_mode.setter
+    def snd_settle_mode(self, mode: int) -> None:
+        pn_link_set_snd_settle_mode(self._impl, mode)
 
-    def _get_rcv_settle_mode(self):
+    @property
+    def rcv_settle_mode(self) -> int:
+        """The local receiver settle mode for this link. One of
+        :const:`RCV_FIRST` or :const:`RCV_SECOND`."""
         return pn_link_rcv_settle_mode(self._impl)
 
-    def _set_rcv_settle_mode(self, mode):
+    @rcv_settle_mode.setter
+    def rcv_settle_mode(self, mode: int) -> None:
         pn_link_set_rcv_settle_mode(self._impl, mode)
 
-    rcv_settle_mode = property(_get_rcv_settle_mode, _set_rcv_settle_mode, doc="""
-        The local receiver settle mode for this link. One of
-        :const:`RCV_FIRST` or :const:`RCV_SECOND`.
-
-        :type: ``int``
-        """)
-
-    def _get_drain(self):
-        return pn_link_get_drain(self._impl)
-
-    def _set_drain(self, b):
-        pn_link_set_drain(self._impl, bool(b))
-
-    drain_mode = property(_get_drain, _set_drain, doc="""
-        The drain mode on this link.
+    @property
+    def drain_mode(self) -> bool:
+        """The drain mode on this link.
 
         If a link is in drain mode (``True``), then the sending
         endpoint of a link must immediately use up all available
@@ -1094,9 +1063,12 @@ class Link(Wrapper, Endpoint):
         the receiving endpoint can set the drain mode.
 
         When ``False``, this link is not in drain mode.
+        """
+        return pn_link_get_drain(self._impl)
 
-        :type: ``bool``
-        """)
+    @drain_mode.setter
+    def drain_mode(self, b: bool):
+        pn_link_set_drain(self._impl, bool(b))
 
     def drained(self) -> int:
         """
@@ -1131,22 +1103,20 @@ class Link(Wrapper, Endpoint):
         """
         return pn_link_remote_max_message_size(self._impl)
 
-    def _get_max_message_size(self):
-        return pn_link_max_message_size(self._impl)
-
-    def _set_max_message_size(self, mode):
-        pn_link_set_max_message_size(self._impl, mode)
-
-    max_message_size = property(_get_max_message_size, _set_max_message_size, doc="""
-        The maximum message size for this link. A zero value means the
+    @property
+    def max_message_size(self) -> int:
+        """The maximum message size for this link. A zero value means the
         size is unlimited.
 
         .. warning:: **Unsettled API**
+        """
+        return pn_link_max_message_size(self._impl)
 
-        :type: ``long``
-        """)
+    @max_message_size.setter
+    def max_message_size(self, mode: int) -> None:
+        pn_link_set_max_message_size(self._impl, mode)
 
-    def detach(self):
+    def detach(self) -> None:
         """
         Detach this link.
         """
@@ -1175,25 +1145,23 @@ class Link(Wrapper, Endpoint):
         """
         return dat2obj(pn_link_remote_properties(self._impl))
 
-    def _get_properties(self):
+    @property
+    def properties(self) -> Optional[PropertyDict]:
+        """Link properties as a dictionary of key/values. The AMQP 1.0
+        specification restricts this dictionary to have keys that are only
+        :class:`symbol` types. It is possible to use the special ``dict``
+        subclass :class:`PropertyDict` which will by default enforce this
+        restrictions on construction. In addition, if strings type are used,
+        this will silently convert them into symbols.
+        """
         return self._properties_dict
 
-    def _set_properties(self, properties_dict):
+    @properties.setter
+    def properties(self, properties_dict: Optional[Dict['symbol', 'PythonAMQPData']]) -> None:
         if isinstance(properties_dict, dict):
             self._properties_dict = PropertyDict(properties_dict, raise_on_error=False)
         else:
             self._properties_dict = properties_dict
-
-    properties = property(_get_properties, _set_properties, doc="""
-    Link properties as a dictionary of key/values. The AMQP 1.0
-    specification restricts this dictionary to have keys that are only
-    :class:`symbol` types. It is possible to use the special ``dict``
-    subclass :class:`PropertyDict` which will by default enforce this
-    restrictions on construction. In addition, if strings type are used,
-    this will silently convert them into symbols.
-
-    :type: ``dict`` containing :class:`symbol`` keys.
-    """)
 
 
 class Sender(Link):
@@ -1218,7 +1186,7 @@ class Sender(Link):
         """
         return self._check(pn_link_send(self._impl, data))
 
-    def send(self, obj, tag=None):
+    def send(self, obj: Union[bytes, 'Message'], tag: Optional[str] = None) -> Union[int, Delivery]:
         """
         A convenience method to send objects as message content.
 
@@ -1356,100 +1324,78 @@ class Terminus(object):
         else:
             return err
 
-    def _get_type(self):
+    @property
+    def type(self) -> int:
+        """The terminus type, must be one of :const:`UNSPECIFIED`,
+        :const:`SOURCE`, :const:`TARGET` or :const:`COORDINATOR`.
+        """
         return pn_terminus_get_type(self._impl)
 
-    def _set_type(self, type):
+    @type.setter
+    def type(self, type: int) -> None:
         self._check(pn_terminus_set_type(self._impl, type))
 
-    type = property(_get_type, _set_type, doc="""
-        The terminus type, must be one of :const:`UNSPECIFIED`,
-        :const:`SOURCE`, :const:`TARGET` or :const:`COORDINATOR`
-
-        :type: ``int``
-        """)
-
-    def _get_address(self):
-        """
-        The address that identifies the source or target node
-        """
+    @property
+    def address(self) -> Optional[str]:
+        """The address that identifies the source or target node"""
         return utf82unicode(pn_terminus_get_address(self._impl))
 
-    def _set_address(self, address):
+    @address.setter
+    def address(self, address: str) -> None:
         self._check(pn_terminus_set_address(self._impl, unicode2utf8(address)))
 
-    address = property(_get_address, _set_address, doc="""
-        The terminus address.
-
-        :type: ``str``
-        """)
-
-    def _get_durability(self):
+    @property
+    def durability(self) -> int:
+        """The terminus durability mode, must be one of :const:`NONDURABLE`,
+        :const:`CONFIGURATION` or :const:`DELIVERIES`.
+        """
         return pn_terminus_get_durability(self._impl)
 
-    def _set_durability(self, seconds):
-        self._check(pn_terminus_set_durability(self._impl, seconds))
+    @durability.setter
+    def durability(self, mode: int):
+        self._check(pn_terminus_set_durability(self._impl, mode))
 
-    durability = property(_get_durability, _set_durability, doc="""
-        The terminus durability mode, must be one of :const:`NONDURABLE`,
-        :const:`CONFIGURATION` or :const:`DELIVERIES`.
-
-        :type: ``int``
-        """)
-
-    def _get_expiry_policy(self):
-        return pn_terminus_get_expiry_policy(self._impl)
-
-    def _set_expiry_policy(self, seconds):
-        self._check(pn_terminus_set_expiry_policy(self._impl, seconds))
-
-    expiry_policy = property(_get_expiry_policy, _set_expiry_policy, doc="""
-        The terminus expiry policy, must be one of :const:`EXPIRE_WITH_LINK`,
+    @property
+    def expiry_policy(self) -> int:
+        """The terminus expiry policy, must be one of :const:`EXPIRE_WITH_LINK`,
         :const:`EXPIRE_WITH_SESSION`, :const:`EXPIRE_WITH_CONNECTION` or
         :const:`EXPIRE_NEVER`.
+        """
+        return pn_terminus_get_expiry_policy(self._impl)
 
-        :type: ``int``
-        """)
+    @expiry_policy.setter
+    def expiry_policy(self, policy: int):
+        self._check(pn_terminus_set_expiry_policy(self._impl, policy))
 
-    def _get_timeout(self):
+    @property
+    def timeout(self) -> int:
+        """The terminus timeout in seconds."""
         return pn_terminus_get_timeout(self._impl)
 
-    def _set_timeout(self, seconds):
+    @timeout.setter
+    def timeout(self, seconds: int) -> None:
         self._check(pn_terminus_set_timeout(self._impl, seconds))
 
-    timeout = property(_get_timeout, _set_timeout, doc="""
-        The terminus timeout in seconds.
-
-        :type: ``int``
-        """)
-
-    def _is_dynamic(self):
+    @property
+    def dynamic(self) -> bool:
         """Indicates whether the source or target node was dynamically
         created"""
         return pn_terminus_is_dynamic(self._impl)
 
-    def _set_dynamic(self, dynamic):
+    @dynamic.setter
+    def dynamic(self, dynamic: bool) -> None:
         self._check(pn_terminus_set_dynamic(self._impl, dynamic))
 
-    dynamic = property(_is_dynamic, _set_dynamic, doc="""
-        The dynamic flag for this terminus object. This indicates if this
-        terminus was dynamically created.
-
-        :type: ``bool``
-        """)
-
-    def _get_distribution_mode(self):
+    @property
+    def distribution_mode(self) -> int:
+        """The terminus distribution mode, must be one of :const:`DIST_MODE_UNSPECIFIED`,
+        :const:`DIST_MODE_COPY` or :const:`DIST_MODE_MOVE`.
+        """
         return pn_terminus_get_distribution_mode(self._impl)
 
-    def _set_distribution_mode(self, mode):
+    @distribution_mode.setter
+    def distribution_mode(self, mode: int) -> None:
         self._check(pn_terminus_set_distribution_mode(self._impl, mode))
-
-    distribution_mode = property(_get_distribution_mode, _set_distribution_mode, doc="""
-        The terminus distribution mode, must be one of :const:`DIST_MODE_UNSPECIFIED`,
-        :const:`DIST_MODE_COPY` or :const:`DIST_MODE_MOVE`.
-
-        :type: ``int``
-        """)
 
     @property
     def properties(self):
@@ -1481,7 +1427,7 @@ class Terminus(object):
     @property
     def filter(self):
         """
-        A filter on a source allows the set of messages transfered over
+        A filter on a source allows the set of messages transferred over
         the link to be restricted. The symbol-keyed map represents a'
         filter set.
 

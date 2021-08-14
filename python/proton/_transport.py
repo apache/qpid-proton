@@ -117,24 +117,22 @@ class Transport(Wrapper):
         else:
             return err
 
-    def _set_tracer(self, tracer):
-        pn_transport_set_pytracer(self._impl, TraceAdapter(tracer))
-
-    def _get_tracer(self):
+    @property
+    def tracer(self) -> Optional[Callable[['Transport', str], None]]:
+        """A callback for trace logging. The callback is passed the transport
+        and log message. For no tracer callback, value is ``None``.
+        """
         adapter = pn_transport_get_pytracer(self._impl)
         if adapter:
             return adapter.tracer
         else:
             return None
 
-    tracer = property(_get_tracer, _set_tracer, doc="""
-        A callback for trace logging. The callback is passed the transport
-        and log message. For no tracer callback, value is ``None``.
+    @tracer.setter
+    def tracer(self, tracer: Callable[['Transport', str], None]) -> None:
+        pn_transport_set_pytracer(self._impl, TraceAdapter(tracer))
 
-        :type: Tracer callback function
-        """)
-
-    def log(self, message):
+    def log(self, message: str) -> None:
         """
         Log a message using a transport's logging mechanism.
 
@@ -344,7 +342,7 @@ class Transport(Wrapper):
             self._check(cd)
             return out
 
-    def pop(self, size):
+    def pop(self, size: int) -> None:
         """
         Removes ``size`` bytes of output from the pending output queue
         following the transport's head pointer.
@@ -353,8 +351,7 @@ class Transport(Wrapper):
         well as the number of pending bytes reported by
         :meth:`pending`.
 
-        :param size: Number of bytes to return.
-        :type size: ``int``
+        :param size: Number of bytes to remove.
         """
         pn_transport_pop(self._impl, size)
 
@@ -377,36 +374,25 @@ class Transport(Wrapper):
         return pn_transport_closed(self._impl)
 
     # AMQP 1.0 max-frame-size
-    def _get_max_frame_size(self):
+    @property
+    def max_frame_size(self) -> int:
+        """The maximum size for transport frames (in bytes)."""
         return pn_transport_get_max_frame(self._impl)
 
-    def _set_max_frame_size(self, value):
+    @max_frame_size.setter
+    def max_frame_size(self, value: int) -> None:
         pn_transport_set_max_frame(self._impl, value)
 
-    max_frame_size = property(_get_max_frame_size, _set_max_frame_size, doc="""
-        The maximum size for transport frames (in bytes).
-
-        :type: ``int``
-        """)
-
     @property
-    def remote_max_frame_size(self):
+    def remote_max_frame_size(self) -> int:
         """
         The maximum frame size of a transport's remote peer (in bytes).
-
-        :type: ``int``
         """
         return pn_transport_get_remote_max_frame(self._impl)
 
-    def _get_channel_max(self):
-        return pn_transport_get_channel_max(self._impl)
-
-    def _set_channel_max(self, value):
-        if pn_transport_set_channel_max(self._impl, value):
-            raise SessionException("Too late to change channel max.")
-
-    channel_max = property(_get_channel_max, _set_channel_max, doc="""
-        The maximum channel number that may be used on this transport.
+    @property
+    def channel_max(self) -> int:
+        """The maximum channel number that may be used on this transport.
 
         .. note:: This is the maximum channel number allowed, giving a
             valid channel number range of ``[0 .. channel_max]``. Therefore the
@@ -421,33 +407,34 @@ class Transport(Wrapper):
         After the ``OPEN`` frame has been sent to the remote peer,
         further calls to this function will have no effect.
 
-        :type: ``int``
         :raise: :exc:`SessionException` if the ``OPEN`` frame has already
                 been sent.
-        """)
+        """
+        return pn_transport_get_channel_max(self._impl)
+
+    @channel_max.setter
+    def channel_max(self, value: int) -> None:
+        if pn_transport_set_channel_max(self._impl, value):
+            raise SessionException("Too late to change channel max.")
 
     @property
-    def remote_channel_max(self):
+    def remote_channel_max(self) -> int:
         """
         The maximum allowed channel number of a transport's remote peer.
-
-        :type: ``int``
         """
         return pn_transport_remote_channel_max(self._impl)
 
     # AMQP 1.0 idle-time-out
-    def _get_idle_timeout(self):
+    @property
+    def idle_timeout(self) -> float:
+        """The idle timeout of the connection in seconds. A zero idle
+        timeout means heartbeats are disabled.
+        """
         return millis2secs(pn_transport_get_idle_timeout(self._impl))
 
-    def _set_idle_timeout(self, sec):
+    @idle_timeout.setter
+    def idle_timeout(self, sec: Union[float, int]) -> None:
         pn_transport_set_idle_timeout(self._impl, secs2millis(sec))
-
-    idle_timeout = property(_get_idle_timeout, _set_idle_timeout, doc="""
-        The idle timeout of the connection in seconds. A zero idle
-        timeout means heartbeats are disabled.
-
-        :type: ``float``
-        """)
 
     @property
     def remote_idle_timeout(self) -> float:
@@ -494,31 +481,25 @@ class Transport(Wrapper):
             self._ssl = SSL(self, domain, session_details)
         return self._ssl
 
-    def _get_condition(self):
-        return cond2obj(pn_transport_condition(self._impl))
-
-    def _set_condition(self, cond):
-        pn_cond = pn_transport_condition(self._impl)
-        obj2cond(cond, pn_cond)
-
-    condition = property(_get_condition, _set_condition, doc="""
-        Get additional information about the condition of the transport.
+    @property
+    def condition(self) -> Optional['Condition']:
+        """Get additional information about the condition of the transport.
 
         When a :const:`Event.TRANSPORT_ERROR` event occurs, this operation
         can be used to access the details of the error condition.
 
         See :class:`Condition` for more information.
+        """
+        return cond2obj(pn_transport_condition(self._impl))
 
-        :type: :class:`Condition`
-        """)
+    @condition.setter
+    def condition(self, cond: 'Condition') -> None:
+        pn_cond = pn_transport_condition(self._impl)
+        obj2cond(cond, pn_cond)
 
     @property
-    def connection(self):
-        """
-        The connection bound to this transport.
-
-        :type: :class:`Connection`
-        """
+    def connection(self) -> 'Connection':
+        """The connection bound to this transport."""
         from . import _endpoints
         return _endpoints.Connection.wrap(pn_transport_connection(self._impl))
 
@@ -664,16 +645,14 @@ class SASL(Wrapper):
             mechs = " ".join(mechs)
         pn_sasl_allowed_mechs(self._sasl, unicode2utf8(mechs))
 
-    def _get_allow_insecure_mechs(self):
+    @property
+    def allow_insecure_mechs(self) -> bool:
+        """Allow unencrypted cleartext passwords (PLAIN mech)"""
         return pn_sasl_get_allow_insecure_mechs(self._sasl)
 
-    def _set_allow_insecure_mechs(self, insecure):
+    @allow_insecure_mechs.setter
+    def allow_insecure_mechs(self, insecure: bool) -> None:
         pn_sasl_set_allow_insecure_mechs(self._sasl, insecure)
-
-    allow_insecure_mechs = property(_get_allow_insecure_mechs, _set_allow_insecure_mechs,
-                                    doc="""
-Allow unencrypted cleartext passwords (PLAIN mech)
-""")
 
     def done(self, outcome):
         """
@@ -1049,7 +1028,7 @@ class SSL(object):
         """
         return self.get_cert_subject_subfield(SSL.CERT_STATE_OR_PROVINCE)
 
-    def get_cert_fingerprint(self, fingerprint_length, digest_name):
+    def get_cert_fingerprint(self, fingerprint_length: int, digest_name: int) -> Optional[str]:
         """
         Get the fingerprint of the certificate. The certificate fingerprint
         (as displayed in the Fingerprints section when looking at a certificate
@@ -1061,12 +1040,9 @@ class SSL(object):
         :param fingerprint_length: Must be :math:`>= 33` for md5, :math:`>= 41`
                                    for sha1, :math:`>= 65` for sha256 and :math:`>= 129`
                                    for sha512.
-        :type fingerprint_length: ``int``
         :param digest_name: The hash algorithm to use. Must be one of :const:`SHA1`,
                             :const:`SHA256`, :const:`SHA512`,  :const:`MD5`.
-        :type digest_name: ``str``
         :return: Hex fingerprint in a string, or ``None`` if an error occurred.
-        :rtype: ``str`` or ``None``
         """
         rc, fingerprint_str = pn_ssl_get_cert_fingerprint(self._ssl, fingerprint_length, digest_name)
         if rc == PN_OK:
@@ -1148,20 +1124,12 @@ class SSL(object):
                  * :const:`RESUME_UNKNOWN`
                  * :const:`RESUME_NEW`
                  * :const:`RESUME_REUSED`
-        :rtype: ``int``
         """
         return pn_ssl_resume_status(self._ssl)
 
-    def _set_peer_hostname(self, hostname):
-        self._check(pn_ssl_set_peer_hostname(self._ssl, unicode2utf8(hostname)))
-
-    def _get_peer_hostname(self):
-        err, name = pn_ssl_get_peer_hostname(self._ssl, 1024)
-        self._check(err)
-        return utf82unicode(name)
-
-    peer_hostname = property(_get_peer_hostname, _set_peer_hostname, doc="""
-        Manage the expected name of the remote peer.
+    @property
+    def peer_hostname(self) -> str:
+        """Manage the expected name of the remote peer.
 
         The hostname is used for two purposes:
 
@@ -1175,10 +1143,14 @@ class SSL(object):
 
         .. note:: Verification of the hostname is only done if
             :const:`SSLDomain.VERIFY_PEER_NAME` is set using
-            :meth:`SSLDomain.set_peer_authentication`.
+            :meth:`SSLDomain.set_peer_authentication`."""
+        err, name = pn_ssl_get_peer_hostname(self._ssl, 1024)
+        self._check(err)
+        return utf82unicode(name)
 
-        :type: ``str``
-        """)
+    @peer_hostname.setter
+    def peer_hostname(self, hostname: Optional[str]) -> None:
+        self._check(pn_ssl_set_peer_hostname(self._ssl, unicode2utf8(hostname)))
 
 
 class SSLSessionDetails(object):
