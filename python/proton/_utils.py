@@ -30,7 +30,8 @@ from ._url import Url
 from ._reactor import Container
 from ._handlers import MessagingHandler, IncomingMessageHandler
 
-from typing import Callable, Optional, Union, TYPE_CHECKING, List
+from typing import Callable, Optional, Union, TYPE_CHECKING, List, Any
+
 try:
     from typing import Literal
 except ImportError:
@@ -83,7 +84,7 @@ class BlockingLink:
                              msg="Closing link %s" % self.link.name)
 
     # Access to other link attributes.
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         return getattr(self.link, name)
 
 
