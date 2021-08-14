@@ -550,7 +550,7 @@ class SASL(Wrapper):
             return err
 
     @property
-    def user(self):
+    def user(self) -> Optional[str]:
         """
         Retrieve the authenticated user. This is usually used at the the
         server end to find the name of the authenticated user.
@@ -559,7 +559,7 @@ class SASL(Wrapper):
         there will be no user to return. The returned value is only reliable
         after the ``PN_TRANSPORT_AUTHENTICATED`` event has been received.
 
-        :rtype: * If the SASL layer was not negotiated then ``0`` is returned.
+        :rtype: * If the SASL layer was not negotiated then ``None`` is returned.
                 * If the ``ANONYMOUS`` mechanism is used then the user will be
                   ``"anonymous"``.
                 * Otherwise a string containing the user is
@@ -568,7 +568,7 @@ class SASL(Wrapper):
         return pn_sasl_get_user(self._sasl)
 
     @property
-    def authorization(self):
+    def authorization(self) -> Optional[str]:
         """
         Retrieve the requested authorization user. This is usually used at the the
         server end to find the name of any requested authorization user.
@@ -584,7 +584,7 @@ class SASL(Wrapper):
         there will be no user to return. The returned value is only reliable
         after the ``PN_TRANSPORT_AUTHENTICATED`` event has been received.
 
-        :rtype: * If the SASL layer was not negotiated then ``0`` is returned.
+        :rtype: * If the SASL layer was not negotiated then ``None`` is returned.
                 * If the ``ANONYMOUS`` mechanism is used then the user will be
                   ``"anonymous"``.
                 * Otherwise a string containing the user is
