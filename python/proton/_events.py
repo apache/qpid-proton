@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from ._endpoints import Receiver, Sender
     from ._handlers import ConnectSelectable
     from ._selectable import Selectable
+    from ._reactor import Handler
 
 
 class Collector:
@@ -136,12 +137,8 @@ class EventBase(object):
         self._type = type
 
     @property
-    def type(self):
-        """
-        The type name for this event
-
-        :type: ``str``
-        """
+    def type(self) -> EventType:
+        """The type of this event."""
         return self._type
 
     @property
@@ -153,15 +150,13 @@ class EventBase(object):
         """
         return None
 
-    def dispatch(self, handler, type=None):
+    def dispatch(self, handler: 'Handler', type: Optional[EventType] = None) -> None:
         """
         Process this event by sending it to all known handlers that
         are valid for this event type.
 
         :param handler: Parent handler to process this event
-        :type handler: :class:`Handler`
         :param type: Event type
-        :type type: :class:`EventType`
         """
         type = type or self._type
         _dispatch(handler, type.method, self)
@@ -581,7 +576,7 @@ class Event(EventBase):
         """
         The sender link associated with the event, or ``None`` if
         none is associated with it. This is essentially an alias for
-        link(), that does an additional check on the type of the
+        ``link`` property, that does an additional check on the type of the
         link.
         """
         l = self.link
@@ -595,7 +590,7 @@ class Event(EventBase):
         """
         The receiver link associated with the event, or ``None`` if
         none is associated with it. This is essentially an alias for
-        link(), that does an additional check on the type of the link.
+        ``link`` property, that does an additional check on the type of the link.
         """
         l = self.link
         if l and l.is_receiver:
