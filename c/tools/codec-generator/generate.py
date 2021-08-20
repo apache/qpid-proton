@@ -318,6 +318,8 @@ def parse_item(format: str) -> Tuple[ASTNode, str]:
         return NullNode('null'), format[1:]
     elif format.startswith('R'):
         return ASTNode('raw', ['pn_bytes_t'], consume_types=['pn_bytes_t*']), format[1:]
+    elif format.startswith('a'):
+        return ASTNode('atom', ['pn_atom_t*'], consume_types=['pn_atom_t*']), format[1:]
     elif format.startswith('M'):
         return ASTNode('multiple', ['pn_data_t*']), format[1:]
     elif format.startswith('o'):

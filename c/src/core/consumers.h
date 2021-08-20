@@ -391,6 +391,145 @@ static inline bool consume_timestamp(pni_consumer_t* consumer, pn_timestamp_t *t
   }
 }
 
+static inline bool consume_atom(pni_consumer_t* consumer, pn_atom_t *atom) {
+  uint8_t type;
+  if (pni_consumer_readf8(consumer, &type)) {
+    switch (type) {
+    case PNE_SMALLULONG: {
+      uint8_t ul;
+      if (!pni_consumer_readf8(consumer, &ul)) break;
+      atom->type = PN_ULONG;
+      atom->u.as_ulong = ul;
+      return true;
+    }
+    case PNE_ULONG: {
+      uint64_t ul;
+      if (!pni_consumer_readf64(consumer, &ul)) break;
+      atom->type = PN_ULONG;
+      atom->u.as_ulong = ul;
+      return true;
+    }
+    case PNE_ULONG0: {
+      atom->type = PN_ULONG;
+      atom->u.as_ulong = 0;
+      return true;
+    }
+    case PNE_SMALLUINT: {
+      uint8_t ui;
+      if (!pni_consumer_readf8(consumer, &ui)) break;
+      atom->type = PN_UINT;
+      atom->u.as_uint = ui;
+      return true;
+    }
+    case PNE_UINT: {
+      uint32_t ui;
+      if (!pni_consumer_readf32(consumer, &ui)) break;
+      atom->type = PN_UINT;
+      atom->u.as_uint = ui;
+      return true;
+    }
+    case PNE_UINT0: {
+      atom->type = PN_UINT;
+      atom->u.as_uint = 0;
+      return true;
+    }
+    case PNE_USHORT: {
+      uint16_t us;
+      if (!pni_consumer_readf16(consumer, &us)) break;
+      atom->type = PN_USHORT;
+      atom->u.as_ushort = us;
+      return true;
+    }
+    case PNE_UBYTE: {
+      uint8_t ub;
+      if (!pni_consumer_readf8(consumer, &ub)) break;
+      atom->type = PN_UBYTE;
+      atom->u.as_ubyte = ub;
+      return true;
+    }
+    case PNE_BOOLEAN: {
+      uint8_t ub;
+      if (!pni_consumer_readf8(consumer, &ub)) break;
+      atom->type = PN_BOOL;
+      atom->u.as_bool = ub;
+      return true;
+    }
+    case PNE_FALSE:
+      atom->type = PN_BOOL;
+      atom->u.as_bool = false;
+      return true;
+    case PNE_TRUE:
+      atom->type = PN_BOOL;
+      atom->u.as_bool = true;
+      return true;
+    case PNE_MS64: {
+      uint64_t timestamp;
+      if (!pni_consumer_readf64(consumer, &timestamp)) break;
+      atom->type = PN_TIMESTAMP;
+      atom->u.as_timestamp = timestamp;
+      return true;
+    }
+    case PNE_VBIN32:{
+      pn_bytes_t binary;
+      if (!pni_consumer_readv32(consumer, &binary)) break;
+      atom->type = PN_BINARY;
+      atom->u.as_bytes = binary;
+      return true;
+    }
+    case PNE_VBIN8:{
+      pn_bytes_t binary;
+      if (!pni_consumer_readv8(consumer, &binary)) break;
+      atom->type = PN_BINARY;
+      atom->u.as_bytes = binary;
+      return true;
+    }
+    case PNE_STR32_UTF8: {
+      pn_bytes_t string;
+      if (!pni_consumer_readv32(consumer, &string)) break;
+      atom->type = PN_STRING;
+      atom->u.as_bytes = string;
+      return true;
+    }
+    case PNE_STR8_UTF8: {
+      pn_bytes_t string;
+      if (!pni_consumer_readv8(consumer, &string)) break;
+      atom->type = PN_STRING;
+      atom->u.as_bytes = string;
+      return true;
+    }
+    case PNE_SYM32:{
+      pn_bytes_t symbol;
+      if (!pni_consumer_readv32(consumer, &symbol)) break;
+      atom->type = PN_SYMBOL;
+      atom->u.as_bytes = symbol;
+      return true;
+    }
+    case PNE_SYM8:{
+      pn_bytes_t symbol;
+      if (!pni_consumer_readv8(consumer, &symbol)) break;
+      atom->type = PN_SYMBOL;
+      atom->u.as_bytes = symbol;
+      return true;
+    }
+    case PNE_UUID: {
+      pn_uuid_t uuid;
+      if (!pni_consumer_readf128(consumer, &uuid)) break;
+      atom->type = PN_UUID;
+      atom->u.as_uuid = uuid;
+      return true;
+    }
+    case PNE_NULL:
+      atom->type = PN_NULL;
+      return true;
+    default:
+      pni_consumer_skip_value(consumer, type);
+      break;
+    }
+  }
+  atom->type = PN_NULL;
+  return false;
+}
+
 // XXX: assuming numeric -
 // if we get a symbol we should map it to the numeric value and dispatch on that
 static inline bool consume_descriptor(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint64_t *descriptor) {

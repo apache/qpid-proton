@@ -236,6 +236,13 @@ static inline void emit_timestamp(pni_emitter_t* emitter, pni_compound_context* 
   compound->count++;
 }
 
+static inline void emit_uuid(pni_emitter_t* emitter, pni_compound_context* compound, pn_uuid_t* uuid) {
+  emit_accumulated_nulls(emitter, compound);
+  pni_emitter_writef8(emitter, PNE_UUID);
+  pni_emitter_writef128(emitter, uuid);
+  compound->count++;
+}
+
 static inline void emit_descriptor(pni_emitter_t* emitter, pni_compound_context* compound, uint64_t ulong) {
   emit_accumulated_nulls(emitter, compound);
   pni_emitter_writef8(emitter, PNE_DESCRIPTOR);
@@ -435,6 +442,45 @@ static inline void emit_binaryornull(pni_emitter_t* emitter, pni_compound_contex
     emit_null(emitter, compound);
   } else {
     emit_binary_bytes(emitter, compound, (pn_bytes_t){.size = size, .start = bytes});
+  }
+}
+
+static inline void emit_atom(pni_emitter_t* emitter, pni_compound_context* compound, pn_atom_t* atom) {
+  switch (atom->type) {
+    default:
+    case PN_NULL:
+      emit_null(emitter, compound);
+      return;
+    case PN_BOOL:
+      emit_bool(emitter, compound, atom->u.as_bool);
+      return;
+    case PN_UBYTE:
+      emit_ubyte(emitter, compound, atom->u.as_ubyte);
+      return;
+    case PN_USHORT:
+      emit_ushort(emitter, compound, atom->u.as_ushort);
+      return;
+    case PN_UINT:
+      emit_uint(emitter, compound, atom->u.as_uint);
+      return;
+    case PN_ULONG:
+      emit_ulong(emitter, compound, atom->u.as_ulong);
+      return;
+    case PN_TIMESTAMP:
+      emit_timestamp(emitter, compound, atom->u.as_timestamp);
+      return;
+    case PN_UUID:
+      emit_uuid(emitter, compound, &atom->u.as_uuid);
+      return;
+    case PN_BINARY:
+      emit_binary_bytes(emitter, compound, atom->u.as_bytes);
+      return;
+    case PN_STRING:
+      emit_string_bytes(emitter, compound, atom->u.as_bytes);
+      return;
+    case PN_SYMBOL:
+      emit_symbol_bytes(emitter, compound, atom->u.as_bytes);
+      return;
   }
 }
 
