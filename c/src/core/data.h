@@ -70,4 +70,6 @@ int pni_data_traverse(pn_data_t *data,
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
                       void *ctx);
 
+int pni_inspect_atom(pn_atom_t *atom, pn_string_t *str);
+
 #endif /* data.h */

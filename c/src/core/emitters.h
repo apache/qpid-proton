@@ -400,6 +400,47 @@ static inline void emit_binaryornull(pni_emitter_t* emitter, pni_compound_contex
   }
 }
 
+static inline void emit_atom(pni_emitter_t* emitter, pni_compound_context* compound, pn_atom_t* atom) {
+  switch (atom->type) {
+    default:
+    case PN_NULL:
+      emit_null(emitter, compound);
+      return;
+    case PN_BOOL:
+      emit_bool(emitter, compound, atom->u.as_bool);
+      return;
+    case PN_UBYTE:
+      emit_ubyte(emitter, compound, atom->u.as_ubyte);
+      return;
+    case PN_USHORT:
+      emit_ushort(emitter, compound, atom->u.as_ushort);
+      return;
+    case PN_UINT:
+      emit_uint(emitter, compound, atom->u.as_uint);
+      return;
+    case PN_ULONG:
+      emit_ulong(emitter, compound, atom->u.as_ulong);
+      return;
+    case PN_TIMESTAMP:
+      emit_timestamp(emitter, compound, atom->u.as_timestamp);
+      return;
+    case PN_UUID:
+      pni_emitter_writef8(emitter, PNE_UUID);
+      pni_emitter_writef128(emitter, &atom->u.as_uuid);
+      compound->count++;
+      return;
+    case PN_BINARY:
+      emit_binary_bytes(emitter, compound, atom->u.as_bytes);
+      return;
+    case PN_STRING:
+      emit_string_bytes(emitter, compound, atom->u.as_bytes);
+      return;
+    case PN_SYMBOL:
+      emit_symbol_bytes(emitter, compound, atom->u.as_bytes);
+      return;
+  }
+}
+
 // NB: This function is only correct because it currently can only be called to fill out an array
 static inline void emit_counted_symbols(pni_emitter_t* emitter, pni_compound_context* compound, size_t count, char** symbols) {
   // 64 is a heuristic - 64 3 character symbols will already be 256 bytes

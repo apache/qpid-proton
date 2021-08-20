@@ -564,6 +564,7 @@ static int pni_normalize_multiple(pn_data_t *data, pn_data_t *src) {
    }: exit map
    ?: TODO document
    *: TODO document
+   a: single value (pn_atom_t*) - append the pn_atom_t unmodified
    C: single value (pn_data_t*) - append the pn_data_t unmodified
    M: multiple value (pn_data_t*) - normalize and append multiple field value,
       see pni_normalize_multiple()
@@ -743,7 +744,19 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         }
       }
       break;
-     case 'M':
+    case 'a':                   /* Append an existing pn_atom_t *  */
+      {
+        pn_atom_t *src = va_arg(ap, pn_atom_t *);
+        if (src) {
+          err = pn_data_put_atom(data, *src);
+          if (err) return err;
+        } else {
+          err = pn_data_put_null(data);
+          if (err) return err;
+        }
+      }
+      break;
+    case 'M':
       {
         pn_data_t *src = va_arg(ap, pn_data_t *);
         err = (src && pn_data_size(src) > 0) ?
@@ -1157,6 +1170,23 @@ int pn_data_vscan(pn_data_t *data, const char *fmt, va_list ap)
             pn_data_widen(data);
             if (err) return err;
             scanned = pn_data_size(dst) > old;
+          } else {
+            scanned = false;
+          }
+          pn_data_next(data);
+        } else {
+          scanned = false;
+        }
+      }
+      if (resume_count && level == count_level) resume_count--;
+      break;
+    case 'a':
+      {
+        pn_atom_t *dst = va_arg(ap, pn_atom_t *);
+        if (!suspend) {
+          pni_node_t *next = pni_data_peek(data);
+          if (next && next->atom.type != PN_NULL) {
+            *dst = next->atom;
           } else {
             scanned = false;
           }
