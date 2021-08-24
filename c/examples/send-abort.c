@@ -79,7 +79,7 @@ static pn_bytes_t encode_message(app_data_t* app) {
   pn_message_t* message = pn_message();
   char data[MSG_SIZE + 11] = {0};
   pn_data_t* body;
-  pn_data_put_int(pn_message_id(message), app->sent); /* Set the message_id also */
+  pn_message_set_id(message, (pn_atom_t){.type=PN_ULONG, .u.as_uint=app->sent});
   body = pn_message_body(message);
   pn_data_enter(body);
   pn_data_put_string(body, pn_bytes(MSG_SIZE, data));

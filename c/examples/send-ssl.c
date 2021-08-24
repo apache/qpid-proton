@@ -62,7 +62,7 @@ static pn_bytes_t encode_message(app_data_t* app) {
   /* Construct a message with the map { "sequence": app.sent } */
   pn_message_t* message = pn_message();
   pn_data_t* body = pn_message_body(message);
-  pn_data_put_ulong(pn_message_id(message), app->sent); /* Set the message_id also */
+  pn_message_set_id(message, (pn_atom_t){.type=PN_ULONG, .u.as_uint=app->sent});
   pn_data_put_map(body);
   pn_data_enter(body);
   pn_data_put_string(body, pn_bytes(sizeof("sequence")-1, "sequence"));
