@@ -33,13 +33,14 @@ from cproton import PN_CONNECTION_BOUND, PN_CONNECTION_FINAL, PN_CONNECTION_INIT
 from ._delivery import Delivery
 from ._endpoints import Connection, Link, Session
 from ._transport import Transport
-from typing import Any, List, Optional, Union, TYPE_CHECKING, Callable
+from typing import Any, List, Optional, Union, TYPE_CHECKING, Callable, Tuple, Type
 
 if TYPE_CHECKING:
     from ._reactor import Container
     from ._endpoints import Receiver, Sender
     from ._handlers import ConnectSelectable
     from ._selectable import Selectable
+    from types import TracebackType
 
 
 class Collector:
@@ -122,7 +123,7 @@ class EventType(object):
         return self.name
 
 
-def _dispatch(handler, method, *args):
+def _dispatch(handler: Any, method: str, *args) -> None:
     m = getattr(handler, method, None)
     if m:
         m(*args)
@@ -141,12 +142,8 @@ class EventBase(object):
         return self._type
 
     @property
-    def handler(self):
-        """
-        The handler for this event type. Not implemented, always returns ``None``.
-
-        :type: ``None``
-        """
+    def handler(self) -> Optional['Handler']:
+        """The handler for this event type. Not implemented, always returns ``None``."""
         return None
 
     def dispatch(self, handler: 'Handler', type: Optional[EventType] = None) -> None:
@@ -464,7 +461,7 @@ class Event(EventBase):
         return self._clsname
 
     @property
-    def context(self):
+    def context(self) -> Union[Optional[Any], Connection, Session, Link, Delivery, Transport]:
         """
         The context object associated with the event.
 
@@ -478,7 +475,7 @@ class Event(EventBase):
         return self._context
 
     @property
-    def handler(self):
+    def handler(self) -> Optional['Handler']:
         """
         The handler for this event. The handler is determined by looking
         at the following in order:
@@ -525,7 +522,7 @@ class Event(EventBase):
         """
         return self._transport._reactor
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """
         This will look for a property of the event as an attached context object of the same
         type as the property (but lowercase)
@@ -607,7 +604,7 @@ class Event(EventBase):
 
 
 class LazyHandlers(object):
-    def __get__(self, obj, clazz):
+    def __get__(self, obj: 'Handler', clazz: Any) -> Union['LazyHandlers', List[Any]]:
         if obj is None:
             return self
         ret = []
@@ -622,7 +619,11 @@ class Handler(object):
     handlers = LazyHandlers()
 
     # TODO What to do with on_error?
-    def add(self, handler, on_error=None):
+    def add(
+            self,
+            handler: Any,
+            on_error: Optional[Callable[[Tuple[Type[BaseException], BaseException, 'TracebackType']], None]] = None,
+    ) -> None:
         """
         Add a child handler
 

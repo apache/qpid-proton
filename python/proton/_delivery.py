@@ -30,9 +30,11 @@ from ._condition import cond2obj, obj2cond
 from ._data import dat2obj, obj2dat
 from ._wrapper import Wrapper
 
-from typing import Dict, List, Optional, Type, Union, TYPE_CHECKING
+from typing import Dict, List, Optional, Type, Union, TYPE_CHECKING, Any
+
 if TYPE_CHECKING:
     from ._condition import Condition
+    from ._data import PythonAMQPData, symbol
     from ._endpoints import Receiver, Sender  # circular import
     from ._reactor import Connection, Session, Transport
 
@@ -133,68 +135,45 @@ class Disposition(object):
         """
         return DispositionType.get(pn_disposition_type(self._impl))
 
-    def _get_section_number(self):
+    @property
+    def section_number(self) -> int:
+        """The section number associated with a disposition."""
         return pn_disposition_get_section_number(self._impl)
 
-    def _set_section_number(self, n):
+    @section_number.setter
+    def section_number(self, n: int) -> None:
         pn_disposition_set_section_number(self._impl, n)
 
-    section_number = property(_get_section_number, _set_section_number, doc="""
-        The section number associated with a disposition.
-
-        :type: ``int``
-        """)
-
-    def _get_section_offset(self):
+    @property
+    def section_offset(self) -> int:
+        """The section offset associated with a disposition."""
         return pn_disposition_get_section_offset(self._impl)
 
-    def _set_section_offset(self, n):
+    @section_offset.setter
+    def section_offset(self, n: int) -> None:
         pn_disposition_set_section_offset(self._impl, n)
 
-    section_offset = property(_get_section_offset, _set_section_offset, doc="""
-        The section offset associated with a disposition.
-
-        :type: ``int``
-        """)
-
-    def _get_failed(self):
+    @property
+    def failed(self) -> bool:
+        """The failed flag for this disposition."""
         return pn_disposition_is_failed(self._impl)
 
-    def _set_failed(self, b):
+    @failed.setter
+    def failed(self, b: bool) -> None:
         pn_disposition_set_failed(self._impl, b)
 
-    failed = property(_get_failed, _set_failed, doc="""
-        The failed flag for this disposition.
-
-        :type: ``bool``
-        """)
-
-    def _get_undeliverable(self):
+    @property
+    def undeliverable(self) -> bool:
+        """The undeliverable flag for this disposition."""
         return pn_disposition_is_undeliverable(self._impl)
 
-    def _set_undeliverable(self, b):
+    @undeliverable.setter
+    def undeliverable(self, b: bool) -> None:
         pn_disposition_set_undeliverable(self._impl, b)
 
-    undeliverable = property(_get_undeliverable, _set_undeliverable, doc="""
-        The undeliverable flag for this disposition.
-
-        :type: ``bool``
-        """)
-
-    def _get_data(self):
-        if self.local:
-            return self._data
-        else:
-            return dat2obj(pn_disposition_data(self._impl))
-
-    def _set_data(self, obj):
-        if self.local:
-            self._data = obj
-        else:
-            raise AttributeError("data attribute is read-only")
-
-    data = property(_get_data, _set_data, doc="""
-        Access the disposition as a :class:`Data` object.
+    @property
+    def data(self) -> Optional[List[int]]:
+        """Access the disposition as a :class:`Data` object.
 
         Dispositions are an extension point in the AMQP protocol. The
         disposition interface provides setters/getters for those
@@ -204,24 +183,22 @@ class Disposition(object):
 
         The :class:`Data` object returned by this operation is valid until
         the parent delivery is settled.
-
-        :type: :class:`Data`
-        """)
-
-    def _get_annotations(self):
+        """
         if self.local:
-            return self._annotations
+            return self._data
         else:
-            return dat2obj(pn_disposition_annotations(self._impl))
+            return dat2obj(pn_disposition_data(self._impl))
 
-    def _set_annotations(self, obj):
+    @data.setter
+    def data(self, obj: List[int]) -> None:
         if self.local:
-            self._annotations = obj
+            self._data = obj
         else:
-            raise AttributeError("annotations attribute is read-only")
+            raise AttributeError("data attribute is read-only")
 
-    annotations = property(_get_annotations, _set_annotations, doc="""
-        The annotations associated with a disposition.
+    @property
+    def annotations(self) -> Optional[Dict['symbol', 'PythonAMQPData']]:
+        """The annotations associated with a disposition.
 
         The :class:`Data` object retrieved by this operation may be modified
         prior to updating a delivery. When a delivery is updated, the
@@ -232,33 +209,40 @@ class Disposition(object):
 
         The :class:`Data` object returned by this operation is valid until
         the parent delivery is settled.
-
-        :type: :class:`Data`
-        """)
-
-    def _get_condition(self):
+        """
         if self.local:
-            return self._condition
+            return self._annotations
         else:
-            return cond2obj(pn_disposition_condition(self._impl))
+            return dat2obj(pn_disposition_annotations(self._impl))
 
-    def _set_condition(self, obj):
+    @annotations.setter
+    def annotations(self, obj: Dict[str, 'PythonAMQPData']) -> None:
         if self.local:
-            self._condition = obj
+            self._annotations = obj
         else:
-            raise AttributeError("condition attribute is read-only")
+            raise AttributeError("annotations attribute is read-only")
 
-    condition = property(_get_condition, _set_condition, doc="""
-        The condition object associated with a disposition.
+    @property
+    def condition(self) -> Optional['Condition']:
+        """The condition object associated with a disposition.
 
         The :class:`Condition` object retrieved by this operation may be
         modified prior to updating a delivery. When a delivery is updated,
         the condition described by the disposition is reported to the peer
         if applicable to the current delivery state, e.g. states such as
         :const:`REJECTED`.
+        """
+        if self.local:
+            return self._condition
+        else:
+            return cond2obj(pn_disposition_condition(self._impl))
 
-        :type: :class:`Condition`
-        """)
+    @condition.setter
+    def condition(self, obj: 'Condition') -> None:
+        if self.local:
+            self._condition = obj
+        else:
+            raise AttributeError("condition attribute is read-only")
 
 
 class Delivery(Wrapper):

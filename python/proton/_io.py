@@ -35,16 +35,16 @@ PN_INVALID_SOCKET = -1
 class IO(object):
 
     @staticmethod
-    def _setupsocket(s: socket) -> None:
+    def _setupsocket(s: socket.socket) -> None:
         s.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, True)
         s.setblocking(False)
 
     @staticmethod
-    def close(s: socket) -> None:
+    def close(s: socket.socket) -> None:
         s.close()
 
     @staticmethod
-    def listen(host, port):
+    def listen(host, port) -> socket.socket:
         s = socket.socket()
         IO._setupsocket(s)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
@@ -53,13 +53,13 @@ class IO(object):
         return s
 
     @staticmethod
-    def accept(s: socket):
+    def accept(s: socket.socket):
         n = s.accept()
         IO._setupsocket(n[0])
         return n
 
     @staticmethod
-    def connect(addr):
+    def connect(addr) -> socket.socket:
         s = socket.socket(addr[0], addr[1], addr[2])
         IO._setupsocket(s)
         try:
