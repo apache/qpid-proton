@@ -322,74 +322,64 @@ class EndpointStateHandler(Handler):
         self.peer_close_is_error = peer_close_is_error
 
     @classmethod
-    def is_local_open(cls, endpoint):
+    def is_local_open(cls, endpoint: Endpoint) -> bool:
         """
         Test if local ``endpoint`` is open (ie has state
         :const:`proton.Endpoint.LOCAL_ACTIVE`).
 
         :param endpoint: The local endpoint to be tested.
-        :type endpoint: Any child of :class:`proton.Endpoint`
         :return: ``True`` if local endpoint is in state
             :const:`proton.Endpoint.LOCAL_ACTIVE`, ``False`` otherwise.
-        :rtype: ``bool``
         """
-        return endpoint.state & Endpoint.LOCAL_ACTIVE
+        return bool(endpoint.state & Endpoint.LOCAL_ACTIVE)
 
     @classmethod
-    def is_local_uninitialised(cls, endpoint):
+    def is_local_uninitialised(cls, endpoint: Endpoint) -> bool:
         """
         Test if local ``endpoint`` is uninitialised (ie has state
         :const:`proton.Endpoint.LOCAL_UNINIT`).
 
         :param endpoint: The local endpoint to be tested.
-        :type endpoint: Any child of :class:`proton.Endpoint`
         :return: ``True`` if local endpoint is in state
             :const:`proton.Endpoint.LOCAL_UNINIT`, ``False`` otherwise.
-        :rtype: ``bool``
         """
-        return endpoint.state & Endpoint.LOCAL_UNINIT
+        return bool(endpoint.state & Endpoint.LOCAL_UNINIT)
 
     @classmethod
-    def is_local_closed(cls, endpoint):
+    def is_local_closed(cls, endpoint: Endpoint) -> bool:
         """
         Test if local ``endpoint`` is closed (ie has state
         :const:`proton.Endpoint.LOCAL_CLOSED`).
 
         :param endpoint: The local endpoint to be tested.
-        :type endpoint: Any child of :class:`proton.Endpoint`
         :return: ``True`` if local endpoint is in state
             :const:`proton.Endpoint.LOCAL_CLOSED`, ``False`` otherwise.
-        :rtype: ``bool``
         """
-        return endpoint.state & Endpoint.LOCAL_CLOSED
+        return bool(endpoint.state & Endpoint.LOCAL_CLOSED)
 
     @classmethod
-    def is_remote_open(cls, endpoint):
+    def is_remote_open(cls, endpoint: Endpoint) -> bool:
         """
-        Test if remote ``enpoint`` is open (ie has state
+        Test if remote ``endpoint`` is open (ie has state
         :const:`proton.Endpoint.LOCAL_ACTIVE`).
 
         :param endpoint: The remote endpoint to be tested.
-        :type endpoint: Any child of :class:`proton.Endpoint`
         :return: ``True`` if remote endpoint is in state
             :const:`proton.Endpoint.LOCAL_ACTIVE`, ``False`` otherwise.
-        :rtype: ``bool``
         """
-        return endpoint.state & Endpoint.REMOTE_ACTIVE
+        return bool(endpoint.state & Endpoint.REMOTE_ACTIVE)
 
     @classmethod
-    def is_remote_closed(cls, endpoint):
+    def is_remote_closed(cls, endpoint: Endpoint) -> bool:
         """
         Test if remote ``endpoint`` is closed (ie has state
         :const:`proton.Endpoint.REMOTE_CLOSED`).
 
         :param endpoint: The remote endpoint to be tested.
-        :type endpoint: Any child of :class:`proton.Endpoint`
         :return: ``True`` if remote endpoint is in state
             :const:`proton.Endpoint.REMOTE_CLOSED`, ``False`` otherwise.
-        :rtype: ``bool``
         """
-        return endpoint.state & Endpoint.REMOTE_CLOSED
+        return bool(endpoint.state & Endpoint.REMOTE_CLOSED)
 
     @classmethod
     def print_error(cls, endpoint: Endpoint, endpoint_type: str) -> None:
@@ -476,7 +466,6 @@ class EndpointStateHandler(Handler):
 
         :param event: The underlying event object. Use this to obtain further
             information on the event.
-        :type event: :class:`proton.Event`
         """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_connection_opened', event)

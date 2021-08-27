@@ -301,8 +301,6 @@ class Connection(Wrapper, Endpoint):
         Any (non ``None``) name returned by this operation will be valid until
         the connection object is unbound from a transport or freed,
         whichever happens sooner.
-
-        :type: ``str``
         """
         return pn_connection_remote_container(self._impl)
 
@@ -1203,11 +1201,8 @@ class Sender(Link):
             # treat object as bytes
             return self.stream(obj)
 
-    def delivery_tag(self):
-        """
-        **HELP!** I have no idea what is going on with this!
-        :meth:`Link.next` returns a Link, not a Delivery.
-        """
+    def delivery_tag(self) -> str:
+        """Increments and returns a counter to be used as the next message tag."""
         if not hasattr(self, 'tag_generator'):
             def simple_tags():
                 count = 1

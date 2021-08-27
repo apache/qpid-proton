@@ -791,12 +791,11 @@ class Data:
         """
         return pn_data_encoded_size(self._data)
 
-    def encode(self):
+    def encode(self) -> bytes:
         """
-        Returns a representation of the data encoded in AMQP format.
+        Returns a binary representation of the data encoded in AMQP format.
 
-        :return: The size of the encoded data
-        :rtype: ``int``
+        :return: The encoded data
         :raise: :exc:`DataException` if there is a Proton error.
         """
         size = 1024
@@ -809,12 +808,11 @@ class Data:
             else:
                 self._check(cd)
 
-    def decode(self, encoded):
+    def decode(self, encoded: bytes) -> int:
         """
         Decodes the first value from supplied AMQP data and returns the
         number of bytes consumed.
 
-        :type encoded: binary
         :param encoded: AMQP encoded binary data
         :raise: :exc:`DataException` if there is a Proton error.
         """
@@ -878,9 +876,7 @@ class Data:
             >>> data.put_double(1.3)
             >>> data.exit()
 
-        :type described: bool
         :param described: specifies whether the array is described
-        :type element_type: int
         :param element_type: the type of the array elements
         :raise: :exc:`DataException` if there is a Proton error.
         """
@@ -1158,7 +1154,7 @@ class Data:
         """
         return pn_data_get_map(self._data)
 
-    def get_array(self):
+    def get_array(self) -> Tuple[int, bool, Optional[int]]:
         """
         If the current node is an array, return a tuple of the element
         count, a boolean indicating whether the array is described, and
@@ -1175,9 +1171,8 @@ class Data:
             ...    print "Element:", data.get_string()
             >>> data.exit()
 
-        :return: A tuple containing the number of array elements, the descriptor
-            (or ``None`` if no descriptor) and the enumerated array element type.
-        :rtype: ``tuple`` (``int``, ``str`` or ``None``, ``int``)
+        :return: A tuple containing the number of array elements, a bool indicating
+            whether the array is described, and the enumerated array element type.
         """
         count = pn_data_get_array(self._data)
         described = pn_data_is_array_described(self._data)

@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 
 class NamedInt(int):
-    values: Dict[int, str] = {}
+    values: Dict[int, 'DispositionType'] = {}
 
     def __new__(cls: Type['DispositionType'], i: int, name: str) -> 'DispositionType':
         ni = super(NamedInt, cls).__new__(cls, i)
@@ -119,7 +119,7 @@ class Disposition(object):
         self._annotations = None
 
     @property
-    def type(self):
+    def type(self) -> Union[int, DispositionType]:
         """
         Get the type of this disposition object.
 
@@ -130,8 +130,6 @@ class Disposition(object):
         * :const:`REJECTED`
         * :const:`RELEASED`
         * :const:`MODIFIED`
-
-        :type: ``str``
         """
         return DispositionType.get(pn_disposition_type(self._impl))
 
@@ -379,22 +377,13 @@ class Delivery(Wrapper):
         return pn_delivery_partial(self._impl)
 
     @property
-    def local_state(self):
-        """
-        A string representation of the local state of the delivery.
-
-        :type: ``str``
-        """
+    def local_state(self) -> DispositionType:
+        """A local state of the delivery."""
         return DispositionType.get(pn_delivery_local_state(self._impl))
 
     @property
-    def remote_state(self):
-        """
-        A string representation of the state of the delivery as
-        indicated by the remote peer.
-
-        :type: ``str``
-        """
+    def remote_state(self) -> Union[int, DispositionType]:
+        """A remote state of the delivery as indicated by the remote peer."""
         return DispositionType.get(pn_delivery_remote_state(self._impl))
 
     @property

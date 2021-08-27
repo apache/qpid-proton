@@ -1400,7 +1400,7 @@ class Container(Reactor):
 
     def _get_id(self, container: str, remote: Optional[str], local: Optional[str]) -> str:
         if local and remote:
-            "%s-%s-%s" % (container, remote, local)
+            return "%s-%s-%s" % (container, remote, local)
         elif local:
             return "%s-%s" % (container, local)
         elif remote:
