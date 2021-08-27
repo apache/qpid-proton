@@ -19,17 +19,17 @@
 
 from __future__ import absolute_import
 
-from cproton import PN_DEFAULT_PRIORITY, PN_OVERFLOW, pn_error_text, pn_message, \
-    pn_message_annotations, pn_message_body, pn_message_clear, pn_message_correlation_id, pn_message_decode, \
+from cproton import PN_DEFAULT_PRIORITY, PN_STRING, PN_UUID, PN_OVERFLOW, pn_error_text, pn_message, \
+    pn_message_annotations, pn_message_body, pn_message_clear, pn_message_decode, \
     pn_message_encode, pn_message_error, pn_message_free, pn_message_get_address, pn_message_get_content_encoding, \
-    pn_message_get_content_type, pn_message_get_creation_time, pn_message_get_delivery_count, \
-    pn_message_get_expiry_time, pn_message_get_group_id, pn_message_get_group_sequence, pn_message_get_priority, \
+    pn_message_get_content_type, pn_message_get_correlation_id, pn_message_get_creation_time, pn_message_get_delivery_count, \
+    pn_message_get_expiry_time, pn_message_get_group_id, pn_message_get_group_sequence, pn_message_get_id, pn_message_get_priority, \
     pn_message_get_reply_to, pn_message_get_reply_to_group_id, pn_message_get_subject, pn_message_get_ttl, \
-    pn_message_get_user_id, pn_message_id, pn_message_instructions, pn_message_is_durable, \
+    pn_message_get_user_id, pn_message_instructions, pn_message_is_durable, \
     pn_message_is_first_acquirer, pn_message_is_inferred, pn_message_properties, pn_message_set_address, \
-    pn_message_set_content_encoding, pn_message_set_content_type, pn_message_set_creation_time, \
+    pn_message_set_content_encoding, pn_message_set_content_type, pn_message_set_correlation_id, pn_message_set_creation_time, \
     pn_message_set_delivery_count, pn_message_set_durable, pn_message_set_expiry_time, pn_message_set_first_acquirer, \
-    pn_message_set_group_id, pn_message_set_group_sequence, pn_message_set_inferred, pn_message_set_priority, \
+    pn_message_set_group_id, pn_message_set_group_sequence, pn_message_set_id, pn_message_set_inferred, pn_message_set_priority, \
     pn_message_set_reply_to, pn_message_set_reply_to_group_id, pn_message_set_subject, \
     pn_message_set_ttl, pn_message_set_user_id
 
@@ -37,12 +37,12 @@ from ._common import isinteger, millis2secs, secs2millis, unicode2utf8, utf82uni
 from ._data import char, Data, symbol, ulong, AnnotationDict
 from ._endpoints import Link
 from ._exceptions import EXCEPTIONS, MessageException
+from uuid import UUID
 from typing import Dict, Optional, Union, TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
     from proton._delivery import Delivery
     from proton._endpoints import Sender, Receiver
-    from uuid import UUID
     from proton._data import Described, PythonAMQPData
 
 
@@ -69,8 +69,6 @@ class Message(object):
             **kwargs
     ) -> None:
         self._msg = pn_message()
-        self._id = Data(pn_message_id(self._msg))
-        self._correlation_id = Data(pn_message_correlation_id(self._msg))
         self.instructions = None
         self.annotations = None
         self.properties = None
@@ -273,14 +271,19 @@ class Message(object):
                * ``bytes``
                * ``str``
         """
-        return self._id.get_object()
+        value = pn_message_get_id(self._msg)
+        if isinstance(value, tuple):
+            if value[0] == PN_UUID:
+                value = UUID(bytes=value[1])
+        return value
 
     @id.setter
     def id(self, value: Optional[Union[str, bytes, 'UUID', int]]) -> None:
         if isinteger(value):
             value = ulong(value)
-        self._id.rewind()
-        self._id.put_object(value)
+        elif isinstance(value, UUID):
+            value = (PN_UUID, value.bytes)
+        pn_message_set_id(self._msg, value)
 
     @property
     def user_id(self) -> bytes:
@@ -341,14 +344,19 @@ class Message(object):
                * ``bytes``
                * ``str``
         """
-        return self._correlation_id.get_object()
+        value = pn_message_get_correlation_id(self._msg)
+        if isinstance(value, tuple):
+            if value[0] == PN_UUID:
+                value = UUID(bytes=value[1])
+        return value
 
     @correlation_id.setter
     def correlation_id(self, value: Optional[Union[str, bytes, 'UUID', int]]) -> None:
         if isinteger(value):
             value = ulong(value)
-        self._correlation_id.rewind()
-        self._correlation_id.put_object(value)
+        elif isinstance(value, UUID):
+            value = (PN_UUID, value.bytes)
+        pn_message_set_correlation_id(self._msg, value)
 
     @property
     def content_type(self) -> symbol:

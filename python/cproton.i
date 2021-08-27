@@ -96,10 +96,8 @@ PN_HANDLE(PNI_PYTRACER);
 
 // These are not used/needed in the python binding
 %ignore pn_dtag;
-%ignore pn_message_get_id;
-%ignore pn_message_set_id;
-%ignore pn_message_get_correlation_id;
-%ignore pn_message_set_correlation_id;
+%ignore pn_message_id;
+%ignore pn_message_correlation_id;
 
 %ignore pn_list;
 %ignore pn_list_size;
@@ -163,6 +161,7 @@ PN_HANDLE(PNI_PYTRACER);
   $result = PyLong_FromVoidPtr((void*)$1);
 }
 
+
 %typemap(in) pn_bytes_t {
   if ($input == Py_None) {
     $1.start = NULL;
@@ -179,6 +178,81 @@ PN_HANDLE(PNI_PYTRACER);
 
 %typemap(out) pn_bytes_t {
   $result = PyBytes_FromStringAndSize($1.start, $1.size);
+}
+
+%typemap(in) pn_msgid_t {
+  if (PyTuple_Check($input)) {
+    pn_type_t type = PyLong_AsUnsignedLong(PyTuple_GetItem($input, 0));
+    PyObject* obj =  PyTuple_GetItem($input, 1);
+    switch (type) {
+      case PN_NULL:
+        break;
+      case PN_ULONG:
+        $1.u.as_ulong = PyLong_AsUnsignedLong(obj);
+        break;
+      case PN_UUID:
+        if (PyBytes_Check(obj)) {
+          memmove(&$1.u.as_uuid, PyBytes_AsString(obj), (PyBytes_Size(obj) < 16 ? PyBytes_Size(obj) : 16));
+          break;
+        }
+        type = PN_NULL;
+        break;
+      case PN_BINARY:
+        if (PyBytes_Check(obj)) {
+          $1.u.as_bytes = (pn_bytes_t){.size=PyBytes_Size(obj), .start=PyBytes_AsString(obj)};
+          break;
+        }
+        type = PN_NULL;
+        break;
+      case PN_STRING:
+        if (PyBytes_Check(obj)) {
+          $1.u.as_bytes = (pn_bytes_t){.size=PyBytes_Size(obj), .start=PyBytes_AsString(obj)};
+          break;
+        }
+      default:
+        type = PN_NULL;
+        break;
+    }
+    $1.type = type;
+  } else if (PyLong_Check($input)) {
+    $1.type = PN_ULONG;
+    $1.u.as_ulong = PyLong_AsUnsignedLong($input);
+  } else if (PyBytes_Check($input)) {
+    $1.type = PN_BINARY;
+    $1.u.as_bytes = (pn_bytes_t){.size=PyBytes_Size($input), .start=PyBytes_AsString($input)};
+  } else if (PyUnicode_Check($input)) {
+    $1.type = PN_STRING;
+    Py_ssize_t utf8size;
+    const char *utf8 = PyUnicode_AsUTF8AndSize($input, &utf8size);
+    $1.u.as_bytes = (pn_bytes_t){.size=utf8size, .start=utf8};
+  } else {
+    $1.type = PN_NULL;
+  }
+}
+
+%typemap(out) pn_msgid_t {
+  switch ($1.type) {
+    case PN_NULL:
+      $result = Py_None;
+      break;
+    case PN_ULONG:
+      $result = PyLong_FromUnsignedLong($1.u.as_ulong);
+      break;
+    case PN_BINARY:
+      $result = PyBytes_FromStringAndSize($1.u.as_bytes.start, $1.u.as_bytes.size);
+      break;
+    case PN_STRING:
+      $result = PyUnicode_FromStringAndSize($1.u.as_bytes.start, $1.u.as_bytes.size);
+      break;
+    case PN_UUID:
+      $result = PyTuple_New(2);
+      PyTuple_SetItem($result, 0, PyLong_FromUnsignedLong($1.type));
+      PyTuple_SetItem($result, 1, PyBytes_FromStringAndSize($1.u.as_uuid.bytes, 16));
+      break;
+    default:
+      $result = Py_None;
+      break;
+  }
 }
 
 %typemap(out) pn_delivery_tag_t {
