@@ -94,13 +94,26 @@ static intptr_t timer_deadline_compare(void *oa, void *ob) {
   return a->list_deadline - b->list_deadline;
 }
 
-#define timer_deadline_inspect NULL
-#define timer_deadline_hashcode NULL
 #define CID_timer_deadline CID_pn_void
+#define timer_deadline_new pn_object_new
+#define timer_deadline_incref pn_void_incref
+#define timer_deadline_decref pn_void_decref
+#define timer_deadline_refcount pn_void_refcount
+#define timer_deadline_free pn_object_free
+#define timer_deadline_hashcode NULL
+#define timer_deadline_inspect NULL
+
+static const pn_class_t *timer_deadline_reify(void *object);
+
+static const pn_class_t timer_deadline_clazz[] = {PN_METACLASS(timer_deadline)};
+
+static const pn_class_t *timer_deadline_reify(void *object)
+{
+  return timer_deadline_clazz;
+}
 
 static timer_deadline_t* pni_timer_deadline(void) {
-  static const pn_class_t timer_deadline_clazz = PN_CLASS(timer_deadline);
-  return (timer_deadline_t *) pn_class_new(&timer_deadline_clazz, sizeof(timer_deadline_t));
+  return (timer_deadline_t *) pn_class_new(timer_deadline_clazz, sizeof(timer_deadline_t));
 }
 
 
@@ -171,8 +184,7 @@ bool pni_timer_manager_init(pni_timer_manager_t *tm) {
   task_init(&tm->task, TIMER_MANAGER, p);
   pmutex_init(&tm->deletion_mutex);
 
-  // PN_VOID turns off ref counting for the elements in the list.
-  tm->timers_heap = pn_list(PN_VOID, 0);
+  tm->timers_heap = pn_list(timer_deadline_clazz, 0);
   if (!tm->timers_heap)
     return false;
   tm->proactor_timer = pni_timer(tm, NULL);
