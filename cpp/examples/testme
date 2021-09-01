@@ -21,10 +21,9 @@
 # Run the C++ examples and verify that they behave as expected.
 # Example executables must be in PATH
 
-import os, shutil, sys, unittest
+import os, shutil, sys, subprocess, unittest
 from test_subprocess import Popen, Server as TestServer, check_output, in_path
 from os.path import dirname
-from string import Template
 
 
 class Server(TestServer):
@@ -43,19 +42,17 @@ def _cyrusSetup(conf_dir):
   """
   saslpasswd = os.getenv('SASLPASSWD')
   if saslpasswd:
-    t = Template("""sasldb_path: ${db}
-mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
-""")
     abs_conf_dir = os.path.abspath(conf_dir)
     shutil.rmtree(abs_conf_dir, True)
     os.mkdir(abs_conf_dir)
     db = os.path.join(abs_conf_dir,'proton.sasldb')
     conf = os.path.join(abs_conf_dir,'proton-server.conf')
     with open(conf, 'w') as f:
-        f.write(t.substitute(db=db))
-    cmd_template = Template("echo password | ${saslpasswd} -c -p -f ${db} -u proton user")
-    cmd = cmd_template.substitute(db=db, saslpasswd=saslpasswd)
-    check_output(cmd, shell=True)
+        f.write(f"""sasldb_path: {db}
+mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
+""")
+    cmd = f"echo password | {saslpasswd} -c -p -f {db} -u proton user"
+    subprocess.check_output(cmd, shell=True)
     os.environ['PN_SASL_CONFIG_PATH'] = abs_conf_dir
 
 
