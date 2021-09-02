@@ -481,12 +481,14 @@ pn_data_t *pn_message_id(pn_message_t *msg)
   assert(msg);
   return msg->id;
 }
-pn_atom_t pn_message_get_id(pn_message_t *msg)
+
+pn_msgid_t pn_message_get_id(pn_message_t *msg)
 {
   assert(msg);
   return pn_data_get_atom(msg->id);
 }
-int pn_message_set_id(pn_message_t *msg, pn_atom_t id)
+
+int pn_message_set_id(pn_message_t *msg, pn_msgid_t id)
 {
   assert(msg);
   pn_data_rewind(msg->id);
@@ -552,12 +554,14 @@ pn_data_t *pn_message_correlation_id(pn_message_t *msg)
   assert(msg);
   return msg->correlation_id;
 }
-pn_atom_t pn_message_get_correlation_id(pn_message_t *msg)
+
+pn_msgid_t pn_message_get_correlation_id(pn_message_t *msg)
 {
   assert(msg);
   return pn_data_get_atom(msg->correlation_id);
 }
-int pn_message_set_correlation_id(pn_message_t *msg, pn_atom_t atom)
+
+int pn_message_set_correlation_id(pn_message_t *msg, pn_msgid_t id)
 {
   assert(msg);
   pn_data_rewind(msg->correlation_id);
