@@ -195,23 +195,25 @@ PN_HANDLE(PNI_PYTRACER);
           memmove(&$1.u.as_uuid, PyBytes_AsString(obj), (PyBytes_Size(obj) < 16 ? PyBytes_Size(obj) : 16));
           break;
         }
-        type = PN_NULL;
-        break;
+        PyErr_SetString(PyExc_TypeError, "Require bytes for uuid id");
+        SWIG_fail;
       case PN_BINARY:
         if (PyBytes_Check(obj)) {
           $1.u.as_bytes = (pn_bytes_t){.size=PyBytes_Size(obj), .start=PyBytes_AsString(obj)};
           break;
         }
-        type = PN_NULL;
-        break;
+        PyErr_SetString(PyExc_TypeError, "Require bytes for binary id");
+        SWIG_fail;
       case PN_STRING:
         if (PyBytes_Check(obj)) {
           $1.u.as_bytes = (pn_bytes_t){.size=PyBytes_Size(obj), .start=PyBytes_AsString(obj)};
           break;
         }
+        PyErr_SetString(PyExc_TypeError, "Require bytes for string id");
+        SWIG_fail;
       default:
-        type = PN_NULL;
-        break;
+        PyErr_SetString(PyExc_ValueError, "Invalid type selector for id");
+        SWIG_fail;
     }
     $1.type = type;
   } else if (PyLong_Check($input)) {
@@ -225,8 +227,11 @@ PN_HANDLE(PNI_PYTRACER);
     Py_ssize_t utf8size;
     const char *utf8 = PyUnicode_AsUTF8AndSize($input, &utf8size);
     $1.u.as_bytes = (pn_bytes_t){.size=utf8size, .start=utf8};
-  } else {
+  } else if ($input == Py_None) {
     $1.type = PN_NULL;
+  } else {
+    PyErr_SetString(PyExc_TypeError, "Cannot convert to id");
+    SWIG_fail;
   }
 }
 
@@ -249,6 +254,23 @@ PN_HANDLE(PNI_PYTRACER);
       PyTuple_SetItem($result, 0, PyLong_FromUnsignedLong($1.type));
       PyTuple_SetItem($result, 1, PyBytes_FromStringAndSize($1.u.as_uuid.bytes, 16));
       break;
+    // Theses 2 cases are for compatibility with the broken ruby binding
+    case PN_INT: {
+      int32_t v = $1.u.as_int;
+      if (v>=0) {
+        $result = PyLong_FromLong(v);
+        break;
+      }
+      $result = Py_None;
+      break;
+    }
+    case PN_LONG: {
+      int64_t v = $1.u.as_long;
+      if (v>=0) {
+        $result = PyLong_FromLong(v);
+        break;
+      }
+    }
     default:
       $result = Py_None;
       break;
