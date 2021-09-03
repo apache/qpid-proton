@@ -565,7 +565,7 @@ int pn_message_set_correlation_id(pn_message_t *msg, pn_msgid_t id)
 {
   assert(msg);
   pn_data_rewind(msg->correlation_id);
-  return pn_data_put_atom(msg->correlation_id, atom);
+  return pn_data_put_atom(msg->correlation_id, id);
 }
 
 const char *pn_message_get_content_type(pn_message_t *msg)
