@@ -1,5 +1,5 @@
-#ifndef PROTON_FRAMING_H
-#define PROTON_FRAMING_H 1
+#ifndef PROTON_VALUE_DUMP_H
+#define PROTON_VALUE_DUMP_H 1
 
 /*
  *
@@ -22,26 +22,9 @@
  *
  */
 
-#include "buffer.h"
-
 #include "proton/types.h"
+#include "proton/object.h"
 
-#include <stddef.h>
+PN_EXTERN size_t pn_value_dump(pn_bytes_t frame, pn_string_t *output);
 
-#define AMQP_HEADER_SIZE (8)
-#define AMQP_MIN_MAX_FRAME_SIZE ((uint32_t)512) // minimum allowable max-frame
-#define AMQP_MAX_WINDOW_SIZE (2147483647)
-
-typedef struct {
-  uint8_t type;
-  uint16_t channel;
-  size_t ex_size;
-  const char *extended;
-  size_t size;
-  const char *payload;
-} pn_frame_t;
-
-ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, uint32_t max);
-size_t pn_write_frame(pn_buffer_t* buffer, pn_frame_t frame);
-
-#endif /* framing.h */
+#endif // PROTON_VALUE_DUMP_H
