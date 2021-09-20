@@ -922,10 +922,10 @@ class TransferTest(Test):
         # Confirm abort discards the sender's buffered content, i.e. no data in generated transfer frame.
         # We want:
         # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag", message-format=0, settled=true, aborted=true]
-        wanted = b"\x00\x00\x00%\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x15\x00\x00\x00\nR\x00R\x00\xa0\x03tagR\x00A@@@@A"
+        wanted = b'\x00\x00\x00"\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x12\x00\x00\x00\nCC\xa0\x03tagCA@@@@A'
         t = self.snd.transport
         wire_bytes = t.peek(1024)
-        assert wanted == wire_bytes
+        assert wanted == wire_bytes, wire_bytes
 
         self.pump()
         assert self.rcv.current.aborted
@@ -1318,10 +1318,10 @@ class MaxFrameTransferTest(Test):
         assert sd.aborted
         # Expect a single abort transfer frame with no content.  One credit is consumed.
         # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag_1", message-format=0, settled=true, aborted=true]
-        wanted = b"\x00\x00\x00\x27\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x17\x00\x00\x00\nR\x00R\x00\xa0\x05tag_1R\x00A@@@@A"
+        wanted = b'\x00\x00\x00\x24\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x14\x00\x00\x00\nCC\xa0\x05tag_1CA@@@@A'
         t = self.snd.transport
         wire_bytes = t.peek(2048)
-        assert wanted == wire_bytes
+        assert wanted == wire_bytes, wire_bytes
         assert self.snd.credit == 0
         self.pump()
         assert self.rcv.current.aborted
@@ -1329,9 +1329,9 @@ class MaxFrameTransferTest(Test):
         self.snd.close()
         # Expect just the detach frame.
         # @detach(22) [handle=0, closed=true]
-        wanted = b"\x00\x00\x00\x17\x02\x00\x00\x00\x00S\x16\xd0\x00\x00\x00\x07\x00\x00\x00\x02R\x00A"
+        wanted = b"\x00\x00\x00\x16\x02\x00\x00\x00\x00S\x16\xd0\x00\x00\x00\x06\x00\x00\x00\x02CA"
         wire_bytes = t.peek(2048)
-        assert wanted == wire_bytes
+        assert wanted == wire_bytes, wire_bytes
 
 
 class IdleTimeoutTest(Test):

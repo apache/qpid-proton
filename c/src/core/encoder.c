@@ -99,13 +99,17 @@ static uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
       return PNE_INT;
     }
   case PN_ULONG:
-    if (node->atom.u.as_ulong < 256) {
+    if (node->atom.u.as_ulong == 0) {
+      return PNE_ULONG0;
+    } else if (node->atom.u.as_ulong < 256) {
       return PNE_SMALLULONG;
     } else {
       return PNE_ULONG;
     }
   case PN_UINT:
-    if (node->atom.u.as_uint < 256) {
+    if (node->atom.u.as_uint == 0) {
+      return PNE_UINT0;
+    } else if (node->atom.u.as_uint < 256) {
       return PNE_SMALLUINT;
     } else {
       return PNE_UINT;
@@ -290,6 +294,7 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   case PNE_SMALLINT: pn_encoder_writef8(encoder, atom->u.as_int); return 0;
   case PNE_INT: pn_encoder_writef32(encoder, atom->u.as_int); return 0;
   case PNE_UTF32: pn_encoder_writef32(encoder, atom->u.as_char); return 0;
+  case PNE_ULONG0: return 0;
   case PNE_ULONG: pn_encoder_writef64(encoder, atom->u.as_ulong); return 0;
   case PNE_SMALLULONG: pn_encoder_writef8(encoder, atom->u.as_ulong); return 0;
   case PNE_LONG: pn_encoder_writef64(encoder, atom->u.as_long); return 0;
