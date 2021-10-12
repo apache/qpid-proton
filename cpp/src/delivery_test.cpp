@@ -51,6 +51,9 @@ std::mutex m;
 std::condition_variable cv;
 bool listener_ready = false;
 int listener_port;
+int tracker_accept_counter;
+int tracker_settle_counter;
+proton::binary test_tag("TESTTAG");
 } // namespace
 
 class test_recv : public proton::messaging_handler {
@@ -78,8 +81,7 @@ class test_recv : public proton::messaging_handler {
     }
 
     void on_message(proton::delivery &d, proton::message &msg) override {
-        proton::binary test_tag_recv("TESTTAG");
-        ASSERT_EQUAL(test_tag_recv, d.tag());
+        ASSERT_EQUAL(test_tag, d.tag());
         d.receiver().close();
         d.connection().close();
         listener.stop();
@@ -102,14 +104,27 @@ class test_send : public proton::messaging_handler {
     void on_sendable(proton::sender &s) override {
         proton::message msg;
         msg.body("message");
-        proton::binary test_tag_send("TESTTAG");
-        s.send(msg, test_tag_send);
+        proton::tracker t = s.send(msg, test_tag);
+        ASSERT_EQUAL(test_tag, t.tag());
+        s.connection().close();
+    }
+
+    void on_tracker_accept(proton::tracker &t) override {
+        ASSERT_EQUAL(test_tag, t.tag());
+        tracker_accept_counter++;
+    }
+
+    void on_tracker_settle(proton::tracker &t) override {
+        ASSERT_EQUAL(test_tag, t.tag());
+        tracker_settle_counter++;
     }
 };
 
 int test_delivery_tag() {
-    std::string recv_address("127.0.0.1:0/test");
+    tracker_accept_counter = 0;
+    tracker_settle_counter = 0;
 
+    std::string recv_address("127.0.0.1:0/test");
     test_recv recv(recv_address);
     proton::container c(recv);
     std::thread thread_recv([&c]() -> void { c.run(); });
@@ -123,6 +138,9 @@ int test_delivery_tag() {
     test_send send(send_address);
     proton::container(send).run();
     thread_recv.join();
+
+    ASSERT_EQUAL(1 ,tracker_accept_counter);
+    ASSERT_EQUAL(1 ,tracker_settle_counter);
 
     return 0;
 }
