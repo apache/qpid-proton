@@ -23,6 +23,7 @@
  */
 
 #include "buffer.h"
+#include "logger_private.h"
 
 #include "proton/types.h"
 
@@ -35,13 +36,12 @@
 typedef struct {
   uint8_t type;
   uint16_t channel;
-  size_t ex_size;
-  const char *extended;
-  size_t size;
-  const char *payload;
+  pn_bytes_t extended;
+  pn_bytes_t frame_payload0;
+  pn_bytes_t frame_payload1;
 } pn_frame_t;
 
-ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, uint32_t max);
-size_t pn_write_frame(pn_buffer_t* buffer, pn_frame_t frame);
+ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, uint32_t max, pn_logger_t *logger);
+size_t pn_write_frame(pn_buffer_t* buffer, pn_frame_t frame, pn_logger_t *logger);
 
 #endif /* framing.h */

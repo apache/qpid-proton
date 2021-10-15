@@ -77,17 +77,17 @@ static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode,
 
 static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_frame_t frame)
 {
-  if (frame.size == 0) { // ignore null frames
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME, "%u <- (EMPTY FRAME)", frame.channel);
+  pn_bytes_t frame_payload = frame.frame_payload0;
+
+  if (frame_payload.size == 0) { // ignore null frames
     return 0;
   }
-
-  ssize_t dsize = pn_data_decode(args, frame.payload, frame.size);
+  ssize_t dsize = pn_data_decode(args, frame_payload.start, frame_payload.size);
   if (dsize < 0) {
     pn_string_format(transport->scratch,
                      "Error decoding frame: %s %s\n", pn_code(dsize),
                      pn_error_text(pn_data_error(args)));
-    pn_quote(transport->scratch, frame.payload, frame.size);
+    pn_quote(transport->scratch, frame_payload.start, frame_payload.size);
     PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, pn_string_get(transport->scratch));
     return dsize;
   }
@@ -107,11 +107,9 @@ static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_fr
     PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame");
     return PN_ERR;
   }
-  size_t payload_size = frame.size - dsize;
-  const char *payload_mem = payload_size ? frame.payload + dsize : NULL;
+  size_t payload_size = frame_payload.size - dsize;
+  const char *payload_mem = payload_size ? frame_payload.start + dsize : NULL;
   pn_bytes_t payload = {payload_size, payload_mem};
-
-  pn_do_trace(transport, channel, IN, args, payload_mem, payload_size);
 
   int err = pni_dispatch_action(transport, lcode, frame_type, channel, args, &payload);
 
@@ -127,7 +125,7 @@ ssize_t pn_dispatcher_input(pn_transport_t *transport, const char *bytes, size_t
   while (available && !*halt) {
     pn_frame_t frame;
 
-    ssize_t n = pn_read_frame(&frame, bytes + read, available, transport->local_max_frame);
+    ssize_t n = pn_read_frame(&frame, bytes + read, available, transport->local_max_frame, &transport->logger);
     if (n > 0) {
       read += n;
       available -= n;

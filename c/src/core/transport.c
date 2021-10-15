@@ -884,28 +884,6 @@ static int pni_disposition_encode(pn_disposition_t *disposition, pn_data_t *data
 }
 
 
-void pn_do_trace(pn_transport_t *transport, uint16_t ch, pn_dir_t dir,
-                 pn_data_t *args, const char *payload, size_t size)
-{
-  if (PN_SHOULD_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME) ) {
-    pn_string_format(transport->scratch, "%u %s ", ch, dir == OUT ? "->" : "<-");
-    pn_inspect(args, transport->scratch);
-
-    if (pn_data_size(args)==0) {
-        pn_string_addf(transport->scratch, "(EMPTY FRAME)");
-    }
-
-    if (size) {
-      char buf[1024];
-      int e = pn_quote_data(buf, 1024, payload, size);
-      pn_string_addf(transport->scratch, " (%" PN_ZU ") \"%s\"%s", size, buf,
-                     e == PN_OVERFLOW ? "... (truncated)" : "");
-    }
-
-    pni_logger_log(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME, pn_string_get(transport->scratch));
-  }
-}
-
 int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const char *fmt, ...)
 {
   pn_buffer_t *frame_buf = transport->frame;
@@ -920,8 +898,6 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
                       pn_error_text(pn_data_error(transport->output_args)));
     return PN_ERR;
   }
-
-  pn_do_trace(transport, ch, OUT, transport->output_args, NULL, 0);
 
  encode_performatives:
   pn_buffer_clear( frame_buf );
@@ -942,17 +918,10 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
   pn_frame_t frame = {AMQP_FRAME_TYPE};
   frame.type = type;
   frame.channel = ch;
-  frame.payload = buf.start;
-  frame.size = wr;
-  pn_buffer_ensure(transport->output_buffer, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
-  pn_write_frame(transport->output_buffer, frame);
+  frame.frame_payload0 = (pn_bytes_t){.size=wr, .start=buf.start};
+  pn_buffer_ensure(transport->output_buffer, AMQP_HEADER_SIZE+frame.extended.size+frame.frame_payload0.size+frame.frame_payload1.size);
+  pn_write_frame(transport->output_buffer, frame, &transport->logger);
   transport->output_frames_ct += 1;
-  if (PN_SHOULD_LOG(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW)) {
-    pn_string_set(transport->scratch, "RAW: \"");
-    pn_buffer_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
-    pn_string_addf(transport->scratch, "\"");
-    pni_logger_log(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW, pn_string_get(transport->scratch));
-  }
 
   return 0;
 }
@@ -1032,34 +1001,18 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
       }
     }
 
-    if (pn_buffer_available( frame ) < (available + buf.size)) {
-      // not enough room for payload - try again...
-      pn_buffer_ensure( frame, available + buf.size );
-      goto encode_performatives;
-    }
-
-    pn_do_trace(transport, ch, OUT, transport->output_args, payload->start, available);
-
-    memmove( buf.start + buf.size, payload->start, available);
-    payload->start += available;
-    payload->size -= available;
-    buf.size += available;
-
     pn_frame_t frame = {AMQP_FRAME_TYPE};
     frame.channel = ch;
-    frame.payload = buf.start;
-    frame.size = buf.size;
+    frame.frame_payload0 = (pn_bytes_t){.size=buf.size, .start=buf.start};
+    frame.frame_payload1 = (pn_bytes_t){.size=available, .start=payload->start};
 
-    pn_buffer_ensure(transport->output_buffer, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
-    pn_write_frame(transport->output_buffer, frame);
+    payload->start += available;
+    payload->size -= available;
+
+    pn_buffer_ensure(transport->output_buffer, AMQP_HEADER_SIZE+frame.extended.size+frame.frame_payload0.size+frame.frame_payload1.size);
+    pn_write_frame(transport->output_buffer, frame, &transport->logger);
     transport->output_frames_ct += 1;
     framecount++;
-    if (PN_SHOULD_LOG(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW)) {
-      pn_string_set(transport->scratch, "RAW: \"");
-      pn_buffer_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
-      pn_string_addf(transport->scratch, "\"");
-      pni_logger_log(&transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW, pn_string_get(transport->scratch));
-    }
   } while (payload->size > 0 && framecount < frame_limit);
 
   return framecount;
