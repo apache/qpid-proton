@@ -23,6 +23,7 @@
 #include "logger_private.h"
 #include "memory.h"
 #include "util.h"
+#include "value_dump.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -195,6 +196,29 @@ void pni_logger_log_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_l
   } else {
     pn_logger_logf(logger, subsystem, severity, "%s: cannot log data: %s", msg, pn_code(n));
   }
+}
+
+void pni_logger_log_raw(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_buffer_t *output, size_t size)
+{
+  pn_string_set(logger->scratch, "\"");
+  pn_buffer_quote(output, logger->scratch, size);
+  pn_string_addf(logger->scratch, "\"");
+  pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
+}
+
+void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t frame, const char *fmt, ...) {
+  va_list ap;
+
+  va_start(ap, fmt);
+  pn_string_vformat(logger->scratch, fmt, ap);
+  va_end(ap);
+  size_t psize = pn_value_dump(frame, logger->scratch);
+  pn_bytes_t payload = {.size=frame.size-psize, .start=frame.start+psize};
+  if (payload.size>0) {
+    pn_string_addf(logger->scratch, " (%zu) ", payload.size);
+    pn_quote(logger->scratch, payload.start, payload.size);
+  }
+  pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
 }
 
 void pni_logger_log(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *message)
