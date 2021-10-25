@@ -197,6 +197,13 @@ class connection_options {
     /// If the connection to the primary connection url fails then try each of the fail-over
     /// connection urls in turn.
     ///
+    /// If this option is set then it will by default set the default reconnect timing options.
+    ///
+    /// If this option is changed using @ref connection::update_options before a reconnection
+    /// attempt (for example in the @ref messaging_handler::on_transport_error callback) then
+    /// the new values of the failover urls will be used for the reconnect attempt rather then
+    /// any previous value.
+    ///
     /// If both the failover_urls and reconnect_url options are set then the behavior is not defined.
     PN_CPP_EXTERN connection_options& failover_urls(const std::vector<std::string>&);
 
