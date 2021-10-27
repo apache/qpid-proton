@@ -280,7 +280,7 @@ mark_as_advanced (INCLUDE_INSTALL_DIR LIB_INSTALL_DIR SYSCONF_INSTALL_DIR SHARE_
 # if VALUE is already relative, it does nothing
 macro (pn_relative_install_dir NAME ROOT VALUE)
   if (IS_ABSOLUTE ${VALUE})
-    file(RELATIVE_PATH "${NAME}" "${CMAKE_INSTALL_PREFIX}" "${VALUE}")
+    file(RELATIVE_PATH "${NAME}" "${ROOT}" "${VALUE}")
   else ()
     set (${NAME} "${VALUE}")
   endif ()
