@@ -98,7 +98,7 @@ int pn_strcasecmp(const char *a, const char *b)
 int pn_strncasecmp(const char* a, const char* b, size_t len)
 {
   int diff = 0;
-  while (*b && len > 0) {
+  while (len > 0 && *b) {
     char aa = *a++, bb = *b++;
     diff = tolower(aa)-tolower(bb);
     if ( diff!=0 ) return diff;
