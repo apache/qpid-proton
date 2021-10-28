@@ -410,9 +410,10 @@ static void pn_transport_initialize(void *object)
   transport->tracer = NULL;
   transport->sasl = NULL;
   transport->ssl = NULL;
-
+#ifdef GENERATE_CODEC_CODE
   transport->args = pn_data(16);
   transport->output_args = pn_data(16);
+#endif
   transport->frame = pn_buffer(PN_TRANSPORT_INITIAL_FRAME_SIZE);
   transport->input_frames_ct = 0;
   transport->output_frames_ct = 0;
@@ -666,8 +667,10 @@ static void pn_transport_finalize(void *object)
   pn_free(transport->remote_channels);
   pni_mem_subdeallocate(pn_class(transport), transport, transport->input_buf);
   pni_mem_subdeallocate(pn_class(transport), transport, transport->output_buf);
+#ifdef GENERATE_CODEC_CODE
   pn_data_free(transport->args);
   pn_data_free(transport->output_args);
+#endif
   pn_buffer_free(transport->frame);
   pn_free(transport->context);
   pn_buffer_free(transport->output_buffer);

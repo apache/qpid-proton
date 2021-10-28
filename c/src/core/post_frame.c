@@ -29,6 +29,7 @@
 #include "framing.h"
 #include "dispatch_actions.h"
 
+#ifdef GENERATE_CODEC_CODE
 static inline struct out {int err; pn_bytes_t bytes;} pn_vfill_performative(pn_buffer_t *frame_buf, pn_data_t *output_args, const char *fmt, va_list ap)
 {
   pn_data_clear(output_args);
@@ -75,3 +76,4 @@ pn_bytes_t pn_fill_performative(pn_transport_t *transport, const char *fmt, ...)
   }
   return out.bytes;
 }
+#endif

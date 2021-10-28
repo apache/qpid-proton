@@ -159,6 +159,7 @@ int pn_framing_send_sasl(pn_transport_t *transport, pn_bytes_t performative)
   return 0;
 }
 
+#ifdef GENERATE_CODEC_CODE
 ssize_t pn_framing_recv_amqp(pn_data_t *args, pn_logger_t *logger, const pn_bytes_t bytes)
 {
   pn_data_clear(args);
@@ -170,3 +171,4 @@ ssize_t pn_framing_recv_amqp(pn_data_t *args, pn_logger_t *logger, const pn_byte
 
   return dsize;
 }
+#endif
