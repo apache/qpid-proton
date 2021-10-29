@@ -188,9 +188,10 @@ class tester : public proton::messaging_handler, public waiter {
         // Could be > 3, unpredictable number reconnects while listener comes up.
         ASSERT(2 < transport_error_count);
         // Last reconnect fails before opening links
-        ASSERT(link_open_count > 1);
+        ASSERT(1 < link_open_count);
         // One final transport close, not an error
         ASSERT_EQUAL(1, transport_close_count);
+
     }
 
   private:
@@ -206,6 +207,74 @@ int test_failover_simple() {
     return 0;
 }
 
+class empty_failover_tester : public proton::messaging_handler, public waiter {
+  public:
+     empty_failover_tester() : waiter(1), container_(*this, "reconnect_client"),
+               start_count(0), open_count(0),
+               link_open_count(0), transport_error_count(0), transport_close_count(0) {}
+
+    void on_container_start(proton::container &c) override {
+        // Server that fails upon connection
+        s1.reset(new server_connection_handler(c, 0, *this));
+    }
+
+    // waiter::ready is called when a listener is ready.
+    void ready() override {
+        std::vector<std::string> urls;
+        container_.connect(s1->url(), proton::connection_options().failover_urls(urls));
+    }
+
+    void on_connection_open(proton::connection& c) override {
+        if (!c.reconnected()) {
+            start_count++;
+            c.open_sender("messages");
+        }
+        ASSERT_EQUAL(bool(open_count), c.reconnected());
+        open_count++;
+    }
+
+    void on_sender_open(proton::sender &s) override {
+        link_open_count++;
+    }
+
+    void on_sendable(proton::sender& s) override {
+        s.send(proton::message("hello"));
+    }
+
+    void on_tracker_accept(proton::tracker& d) override {
+        d.connection().close();
+    }
+
+    void on_transport_error(proton::transport& t) override {
+        ASSERT_EQUAL(bool(transport_error_count), t.connection().reconnected());
+        transport_error_count++;
+    }
+
+    void on_transport_close(proton::transport& t) override {
+        transport_close_count++;
+    }
+
+    void run() {
+        ASSERT_THROWS_MSG(proton::error, "Failover testing", container_.run());
+
+        ASSERT_EQUAL(1, start_count);
+        ASSERT_EQUAL(1, open_count);
+        // Could be >=0, unpredictable number reconnects while listener comes up.
+        ASSERT(0 <= transport_error_count);
+        ASSERT(0 <= link_open_count);
+        ASSERT_EQUAL(0, transport_close_count);
+    }
+
+  private:
+    proton::internal::pn_unique_ptr<server_connection_handler> s1;
+    proton::container container_;
+    int start_count, open_count, link_open_count, transport_error_count, transport_close_count;
+};
+
+int test_empty_failover() {
+    empty_failover_tester().run();
+    return 0;
+}
 
 }
 
@@ -493,6 +562,7 @@ private:
 int main(int argc, char **argv) {
     int failed = 0;
     RUN_ARGV_TEST(failed, test_failover_simple());
+    RUN_ARGV_TEST(failed, test_empty_failover());
     RUN_ARGV_TEST(failed, test_stop_reconnect());
     RUN_ARGV_TEST(failed, test_auth_fail_reconnect());
     RUN_ARGV_TEST(failed, test_reconnecting_close().run());
