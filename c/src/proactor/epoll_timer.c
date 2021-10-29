@@ -73,36 +73,48 @@ static void timerfd_drain(int fd) {
 
 // Struct to manage the ordering of timers on the heap ordered list and manage the lifecycle if
 // the parent timer is self-deleting.
+// This needs a Proton class definition to provide a custom compare() function.  It otherwise
+// remains private to this file and opts out of the general object machinery.
+// This works because the pn_list class is already meant to work with non-Proton objects using a
+// different compare operator (pn_void_compare).
 typedef struct timer_deadline_t {
   uint64_t list_deadline;      // Heap ordering deadline.  Must not change while on list.
   pni_timer_t *timer;          // Parent timer.  NULL means orphaned and to be deleted.
   bool resequenced;            // An out-of-order connection timeout caught and handled.
 } timer_deadline_t;
 
-static void timer_deadline_initialize(void *object) {
-  timer_deadline_t *td = (timer_deadline_t *) object;
-  memset(td, 0 , sizeof(*td));
-}
+static const pn_class_t *timer_deadline_reify(void *p);
 
-static void timer_deadline_finalize(void *object) {
-  assert(((timer_deadline_t *) object)->list_deadline == 0);
-}
-
+// The pn_list_t calls this to maintain its sorted heap.
 static intptr_t timer_deadline_compare(void *oa, void *ob) {
   timer_deadline_t *a = (timer_deadline_t *) oa;
   timer_deadline_t *b = (timer_deadline_t *) ob;
   return a->list_deadline - b->list_deadline;
 }
 
-#define timer_deadline_inspect NULL
-#define timer_deadline_hashcode NULL
 #define CID_timer_deadline CID_pn_void
+#define timer_deadline_new NULL
+#define timer_deadline_initialize NULL
+#define timer_deadline_incref pn_void_incref
+#define timer_deadline_decref pn_void_decref
+#define timer_deadline_refcount pn_void_refcount
+#define timer_deadline_finalize NULL
+#define timer_deadline_free NULL
+#define timer_deadline_hashcode NULL
+#define timer_deadline_inspect NULL
 
-static timer_deadline_t* pni_timer_deadline(void) {
-  static const pn_class_t timer_deadline_clazz = PN_CLASS(timer_deadline);
-  return (timer_deadline_t *) pn_class_new(&timer_deadline_clazz, sizeof(timer_deadline_t));
+static const pn_class_t timer_deadline_clazz = PN_METACLASS(timer_deadline);
+static const pn_class_t *timer_deadline_reify(void *p) { return &timer_deadline_clazz; }
+
+static timer_deadline_t* timer_deadline_t_new(void) {
+  // Just the struct.  Not a Proton class based object.
+  return (timer_deadline_t *) calloc(1, sizeof(timer_deadline_t));
 }
 
+static void timer_deadline_t_free(timer_deadline_t* td) {
+  assert(td->list_deadline == 0);
+  free(td);
+}
 
 struct pni_timer_t {
   uint64_t deadline;
@@ -119,7 +131,7 @@ pni_timer_t *pni_timer(pni_timer_manager_t *tm, pconnection_t *c) {
   if (!timer) return NULL;
   if (c) {
     // Connections are tracked on the timer_heap.  Allocate the tracking struct.
-    td = pni_timer_deadline();
+    td = timer_deadline_t_new();
     if (!td) {
       free(timer);
       return NULL;
@@ -147,14 +159,14 @@ void pni_timer_free(pni_timer_t *timer) {
   lock(&tm->deletion_mutex);
   if (td) {
     if (td->list_deadline)
-      td->timer = NULL;  // Orphan.  timer_manager does eventual pn_free() in process().
+      td->timer = NULL;  // Orphan.  timer_manager does eventual timer_deadline_t_free() in process().
     else
       can_free_td = true;
   }
   unlock(&tm->deletion_mutex);
   unlock(&tm->task.mutex);
   if (can_free_td) {
-    pn_free(td);
+    timer_deadline_t_free(td);
   }
   free(timer);
 }
@@ -171,8 +183,8 @@ bool pni_timer_manager_init(pni_timer_manager_t *tm) {
   task_init(&tm->task, TIMER_MANAGER, p);
   pmutex_init(&tm->deletion_mutex);
 
-  // PN_VOID turns off ref counting for the elements in the list.
-  tm->timers_heap = pn_list(PN_VOID, 0);
+  // Heap sorted pn_list_t using timer_deadline_compare() to determine ordering.
+  tm->timers_heap = pn_list(&timer_deadline_clazz, 0);
   if (!tm->timers_heap)
     return false;
   tm->proactor_timer = pni_timer(tm, NULL);
@@ -200,7 +212,7 @@ void pni_timer_manager_finalize(pni_timer_manager_t *tm) {
     for (size_t idx = 0; idx < sz; idx++) {
       timer_deadline_t *td = (timer_deadline_t *) pn_list_get(tm->timers_heap, idx);
       td->list_deadline = 0;
-      pn_free(td);
+      timer_deadline_t_free(td);
     }
     pn_free(tm->timers_heap);
   }
@@ -322,7 +334,7 @@ pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeou
     //   timer freed -> free the associated timer_deadline popped off the list
     if (!td->timer) {
       unlock(&tm->task.mutex);
-      pn_free(td);
+      timer_deadline_t_free(td);
       lock(&tm->task.mutex);
     } else {
       uint64_t deadline = td->timer->deadline;
@@ -370,7 +382,7 @@ static timer_deadline_t *replace_timer_deadline(pni_timer_manager_t *tm, pni_tim
 
   unlock(&tm->task.mutex);
   // Create replacement timer for life of connection.
-  timer_deadline_t *new_td = pni_timer_deadline();
+  timer_deadline_t *new_td = timer_deadline_t_new();
   if (!new_td)
     EPOLL_FATAL("replacement timer deadline allocation", errno);
   lock(&tm->task.mutex);
