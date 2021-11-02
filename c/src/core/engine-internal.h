@@ -165,10 +165,6 @@ struct pn_transport_t {
 
 
   /* scratch area */
-#ifdef GENERATE_CODEC_CODE
-  pn_data_t *args;
-  pn_data_t *output_args;
-#endif
   pn_buffer_t *frame;  // frame under construction
 
   // Temporary - ??

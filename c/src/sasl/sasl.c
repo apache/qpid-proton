@@ -22,13 +22,11 @@
 #include "sasl-internal.h"
 
 #include "core/autodetect.h"
-#include "core/framing.h"
-#ifndef GENERATE_CODEC_CODE
 #include "core/consumers.h"
+#include "core/engine-internal.h"
+#include "core/framing.h"
 #include "core/frame_generators.h"
 #include "core/frame_consumers.h"
-#endif
-#include "core/engine-internal.h"
 #include "core/util.h"
 #include "platform/platform_fmt.h"
 #include "protocol.h"
@@ -490,12 +488,8 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
   while (sasl->desired_state > sasl->last_state) {
     switch (desired_state) {
     case SASL_POSTED_INIT: {
-#ifdef GENERATE_CODEC_CODE
-      pn_bytes_t buf = pn_fill_performative(transport, "DL[szS]", SASL_INIT, sasl->selected_mechanism, out.size, out.start, sasl->local_fqdn);
-#else
       /* GENERATE_CODEC_CODE: "DL[szS]" */
       pn_bytes_t buf = pn_amqp_encode_DLEszSe(transport->frame, SASL_INIT, sasl->selected_mechanism, out.size, out.start, sasl->local_fqdn);
-#endif
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       break;
@@ -509,12 +503,8 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       if (mechlist) {
         pni_split_mechs(mechlist, sasl->included_mechanisms, mechs, &count);
       }
-#ifdef GENERATE_CODEC_CODE
-      pn_bytes_t buf = pn_fill_performative(transport, "DL[@T[*s]]", SASL_MECHANISMS, PN_SYMBOL, count, mechs);
-#else
       /* GENERATE_CODEC_CODE: "DL[@T[*s]]" */
       pn_bytes_t buf = pn_amqp_encode_DLEATEjsee(transport->frame, SASL_MECHANISMS, PN_SYMBOL, count, mechs);
-#endif
       free(mechlist);
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
@@ -522,12 +512,8 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     }
     case SASL_POSTED_RESPONSE:
       if (sasl->last_state != SASL_POSTED_RESPONSE) {
-#ifdef GENERATE_CODEC_CODE
-        pn_bytes_t buf = pn_fill_performative(transport, "DL[Z]", SASL_RESPONSE, out.size, out.start);
-#else
         /* "DL[Z]" */
         pn_bytes_t buf = pn_amqp_encode_DLEZe(transport->frame, SASL_RESPONSE, out.size, out.start);
-#endif
         pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
@@ -537,12 +523,8 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         desired_state = SASL_POSTED_MECHANISMS;
         continue;
       } else if (sasl->last_state != SASL_POSTED_CHALLENGE) {
-#ifdef GENERATE_CODEC_CODE
-        pn_bytes_t buf = pn_fill_performative(transport, "DL[Z]", SASL_CHALLENGE, out.size, out.start);
-#else
         /* "DL[Z]" */
         pn_bytes_t buf = pn_amqp_encode_DLEZe(transport->frame, SASL_CHALLENGE, out.size, out.start);
-#endif
         pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
@@ -552,12 +534,8 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         desired_state = SASL_POSTED_MECHANISMS;
         continue;
       }
-#ifdef GENERATE_CODEC_CODE
-      pn_bytes_t buf = pn_fill_performative(transport, "DL[Bz]", SASL_OUTCOME, sasl->outcome, out.size, out.start);
-#else
       /* "DL[Bz]" */
       pn_bytes_t buf = pn_amqp_encode_DLEBze(transport->frame, SASL_OUTCOME, sasl->outcome, out.size, out.start);
-#endif
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       if (sasl->outcome!=PN_SASL_OK) {
@@ -924,16 +902,7 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   pn_bytes_t mech;
   pn_bytes_t recv;
 
-#ifdef GENERATE_CODEC_CODE
-  pn_data_t *args = transport->args;
-  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
-  if (dsize < 0) return dsize;
-
-  int err = pn_data_scan(args, "D.[sz]", &mech, &recv);
-  if (err) return err;
-#else
   pn_amqp_decode_DqEsze(payload, &mech, &recv);
-#endif
   sasl->selected_mechanism = pn_strndup(mech.start, mech.size);
 
   // We need to filter out a supplied mech in in the inclusion list
@@ -964,43 +933,6 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
 
   pn_string_t *mechs = pn_string("");
 
-#ifdef GENERATE_CODEC_CODE
-  // Try array of symbols for mechanism list
-  bool array = false;
-
-  pn_data_t *args = transport->args;
-  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
-  if (dsize < 0) return dsize;
-
-  // This scanning relies on pn_data_scan leaving the pn_data_t cursors
-  // where they are after finishing the scan
-  int err = pn_data_scan(args, "D.[?@[", &array);
-  if (err) return err;
-
-  if (array) {
-    // Now keep checking for end of array and pull a symbol
-    while(pn_data_next(args)) {
-      pn_bytes_t s = pn_data_get_symbol(args);
-      if (pni_sasl_client_included_mech(sasl->included_mechanisms, s)) {
-        pn_string_addf(mechs, "%.*s ", (int)s.size, s.start);
-      }
-    }
-
-    if (pn_string_size(mechs)) {
-        pn_string_buffer(mechs)[pn_string_size(mechs)-1] = 0;
-    }
-  } else {
-    // No array of symbols; try single symbol
-    pn_data_rewind(args);
-    pn_bytes_t symbol;
-    int err = pn_data_scan(args, "D.[s]", &symbol);
-    if (err) return err;
-
-    if (pni_sasl_client_included_mech(sasl->included_mechanisms, symbol)) {
-      pn_string_setn(mechs, symbol.start, symbol.size);
-    }
-  }
-#else
   pn_bytes_t subpayload;
   pn_amqp_decode_DqERe(payload, &subpayload);
   pni_consumer_t consumer = make_consumer_from_bytes(subpayload);
@@ -1043,7 +975,6 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
       pn_string_setn(mechs, symbol.start, symbol.size);
     }
   }
-#endif
 
   if (!(pni_sasl_impl_init_client(transport) &&
         pn_string_size(mechs) &&
@@ -1070,15 +1001,7 @@ int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t chan
 
   pn_bytes_t recv;
 
-#ifdef GENERATE_CODEC_CODE
-  pn_data_t *args = transport->args;
-  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
-  if (dsize < 0) return dsize;
-  int err = pn_data_scan(args, "D.[z]", &recv);
-  if (err) return err;
-#else
   pn_amqp_decode_DqEze(payload, &recv);
-#endif
 
   pni_sasl_impl_process_challenge(transport, &recv);
 
@@ -1099,15 +1022,7 @@ int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 
   pn_bytes_t recv;
 
-#ifdef GENERATE_CODEC_CODE
-  pn_data_t *args = transport->args;
-  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
-  if (dsize < 0) return dsize;
-  int err = pn_data_scan(args, "D.[z]", &recv);
-  if (err) return err;
-#else
   pn_amqp_decode_DqEze(payload, &recv);
-#endif
 
   pni_sasl_impl_process_response(transport, &recv);
 
@@ -1129,15 +1044,8 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
   uint8_t outcome;
   pn_bytes_t recv;
 
-#ifdef GENERATE_CODEC_CODE
-  pn_data_t *args = transport->args;
-  ssize_t dsize = pn_framing_recv_amqp(args, &transport->logger, payload);
-  if (dsize < 0) return dsize;
-  int err = pn_data_scan(args, "D.[Bz]", &outcome, &recv);
-  if (err) return err;
-#else
   pn_amqp_decode_DqEBze(payload, &outcome, &recv);
-#endif
+
   // Preset the outcome to what the server sent us - the plugin can alter this.
   // In practise the plugin processing here should only fail because it fails
   // to authenticate the server id after the server authenticates our user.

@@ -114,11 +114,6 @@ add_custom_target(
     ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.h
   )
 
-option (ENABLE_GENERATED_CODEC "Use automatically generated codec code" ON)
-if (NOT ENABLE_GENERATED_CODEC)
-  add_compile_definitions(GENERATE_CODEC_CODE)
-endif ()
-
 file (GLOB_RECURSE source_files "src/*.h" "src/*.c" "src/*.cpp")
 
 foreach (sfile ${source_files})
@@ -266,7 +261,6 @@ set (qpid-proton-core
   src/core/types.c
 
   src/core/framing.c
-  src/core/post_frame.c
   src/core/value_dump.c
 
   src/core/codec.c
