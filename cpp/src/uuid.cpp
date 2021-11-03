@@ -22,10 +22,15 @@
 #include "proton/uuid.hpp"
 #include "proton/types_fwd.hpp"
 
+#include <algorithm>
+#include <chrono>
+#include <climits>
 #include <cstdlib>
 #include <ctime>
-#include <sstream>
+#include <functional>
 #include <iomanip>
+#include <random>
+#include <sstream>
 
 #if defined(_WIN32)
 #include <process.h>
@@ -39,19 +44,27 @@ namespace proton {
 
 namespace {
 
-
-// Seed the random number generated once at startup.
 struct seed {
-    seed() {
-        // A hash of time and PID, time alone is a bad seed as programs started
-        // within the same second will get the same seed.
-        unsigned long secs = time(0);
-        unsigned long pid = GETPID();
-        std::srand(((secs*181)*((pid-83)*359))%104729);
-    }
-} seed_;
 
-}
+    std::independent_bits_engine<std::mt19937, CHAR_BIT, unsigned int> engine;
+
+    seed() {
+        // A hash of time, PID and random_device to produce an unsigned integer
+        // for seeding the engine.
+        unsigned long ticks =
+            std::chrono::system_clock::now().time_since_epoch().count();
+        unsigned long pid = GETPID();
+        unsigned int rd = std::random_device{}();
+
+        std::seed_seq seq{ticks, pid, (unsigned long)rd};
+        engine =
+            std::independent_bits_engine<std::mt19937, CHAR_BIT, unsigned int>(
+                seq);
+    }
+
+} thread_local seed_;
+
+} // namespace
 
 uuid uuid::copy() {
     uuid u;
@@ -70,12 +83,7 @@ uuid uuid::copy(const char* bytes) {
 
 uuid uuid::random() {
     uuid bytes;
-    int r = std::rand();
-    for (size_t i = 0; i < bytes.size(); ++i ) {
-        bytes[i] = r & 0xFF;
-        r >>= 8;
-        if (!r) r = std::rand();
-    }
+    std::generate(bytes.begin(), bytes.end(), std::ref(seed_.engine));
 
     // From RFC4122, the version bits are set to 0100
     bytes[6] = (bytes[6] & 0x0F) | 0x40;
