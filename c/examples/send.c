@@ -61,7 +61,7 @@ static void send_message(app_data_t* app, pn_link_t *sender) {
   pn_data_t* body;
   pn_message_clear(app->message);
   body = pn_message_body(app->message);
-  pn_message_set_id(app->message, (pn_atom_t){.type=PN_ULONG, .u.as_uint=app->sent});
+  pn_message_set_id(app->message, (pn_atom_t){.type=PN_ULONG, .u.as_ulong=app->sent});
   pn_data_put_map(body);
   pn_data_enter(body);
   pn_data_put_string(body, pn_bytes(sizeof("sequence")-1, "sequence"));
