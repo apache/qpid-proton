@@ -176,9 +176,11 @@ int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
   size_t tail_space = pni_buffer_tail_space(buf);
   size_t n = pn_min(tail_space, size);
 
-  memcpy(buf->bytes + tail, bytes, n);
-  memcpy(buf->bytes, bytes + n, size - n);
-
+  // Heuristic check for a strange usage in messenger
+  if (bytes!=buf->bytes+tail) {
+    memcpy(buf->bytes + tail, bytes, n);
+    memcpy(buf->bytes, bytes + n, size - n);
+  }
   buf->size += size;
 
   return 0;
