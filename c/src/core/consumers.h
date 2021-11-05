@@ -543,7 +543,8 @@ static inline bool consume_descriptor(pni_consumer_t* consumer, pni_consumer_t *
       size_t sposition = consumer->position;
       uint8_t type;
       consume_single_value_not_described(consumer, &type);
-      *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+sposition, .position=0, .size=consumer->position-sposition};
+      size_t scsize = consumer->position > sposition ? consumer->position-sposition : 0;
+      *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+sposition, .position=0, .size=scsize};
       return lq;
     }
     default:
@@ -561,15 +562,17 @@ static inline bool consume_list(pni_consumer_t* consumer, pni_consumer_t *subcon
     case PNE_LIST32: {
       uint32_t s;
       if (!pni_consumer_readf32(consumer, &s)) return false;
-      *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+consumer->position, .position=0, .size=s};
-      consumer->position += s;
+      size_t scsize = s < consumer->size-consumer->position ? s : consumer->size-consumer->position;
+      *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+consumer->position, .position=0, .size=scsize};
+      consumer->position += scsize;
       return pni_consumer_readf32(subconsumer, count);
     }
     case PNE_LIST8: {
       uint8_t s;
       if (!pni_consumer_readf8(consumer, &s)) return false;
-      *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+consumer->position, .position=0, .size=s};
-      consumer->position += s;
+      size_t scsize = s < consumer->size-consumer->position ? s : consumer->size-consumer->position;
+      *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+consumer->position, .position=0, .size=scsize};
+      consumer->position += scsize;
       uint8_t c;
       if (!pni_consumer_readf8(subconsumer, &c)) return false;
       *count = c;
@@ -598,16 +601,18 @@ static inline bool consume_array(pni_consumer_t* consumer, pni_consumer_t *subco
     case PNE_ARRAY32: {
       uint32_t s;
       if (!pni_consumer_readf32(consumer, &s)) return false;
-      *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+consumer->position, .position=0, .size=s};
-      consumer->position += s;
+      size_t scsize = s < consumer->size-consumer->position ? s : consumer->size-consumer->position;
+      *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+consumer->position, .position=0, .size=scsize};
+      consumer->position += scsize;
       if (!pni_consumer_readf32(subconsumer, count)) return false;
       return pni_consumer_readf8(subconsumer, element_type);
     }
     case PNE_ARRAY8: {
       uint8_t s;
       if (!pni_consumer_readf8(consumer, &s)) return false;
-      *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+consumer->position, .position=0, .size=s};
-      consumer->position += s;
+      size_t scsize = s < consumer->size-consumer->position ? s : consumer->size-consumer->position;
+      *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+consumer->position, .position=0, .size=scsize};
+      consumer->position += scsize;
       uint8_t c;
       if (!pni_consumer_readf8(subconsumer, &c)) return false;
       *count = c;
