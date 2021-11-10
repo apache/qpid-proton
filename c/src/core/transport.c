@@ -2922,25 +2922,7 @@ ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
   if (transport->tail_closed) return PN_EOS;
   //if (pn_error_code(transport->error)) return pn_error_code(transport->error);
 
-  ssize_t capacity = transport->input_size - transport->input_pending;
-  if ( capacity<=0 ) {
-    // can we expand the size of the input buffer?
-    int more = 0;
-    if (!transport->local_max_frame) {  // no limit (ha!)
-      more = transport->input_size;
-    } else if (transport->local_max_frame > transport->input_size) {
-      more = pn_min(transport->input_size, transport->local_max_frame - transport->input_size);
-    }
-    if (more) {
-      char *newbuf = (char *) pni_mem_subreallocate(pn_class(transport), transport, transport->input_buf, transport->input_size + more );
-      if (newbuf) {
-        transport->input_buf = newbuf;
-        transport->input_size += more;
-        capacity += more;
-      }
-    }
-  }
-  return capacity;
+  return transport->input_size - transport->input_pending;
 }
 
 
@@ -2975,10 +2957,41 @@ ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t siz
   }
 }
 
+static void pni_grow_input_buffer(pn_transport_t* transport) {
+  assert(transport);
+
+  // can we expand the size of the input buffer?
+  int more = 0;
+
+  if (!transport->local_max_frame) {  // no limit (ha!)
+    more = transport->input_size;
+  } else if (transport->local_max_frame > transport->input_size) {
+    more = pn_min(transport->input_size, transport->local_max_frame - transport->input_size);
+  }
+
+  if (more) {
+    char *newbuf = (char *) pni_mem_subreallocate(pn_class(transport), transport, transport->input_buf, transport->input_size + more);
+
+    if (newbuf) {
+      transport->input_buf = newbuf;
+      transport->input_size += more;
+    }
+  }
+}
+
 int pn_transport_process(pn_transport_t *transport, size_t size)
 {
   assert(transport);
-  size = pn_min( size, (transport->input_size - transport->input_pending) );
+
+  size_t capacity = transport->input_size - transport->input_pending;
+
+  assert(size <= capacity);
+
+  if (size == capacity) {
+    pni_grow_input_buffer(transport);
+  }
+
+  size = pn_min(size, capacity);
   transport->input_pending += size;
   transport->bytes_input += size;
 
