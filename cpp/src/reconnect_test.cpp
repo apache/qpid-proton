@@ -32,12 +32,11 @@
 #include "proton/transport.hpp"
 #include "proton/work_queue.hpp"
 
-#include "proton/internal/pn_unique_ptr.hpp"
-
 #include <cstdlib>
 #include <ctime>
 #include <string>
 #include <cstdio>
+#include <memory>
 #include <sstream>
 
 namespace {
@@ -74,11 +73,11 @@ class server_connection_handler : public proton::messaging_handler {
         proton::connection_options on_accept(proton::listener&) override { return opts; }
     };
 
-    proton::listener listener_;
-    int messages_;
-    int expect_;
-    bool closing_;
     listen_handler listen_handler_;
+    proton::listener listener_;
+    int messages_ = 0;
+    int expect_;
+    bool closing_ = false;
 
     void close (proton::connection &c) {
         if (closing_) return;
@@ -89,7 +88,7 @@ class server_connection_handler : public proton::messaging_handler {
 
   public:
     server_connection_handler(proton::container& c, int e, waiter& w)
-        : messages_(0), expect_(e), closing_(false), listen_handler_(*this, w)
+        : listen_handler_(*this, w), expect_(e)
     {
         listener_ = c.listen("//:0", listen_handler_);
     }
@@ -128,11 +127,53 @@ class server_connection_handler : public proton::messaging_handler {
     }
 };
 
-class tester : public proton::messaging_handler, public waiter {
+class tester_base: public proton::messaging_handler {
+  void on_connection_open(proton::connection& c) override {
+    if (!c.reconnected()) {
+      start_count++;
+      c.open_sender("messages");
+    }
+    ASSERT_EQUAL(bool(open_count), c.reconnected());
+    open_count++;
+  }
+
+  void on_connection_error(proton::connection& c) override {
+    connection_error_count++;
+  }
+
+  void on_sender_open(proton::sender &s) override {
+    link_open_count++;
+  }
+
+  void on_sendable(proton::sender& s) override {
+    s.send(proton::message("hello"));
+  }
+
+  void on_tracker_accept(proton::tracker& d) override {
+    d.connection().close();
+  }
+
+  void on_transport_error(proton::transport& t) override {
+    ASSERT_EQUAL(bool(transport_error_count), t.connection().reconnected());
+    transport_error_count++;
+  }
+
+  void on_transport_close(proton::transport& t) override {
+    transport_close_count++;
+  }
+
+protected:
+  int start_count = 0;
+  int open_count = 0;
+  int link_open_count = 0;
+  int transport_error_count = 0;
+  int transport_close_count = 0;
+  int connection_error_count = 0;
+};
+
+class tester : public tester_base, public waiter {
   public:
-    tester() : waiter(3), container_(*this, "reconnect_client"),
-               start_count(0), open_count(0),
-               link_open_count(0), transport_error_count(0), transport_close_count(0) {}
+    tester() : waiter(3), container_(*this, "reconnect_client") {}
 
     void on_container_start(proton::container &c) override {
         // Server that fails upon connection
@@ -145,40 +186,7 @@ class tester : public proton::messaging_handler, public waiter {
 
     // waiter::ready is called when all 3 listeners are ready.
     void ready() override {
-        std::vector<std::string> urls;
-        urls.push_back(s2->url());
-        urls.push_back(s3->url());
-        container_.connect(s1->url(), proton::connection_options().failover_urls(urls));
-    }
-
-    void on_connection_open(proton::connection& c) override {
-        if (!c.reconnected()) {
-            start_count++;
-            c.open_sender("messages");
-        }
-        ASSERT_EQUAL(bool(open_count), c.reconnected());
-        open_count++;
-    }
-
-    void on_sender_open(proton::sender &s) override {
-        link_open_count++;
-    }
-
-    void on_sendable(proton::sender& s) override {
-        s.send(proton::message("hello"));
-    }
-
-    void on_tracker_accept(proton::tracker& d) override {
-        d.connection().close();
-    }
-
-    void on_transport_error(proton::transport& t) override {
-        ASSERT_EQUAL(bool(transport_error_count), t.connection().reconnected());
-        transport_error_count++;
-    }
-
-    void on_transport_close(proton::transport& t) override {
-        transport_close_count++;
+        container_.connect(s1->url(), proton::connection_options().failover_urls({s2->url(), s3->url()}));
     }
 
     void run() {
@@ -191,15 +199,14 @@ class tester : public proton::messaging_handler, public waiter {
         ASSERT(1 < link_open_count);
         // One final transport close, not an error
         ASSERT_EQUAL(1, transport_close_count);
-
+        ASSERT_EQUAL(0, connection_error_count);
     }
 
   private:
-    proton::internal::pn_unique_ptr<server_connection_handler> s1;
-    proton::internal::pn_unique_ptr<server_connection_handler> s2;
-    proton::internal::pn_unique_ptr<server_connection_handler> s3;
+    std::unique_ptr<server_connection_handler> s1;
+    std::unique_ptr<server_connection_handler> s2;
+    std::unique_ptr<server_connection_handler> s3;
     proton::container container_;
-    int start_count, open_count, link_open_count, transport_error_count, transport_close_count;
 };
 
 int test_failover_simple() {
@@ -207,12 +214,9 @@ int test_failover_simple() {
     return 0;
 }
 
-class empty_failover_tester : public proton::messaging_handler, public waiter {
+class empty_failover_tester : public tester_base, public waiter {
   public:
-     empty_failover_tester() : waiter(1), container_(*this, "reconnect_client"),
-               start_count(0), open_count(0),
-               link_open_count(0), transport_error_count(0), transport_close_count(0),
-               connection_error_count(0) {}
+     empty_failover_tester() : waiter(1), container_(*this, "reconnect_client") {}
 
     void on_container_start(proton::container &c) override {
         // Server that fails upon connection
@@ -221,42 +225,7 @@ class empty_failover_tester : public proton::messaging_handler, public waiter {
 
     // waiter::ready is called when a listener is ready.
     void ready() override {
-        std::vector<std::string> urls;
-        container_.connect(s1->url(), proton::connection_options().failover_urls(urls));
-    }
-
-    void on_connection_open(proton::connection& c) override {
-        if (!c.reconnected()) {
-            start_count++;
-            c.open_sender("messages");
-        }
-        ASSERT_EQUAL(bool(open_count), c.reconnected());
-        open_count++;
-    }
-
-    void on_connection_error (proton::connection& c) override {
-        connection_error_count++;
-    }
-
-    void on_sender_open(proton::sender &s) override {
-        link_open_count++;
-    }
-
-    void on_sendable(proton::sender& s) override {
-        s.send(proton::message("hello"));
-    }
-
-    void on_tracker_accept(proton::tracker& d) override {
-        d.connection().close();
-    }
-
-    void on_transport_error(proton::transport& t) override {
-        ASSERT_EQUAL(bool(transport_error_count), t.connection().reconnected());
-        transport_error_count++;
-    }
-
-    void on_transport_close(proton::transport& t) override {
-        transport_close_count++;
+        container_.connect(s1->url(), proton::connection_options().failover_urls({}));
     }
 
     void run() {
@@ -271,9 +240,8 @@ class empty_failover_tester : public proton::messaging_handler, public waiter {
     }
 
   private:
-    proton::internal::pn_unique_ptr<server_connection_handler> s1;
+    std::unique_ptr<server_connection_handler> s1;
     proton::container container_;
-    int start_count, open_count, link_open_count, transport_error_count, transport_close_count, connection_error_count;
 };
 
 int test_empty_failover() {
@@ -316,7 +284,7 @@ int test_stop_reconnect() {
 class authfail_reconnect_tester : public proton::messaging_handler, public waiter {
   public:
     authfail_reconnect_tester() :
-        waiter(1), container_(*this, "authfail_reconnect_tester"), errored_(false)
+        waiter(1), container_(*this, "authfail_reconnect_tester")
     {}
 
     void deferred_stop() {
@@ -347,15 +315,14 @@ class authfail_reconnect_tester : public proton::messaging_handler, public waite
 
   private:
     proton::container container_;
-    proton::internal::pn_unique_ptr<server_connection_handler> s1;
-    bool errored_;
+    std::unique_ptr<server_connection_handler> s1;
+    bool errored_ = false;
 };
 
 // Verify we can stop reconnecting by calling close() in on_transport_error()
 class test_reconnecting_close : public proton::messaging_handler, public waiter {
   public:
-    test_reconnecting_close() : waiter(1), container_(*this, "test_reconnecting_close"),
-                                transport_error_called(false) {}
+    test_reconnecting_close() : waiter(1), container_(*this, "test_reconnecting_close") {}
 
     void on_container_start(proton::container &c) override {
         s1.reset(new server_connection_handler(c, 0, *this));
@@ -381,8 +348,8 @@ class test_reconnecting_close : public proton::messaging_handler, public waiter 
   private:
     proton::container container_;
     std::string err_;
-    bool transport_error_called;
-    proton::internal::pn_unique_ptr<server_connection_handler> s1;
+    bool transport_error_called = false;
+    std::unique_ptr<server_connection_handler> s1;
 };
 
 int test_auth_fail_reconnect() {
@@ -393,7 +360,7 @@ int test_auth_fail_reconnect() {
 class test_reconnect_url : public proton::messaging_handler {
 public:
     test_reconnect_url()
-            : errors_(0), container_(*this, "test_reconnect_update") {}
+            : container_(*this, "test_reconnect_update") {}
 
     proton::reconnect_options ropts() {
         // Fast as we can to avoid needless test slowness.
@@ -440,7 +407,7 @@ public:
     void run() { container_.run(); }
 
 private:
-    int errors_;
+    int errors_ = 0;
     proton::container container_;
 };
 
@@ -448,7 +415,7 @@ private:
 class test_reconnect_update_failover : public proton::messaging_handler {
 public:
     test_reconnect_update_failover()
-            : errors_(0), container_(*this, "test_reconnect_update") {}
+            : container_(*this, "test_reconnect_update") {}
 
     proton::reconnect_options ropts() {
         // Fast as we can to avoid needless test slowness.
@@ -498,14 +465,14 @@ public:
     void run() { container_.run(); }
 
 private:
-    int errors_;
+    int errors_ = 0;
     proton::container container_;
 };
 
 class test_reconnect_update_simple : public proton::messaging_handler {
 public:
     test_reconnect_update_simple()
-            : errors_(0), container_(*this, "test_reconnect_update") {}
+            : container_(*this, "test_reconnect_update") {}
 
     proton::reconnect_options ropts() {
         // Fast as we can to avoid needless test slowness.
@@ -560,7 +527,7 @@ public:
     void run() { container_.run(); }
 
 private:
-    int errors_;
+    int errors_ = 0;
     proton::container container_;
 };
 
