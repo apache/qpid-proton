@@ -19,8 +19,8 @@
 
 prefix=${pcfiledir}/../..
 exec_prefix=${prefix}
-libdir=${prefix}/@INCLUDEDIR@
-includedir=${prefix}/@LIBDIR@
+libdir=${prefix}/@LIBDIR@
+includedir=${prefix}/@INCLUDEDIR@
 
 Name: Proton
 Description: Qpid Proton C library
