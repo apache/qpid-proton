@@ -24,7 +24,7 @@
 
 typedef struct pn_encoder_t {
   char *output;
-  char *position;
+  size_t position;
   pn_error_t *error;
   size_t size;
   unsigned null_count;

@@ -32,7 +32,7 @@ typedef uint16_t pni_nid_t;
 #define PNI_INTERN_MINSIZE 64
 
 typedef struct {
-  char *start;
+  size_t start;
   size_t data_offset;
   size_t data_size;
   pn_atom_t atom;

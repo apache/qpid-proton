@@ -534,7 +534,7 @@ static inline bool consume_atom(pni_consumer_t* consumer, pn_atom_t *atom) {
 // if we get a symbol we should map it to the numeric value and dispatch on that
 static inline bool consume_descriptor(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint64_t *descriptor) {
   *descriptor = 0;
-  *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+consumer->position, .position=0, .size=0};
+  *subconsumer = (pni_consumer_t){.output_start=NULL, .position=0, .size=0};
   uint8_t type;
   if (!pni_consumer_readf8(consumer, &type)) return false;
   switch (type) {
@@ -554,7 +554,7 @@ static inline bool consume_descriptor(pni_consumer_t* consumer, pni_consumer_t *
 }
 
 static inline bool consume_list(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint32_t *count) {
-  *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+consumer->position, .position=0, .size=0};
+  *subconsumer = (pni_consumer_t){.output_start=NULL, .position=0, .size=0};
   *count = 0;
   uint8_t type;
   if (!pni_consumer_readf8(consumer, &type)) return false;
@@ -592,7 +592,7 @@ static inline bool consume_end_list(pni_consumer_t *consumer) {
 }
 
 static inline bool consume_array(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint32_t *count, uint8_t *element_type) {
-  *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+consumer->position, .position=0, .size=0};
+  *subconsumer = (pni_consumer_t){.output_start=NULL, .position=0, .size=0};
   *count = 0;
   *element_type = 0;
   uint8_t type;
