@@ -1451,7 +1451,7 @@ void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *
   }
   /* We need to issue INACTIVE on immediate failure */
   unlock(&pc->task.mutex);
-  if (notify) notify_poller(pc->task.proactor);
+  if (notify) notify_poller(p);
 }
 
 static void pconnection_tick(pconnection_t *pc) {
