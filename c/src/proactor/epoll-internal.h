@@ -348,7 +348,7 @@ int pclosefd(pn_proactor_t *p, int fd);
 void proactor_add(task_t *tsk);
 bool proactor_remove(task_t *tsk);
 
-bool unassign_thread(tslot_t *ts, tslot_state new_state);
+bool unassign_thread(pn_proactor_t *p, tslot_t *ts, tslot_state new_state, tslot_t **resume_thread);
 
 void task_init(task_t *tsk, task_type_t t, pn_proactor_t *p);
 static void task_finalize(task_t* tsk) {
@@ -385,6 +385,7 @@ void pni_timer_manager_finalize(pni_timer_manager_t *tm);
 pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool sched_ready);
 void pni_pconnection_timeout(pconnection_t *pc);
 void pni_proactor_timeout(pn_proactor_t *p);
+void pni_resume(pn_proactor_t *p, tslot_t *ts);
 
 // Generic wake primitives for a task.
 

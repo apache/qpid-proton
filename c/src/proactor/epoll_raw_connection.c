@@ -421,7 +421,9 @@ void pni_raw_connection_done(praw_connection_t *rc) {
   }
 
   lock(&p->sched_mutex);
-  notify |= unassign_thread(ts, UNUSED);
+  tslot_t *resume_thread;
+  notify |= unassign_thread(p, ts, UNUSED, &resume_thread);
   unlock(&p->sched_mutex);
   if (notify) notify_poller(p);
+  if (resume_thread) pni_resume(p, resume_thread);
 }
