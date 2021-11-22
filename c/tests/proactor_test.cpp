@@ -538,9 +538,18 @@ TEST_CASE("proactor_ssl") {
   REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
   CHECK_THAT(*client.last_condition,
              cond_matches("amqp:connection:framing-error", "SSL"));
-  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
-  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
-  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  int errs = 1;
+  int closes = 0;
+  while (errs < 2 && closes < 2) {
+    pn_event_type_t et = p.run(PN_TRANSPORT_CLOSED);
+    switch(et) {
+    case PN_TRANSPORT_ERROR: errs++; break;
+    case PN_TRANSPORT_CLOSED: closes++; break;
+    default:
+      FAIL( "bad stop event " << pn_event_type_name(et)) ;
+      break;
+    }
+  }
 
   /* Deliberate use of Anonymous */
   pn_ssl_domain_t *cd = client.ssl_domain;
@@ -576,9 +585,18 @@ TEST_CASE("proactor_ssl") {
   REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
   CHECK_THAT(*client.last_condition,
              cond_matches("amqp:connection:framing-error", "SSL"));
-  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
-  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
-  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  errs = 1;
+  closes = 0;
+  while (errs < 2 && closes < 2) {
+    pn_event_type_t et = p.run(PN_TRANSPORT_CLOSED);
+    switch(et) {
+    case PN_TRANSPORT_ERROR: errs++; break;
+    case PN_TRANSPORT_CLOSED: closes++; break;
+    default:
+      FAIL( "bad stop event " << pn_event_type_name(et)) ;
+      break;
+    }
+  }
 
   /* Can ignore bad hostname */
   REQUIRE(0 == pn_ssl_domain_set_peer_authentication(

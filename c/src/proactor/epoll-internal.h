@@ -88,8 +88,9 @@ typedef struct task_t {
   bool working;
   bool ready;                // ready to run and on ready list.  Poller notified by eventfd.
   bool waking;
-  bool on_ready_list;        // todo: protected by eventfd_mutex or sched mutex?  needed?
+  unsigned int ready_generation;
   struct task_t *ready_next; // ready list, guarded by proactor eventfd_mutex
+  struct task_t *resched_next; // resched list, guarded by sched mutex
   bool closing;
   // Next 4 are protected by the proactor mutex
   struct task_t* next;  /* Protected by proactor.mutex */
@@ -164,6 +165,8 @@ struct pn_proactor_t {
   bool ready_list_active;
   task_t *ready_list_first;
   task_t *ready_list_last;
+  unsigned int ready_list_count;
+  unsigned int ready_list_generation; // protected by both eventfd_mutex and a single p->poller instance
   // Interrupts have a dedicated eventfd because they must be async-signal safe.
   int interruptfd;
   // If the process runs out of file descriptors, disarm listening sockets temporarily and save them here.
@@ -188,7 +191,14 @@ struct pn_proactor_t {
   tslot_t *last_earmark;
   task_t *sched_ready_first;
   task_t *sched_ready_last;
-  task_t *sched_ready_current;
+  task_t *sched_ready_current; // TODO: remove or use for sceduling priority or fairness
+  unsigned int sched_ready_count;
+  task_t *resched_first;
+  task_t *resched_last;
+  task_t *resched_cutoff; // last resched task of current poller work snapshot.  TODO: superseded by polled_resched_count?
+  task_t *resched_next;
+  unsigned int resched_count;
+  unsigned int polled_resched_count; 
   pmutex tslot_mutex;
   int earmark_count;
   bool earmark_drain;
