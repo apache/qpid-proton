@@ -17,22 +17,20 @@
 # under the License.
 #
 
-# Name: Proton
-# Description: Qpid Proton C library
-# Version: @PN_VERSION@
-# URL: http://qpid.apache.org/proton/
+# This Makefile demonstrates the use of pkgconfig to compile
+# programs that make use of Qpid Proton Cpp
 
-@PACKAGE_INIT@
-if (NOT ProtonCpp_USE_STATIC_LIBS)
-  include("${CMAKE_CURRENT_LIST_DIR}/ProtonCppTargets.cmake")
-else()
-  include("${CMAKE_CURRENT_LIST_DIR}/ProtonCppTargetsStatic.cmake")
-endif()
+CFLAGS=-g -Wall -Wextra $(shell pkg-config --cflags libqpid-proton-cpp)
+LDFLAGS=$(shell pkg-config --libs libqpid-proton-cpp)
 
-set (ProtonCpp_VERSION @PN_VERSION@)
+SOURCES=$(wildcard *.cpp)
+EXECUTABLES=$(patsubst %.cpp,%,$(SOURCES))
 
-set (ProtonCpp_INCLUDE_DIRS @PACKAGE_INCLUDE_INSTALL_DIR@)
-set (ProtonCpp_LIBRARIES Proton::cpp)
-set (ProtonCpp_FOUND True)
+all: $(EXECUTABLES)
 
-check_required_components(ProtonCpp)
+% : %.cpp
+	$(CXX) -o $@ $(CFLAGS) $(LDFLAGS) -lpthread $<
+
+.PHONY: clean
+clean:
+	rm -f $(EXECUTABLES)

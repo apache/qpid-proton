@@ -17,10 +17,10 @@
  * under the License.
  */
 
-prefix=@PREFIX@
-exec_prefix=@EXEC_PREFIX@
-libdir=@LIBDIR@
-includedir=@INCLUDEDIR@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${prefix}/@LIBDIR@
+includedir=${prefix}/@INCLUDEDIR@
 
 Name: Proton Proactor
 Description: Qpid Proton C proactive IO library
@@ -28,3 +28,4 @@ Version: @PN_VERSION@
 URL: http://qpid.apache.org/proton/
 Libs: -L${libdir} -lqpid-proton-proactor
 Cflags: -I${includedir}
+Requires: libqpid-proton-core

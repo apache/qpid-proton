@@ -202,6 +202,7 @@ include(WriteBasicConfigVersionFile)
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake
+  PATH_VARS INCLUDE_INSTALL_DIR
   INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
 write_basic_config_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake

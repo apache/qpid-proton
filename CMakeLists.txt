@@ -276,18 +276,18 @@ set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
 mark_as_advanced (INCLUDE_INSTALL_DIR LIB_INSTALL_DIR SYSCONF_INSTALL_DIR SHARE_INSTALL_DIR MAN_INSTALL_DIR)
 
-# ${PACKAGE_PREFIX_DIR} is expanded from @PACKAGE_INIT@
-# by configure_package_config_file(), and available in ProtonConfig.cmake
-macro (pn_relative_install_dir NAME VALUE)
+# Sets variable NAME to contain relative path from ROOT to VALUE
+# if VALUE is already relative, it does nothing
+macro (pn_relative_install_dir NAME ROOT VALUE)
   if (IS_ABSOLUTE ${VALUE})
-    message(WARNING "Build was given an absolute path '${VALUE}'. As a result, `make DESTDIR=... install` will not work.")
-    set (${NAME} "${VALUE}")
+    file(RELATIVE_PATH "${NAME}" "${ROOT}" "${VALUE}")
   else ()
-    set (${NAME} "\${PACKAGE_PREFIX_DIR}/${VALUE}")
+    set (${NAME} "${VALUE}")
   endif ()
 endmacro ()
 
-pn_relative_install_dir (INCLUDEDIR ${INCLUDE_INSTALL_DIR})
+pn_relative_install_dir (INCLUDEDIR "${CMAKE_INSTALL_PREFIX}" "${INCLUDE_INSTALL_DIR}")
+pn_relative_install_dir (LIBDIR "${CMAKE_INSTALL_PREFIX}" "${LIB_INSTALL_DIR}")
 
 ## LANGUAGE BINDINGS
 
