@@ -115,8 +115,8 @@ class ExampleTest(unittest.TestCase):
     def test_raw_connect(self):
         message = b"At thee! Have at thee!\n"
 
-        with Server(["./raw_echo", "", "0"], kill_me=True) as server:
-            client = subprocess.Popen(args=["./raw_connect", "", server.port],
+        with Server(["raw_echo", "", "0"], kill_me=True) as server:
+            client = subprocess.Popen(args=["raw_connect", "", server.port],
                                       stdin=subprocess.PIPE, stdout=subprocess.PIPE)
             client.stdin.write(message)
             client.stdin.flush()
@@ -134,7 +134,7 @@ class ExampleTest(unittest.TestCase):
         """raw_echo example implements a TCP echo server"""
         message = b"Hello world\n"
 
-        with Server(["./raw_echo", "", "0"], kill_me=True) as server:
+        with Server(["raw_echo", "", "0"], kill_me=True) as server:
             s = socket.socket()
             s.connect(("localhost", int(server.port)))
             s.sendall(message)
