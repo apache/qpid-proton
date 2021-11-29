@@ -71,6 +71,10 @@ std::string connection::virtual_host() const {
     return str(pn_connection_remote_hostname(pn_object()));
 }
 
+std::string connection::host() const {
+    return str(pn_connection_get_hostname(pn_object()));
+}
+
 std::string connection::container_id() const {
     return str(pn_connection_remote_container(pn_object()));
 }

@@ -76,6 +76,9 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Return the remote AMQP hostname attribute for the connection.
     PN_CPP_EXTERN std::string virtual_host() const;
 
+    // Return the AMQP hostname attribute for the connection.
+    PN_CPP_EXTERN std::string host() const;
+
     /// Return the remote container ID for the connection.
     PN_CPP_EXTERN std::string container_id() const;
 
