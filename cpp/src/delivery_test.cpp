@@ -56,7 +56,7 @@ int tracker_settle_counter;
 proton::binary test_tag("TESTTAG");
 } // namespace
 
-class test_recv : public proton::messaging_handler {
+class test_server : public proton::messaging_handler {
   private:
     class listener_ready_handler : public proton::listen_handler {
         void on_open(proton::listener &l) override {
@@ -74,7 +74,7 @@ class test_recv : public proton::messaging_handler {
     listener_ready_handler listen_handler;
 
   public:
-    test_recv(const std::string &s) : url(s) {}
+    test_server (const std::string &s) : url(s) {}
 
     void on_container_start(proton::container &c) override {
         listener = c.listen(url, listen_handler);
@@ -88,13 +88,13 @@ class test_recv : public proton::messaging_handler {
     }
 };
 
-class test_send : public proton::messaging_handler {
+class test_client : public proton::messaging_handler {
   private:
     std::string url;
     proton::sender sender;
 
   public:
-    test_send(const std::string &s) : url(s) {}
+    test_client (const std::string &s) : url(s) {}
 
     void on_container_start(proton::container &c) override {
         proton::connection_options co;
@@ -125,7 +125,7 @@ int test_delivery_tag() {
     tracker_settle_counter = 0;
 
     std::string recv_address("127.0.0.1:0/test");
-    test_recv recv(recv_address);
+    test_server recv(recv_address);
     proton::container c(recv);
     std::thread thread_recv([&c]() -> void { c.run(); });
 
@@ -135,7 +135,7 @@ int test_delivery_tag() {
 
     std::string send_address =
         "127.0.0.1:" + std::to_string(listener_port) + "/test";
-    test_send send(send_address);
+    test_client send(send_address);
     proton::container(send).run();
     thread_recv.join();
 
