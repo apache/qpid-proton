@@ -27,6 +27,7 @@
 
 #include <proton/terminus.h>
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -102,6 +103,10 @@ class terminus {
 
     /// Extension capabilities that are supported/requested
     PN_CPP_EXTERN std::vector<symbol> capabilities() const;
+
+    /// Obtain the AMQP dynamic node properties for the
+    /// terminus as a standard map.
+    PN_CPP_EXTERN std::map<symbol, value> dynamic_properties() const;
 
   protected:
     pn_terminus_t *pn_object() const { return object_; }

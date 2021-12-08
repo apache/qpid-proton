@@ -27,6 +27,7 @@
 #include "./duration.hpp"
 #include "./source.hpp"
 
+#include <map>
 #include <string>
 
 /// @file
@@ -91,6 +92,9 @@ class source_options {
 
     /// Extension capabilities that are supported/requested
     PN_CPP_EXTERN source_options& capabilities(const std::vector<symbol>&);
+
+    /// Set the dynamic node properties.
+    PN_CPP_EXTERN source_options& dynamic_properties(const std::map<symbol, value>&);
 
   private:
     void apply(source&) const;

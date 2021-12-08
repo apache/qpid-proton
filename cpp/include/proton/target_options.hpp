@@ -27,6 +27,7 @@
 #include "./duration.hpp"
 #include "./target.hpp"
 
+#include <map>
 #include <string>
 
 /// @file
@@ -82,6 +83,9 @@ class target_options {
 
     /// Extension capabilities that are supported/requested
     PN_CPP_EXTERN target_options& capabilities(const std::vector<symbol>&);
+
+    /// Set the dynamic node properties.
+    PN_CPP_EXTERN target_options& dynamic_properties(const std::map<symbol, value>&);
 
   private:
     void apply(target&) const;
