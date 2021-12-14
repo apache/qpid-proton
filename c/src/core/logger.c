@@ -234,8 +234,13 @@ void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem,
   size_t psize = pn_value_dump(frame, logger->scratch);
   pn_bytes_t payload = {.size=frame.size-psize, .start=frame.start+psize};
   if (payload.size>0) {
-    pn_string_addf(logger->scratch, " (%zu) ", payload.size);
-    pn_quote(logger->scratch, payload.start, payload.size);
+    char buf[512];
+    ssize_t n = pn_quote_data(buf, sizeof(buf), payload.start, payload.size);
+    if (n >= 0) {
+      pn_string_addf(logger->scratch, " (%zu) %s", payload.size, buf);
+    } else if (n == PN_OVERFLOW) {
+      pn_string_addf(logger->scratch, " (%zu) %s ... (truncated)", payload.size, buf);
+    }
   }
   pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
 }
