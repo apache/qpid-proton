@@ -205,16 +205,6 @@ void pni_logger_log_raw(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_lo
   pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
 }
 
-void pni_logger_log_msg_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t data, const char *fmt, ...) {
-  va_list ap;
-
-  va_start(ap, fmt);
-  pn_string_vformat(logger->scratch, fmt, ap);
-  va_end(ap);
-  pn_quote(logger->scratch, data.start, data.size);
-  pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
-}
-
 void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, void* object, const char *fmt, ...) {
   va_list ap;
 

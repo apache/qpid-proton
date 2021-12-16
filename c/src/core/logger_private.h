@@ -44,7 +44,6 @@ void pni_logger_fini(pn_logger_t*);
 void pni_logger_log(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *message);
 void pni_logger_vlogf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *fmt, va_list ap);
 void pni_logger_log_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *msg, const char *bytes, size_t size);
-void pni_logger_log_msg_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t data, const char *fmt, ...);
 void pni_logger_log_raw(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_buffer_t *output, size_t size);
 void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, void *object, const char *fmt, ...);
 void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t frame, const char *fmt, ...);
