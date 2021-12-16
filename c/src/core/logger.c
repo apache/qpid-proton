@@ -247,8 +247,16 @@ void pni_logger_log(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_le
 void pni_logger_vlogf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *fmt, va_list ap)
 {
   assert(logger);
-  pn_string_vformat(logger->scratch, fmt, ap);
-  pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
+  char buf[1024];
+  pn_fixed_string_t output = pn_fixed_string(buf, sizeof(buf));
+  pn_fixed_string_vaddf(&output, fmt, ap);
+  if (output.position==output.size) {
+    // Message overflow
+    const char truncated[] = " ... (truncated)";
+    output.position -= sizeof(truncated);
+    pn_fixed_string_append(&output, pn_string_const(truncated, sizeof(truncated)));
+  }
+  pni_logger_log(logger, subsystem, severity, buf);
 }
 
 void pn_logger_logf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *fmt, ...)
