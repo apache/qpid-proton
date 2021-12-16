@@ -23,11 +23,11 @@
 
 #include "encodings.h"
 #include "consumers.h"
+#include "fixed_string.h"
 #include "framing.h"
 #include "protocol.h"
 #include "util.h"
 
-#include "proton/object.h"
 #include "proton/types.h"
 
 #include <ctype.h>
@@ -105,33 +105,33 @@ static inline bool type_islist_notspecial(uint8_t type) {
   return type==PNE_LIST8 || type==PNE_LIST32;
 }
 
-void pn_value_dump_special(uint8_t type, pn_string_t *output) {
+void pn_value_dump_special(uint8_t type, pn_fixed_string_t *output) {
   switch (type) {
     case PNE_NULL:
-      pn_string_addf(output, "null");
+      pn_fixed_string_addf(output, "null");
       break;
     case PNE_TRUE:
-      pn_string_addf(output, "true");
+      pn_fixed_string_addf(output, "true");
       break;
     case PNE_FALSE:
-      pn_string_addf(output, "false");
+      pn_fixed_string_addf(output, "false");
       break;
     case PNE_UINT0:
-      pn_string_addf(output, "0x0");
+      pn_fixed_string_addf(output, "0x0");
       break;
     case PNE_ULONG0:
-      pn_string_addf(output, "0x0");
+      pn_fixed_string_addf(output, "0x0");
       break;
     case PNE_LIST0:
-      pn_string_addf(output, "[]");
+      pn_fixed_string_addf(output, "[]");
       break;
     default:
-      pn_string_addf(output, "!!<unknown>");
+      pn_fixed_string_addf(output, "!!<unknown>");
       break;
   }
 }
 
-void pn_value_dump_descriptor_ulong(uint8_t type, pn_bytes_t value, pn_string_t* output, uint64_t* dcode) {
+void pn_value_dump_descriptor_ulong(uint8_t type, pn_bytes_t value, pn_fixed_string_t* output, uint64_t* dcode) {
   uint64_t ulong;
   switch (type) {
     case PNE_ULONG0:
@@ -145,7 +145,7 @@ void pn_value_dump_descriptor_ulong(uint8_t type, pn_bytes_t value, pn_string_t*
       break;
     default:
       // If we get a different descriptor type - huh
-      pn_string_addf(output, "!!<not-a-ulong>");
+      pn_fixed_string_addf(output, "!!<not-a-ulong>");
       return;
   }
   *dcode = ulong;
@@ -154,18 +154,18 @@ void pn_value_dump_descriptor_ulong(uint8_t type, pn_bytes_t value, pn_string_t*
   if (ulong>=FIELD_MIN && ulong<=FIELD_MAX) {
     uint8_t name_index = FIELDS[ulong-FIELD_MIN].name_index;
     if (name_index!=0) {
-      pn_string_addf(output, "%s(%" PRIu64 ") ",
+      pn_fixed_string_addf(output, "%s(%" PRIu64 ") ",
                      (const char *)FIELD_STRINGPOOL.STRING0+FIELD_NAME[name_index],
                      ulong);
       return;
     }
   }
 
-  pn_string_addf(output, "%" PRIu64 " ", ulong);
+  pn_fixed_string_addf(output, "%" PRIu64 " ", ulong);
   return;
 }
 
-void pn_value_dump_scalar(uint8_t type, pn_bytes_t value, pn_string_t *output){
+void pn_value_dump_scalar(uint8_t type, pn_bytes_t value, pn_fixed_string_t *output){
   if (type_isfixedsize(type)) {
     if (type_isspecial(type)) {
       pn_value_dump_special(type, output);
@@ -192,64 +192,64 @@ void pn_value_dump_scalar(uint8_t type, pn_bytes_t value, pn_string_t *output){
           break;
         case 0:
           // We'll get here if there aren't enough bytes left for the value
-          pn_string_addf(output, "!!");
+          pn_fixed_string_addf(output, "!!");
           return;
         default:
           // It has to be length 1,2,4 or 8!
-          pn_string_addf(output, "!!<WeirdLengthHappened(%zu)>", value.size);
+          pn_fixed_string_addf(output, "!!<WeirdLengthHappened(%zu)>", value.size);
           return;
       }
       if (type_isunsigned_ifsimpleint(type)) {
         // mask high sign extended bits if unsigned
         uint = uint & mask;
-        pn_string_addf(output, "0x%" PRIx64, uint);
+        pn_fixed_string_addf(output, "0x%" PRIx64, uint);
       } else {
         int64_t i = (int64_t)uint;
-        pn_string_addf(output, "%" PRIi64, i);
+        pn_fixed_string_addf(output, "%" PRIi64, i);
       }
     } else {
       // Check if we didn't have enough bytes for the value
       if (value.size==0) {
-        pn_string_addf(output, "!!");
+        pn_fixed_string_addf(output, "!!");
         return;
       }
       switch (type) {
         case PNE_BOOLEAN:
-          pn_string_addf(output, *value.start ? "true" : "false");
+          pn_fixed_string_addf(output, *value.start ? "true" : "false");
           break;
         case PNE_FLOAT: {
           union {uint32_t i; float f;} conv;
           conv.i = pni_read32(value.start);
-          pn_string_addf(output, "%g", conv.f);
+          pn_fixed_string_addf(output, "%g", conv.f);
           break;
         }
         case PNE_DOUBLE: {
           union {uint64_t i; double f;} conv;
           conv.i = pni_read64(value.start);
-          pn_string_addf(output, "%g", conv.f);
+          pn_fixed_string_addf(output, "%g", conv.f);
           break;
         }
         case PNE_UTF32:
           break;
         case PNE_MS64: {
           int64_t timestamp = pni_read64(value.start);
-          pn_string_addf(output, "%" PRIi64, timestamp);
+          pn_fixed_string_addf(output, "%" PRIi64, timestamp);
           break;
         }
         case PNE_DECIMAL32:
-          pn_string_addf(output, "D32(%04" PRIx32 ")", pni_read32(value.start));
+          pn_fixed_string_addf(output, "D32(%04" PRIx32 ")", pni_read32(value.start));
           break;
         case PNE_DECIMAL64:
-          pn_string_addf(output, "D64(%08" PRIx64 ")", pni_read64(value.start));
+          pn_fixed_string_addf(output, "D64(%08" PRIx64 ")", pni_read64(value.start));
           break;
         case PNE_DECIMAL128:
-          pn_string_addf(
+          pn_fixed_string_addf(
             output,
             "D128(%08" PRIx64 "%08" PRIx64 ")",
                   pni_read64(value.start), pni_read64(&value.start[8]));
           break;
         case PNE_UUID:
-          pn_string_addf(
+          pn_fixed_string_addf(
             output,
             "UUID(%02hhx%02hhx%02hhx%02hhx-"
             "%02hhx%02hhx-%02hhx%02hhx-%02hhx%02hhx-"
@@ -261,11 +261,11 @@ void pn_value_dump_scalar(uint8_t type, pn_bytes_t value, pn_string_t *output){
             value.start[10], value.start[11], value.start[12], value.start[13], value.start[14], value.start[15]);
           break;
         default:
-          pn_string_addf(output, "!!<UnknownType<0x%02hhx>(", type);
+          pn_fixed_string_addf(output, "!!<UnknownType<0x%02hhx>(", type);
           for (size_t i=0; i<value.size; i++) {
-            pn_string_addf(output, "%.2x", value.start[i]);
+            pn_fixed_string_addf(output, "%.2x", value.start[i]);
           }
-          pn_string_addf(output, ")>");
+          pn_fixed_string_addf(output, ")>");
       }
     }
   } else {
@@ -307,9 +307,9 @@ void pn_value_dump_scalar(uint8_t type, pn_bytes_t value, pn_string_t *output){
         prefix = "<?<";
         suffix = ">?>";
     }
-    pn_string_addf(output, "%s", prefix);
-    pn_quote(output, value.start, value.size);
-    pn_string_addf(output, "%s", suffix);
+    pn_fixed_string_addf(output, "%s", prefix);
+    pn_fixed_string_quote(output, value.start, value.size);
+    pn_fixed_string_addf(output, "%s", suffix);
   }
 }
 
@@ -325,72 +325,72 @@ static inline uint32_t consume_count(uint8_t type, pn_bytes_t *value) {
   return count;
 }
 
-void pn_value_dump_nondescribed_value(uint8_t type, pn_bytes_t value, pn_string_t *output);
+void pn_value_dump_nondescribed_value(uint8_t type, pn_bytes_t value, pn_fixed_string_t *output);
 
-void pn_value_dump_list(uint32_t count, pn_bytes_t value, pn_string_t *output) {
+void pn_value_dump_list(uint32_t count, pn_bytes_t value, pn_fixed_string_t *output) {
   uint32_t elements = 0;
-  pn_string_addf(output, "[");
+  pn_fixed_string_addf(output, "[");
   while (value.size) {
     elements++;
-    size_t size = pn_value_dump(value, output);
+    size_t size = pni_value_dump(value, output);
     value = pn_bytes_advance(value, size);
     if (value.size) {
-      pn_string_addf(output, ", ");
+      pn_fixed_string_addf(output, ", ");
     }
   }
-  pn_string_addf(output, "]");
+  pn_fixed_string_addf(output, "]");
   if (elements!=count) {
-    pn_string_addf(output, "<%" PRIu32 "!=%" PRIu32 ">", elements, count);
+    pn_fixed_string_addf(output, "<%" PRIu32 "!=%" PRIu32 ">", elements, count);
   }
 }
 
-void pn_value_dump_described_list(uint32_t count, pn_bytes_t value, uint64_t dcode, pn_string_t *output) {
+void pn_value_dump_described_list(uint32_t count, pn_bytes_t value, uint64_t dcode, pn_fixed_string_t *output) {
   uint32_t elements = 0;
   bool output_element = false;
-  pn_string_addf(output, "[");
+  pn_fixed_string_addf(output, "[");
   while (value.size) {
     uint8_t type = value.start[0];
     if (type==PNE_NULL) {
       value = pn_bytes_advance(value, 1);
     } else {
       if (output_element) {
-        pn_string_addf(output, ", ");
+        pn_fixed_string_addf(output, ", ");
       }
       const pn_fields_t *fields = &FIELDS[dcode-FIELD_MIN];
       if (elements < fields->field_count) {
-        pn_string_addf(output, "%s=",
+        pn_fixed_string_addf(output, "%s=",
                       (const char*)FIELD_STRINGPOOL.STRING0+FIELD_FIELDS[fields->first_field_index+elements]);
       }
-      size_t size = pn_value_dump(value, output);
+      size_t size = pni_value_dump(value, output);
       value = pn_bytes_advance(value, size);
       output_element = true;
     }
     elements++;
   }
-  pn_string_addf(output, "]");
+  pn_fixed_string_addf(output, "]");
   if (elements!=count) {
-    pn_string_addf(output, "<%" PRIu32 "!=%" PRIu32 ">", elements, count);
+    pn_fixed_string_addf(output, "<%" PRIu32 "!=%" PRIu32 ">", elements, count);
   }
 }
 
-void pn_value_dump_map(uint32_t count, pn_bytes_t value, pn_string_t *output) {
+void pn_value_dump_map(uint32_t count, pn_bytes_t value, pn_fixed_string_t *output) {
   uint32_t elements = 0;
-  pn_string_addf(output, "{");
+  pn_fixed_string_addf(output, "{");
   while (value.size) {
     elements++;
-    size_t size = pn_value_dump(value, output);
+    size_t size = pni_value_dump(value, output);
     value = pn_bytes_advance(value, size);
     if (value.size) {
       if (elements & 1) {
-        pn_string_addf(output, "=");
+        pn_fixed_string_addf(output, "=");
       } else {
-        pn_string_addf(output, ", ");
+        pn_fixed_string_addf(output, ", ");
       }
     }
   }
-  pn_string_addf(output, "}");
+  pn_fixed_string_addf(output, "}");
   if (elements!=count) {
-    pn_string_addf(output, "<%" PRIu32 "!=%" PRIu32 ">", elements, count);
+    pn_fixed_string_addf(output, "<%" PRIu32 "!=%" PRIu32 ">", elements, count);
   }
 }
 
@@ -438,7 +438,7 @@ static inline const char* pni_type_name(uint8_t type) {
   return NULL;
 }
 
-void pn_value_dump_array(uint32_t count, pn_bytes_t value, pn_string_t *output) {
+void pn_value_dump_array(uint32_t count, pn_bytes_t value, pn_fixed_string_t *output) {
   // Read base type only (ignoring descriptor) and first value
   uint8_t type = 0;
   pn_bytes_t evalue;
@@ -450,49 +450,49 @@ void pn_value_dump_array(uint32_t count, pn_bytes_t value, pn_string_t *output) 
   }
   if (type==0){
     // Type isn't allowed to be 0 at present because we dump described values as the base type anyway
-    pn_string_addf(output, "@<!!>[]");
+    pn_fixed_string_addf(output, "@<!!>[]");
     return;
   }
   const char* type_name = pni_type_name(type);
   if (type_name) {
-    pn_string_addf(output, "@<%s>[", type_name);
+    pn_fixed_string_addf(output, "@<%s>[", type_name);
   } else {
-    pn_string_addf(output, "@<%02hhx>[", type);
+    pn_fixed_string_addf(output, "@<%02hhx>[", type);
   }
   if (count==0) {
-    pn_string_addf(output, "]");
+    pn_fixed_string_addf(output, "]");
     return;
   }
 
   pn_value_dump_nondescribed_value(type, evalue, output);
   if (type_isspecial(type)) {
     if (count>1) {
-      pn_string_addf(output, ", ...(%d more)]", count-1);
+      pn_fixed_string_addf(output, ", ...(%d more)]", count-1);
     } else {
-      pn_string_addf(output, "]");
+      pn_fixed_string_addf(output, "]");
     }
     return;
   }
   uint32_t elements = 1;
   while (value.size) {
-    pn_string_addf(output, ", ");
+    pn_fixed_string_addf(output, ", ");
     elements++;
     size_t size = pni_frame_read_value_not_described(value, type, &evalue);
     pn_value_dump_nondescribed_value(type, evalue, output);
     if (size <= value.size) {
       value = pn_bytes_advance(value, size);
     } else {
-      pn_string_addf(output, "<error: %zd > %zd>", size, value.size);
+      pn_fixed_string_addf(output, "<error: %zd > %zd>", size, value.size);
       value.size = 0;
     }
   }
-  pn_string_addf(output, "]");
+  pn_fixed_string_addf(output, "]");
   if (elements!=count) {
-    pn_string_addf(output, "<%" PRIu32 "!=%" PRIu32 ">", elements, count);
+    pn_fixed_string_addf(output, "<%" PRIu32 "!=%" PRIu32 ">", elements, count);
   }
 }
 
-void pn_value_dump_nondescribed_value(uint8_t type, pn_bytes_t value, pn_string_t *output){
+void pn_value_dump_nondescribed_value(uint8_t type, pn_bytes_t value, pn_fixed_string_t *output){
   if (!type_iscompund(type)) {
     // The one exception to 'scalar' is LIST0 which is encoded as a special type
     pn_value_dump_scalar(type, value, output);
@@ -503,15 +503,15 @@ void pn_value_dump_nondescribed_value(uint8_t type, pn_bytes_t value, pn_string_
     switch (type) {
       case PNE_LIST8:
       case PNE_LIST32:
-        pn_string_addf(output, "[!!]");
+        pn_fixed_string_addf(output, "[!!]");
         break;
       case PNE_MAP8:
       case PNE_MAP32:
-        pn_string_addf(output, "{!!}");
+        pn_fixed_string_addf(output, "{!!}");
         break;
       case PNE_ARRAY8:
       case PNE_ARRAY32:
-        pn_string_addf(output, "@<>[!!]");
+        pn_fixed_string_addf(output, "@<>[!!]");
         break;
     }
     return;
@@ -536,19 +536,19 @@ void pn_value_dump_nondescribed_value(uint8_t type, pn_bytes_t value, pn_string_
   }
 }
 
-size_t pn_value_dump_described(pn_bytes_t bytes, uint64_t dcode, pn_string_t *output) {
+size_t pn_value_dump_described(pn_bytes_t bytes, uint64_t dcode, pn_fixed_string_t *output) {
   uint8_t type;
   pn_bytes_t value;
   size_t size = pni_frame_get_type_value(bytes, &type, &value);
   if (size==0) {
-    pn_string_addf(output, "!!");
+    pn_fixed_string_addf(output, "!!");
     return 0;
   }
 
   // The only described type handled differently is list
   if (type_islist_notspecial(type) && dcode) {
     if (value.size==0) {
-      pn_string_addf(output, "[!!]");
+      pn_fixed_string_addf(output, "[!!]");
       return size;
     }
     uint32_t count = consume_count(type, &value);
@@ -559,12 +559,12 @@ size_t pn_value_dump_described(pn_bytes_t bytes, uint64_t dcode, pn_string_t *ou
   return size;
 }
 
-size_t pn_value_dump_nondescribed(pn_bytes_t bytes, pn_string_t *output) {
+size_t pn_value_dump_nondescribed(pn_bytes_t bytes, pn_fixed_string_t *output) {
   uint8_t type;
   pn_bytes_t value;
   size_t size = pni_frame_get_type_value(bytes, &type, &value);
   if (size==0) {
-    pn_string_addf(output, "!!");
+    pn_fixed_string_addf(output, "!!");
     return 0;
   }
 
@@ -572,7 +572,7 @@ size_t pn_value_dump_nondescribed(pn_bytes_t bytes, pn_string_t *output) {
   return size;
 }
 
-size_t pn_value_dump(pn_bytes_t frame, pn_string_t *output)
+size_t pni_value_dump(pn_bytes_t frame, pn_fixed_string_t *output)
 {
   if (frame.size==0) {
     return 0;
@@ -580,7 +580,7 @@ size_t pn_value_dump(pn_bytes_t frame, pn_string_t *output)
   uint8_t type = frame.start[0];
   // Check for described type first
   if (type==PNE_DESCRIPTOR) {
-    pn_string_addf(output, "@");
+    pn_fixed_string_addf(output, "@");
     frame = pn_bytes_advance(frame, 1);
     size_t fsize = 1;
     uint8_t type;
@@ -589,7 +589,7 @@ size_t pn_value_dump(pn_bytes_t frame, pn_string_t *output)
     frame = pn_bytes_advance(frame, size);
     fsize += size;
     if (value.size==0) {
-      pn_string_addf(output, "!!");
+      pn_fixed_string_addf(output, "!!");
       return fsize;
     }
     if (type_isulong(type)) {
@@ -604,4 +604,12 @@ size_t pn_value_dump(pn_bytes_t frame, pn_string_t *output)
   } else {
     return pn_value_dump_nondescribed(frame, output);
   }
+}
+
+size_t pn_value_dump(pn_bytes_t frame, char *bytes, uint32_t size)
+{
+  pn_fixed_string_t output = pn_fixed_string(bytes, size);
+  size_t fsize = pni_value_dump(frame, &output);
+  pn_fixed_string_terminate(&output);
+  return fsize;
 }

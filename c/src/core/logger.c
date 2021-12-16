@@ -22,6 +22,7 @@
 #include <proton/logger.h>
 #include <proton/error.h>
 
+#include "fixed_string.h"
 #include "memory.h"
 #include "util.h"
 #include "value_dump.h"
@@ -216,22 +217,25 @@ void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsyste
 
 void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t frame, const char *fmt, ...) {
   va_list ap;
+  char buf[1024];
+  pn_fixed_string_t output = pn_fixed_string(buf, sizeof(buf));
 
   va_start(ap, fmt);
-  pn_string_vformat(logger->scratch, fmt, ap);
+  pn_fixed_string_vaddf(&output, fmt, ap);
   va_end(ap);
-  size_t psize = pn_value_dump(frame, logger->scratch);
+  size_t psize = pni_value_dump(frame, &output);
   pn_bytes_t payload = {.size=frame.size-psize, .start=frame.start+psize};
   if (payload.size>0) {
-    char buf[512];
-    ssize_t n = pn_quote_data(buf, sizeof(buf), payload.start, payload.size);
-    if (n >= 0) {
-      pn_string_addf(logger->scratch, " (%zu) %s", payload.size, buf);
-    } else if (n == PN_OVERFLOW) {
-      pn_string_addf(logger->scratch, " (%zu) %s ... (truncated)", payload.size, buf);
-    }
+    pn_fixed_string_addf(&output, " (%zu) ", payload.size);
+    pn_fixed_string_quote(&output, payload.start, payload.size);
   }
-  pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
+  if (output.position==output.size) {
+    // Message overflow
+    const char truncated[] = " ... (truncated)";
+    output.position -= sizeof(truncated);
+    pn_fixed_string_append(&output, pn_string_const(truncated, sizeof(truncated)));
+  }
+  pni_logger_log(logger, subsystem, severity, buf);
 }
 
 void pni_logger_log(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *message)
