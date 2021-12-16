@@ -102,7 +102,7 @@ typedef struct task_t {
   tslot_t *prev_runner;
   bool sched_ready;
   bool sched_pending;           /* If true, one or more unseen epoll or other events to process() */
-  bool runnable ;               /* on one of the runnable lists */
+  int runnables_idx;            /* 0 means unset, idx-1 is array position */
 } task_t;
 
 typedef enum {
@@ -198,7 +198,7 @@ struct pn_proactor_t {
   task_t *resched_cutoff; // last resched task of current poller work snapshot.  TODO: superseded by polled_resched_count?
   task_t *resched_next;
   unsigned int resched_count;
-  unsigned int polled_resched_count; 
+  unsigned int polled_resched_count;
   pmutex tslot_mutex;
   int earmark_count;
   bool earmark_drain;
