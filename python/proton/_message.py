@@ -225,6 +225,9 @@ class Message(object):
         """The time to live of the message measured in seconds. Expired messages
         may be dropped.
 
+        The default ttl value for a new message is 0. If this value is 0,
+        Proton will send no ttl message header.
+
         :raise: :exc:`MessageException` if there is any Proton error when using the setter.
         """
         return millis2secs(pn_message_get_ttl(self._msg))

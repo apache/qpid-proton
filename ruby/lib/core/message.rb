@@ -201,6 +201,9 @@ module Qpid::Proton
 
     # Returns the time-to-live, in milliseconds.
     #
+    # The default ttl value for a new message is 0. If this value is 0, Proton
+    # will send no ttl message header.
+    #
     def ttl
       Cproton.pn_message_get_ttl(@impl)
     end

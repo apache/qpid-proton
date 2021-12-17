@@ -203,6 +203,9 @@ PN_EXTERN pn_millis_t    pn_message_get_ttl               (pn_message_t *msg);
  *
  * See ::pn_message_get_ttl() for a detailed description of message ttl.
  *
+ * The default ttl value for a new message is 0. If this value is 0, Proton
+ * will send no ttl message header.
+ *
  * @param[in] msg a message object
  * @param[in] ttl the new value for the message ttl
  * @return zero on success or an error code on failure
