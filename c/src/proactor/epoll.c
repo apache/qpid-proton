@@ -2471,9 +2471,11 @@ static pn_event_batch_t *next_event_batch(pn_proactor_t* p, bool can_block) {
 // Call with sched lock.  Return true if !can_block and no new events to process.
 static bool poller_do_epoll(struct pn_proactor_t* p, tslot_t *ts, bool can_block) {
   // As poller with lots to do, be mindful of hogging the sched lock.  Release when making kernel calls.
+  assert(!p->resched_cutoff);
+  assert(!p->sched_ready_first);
   int n_events;
   task_t *tsk;
-  assert(!p->resched_cutoff);
+  bool unpolled_work = false;
 
   while (true) {
     assert(p->n_runnables == 0);
@@ -2484,13 +2486,15 @@ static bool poller_do_epoll(struct pn_proactor_t* p, tslot_t *ts, bool can_block
     p->last_earmark = NULL;
 
     bool unfinished_earmarks = p->earmark_count > 0;
-    bool epoll_immediate = p->resched_first || unfinished_earmarks || !can_block;
-    assert(!p->sched_ready_first);
+    if (unfinished_earmarks || p->resched_first)
+      unpolled_work = true;
+    bool epoll_immediate = unpolled_work || !can_block;
 
     // Determine if notify_poller() can be avoided.
     if (!epoll_immediate) {
       lock(&p->eventfd_mutex);
       if (p->ready_list_first) {
+        unpolled_work = true;
         epoll_immediate = true;
       } else {
         // Poller may sleep.  Enable eventfd wakeup.
@@ -2508,7 +2512,6 @@ static bool poller_do_epoll(struct pn_proactor_t* p, tslot_t *ts, bool can_block
     lock(&p->sched_mutex);
     p->poller_suspended = false;
 
-    bool unpolled_work = false;
     if (p->resched_first) {
       // Defer future resched tasks until next do_epoll()
       p->resched_cutoff = p->resched_last;
