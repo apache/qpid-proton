@@ -2916,6 +2916,22 @@ uint64_t pn_transport_get_frames_input(const pn_transport_t *transport)
   return 0;
 }
 
+ssize_t pni_transport_grow_capacity(pn_transport_t *transport, size_t n) {
+  // can we expand the size of the input buffer?
+  size_t size = pn_max(n, transport->input_size);
+  if (transport->local_max_frame) {  // there is a limit to buffer size
+    size = pn_min(size, transport->local_max_frame);
+  }
+  if (size > transport->input_size) {
+    char *newbuf = (char *) pni_mem_subreallocate(pn_class(transport), transport, transport->input_buf, size );
+    if (newbuf) {
+      transport->input_buf = newbuf;
+      transport->input_size = size;
+    }
+  }
+  return transport->input_size-transport->input_pending;
+}
+
 // input
 ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 {
@@ -2924,21 +2940,7 @@ ssize_t pn_transport_capacity(pn_transport_t *transport)  /* <0 == done */
 
   ssize_t capacity = transport->input_size - transport->input_pending;
   if ( capacity<=0 ) {
-    // can we expand the size of the input buffer?
-    int more = 0;
-    if (!transport->local_max_frame) {  // no limit (ha!)
-      more = transport->input_size;
-    } else if (transport->local_max_frame > transport->input_size) {
-      more = pn_min(transport->input_size, transport->local_max_frame - transport->input_size);
-    }
-    if (more) {
-      char *newbuf = (char *) pni_mem_subreallocate(pn_class(transport), transport, transport->input_buf, transport->input_size + more );
-      if (newbuf) {
-        transport->input_buf = newbuf;
-        transport->input_size += more;
-        capacity += more;
-      }
-    }
+    capacity = pni_transport_grow_capacity(transport, 2*transport->input_size);
   }
   return capacity;
 }

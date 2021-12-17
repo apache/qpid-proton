@@ -87,6 +87,11 @@ void pn_connection_driver_destroy(pn_connection_driver_t *d) {
   memset(d, 0, sizeof(*d));
 }
 
+pn_rwbytes_t pn_connection_driver_sized_read_buffer(pn_connection_driver_t *d, size_t n) {
+  ssize_t cap = pni_transport_grow_capacity(d->transport, n);
+  return (cap > 0) ?  pn_rwbytes(cap, pn_transport_tail(d->transport)) : pn_rwbytes(0, 0);
+}
+
 pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
   ssize_t cap = pn_transport_capacity(d->transport);
   return (cap > 0) ?  pn_rwbytes(cap, pn_transport_tail(d->transport)) : pn_rwbytes(0, 0);
