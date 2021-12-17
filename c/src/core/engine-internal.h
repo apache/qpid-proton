@@ -376,8 +376,6 @@ void pn_link_unbound(pn_link_t* link);
 void pn_ep_incref(pn_endpoint_t *endpoint);
 void pn_ep_decref(pn_endpoint_t *endpoint);
 
-pn_bytes_t pn_fill_performative(pn_transport_t *transport, const char *fmt, ...);
-
 #if __cplusplus
 }
 #endif
