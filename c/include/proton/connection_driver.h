@@ -138,6 +138,19 @@ PN_EXTERN void pn_connection_driver_destroy(pn_connection_driver_t *);
 PN_EXTERN pn_connection_t *pn_connection_driver_release_connection(pn_connection_driver_t *d);
 
 /**
+ * Try to get a read buffer with the specified size.
+ *
+ * This will try to grow the read buffer to the specified size and then it will return whatever size
+ * read buffer can be got.
+ *
+ * Copy data from your input byte source to buf.start, up to buf.size.
+ * Call pn_connection_driver_read_done() when reading is complete.
+ *
+ * buf.size==0 means reading is not possible: no buffer space or the read side is closed.
+ */
+PN_EXTERN pn_rwbytes_t pn_connection_driver_read_buffer_sized(pn_connection_driver_t *, size_t n);
+
+/**
  * Get the read buffer.
  *
  * Copy data from your input byte source to buf.start, up to buf.size.
