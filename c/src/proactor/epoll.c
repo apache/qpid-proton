@@ -1214,6 +1214,12 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
       ssize_t n = read(pc->psocket.epoll_io.fd, rbuf.start, rbuf.size);
       if (n > 0) {
         pn_connection_driver_read_done(&pc->driver, n);
+        // If n == rbuf.size then we should enlarge the buffer and see if there is more to read
+        if (n==(ssize_t)rbuf.size) {
+          rbuf = pn_connection_driver_read_buffer(&pc->driver);
+          n = read(pc->psocket.epoll_io.fd, rbuf.start, rbuf.size);
+          pn_connection_driver_read_done(&pc->driver, n);
+        }
         pc->output_drained = false;
         pconnection_tick(pc);         /* check for tick changes. */
         tick_required = false;
