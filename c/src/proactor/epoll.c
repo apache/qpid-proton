@@ -965,7 +965,7 @@ static inline bool pconnection_wclosed(pconnection_t  *pc) {
    close/shutdown.  Let read()/write() return 0 or -1 to trigger cleanup logic.
 */
 static int pconnection_rearm_check(pconnection_t *pc) {
-  if (pconnection_rclosed(pc) && pconnection_wclosed(pc)) {
+  if ((pconnection_rclosed(pc) && pconnection_wclosed(pc)) || pc->psocket.epoll_io.fd == -1) {
     return 0;
   }
   uint32_t wanted_now = (pc->read_blocked && !pconnection_rclosed(pc)) ? EPOLLIN : 0;
@@ -1652,7 +1652,7 @@ static void listener_begin_close(pn_listener_t* l) {
 void pn_listener_close(pn_listener_t* l) {
   bool notify = false;
   lock(&l->task.mutex);
-  if (!l->task.closing) {
+  if (l->task.proactor && !l->task.closing) {
     listener_begin_close(l);
     notify = schedule(&l->task);
   }
