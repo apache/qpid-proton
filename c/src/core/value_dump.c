@@ -346,19 +346,26 @@ void pn_value_dump_list(uint32_t count, pn_bytes_t value, pn_string_t *output) {
 
 void pn_value_dump_described_list(uint32_t count, pn_bytes_t value, uint64_t dcode, pn_string_t *output) {
   uint32_t elements = 0;
+  bool output_element = false;
   pn_string_addf(output, "[");
   while (value.size) {
-    const pn_fields_t *fields = &FIELDS[dcode-FIELD_MIN];
-    if (elements < fields->field_count) {
-      pn_string_addf(output, "%s=",
-                     (const char*)FIELD_STRINGPOOL.STRING0+FIELD_FIELDS[fields->first_field_index+elements]);
+    uint8_t type = value.start[0];
+    if (type==PNE_NULL) {
+      value = pn_bytes_advance(value, 1);
+    } else {
+      if (output_element) {
+        pn_string_addf(output, ", ");
+      }
+      const pn_fields_t *fields = &FIELDS[dcode-FIELD_MIN];
+      if (elements < fields->field_count) {
+        pn_string_addf(output, "%s=",
+                      (const char*)FIELD_STRINGPOOL.STRING0+FIELD_FIELDS[fields->first_field_index+elements]);
+      }
+      size_t size = pn_value_dump(value, output);
+      value = pn_bytes_advance(value, size);
+      output_element = true;
     }
     elements++;
-    size_t size = pn_value_dump(value, output);
-    value = pn_bytes_advance(value, size);
-    if (value.size) {
-      pn_string_addf(output, ", ");
-    }
   }
   pn_string_addf(output, "]");
   if (elements!=count) {
