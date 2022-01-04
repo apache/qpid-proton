@@ -25,8 +25,6 @@
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
 
-#include "proton_bits.hpp"
-
 namespace proton {
 
 // Set parent_ non-null when the local terminus is authoritative and may need to be looked up.
