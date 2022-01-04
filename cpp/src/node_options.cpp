@@ -31,6 +31,7 @@
 
 #include <limits>
 #include <map>
+#include <vector>
 
 namespace proton {
 

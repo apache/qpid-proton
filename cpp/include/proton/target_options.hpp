@@ -29,6 +29,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 /// @file
 /// @copybrief proton::target_options
