@@ -19,7 +19,6 @@
  *
  */
 
-#include "proton/codec/vector.hpp"
 #include "proton/map.hpp"
 #include "proton/source.hpp"
 #include "proton/source_options.hpp"
