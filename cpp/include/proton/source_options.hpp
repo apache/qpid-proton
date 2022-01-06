@@ -91,11 +91,11 @@ class source_options {
     /// messages.
     PN_CPP_EXTERN source_options& filters(const source::filter_map&);
 
-    /// Extension capabilities that are supported/requested
+    /// **Unsettled API** Extension capabilities that are supported/requested
     PN_CPP_EXTERN source_options& capabilities(const std::vector<symbol>&);
 
-    /// Set the dynamic node properties.
-    PN_CPP_EXTERN source_options& dynamic_properties(const std::map<symbol, value>&);
+    /// **Unsettled API** Set the dynamic node properties.
+    PN_CPP_EXTERN source_options& dynamic_properties(const source::dynamic_property_map&);
 
   private:
     void apply(source&) const;

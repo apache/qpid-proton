@@ -82,11 +82,11 @@ class target_options {
     /// target::LINK_CLOSE.
     PN_CPP_EXTERN target_options& expiry_policy(enum target::expiry_policy);
 
-    /// Extension capabilities that are supported/requested
+    /// **Unsettled API** Extension capabilities that are supported/requested
     PN_CPP_EXTERN target_options& capabilities(const std::vector<symbol>&);
 
-    /// Set the dynamic node properties.
-    PN_CPP_EXTERN target_options& dynamic_properties(const std::map<symbol, value>&);
+    /// **Unsettled API** Set the dynamic node properties.
+    PN_CPP_EXTERN target_options& dynamic_properties(const target::dynamic_property_map&);
 
   private:
     void apply(target&) const;

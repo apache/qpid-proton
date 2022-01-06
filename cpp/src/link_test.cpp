@@ -41,7 +41,7 @@
 #include <mutex>
 #include <thread>
 
-typedef std::map<proton::symbol, proton::value> property_map;
+using property_map=proton::terminus::dynamic_property_map;
 
 namespace {
 std::mutex m;
@@ -78,16 +78,21 @@ class test_server : public proton::messaging_handler {
     void on_sender_open(proton::sender& s) override {
         ASSERT(s.source().dynamic());
         ASSERT(s.source().address().empty());
-        property_map p = {{proton::symbol("supported-dist-modes"), proton::symbol("copy")}};
+        property_map p;
+        p = std::map<proton::symbol, proton::value>{
+          {proton::symbol("supported-dist-modes"), proton::symbol("copy")}
+        };
         ASSERT_EQUAL(s.source().dynamic_properties(), p);
 
+        property_map sp;
+        sp = std::map<proton::symbol, proton::value>{
+          {proton::symbol("supported-dist-modes"), proton::symbol("move")}
+        };
         proton::source_options opts;
         opts.address(DYNAMIC_ADDRESS)
             // This fails due to a bug in the C++ bindings - PROTON-2480
             // .dynamic(true)
-            .dynamic_properties(
-          property_map{{proton::symbol("supported-dist-modes"), proton::symbol("move")}}
-        );
+            .dynamic_properties(sp);
         s.open(proton::sender_options().source(opts));
         listener.stop();
     }
@@ -101,11 +106,13 @@ class test_client : public proton::messaging_handler {
     test_client (const std::string& s) : url(s) {}
 
     void on_container_start(proton::container& c) override {
+        property_map sp;
+        sp = std::map<proton::symbol, proton::value>{
+          {proton::symbol("supported-dist-modes"), proton::symbol("copy")}
+        };
         proton::source_options opts;
         opts.dynamic(true)
-            .dynamic_properties(
-              property_map{{proton::symbol{"supported-dist-modes"}, proton::symbol{"copy"}}}
-        );
+            .dynamic_properties(sp);
         c.open_receiver(url, proton::receiver_options().source(opts));
     }
 
@@ -113,7 +120,10 @@ class test_client : public proton::messaging_handler {
         // This fails due to a bug in the c++ bindings - PROTON-2480
         // ASSERT(r.source().dynamic());
         ASSERT_EQUAL(DYNAMIC_ADDRESS, r.source().address());
-        property_map m({{proton::symbol("supported-dist-modes"), proton::symbol("move")}});
+        property_map m;
+        m = std::map<proton::symbol, proton::value>{
+          {proton::symbol("supported-dist-modes"), proton::symbol("move")}
+        };
         ASSERT_EQUAL(m, r.source().dynamic_properties());
 
         r.connection().close();

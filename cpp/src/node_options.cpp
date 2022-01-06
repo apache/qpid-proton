@@ -100,7 +100,7 @@ class source_options::impl {
     option<enum source::distribution_mode> distribution_mode;
     option<source::filter_map> filters;
     option<std::vector<symbol> > capabilities;
-    option<std::map<symbol, value>> dynamic_properties;
+    option<source::dynamic_property_map> dynamic_properties;
 
     void apply(source& s) {
         node_address(s, address, dynamic, anonymous);
@@ -143,7 +143,7 @@ source_options& source_options::expiry_policy(enum source::expiry_policy m) { im
 source_options& source_options::distribution_mode(enum source::distribution_mode m) { impl_->distribution_mode = m; return *this; }
 source_options& source_options::filters(const source::filter_map &map) { impl_->filters = map; return *this; }
 source_options& source_options::capabilities(const std::vector<symbol>& c) { impl_->capabilities = c; return *this; }
-source_options& source_options::dynamic_properties(const std::map<symbol, value>& c) {
+source_options& source_options::dynamic_properties(const source::dynamic_property_map& c) {
     impl_->dynamic_properties = c;
     return *this;
 }
@@ -161,7 +161,7 @@ class target_options::impl {
     option<duration> timeout;
     option<enum target::expiry_policy> expiry_policy;
     option<std::vector<symbol> > capabilities;
-    option<std::map<symbol, value>> dynamic_properties;
+    option<target::dynamic_property_map> dynamic_properties;
 
     void apply(target& t) {
         node_address(t, address, dynamic, anonymous);
@@ -196,7 +196,7 @@ target_options& target_options::durability_mode(enum target::durability_mode m) 
 target_options& target_options::timeout(duration d) { impl_->timeout = d; return *this; }
 target_options& target_options::expiry_policy(enum target::expiry_policy m) { impl_->expiry_policy = m; return *this; }
 target_options& target_options::capabilities(const std::vector<symbol>& c) { impl_->capabilities = c; return *this; }
-target_options& target_options::dynamic_properties(const std::map<symbol, value>& c) {
+target_options& target_options::dynamic_properties(const target::dynamic_property_map& c) {
     impl_->dynamic_properties = c;
     return *this;
 }

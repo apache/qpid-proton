@@ -61,11 +61,11 @@ std::vector<symbol> terminus::capabilities() const {
     return caps.empty() ? std::vector<symbol>() : caps.get<std::vector<symbol> >();
 }
 
-std::map<symbol, value> terminus::dynamic_properties() const {
+terminus::dynamic_property_map terminus::dynamic_properties() const {
     value props(pn_terminus_properties(object_));
-    std::map<symbol, value> properties;
+    dynamic_property_map properties;
     if (!props.empty()) {
-        get(props, properties);
+        properties.value(props);
     }
     return properties;
 }
