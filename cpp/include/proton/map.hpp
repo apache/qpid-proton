@@ -25,6 +25,8 @@
 #include "./value.hpp"
 
 #include <cstddef>
+#include <initializer_list>
+#include <map>
 #include <memory>
 
 /// @file
@@ -78,6 +80,12 @@ class PN_CPP_CLASS_EXTERN map {
 
     /// Copy a map.
     PN_CPP_EXTERN map& operator=(const map&);
+
+    /// Copy a std::map.
+    PN_CPP_EXTERN map(const std::map<K, T>&);
+
+    /// Initializer_list constructor.
+    PN_CPP_EXTERN map(const std::initializer_list<std::pair<const K, T>>&);
 
     /// Move a map.
     PN_CPP_EXTERN map(map&&);

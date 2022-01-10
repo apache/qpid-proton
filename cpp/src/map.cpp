@@ -49,6 +49,14 @@ template <class K, class T>
 map<K,T>::map(const map& x) { *this = x; }
 
 template <class K, class T>
+map<K, T>::map(const std::map<K, T>& x) { *this = x; }
+
+template <class K, class T>
+map<K, T>::map(const std::initializer_list<std::pair<const K, T>>& x) {
+    *this = std::map<K, T>(x);
+}
+
+template <class K, class T>
 map<K,T>::map(pn_data_t *d) : value_(d) {
     // NOTE: for internal use. Don't verify that the data is valid here as that
     // would forcibly decode message maps immediately, we want to decode on-demand.
