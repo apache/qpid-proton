@@ -48,6 +48,8 @@
 
 #include <assert.h>
 
+#include <proton/tracing.hpp>
+
 namespace proton {
 
 namespace {
@@ -128,7 +130,9 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
                 if (lctx.auto_accept)
                     d.release();
             } else {
+                on_message_start_span(msg, d);
                 handler.on_message(d, msg);
+                on_message_end_span(d);
                 if (lctx.auto_accept && pn_delivery_local_state(dlv) == 0) // Not set by handler
                     d.accept();
                 if (lctx.draining && !pn_link_credit(lnk)) {
@@ -157,6 +161,8 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
         // sender
         if (pn_delivery_updated(dlv)) {
             tracker t(make_wrapper<tracker>(dlv));
+            delivery d(make_wrapper<delivery>(dlv));
+            on_settled_span(d,t);
             switch(pn_delivery_remote_state(dlv)) {
             case PN_ACCEPTED:
                 handler.on_tracker_accept(t);

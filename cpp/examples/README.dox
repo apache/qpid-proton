@@ -137,3 +137,55 @@ A multithreaded sender and receiver enhanced for flow control.
 __Requires C++11__
 
 */
+
+/** @example tracing_demo.cpp
+
+A working example of distributed tracing. 
+
+Steps to run this example: 
+
+# Start Jaeger, for example: 
+
+docker run -d --name jaeger \
+  -e COLLECTOR_ZIPKIN_HOST_PORT=:9411 \
+  -p 5775:5775/udp \
+  -p 6831:6831/udp \
+  -p 6832:6832/udp \
+  -p 5778:5778 \
+  -p 16686:16686 \
+  -p 14268:14268 \
+  -p 14250:14250 \
+  -p 9411:9411 \
+  jaegertracing/all-in-one:1.25 
+
+# Opentelemetry-cpp: 
+
+1. Clone opentelemetry-cpp 
+
+WORKDIR opentelemetry-cpp 
+2. RUN mkdir bld 
+
+WORKDIR bld 
+3. RUN cmake .. -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DWITH_JAEGER=ON 
+4. RUN make 
+5. RUN sudo make install 
+
+# Start broker, for example: 
+
+cd examples
+./broker
+
+# Build and run the tracing_demo example: 
+
+WORKDIR examples 
+RUN ./tracing_demo
+
+# Look in the Jaeger UI: 
+
+Browse to http://localhost:16686 
+Select the Service dropdown at the top of the Search options (if not already selected). 
+Hit Find Traces. 
+
+__Requires C++11 opentelemetry-cpp__
+
+*/

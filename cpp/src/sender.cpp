@@ -35,6 +35,7 @@
 #include "contexts.hpp"
 
 #include <assert.h>
+#include <proton/tracing.hpp>
 
 namespace proton {
 
@@ -70,6 +71,12 @@ tracker sender::send(const message &message, const binary &tag) {
     pn_delivery_t *dlv = pn_delivery(
         pn_object(),
         pn_dtag((reinterpret_cast<const char *>(&tag[0])), tag.size()));
+
+    // TODO: Do not copy message.
+    // proton::message message_cp = message;
+    proton::binary tag_cp = tag;
+    tracker track = make_wrapper<tracker>(dlv);
+    send_span(message, tag_cp, track);
     std::vector<char> buf;
     message.encode(buf);
     assert(!buf.empty());

@@ -62,12 +62,20 @@ add_cpp_test(reconnect_test)
 add_cpp_test(link_test)
 add_cpp_test(credit_test)
 add_cpp_test(delivery_test)
+# add_cpp_test(tracing_test)
+
+# target_link_libraries(tracing_test ${OPENTELEMETRY_CPP_LIBRARIES})
 if (ENABLE_JSONCPP)
   add_cpp_test(connect_config_test)
   target_link_libraries(connect_config_test qpid-proton-core) # For pn_sasl_enabled
   set_tests_properties(cpp-connect_config_test PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   # Test data and output directories for connect_config_test
   file(COPY  "${CMAKE_CURRENT_SOURCE_DIR}/testdata" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
+
+if (ENABLE_OPENTELEMETRYCPP)
+  add_cpp_test(tracing_test)
+  target_link_libraries(tracing_test ${OPENTELEMETRY_CPP_LIBRARIES})
 endif()
 
 # TODO aconway 2018-10-31: Catch2 tests

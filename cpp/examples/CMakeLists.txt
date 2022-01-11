@@ -52,7 +52,6 @@ else ()
   add_definitions(${CXX_STANDARD})
 endif()
 
-
 # Single-threaded examples
 foreach(example
     broker
@@ -89,3 +88,17 @@ foreach(example
   add_executable(${example} ${example}.cpp)
   target_link_libraries(${example} Proton::cpp Threads::Threads)
 endforeach()
+
+if (ENABLE_OPENTELEMETRYCPP)
+  set(example tracing_demo)
+  # set(JAEGER_THRIFT_GENCPP_SOURCES
+  #   thrift-gen/Agent.cpp thrift-gen/jaeger_types.cpp thrift-gen/Collector.cpp
+  #   thrift-gen/zipkincore_types.cpp)
+
+  # add_library(opentelemetry_exporter_jaeger_trace ${JAEGER_THRIFT_GENCPP_SOURCES})
+  add_executable(${example} ${example}.cpp)
+  include_directories(${CMAKE_SOURCE_DIR}/exporters/jaeger/include)
+  
+  target_link_libraries(${example} Proton::cpp opentelemetry_trace opentelemetry_exporter_jaeger_trace)
+  # target_link_libraries(${example} Proton::cpp opentelemetry_trace opentelemetry_exporter_ostream_span)
+endif()

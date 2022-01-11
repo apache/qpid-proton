@@ -19,10 +19,10 @@
 
 include(CMakeDependentOption)
 enable_language(CXX)
+include(CMakePrintHelpers)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads)
-
 include(versions.cmake)
 
 # Check for JSON-CPP support for connection configuration
@@ -36,10 +36,42 @@ else()
   set(CONNECT_CONFIG_SRC src/connect_config_dummy.cpp)
 endif()
 
+# Check for OPENTELEMETRY-CPP for distributed tracing
+find_package(opentelemetry-cpp)
+option(ENABLE_OPENTELEMETRYCPP "Use opentelemetry for distributed tracing" ${OPENTELEMETRY-CPP_FOUND})
+MESSAGE("opentelemetrycpp found: ${OPENTELEMETRY-CPP_FOUND}")
+MESSAGE("ENABLE_OPENTELEMETRYCPP: ${ENABLE_OPENTELEMETRYCPP}")
+
+if (ENABLE_OPENTELEMETRYCPP)
+  add_compile_definitions(ENABLE_OPENTELEMETRYCPP)
+  include_directories(${OPENTELEMETRY_CPP_INCLUDE_DIRS})
+  set(TRACING_SRC src/tracing.cpp)
+  set(TRACING_LIBS ${OPENTELEMETRY_CPP_LIBRARIES})
+
+  set(CURL_LIBRARY "-lcurl")
+  find_package(CURL REQUIRED)
+  include_directories(${CURL_INCLUDE_DIR})
+  MESSAGE("Curl found: ${CURL_FOUND}")
+  set(CURL_LIBS ${CURL_LIBRARIES})
+
+  find_package(Thrift REQUIRED)
+  include_directories(${THRIFT_INCLUDE_DIR})
+  MESSAGE("Thrift found: ${THRIFT_FOUND}")
+  set(THRIFT_LIBS ${THRIFT_LIBRARIES})
+  set(THRIFT_THRIFT thrift::thrift)
+
+else()
+  set(TRACING_SRC src/tracing_dummy.cpp)
+endif()
+
 list(APPEND PLATFORM_LIBS Threads::Threads)
 
 set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CXX_STANDARD}")
 set(CXX_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}")
+
+cmake_print_variables(OPENTELEMETRY_CPP_INCLUDE_DIRS OPENTELEMETRY_CPP_LIBRARIES)
+cmake_print_variables(CURL_INCLUDE_DIRS CURL_LIBRARIES)
+cmake_print_variables(THRIFT_INCLUDE_DIRS THRIFT_LIBRARIES)
 
 include_directories (
   "${CMAKE_SOURCE_DIR}/c/include"
@@ -105,6 +137,7 @@ set(qpid-proton-cpp-source
   src/value.cpp
   src/work_queue.cpp
   ${CONNECT_CONFIG_SRC}
+  ${TRACING_SRC}
   )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
@@ -119,7 +152,7 @@ if(BUILD_STATIC_LIBS)
     EXPORT_NAME cpp)
 endif(BUILD_STATIC_LIBS)
 
-target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS})
+target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS} ${TRACING_LIBS} ${CURL_LIBS} ${THRIFT_LIBS} ${THRIFT_THRIFT})
 
 set_target_properties (
   qpid-proton-cpp

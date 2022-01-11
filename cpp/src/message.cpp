@@ -254,7 +254,7 @@ message::annotation_map& message::message_annotations() {
     return impl().annotations;
 }
 
-const message::annotation_map& message::message_annotations() const {
+message::annotation_map& message::message_annotations() const {
     return impl().annotations;
 }
 

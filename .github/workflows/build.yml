@@ -4,6 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build:
+    if: github.repository == 'DreamPearl/qpid-proton'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -24,6 +25,12 @@ jobs:
       InstallPrefix: ${{github.workspace}}/INSTALL
       PKG_CONFIG_PATH: ${{matrix.pkg_config_path}}
       VCPKG_DEFAULT_TRIPLET: x64-windows
+      OTelDir: ${{github.workspace}}/opentelemetry-cpp
+      OTelBuildDir: ${{github.workspace}}/opentelemetry-cpp/BLD
+      OTelInstallPrefix: /usr
+      CurlDir: ${{github.workspace}}/curl
+      CurlBuildDir: ${{github.workspace}}/curl/BLD
+      CurlInstallPrefix: /usr
     steps:
     - uses: actions/checkout@v2
     - name: Create Build and Install directories
@@ -60,9 +67,59 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         brew install libuv swig pkgconfig jsoncpp
+    - name: Checkout curl repo (for jaeger)
+      if: runner.os == 'Linux'
+      uses: actions/checkout@v2
+      with:
+        repository: curl/curl
+        path: ${{env.CurlDir}}
+        submodules: recursive
+    - name: Create Build directory for curl
+      run: mkdir -p "${CurlBuildDir}"
+      shell: bash
+    - name: curl cmake configure
+      if: runner.os == 'Linux'
+      working-directory: ${{env.CurlBuildDir}}
+      run: cmake "${{github.workspace}}/curl" "-DCMAKE_INSTALL_PREFIX=${CurlInstallPrefix}" "-DBUILD_SHARED_LIBS=ON" "-DCMAKE_POSITION_INDEPENDENT_CODE=ON" "-DBUILD_TESTING=OFF" "-DCMAKE_BUILD_TYPE=${BuildType}"
+      shell: bash
+    - name: curl cmake build/install
+      if: runner.os == 'Linux'
+      run: |
+        cmake --build "${CurlBuildDir}" --target all
+        sudo cmake --install "${CurlBuildDir}" --config ${BuildType}
+      shell: bash
+    - name: install thrift (for jaeger)
+      if: runner.os == 'Linux'
+      run: sudo ./ci/setup_thrift.sh
+      shell: bash
+    - name: Create directory for opentelemetry-cpp
+      run: mkdir -p "${OTelDir}"
+      shell: bash
+    - name: Checkout opentelemetry-cpp repo
+      if: runner.os == 'Linux'
+      uses: actions/checkout@v2
+      with:
+        repository: open-telemetry/opentelemetry-cpp
+        path: ${{env.OTelDir}}
+        submodules: recursive
+    - name: Create Build directory for opentelemetry-cpp
+      if: runner.os == 'Linux'
+      run: mkdir -p "${OTelBuildDir}"
+      shell: bash
+    - name: opentelemetry-cpp cmake configure
+      if: runner.os == 'Linux'
+      working-directory: ${{env.OTelBuildDir}}
+      run: cmake "${{github.workspace}}/opentelemetry-cpp" "-DCMAKE_INSTALL_PREFIX=${OTelInstallPrefix}" "-DBUILD_SHARED_LIBS=ON" "-DCMAKE_POSITION_INDEPENDENT_CODE=ON" "-DBUILD_TESTING=OFF" "-DCMAKE_BUILD_TYPE=${BuildType}" "-DWITH_JAEGER=ON"
+      shell: bash
+    - name: opentelemetry-cpp cmake build/install
+      if: runner.os == 'Linux'
+      run: |
+        cmake --build "${OTelBuildDir}" --target all
+        sudo cmake --install "${OTelBuildDir}" --config ${BuildType}
+      shell: bash
     - name: cmake configure
       working-directory: ${{env.BuildDir}}
-      run: cmake "${{github.workspace}}" "-DCMAKE_BUILD_TYPE=${BuildType}" "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" ${{matrix.cmake_extra}}
+      run: cmake "${{github.workspace}}" "-DCMAKE_BUILD_TYPE=${BuildType}" "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" ${{matrix.cmake_extra}} "-Dopentelemetry-cpp_DIR=${OTelInstallPrefix}/lib/cmake/opentelemetry-cpp"
       shell: bash
     - name: cmake build/install
       run: cmake --build "${BuildDir}" --config ${BuildType} -t install
