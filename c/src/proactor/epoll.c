@@ -1215,26 +1215,34 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
       if (n > 0) {
         pn_connection_driver_read_done(&pc->driver, n);
         // If n == rbuf.size then we should enlarge the buffer and see if there is more to read
-        if (n==(ssize_t)rbuf.size) {
+        if ((size_t)n==rbuf.size) {
           rbuf = pn_connection_driver_read_buffer_sized(&pc->driver, n*2);
-          n = read(pc->psocket.epoll_io.fd, rbuf.start, rbuf.size);
-          pn_connection_driver_read_done(&pc->driver, n);
+          if (rbuf.size > 0) {
+            n = read(pc->psocket.epoll_io.fd, rbuf.start, rbuf.size);
+            if (n > 0) {
+              pn_connection_driver_read_done(&pc->driver, n);
+            }
+          }
+        }
+        // If we didn't read a full buffer (either in the first or second read) then we are blocked
+        if ((size_t)n < rbuf.size && !pn_connection_driver_read_closed(&pc->driver)) {
+          pc->read_blocked = true;
         }
         pc->output_drained = false;
         pconnection_tick(pc);         /* check for tick changes. */
         tick_required = false;
         pc->io_doublecheck = false;
-        if (!pn_connection_driver_read_closed(&pc->driver) && (size_t)n < rbuf.size)
-          pc->read_blocked = true;
       }
-      else if (n == 0) {
+      // Need to check for EOF and errors for either read
+      if (n == 0) {
         pc->read_blocked = true;
         pn_connection_driver_read_close(&pc->driver);
-      }
-      else if (errno == EWOULDBLOCK)
-        pc->read_blocked = true;
-      else if (!(errno == EAGAIN || errno == EINTR)) {
-        psocket_error(&pc->psocket, errno, pc->disconnected ? "disconnected" : "on read from");
+      } else if (n < 0) {
+        if (errno == EWOULDBLOCK) {
+          pc->read_blocked = true;
+        } else if (!(errno == EAGAIN || errno == EINTR)) {
+          psocket_error(&pc->psocket, errno, pc->disconnected ? "disconnected" : "on read from");
+        }
       }
     }
   } else {
