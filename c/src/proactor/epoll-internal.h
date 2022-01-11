@@ -381,7 +381,8 @@ void configure_socket(int sock);
 accepted_t *listener_accepted_next(pn_listener_t *listener);
 
 task_t *pni_psocket_raw_task(psocket_t *ps);
-pn_event_batch_t *pni_raw_connection_process(task_t *t, bool sched_ready);
+psocket_t *pni_task_raw_psocket(task_t *t);
+pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool sched_ready);
 
 typedef struct praw_connection_t praw_connection_t;
 task_t *pni_raw_connection_task(praw_connection_t *rc);

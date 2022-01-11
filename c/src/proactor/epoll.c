@@ -2221,8 +2221,11 @@ static pn_event_batch_t *process(task_t *tsk) {
     break;
   }
   case RAW_CONNECTION: {
+    psocket_t *ps = pni_task_raw_psocket(tsk);
+    uint32_t events = ps->sched_io_events;
+    if (events) ps->sched_io_events = 0;
     unlock(&p->sched_mutex);
-    batch = pni_raw_connection_process(tsk, tsk_ready);
+    batch = pni_raw_connection_process(tsk, events, tsk_ready);
     break;
   }
   case TIMER_MANAGER: {

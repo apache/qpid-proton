@@ -320,6 +320,10 @@ task_t *pni_psocket_raw_task(psocket_t* ps) {
   return &containerof(ps, praw_connection_t, psocket)->task;
 }
 
+psocket_t *pni_task_raw_psocket(task_t *t) {
+  return &containerof(t, praw_connection_t, task)->psocket;
+}
+
 praw_connection_t *pni_batch_raw_connection(pn_event_batch_t *batch) {
   return (batch->next_event == pni_raw_batch_next) ?
     containerof(batch, praw_connection_t, batch) : NULL;
@@ -349,10 +353,10 @@ static void  set_error(pn_raw_connection_t *conn, const char *msg, int err) {
   psocket_error(containerof(conn, praw_connection_t, raw_connection), err, msg);
 }
 
-pn_event_batch_t *pni_raw_connection_process(task_t *t, bool sched_ready) {
+pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool sched_ready) {
   praw_connection_t *rc = containerof(t, praw_connection_t, task);
   lock(&rc->task.mutex);
-  int events = rc->psocket.sched_io_events;
+  int events = io_events;
   int fd = rc->psocket.epoll_io.fd;
   if (!rc->connected) {
     if (events & (EPOLLHUP | EPOLLERR)) {
