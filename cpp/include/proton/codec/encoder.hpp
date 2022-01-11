@@ -169,10 +169,10 @@ class encoder : public internal::data {
 inline encoder& operator<<(encoder& e, const char* s) { return e << std::string(s); }
 
 /// operator << for integer types that are not covered by the standard overrides.
-template <class T> typename internal::enable_if<internal::is_unknown_integer<T>::value, encoder&>::type
+template <class T> typename std::enable_if<internal::is_unknown_integer<T>::value, encoder&>::type
 operator<<(encoder& e, T i)  {
     using namespace internal;
-    return e << static_cast<typename integer_type<sizeof(T), is_signed<T>::value>::type>(i);
+    return e << static_cast<typename integer_type<sizeof(T), std::is_signed<T>::value>::type>(i);
 }
 
 /// @cond INTERNAL
@@ -192,7 +192,7 @@ template<typename T> struct is_encodable : public sfinae {
 };
 
 // Avoid recursion
-template <> struct is_encodable<value> : public true_type {};
+template <> struct is_encodable<value> : public std::true_type {};
 
 } // is_encodable_impl
 
@@ -200,15 +200,15 @@ using is_encodable_impl::is_encodable;
 
 // Metafunction to test if a class looks like an encodable map from K to T.
 template <class M, class K, class T, class Enable = void>
-struct is_encodable_map : public internal::false_type {};
+struct is_encodable_map : public std::false_type {};
 
 template <class M, class K, class T> struct is_encodable_map<
-    M, K, T, typename internal::enable_if<
-                 internal::is_same<K, typename M::key_type>::value &&
-                 internal::is_same<T, typename M::mapped_type>::value &&
+    M, K, T, typename std::enable_if<
+                 std::is_same<K, typename M::key_type>::value &&
+                 std::is_same<T, typename M::mapped_type>::value &&
                  is_encodable<M>::value
                  >::type
-    > : public internal::true_type {};
+    > : public std::true_type {};
 
 
 /// @endcond

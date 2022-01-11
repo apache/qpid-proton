@@ -134,7 +134,7 @@ class scalar_base : private internal::comparable<scalar_base> {
         static void put(scalar_base& s, const T& x) { s.put_(x); }
     };
     template <class T>
-    struct putter<T, typename internal::enable_if<internal::is_unknown_integer<T>::value>::type> {
+    struct putter<T, typename std::enable_if<internal::is_unknown_integer<T>::value>::type> {
         static void put(scalar_base& s, const T& x) {
             s.put_(static_cast<typename internal::known_integer<T>::type>(x));
         }
@@ -144,7 +144,7 @@ class scalar_base : private internal::comparable<scalar_base> {
         static T get(const scalar_base& s) { T x; s.get_(x); return x; }
     };
     template <class T>
-    struct getter<T, typename internal::enable_if<internal::is_unknown_integer<T>::value>::type> {
+    struct getter<T, typename std::enable_if<internal::is_unknown_integer<T>::value>::type> {
         static T get(const scalar_base& s) {
             typename internal::known_integer<T>::type x; s.get_(x); return x;
         }
@@ -201,11 +201,11 @@ PN_CPP_EXTERN conversion_error make_coercion_error(const char* cpp_type, type_id
 
 template<class T> struct coerce_op {
     template <class U>
-    typename enable_if<is_convertible<U, T>::value, T>::type operator()(const U& x) {
+    typename std::enable_if<std::is_convertible<U, T>::value, T>::type operator()(const U& x) {
         return static_cast<T>(x);
     }
     template <class U>
-    typename enable_if<!is_convertible<U, T>::value, T>::type operator()(const U&) {
+    typename std::enable_if<!std::is_convertible<U, T>::value, T>::type operator()(const U&) {
         throw make_coercion_error(typeid(T).name(), type_id_of<U>::value);
     }
 };

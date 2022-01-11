@@ -79,7 +79,7 @@ template <class V, class T> void simple_type_test(T x, type_id tid, const std::s
 
 // Test native C/C++ integer types via their mapped integer type ([u]int_x_t)
 template <class V, class T> void simple_integral_test() {
-    typedef typename internal::integer_type<sizeof(T), internal::is_signed<T>::value>::type int_type;
+    typedef typename internal::integer_type<sizeof(T), std::is_signed<T>::value>::type int_type;
     simple_type_test<V>(T(3), internal::type_id_of<int_type>::value, "3", T(4));
 }
 

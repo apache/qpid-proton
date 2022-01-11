@@ -157,8 +157,8 @@ class decoder : public internal::data {
         assert_type_equal(MAP, s.type);
         r.ref.clear();
         for (size_t i = 0; i < s.size/2; ++i) {
-            typename remove_const<typename T::key_type>::type k;
-            typename remove_const<typename T::mapped_type>::type v;
+            typename std::remove_const<typename T::key_type>::type k;
+            typename std::remove_const<typename T::mapped_type>::type v;
             *this >> k >> v;
             r.ref[k] = v;
         }
@@ -175,8 +175,8 @@ class decoder : public internal::data {
         r.ref.clear();
         for (size_t i = 0; i < s.size/2; ++i) {
             typedef typename T::value_type value_type;
-            typename remove_const<typename value_type::first_type>::type k;
-            typename remove_const<typename value_type::second_type>::type v;
+            typename std::remove_const<typename value_type::first_type>::type k;
+            typename std::remove_const<typename value_type::second_type>::type v;
             *this >> k >> v;
             r.ref.push_back(value_type(k, v));
         }
@@ -203,10 +203,10 @@ template<class T> T get(decoder& d) {
 
 /// operator>> for integer types that are not covered by the standard
 /// overrides.
-template <class T> typename internal::enable_if<internal::is_unknown_integer<T>::value, decoder&>::type
+template <class T> typename std::enable_if<internal::is_unknown_integer<T>::value, decoder&>::type
 operator>>(decoder& d, T& i)  {
     using namespace internal;
-    typename integer_type<sizeof(T), is_signed<T>::value>::type v;
+    typename integer_type<sizeof(T), std::is_signed<T>::value>::type v;
     d >> v;                     // Extract as a known integer type
     i = v;                      // C++ conversion to the target type.
     return d;

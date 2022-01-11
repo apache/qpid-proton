@@ -67,7 +67,7 @@ template <class K, class T>
 class PN_CPP_CLASS_EXTERN map {
     template <class M, class U=void>
         struct assignable_map :
-            public internal::enable_if<codec::is_encodable_map<M,K,T>::value, U> {};
+            public std::enable_if<codec::is_encodable_map<M,K,T>::value, U> {};
 
  public:
     /// Construct an empty map.
