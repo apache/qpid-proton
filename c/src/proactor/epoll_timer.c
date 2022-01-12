@@ -153,7 +153,9 @@ pni_timer_t *pni_timer(pni_timer_manager_t *tm, pconnection_t *c) {
 void pni_timer_free(pni_timer_t *timer) {
   timer_deadline_t *td = timer->timer_deadline;
   bool can_free_td = false;
-  if (td) pni_timer_set(timer, 0);
+  bool notify = false;
+  if (td)
+    notify = pni_timer_set(timer, 0);
   pni_timer_manager_t *tm = timer->manager;
   lock(&tm->task.mutex);
   lock(&tm->deletion_mutex);
@@ -165,6 +167,8 @@ void pni_timer_free(pni_timer_t *timer) {
   }
   unlock(&tm->deletion_mutex);
   unlock(&tm->task.mutex);
+  if (notify)
+    notify_poller(tm->task.proactor);
   if (can_free_td) {
     timer_deadline_t_free(td);
   }
@@ -253,14 +257,15 @@ static bool adjust_deadline(pni_timer_manager_t *tm) {
 // Call without task lock or timer_manager lock.
 // Calls for connection timers are generated in the proactor and serialized per connection.
 // Calls for the proactor timer can come from arbitrary user threads.
-void pni_timer_set(pni_timer_t *timer, uint64_t deadline) {
+// Caller must call notify_poller() if true returned.
+bool pni_timer_set(pni_timer_t *timer, uint64_t deadline) {
   pni_timer_manager_t *tm = timer->manager;
   bool notify = false;
 
   lock(&tm->task.mutex);
   if (deadline == timer->deadline) {
     unlock(&tm->task.mutex);
-    return;  // No change.
+    return false;  // No change.
   }
 
   if (timer == tm->proactor_timer) {
@@ -293,8 +298,7 @@ void pni_timer_set(pni_timer_t *timer, uint64_t deadline) {
     notify = adjust_deadline(tm);
   unlock(&tm->task.mutex);
 
-  if (notify)
-    notify_poller(tm->task.proactor);
+  return notify;
 }
 
 pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool sched_ready) {

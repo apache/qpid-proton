@@ -835,8 +835,8 @@ static void pconnection_final_free(pconnection_t *pc) {
   pmutex_finalize(&pc->rearm_mutex);
   pn_condition_free(pc->disconnect_condition);
   pn_connection_driver_destroy(&pc->driver);
-  task_finalize(&pc->task);
   pni_timer_free(pc->timer);
+  task_finalize(&pc->task);
   free(pc);
 }
 
@@ -1453,7 +1453,8 @@ static void pconnection_tick(pconnection_t *pc) {
       lock(&pc->task.mutex);
       pc->expected_timeout = next;
       unlock(&pc->task.mutex);
-      pni_timer_set(pc->timer, next);
+      if (pni_timer_set(pc->timer, next))
+        notify_poller(pc->task.proactor);
     }
   }
 }
@@ -1957,6 +1958,7 @@ pn_proactor_t *pn_proactor() {
   pmutex_init(&p->eventfd_mutex);
   pmutex_init(&p->sched_mutex);
   pmutex_init(&p->tslot_mutex);
+  pmutex_init(&p->timeout_mutex);
 
   if ((p->epollfd = epoll_create(1)) >= 0) {
     if ((p->eventfd = eventfd(0, EFD_NONBLOCK)) >= 0) {
@@ -1979,6 +1981,7 @@ pn_proactor_t *pn_proactor() {
   if (p->eventfd >= 0) close(p->eventfd);
   if (p->interruptfd >= 0) close(p->interruptfd);
   pni_timer_manager_finalize(&p->timer_manager);
+  pmutex_finalize(&p->timeout_mutex);
   pmutex_finalize(&p->tslot_mutex);
   pmutex_finalize(&p->sched_mutex);
   pmutex_finalize(&p->eventfd_mutex);
@@ -2014,6 +2017,7 @@ void pn_proactor_free(pn_proactor_t *p) {
 
   pni_timer_manager_finalize(&p->timer_manager);
   pn_collector_free(p->collector);
+  pmutex_finalize(&p->timeout_mutex);
   pmutex_finalize(&p->tslot_mutex);
   pmutex_finalize(&p->sched_mutex);
   pmutex_finalize(&p->eventfd_mutex);
@@ -2768,26 +2772,42 @@ void pn_proactor_interrupt(pn_proactor_t *p) {
 
 void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
   bool notify = false;
+  lock(&p->timeout_mutex);
+
   lock(&p->task.mutex);
   p->timeout_set = true;
   if (t == 0) {
-    pni_timer_set(p->timer, 0);
     p->need_timeout = true;
-    notify = schedule(&p->task);
-  } else {
-    pni_timer_set(p->timer, t + pn_proactor_now_64());
+    if (schedule(&p->task))
+      notify = true;
   }
   unlock(&p->task.mutex);
+
+  if (t == 0) {
+    if (pni_timer_set(p->timer, 0))
+      notify = true;
+  } else {
+    if (pni_timer_set(p->timer, t + pn_proactor_now_64()))
+      notify = true;
+  }
+  unlock(&p->timeout_mutex);
   if (notify) notify_poller(p);
 }
 
 void pn_proactor_cancel_timeout(pn_proactor_t *p) {
+  bool notify = false;
+  lock(&p->timeout_mutex);
+
   lock(&p->task.mutex);
   p->timeout_set = false;
   p->need_timeout = false;
-  pni_timer_set(p->timer, 0);
-  bool notify = schedule_if_inactive(p);
+  if (schedule_if_inactive(p))
+    notify = true;
   unlock(&p->task.mutex);
+
+  if (pni_timer_set(p->timer, 0))
+    notify = true;
+  unlock(&p->timeout_mutex);
   if (notify) notify_poller(p);
 }
 

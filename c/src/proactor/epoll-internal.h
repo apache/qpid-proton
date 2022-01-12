@@ -157,6 +157,7 @@ struct pn_proactor_t {
   bool need_timeout;
   bool timeout_set; /* timeout has been set by user and not yet cancelled or generated event */
   bool timeout_processed;  /* timeout event dispatched in the most recent event batch */
+  pmutex timeout_mutex;
   int task_count;
 
   // ready list subsystem
@@ -391,7 +392,7 @@ void pni_raw_connection_done(praw_connection_t *rc);
 
 pni_timer_t *pni_timer(pni_timer_manager_t *tm, pconnection_t *c);
 void pni_timer_free(pni_timer_t *timer);
-void pni_timer_set(pni_timer_t *timer, uint64_t deadline);
+bool pni_timer_set(pni_timer_t *timer, uint64_t deadline);
 bool pni_timer_manager_init(pni_timer_manager_t *tm);
 void pni_timer_manager_finalize(pni_timer_manager_t *tm);
 pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool sched_ready);
