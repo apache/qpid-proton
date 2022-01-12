@@ -23,11 +23,11 @@
  */
 
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 #include "./duration.hpp"
 #include "./source.hpp"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -101,7 +101,7 @@ class source_options {
     void apply(source&) const;
 
     class impl;
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
   friend class source;

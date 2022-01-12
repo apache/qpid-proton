@@ -27,8 +27,8 @@
 #include "./types_fwd.hpp"
 
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 
+#include <memory>
 #include <string>
 
 /// @file
@@ -313,7 +313,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// A C++11 user should never call the v03 overload so it is private in this case
     PN_CPP_EXTERN void schedule(duration dur, internal::v03::work fn);
     class impl;
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
   friend class connection_options;

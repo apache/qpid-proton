@@ -29,8 +29,6 @@
 #include "./value.hpp"
 #include "./map.hpp"
 
-#include "./internal/pn_unique_ptr.hpp"
-
 #include <proton/type_compat.h>
 
 #include <string>

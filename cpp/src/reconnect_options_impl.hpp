@@ -23,7 +23,6 @@
  */
 
 #include "proton/duration.hpp"
-#include "proton/internal/pn_unique_ptr.hpp"
 #include "proton/reconnect_options.hpp"
 
 #include <string>

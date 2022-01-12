@@ -26,7 +26,8 @@
 
 #include "proton/work_queue.hpp"
 #include "proton/message.hpp"
-#include "proton/internal/pn_unique_ptr.hpp"
+
+#include <memory>
 
 struct pn_record_t;
 struct pn_link_t;
@@ -95,8 +96,8 @@ class connection_context : public context {
     messaging_handler* handler;
     std::string reconnect_url_;
     std::vector<std::string> failover_urls_;
-    internal::pn_unique_ptr<connection_options> connection_options_;
-    internal::pn_unique_ptr<reconnect_context> reconnect_context_;
+    std::unique_ptr<connection_options> connection_options_;
+    std::unique_ptr<reconnect_context> reconnect_context_;
     listener_context* listener_context_;
     work_queue work_queue_;
 };
@@ -122,7 +123,7 @@ class listener_context : public context {
     static listener_context& get(pn_listener_t* c);
 
     listen_handler* listen_handler_;
-    internal::pn_unique_ptr<const connection_options> connection_options_;
+    std::unique_ptr<const connection_options> connection_options_;
 };
 
 class link_context : public context {

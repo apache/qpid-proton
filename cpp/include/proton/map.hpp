@@ -23,9 +23,9 @@
  */
 
 #include "./value.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 
 #include <cstddef>
+#include <memory>
 
 /// @file
 /// @copybrief proton::map
@@ -132,7 +132,7 @@ class PN_CPP_CLASS_EXTERN map {
 
   private:
     typedef map_type_impl<K,T> map_type;
-    mutable internal::pn_unique_ptr<map_type> map_;
+    mutable std::unique_ptr<map_type> map_;
     mutable proton::value value_;
 
     map_type& cache() const;

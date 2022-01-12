@@ -26,11 +26,11 @@
 #include "./fwd.hpp"
 #include "./function.hpp"
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 
 #include <functional>
-#include <utility>
+#include <memory>
 #include <type_traits>
+#include <utility>
 
 struct pn_connection_t;
 struct pn_session_t;
@@ -375,7 +375,7 @@ class PN_CPP_CLASS_EXTERN work_queue {
     PN_CPP_EXTERN static work_queue& get(pn_session_t*);
     PN_CPP_EXTERN static work_queue& get(pn_link_t*);
 
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
   friend class container;

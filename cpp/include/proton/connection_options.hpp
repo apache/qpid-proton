@@ -25,13 +25,13 @@
 #include "./duration.hpp"
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 #include "./symbol.hpp"
 #include "./types_fwd.hpp"
 
 #include <proton/type_compat.h>
 
 #include <map>
+#include <memory>
 #include <vector>
 #include <string>
 
@@ -218,7 +218,7 @@ class connection_options {
     messaging_handler* handler() const;
 
     class impl;
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
   friend class container;

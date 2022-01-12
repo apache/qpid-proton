@@ -23,11 +23,11 @@
  */
 
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 #include "./duration.hpp"
 #include "./target.hpp"
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -92,7 +92,7 @@ class target_options {
     void apply(target&) const;
 
     class impl;
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
   friend class target;

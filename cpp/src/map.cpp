@@ -117,7 +117,7 @@ void map<K,T>::value(const proton::value& x) {
     if (x.empty()) {
         clear();
     } else {
-        internal::pn_unique_ptr<map_type> tmp(new map_type);
+        std::unique_ptr<map_type> tmp(new map_type);
         proton::get(x, *tmp);  // Validate by decoding, may throw
         map_.reset(tmp.release());
         value_.clear();

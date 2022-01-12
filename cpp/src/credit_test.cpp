@@ -31,12 +31,11 @@
 #include "proton/transport.hpp"
 #include "proton/work_queue.hpp"
 
-#include "proton/internal/pn_unique_ptr.hpp"
-
 #include <cstdlib>
 #include <ctime>
 #include <string>
 #include <cstdio>
+#include <memory>
 #include <sstream>
 
 namespace {
@@ -212,7 +211,7 @@ class tester : public proton::messaging_handler, public waiter {
     virtual void first_idle() = 0;
 
   protected:
-    proton::internal::pn_unique_ptr<server_connection_handler> srv_;
+    std::unique_ptr<server_connection_handler> srv_;
     proton::container container_;
     proton::receiver receiver_;
     proton::work next_idle_;

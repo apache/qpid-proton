@@ -36,7 +36,6 @@
 #include <proton/value.hpp>
 
 #include "proton/error_condition.hpp"
-#include "proton/internal/pn_unique_ptr.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/transport.hpp"
 #include "proton/work_queue.hpp"
