@@ -78,21 +78,16 @@ class test_server : public proton::messaging_handler {
     void on_sender_open(proton::sender& s) override {
         ASSERT(s.source().dynamic());
         ASSERT(s.source().address().empty());
-        property_map p;
-        p = std::map<proton::symbol, proton::value>{
+        property_map p = {
           {proton::symbol("supported-dist-modes"), proton::symbol("copy")}
         };
         ASSERT_EQUAL(s.source().dynamic_properties(), p);
 
-        property_map sp;
-        sp = std::map<proton::symbol, proton::value>{
-          {proton::symbol("supported-dist-modes"), proton::symbol("move")}
-        };
         proton::source_options opts;
         opts.address(DYNAMIC_ADDRESS)
             // This fails due to a bug in the C++ bindings - PROTON-2480
             // .dynamic(true)
-            .dynamic_properties(sp);
+            .dynamic_properties({{proton::symbol("supported-dist-modes"), proton::symbol("move")}});
         s.open(proton::sender_options().source(opts));
         listener.stop();
     }
@@ -106,8 +101,7 @@ class test_client : public proton::messaging_handler {
     test_client (const std::string& s) : url(s) {}
 
     void on_container_start(proton::container& c) override {
-        property_map sp;
-        sp = std::map<proton::symbol, proton::value>{
+        property_map sp = std::map<proton::symbol, proton::value>{
           {proton::symbol("supported-dist-modes"), proton::symbol("copy")}
         };
         proton::source_options opts;
@@ -120,8 +114,7 @@ class test_client : public proton::messaging_handler {
         // This fails due to a bug in the c++ bindings - PROTON-2480
         // ASSERT(r.source().dynamic());
         ASSERT_EQUAL(DYNAMIC_ADDRESS, r.source().address());
-        property_map m;
-        m = std::map<proton::symbol, proton::value>{
+        property_map m = std::map<proton::symbol, proton::value>{
           {proton::symbol("supported-dist-modes"), proton::symbol("move")}
         };
         ASSERT_EQUAL(m, r.source().dynamic_properties());

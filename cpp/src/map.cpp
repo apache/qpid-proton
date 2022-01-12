@@ -40,7 +40,14 @@ namespace proton {
 
 // use std::map as the actual map implementation type
 template <class K, class T>
-class map_type_impl : public std::map<K, T> {};
+class map_type_impl : public std::map<K, T> {
+  // Inherit constructors from std::map for convenience
+  using std::map<K,T>::map;
+
+public:
+    map_type_impl() = default;
+    map_type_impl(const std::map<K, T>& x) : std::map<K, T>(x) {};
+};
 
 template <class K, class T>
 map<K,T>::map() {}
@@ -49,11 +56,17 @@ template <class K, class T>
 map<K,T>::map(const map& x) { *this = x; }
 
 template <class K, class T>
-map<K, T>::map(const std::map<K, T>& x) { *this = x; }
+map<K,T>::map(const std::initializer_list<std::pair<const K, T>>& x) : map_(new map_type(x)) {
+}
 
 template <class K, class T>
-map<K, T>::map(const std::initializer_list<std::pair<const K, T>>& x) {
-    *this = std::map<K, T>(x);
+map<K,T>::map(const std::map<K, T>& x) : map_(new map_type(x)) {
+}
+
+template <class K, class T>
+map<K,T>& map<K,T>::operator=(const std::map<K, T>& x) {
+  map_.reset(new map_type(x));
+  return *this;
 }
 
 template <class K, class T>
