@@ -900,6 +900,7 @@ static void pconnection_forced_shutdown(pconnection_t *pc) {
 // Called from timer_manager with no locks.
 void pni_pconnection_timeout(pconnection_t  *pc) {
   bool notify = false;
+  pn_proactor_t *p = pc->task.proactor;
   uint64_t now = pn_proactor_now_64();
   lock(&pc->task.mutex);
   if (!pc->task.closing) {
@@ -912,7 +913,7 @@ void pni_pconnection_timeout(pconnection_t  *pc) {
   }
   unlock(&pc->task.mutex);
   if (notify)
-    notify_poller(pc->task.proactor);
+    notify_poller(p);
 }
 
 static pn_event_t *pconnection_batch_next(pn_event_batch_t *batch) {
@@ -1460,21 +1461,24 @@ static void pconnection_tick(pconnection_t *pc) {
 }
 
 void pn_connection_wake(pn_connection_t* c) {
-  bool notify = false;
   pconnection_t *pc = get_pconnection(c);
   if (pc) {
+    pn_proactor_t *p = pc->task.proactor;
+    bool notify = false;
+
     lock(&pc->task.mutex);
     if (!pc->task.closing) {
       notify = pni_task_wake(&pc->task);
     }
     unlock(&pc->task.mutex);
+    if (notify) notify_poller(p);
   }
-  if (notify) notify_poller(pc->task.proactor);
 }
 
 void pn_proactor_release_connection(pn_connection_t *c) {
   bool notify = false;
   pconnection_t *pc = get_pconnection(c);
+  pn_proactor_t *p = pc->task.proactor;
   if (pc) {
     set_pconnection(c, NULL);
     lock(&pc->task.mutex);
@@ -1483,7 +1487,7 @@ void pn_proactor_release_connection(pn_connection_t *c) {
     notify = schedule(&pc->task);
     unlock(&pc->task.mutex);
   }
-  if (notify) notify_poller(pc->task.proactor);
+  if (notify) notify_poller(p);
 }
 
 // ========================================================================
@@ -1666,13 +1670,14 @@ static void listener_begin_close(pn_listener_t* l) {
 
 void pn_listener_close(pn_listener_t* l) {
   bool notify = false;
+  pn_proactor_t *p = l->task.proactor;
   lock(&l->task.mutex);
   if (l->task.proactor && !l->task.closing) {
     listener_begin_close(l);
     notify = schedule(&l->task);
   }
   unlock(&l->task.mutex);
-  if (notify) notify_poller(l->task.proactor);
+  if (notify) notify_poller(p);
 }
 
 static void listener_forced_shutdown(pn_listener_t *l) {
@@ -1859,8 +1864,9 @@ pn_record_t *pn_listener_attachments(pn_listener_t *l) {
 
 void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t) {
   pconnection_t *pc = (pconnection_t*) malloc(sizeof(pconnection_t));
-  assert(pc); // TODO: memory safety
-  const char *err = pconnection_setup(pc, pn_listener_proactor(l), c, t, true, "", 0);
+  pn_proactor_t *p = pn_listener_proactor(l);
+  assert(pc && p); // TODO: memory safety
+  const char *err = pconnection_setup(pc, p, c, t, true, "", 0);
   if (err) {
     PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_listener_accept failure: %s", err);
     return;
@@ -1895,7 +1901,7 @@ void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t
     notify = schedule(&l->task);
   unlock(&pc->task.mutex);
   unlock(&l->task.mutex);
-  if (notify) notify_poller(l->task.proactor);
+  if (notify) notify_poller(p);
 }
 
 

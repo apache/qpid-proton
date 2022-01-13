@@ -211,8 +211,9 @@ void pn_proactor_raw_connect(pn_proactor_t *p, pn_raw_connection_t *rc, const ch
 
 void pn_listener_raw_accept(pn_listener_t *l, pn_raw_connection_t *rc) {
   assert(rc);
+  pn_proactor_t *p = pn_listener_proactor(l);
   praw_connection_t *prc = containerof(rc, praw_connection_t, raw_connection);
-  praw_connection_init(prc, pn_listener_proactor(l), rc);
+  praw_connection_init(prc, p, rc);
   // TODO: fuller sanity check on input args
 
   int err = 0;
@@ -246,7 +247,7 @@ void pn_listener_raw_accept(pn_listener_t *l, pn_raw_connection_t *rc) {
   }
   unlock(&prc->task.mutex);
   unlock(&l->task.mutex);
-  if (notify) notify_poller(l->task.proactor);
+  if (notify) notify_poller(p);
 }
 
 const pn_netaddr_t *pn_raw_connection_local_addr(pn_raw_connection_t *rc) {
@@ -264,12 +265,13 @@ const pn_netaddr_t *pn_raw_connection_remote_addr(pn_raw_connection_t *rc) {
 void pn_raw_connection_wake(pn_raw_connection_t *rc) {
   bool notify = false;
   praw_connection_t *prc = containerof(rc, praw_connection_t, raw_connection);
+  pn_proactor_t *p = prc->task.proactor;
   lock(&prc->task.mutex);
   if (!prc->task.closing) {
     notify = pni_task_wake(&prc->task);
   }
   unlock(&prc->task.mutex);
-  if (notify) notify_poller(prc->task.proactor);
+  if (notify) notify_poller(p);
 }
 
 static inline void set_closed(pn_raw_connection_t *rc)
