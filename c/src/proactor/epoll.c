@@ -1670,9 +1670,9 @@ static void listener_begin_close(pn_listener_t* l) {
 
 void pn_listener_close(pn_listener_t* l) {
   bool notify = false;
-  pn_proactor_t *p = l->task.proactor;
   lock(&l->task.mutex);
-  if (l->task.proactor && !l->task.closing) {
+  pn_proactor_t *p = l->task.proactor;
+  if (p && !l->task.closing) {
     listener_begin_close(l);
     notify = schedule(&l->task);
   }
