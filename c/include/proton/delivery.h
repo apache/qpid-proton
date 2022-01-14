@@ -287,6 +287,12 @@ PN_EXTERN void pn_delivery_abort(pn_delivery_t *delivery);
  * @note If pn_delivery_current(delivery) is true before the call then
  * pn_link_advance(pn_delivery_link(deliver)) is called automatically.
  *
+ * @note The sender **should not** settle after only receiving a terminal
+ * status disposition with no settle flag, as then there would then be no way
+ * to receive any further events for that delivery (such as the subsequent
+ * on_settle message that might be expected when the receiver finally settles
+ * the message).
+ *
  * @param[in] delivery a delivery object
  */
 PN_EXTERN void pn_delivery_settle(pn_delivery_t *delivery);
