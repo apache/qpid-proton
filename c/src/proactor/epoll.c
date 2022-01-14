@@ -1476,18 +1476,18 @@ void pn_connection_wake(pn_connection_t* c) {
 }
 
 void pn_proactor_release_connection(pn_connection_t *c) {
-  bool notify = false;
   pconnection_t *pc = get_pconnection(c);
-  pn_proactor_t *p = pc->task.proactor;
   if (pc) {
+    bool notify = false;
+    pn_proactor_t *p = pc->task.proactor;
     set_pconnection(c, NULL);
     lock(&pc->task.mutex);
     pn_connection_driver_release_connection(&pc->driver);
     pconnection_begin_close(pc);
     notify = schedule(&pc->task);
     unlock(&pc->task.mutex);
+    if (notify) notify_poller(p);
   }
-  if (notify) notify_poller(p);
 }
 
 // ========================================================================
