@@ -371,10 +371,10 @@ if(SWIG_FOUND)
   list(APPEND BINDINGS python ruby)
 
   if (POLICY CMP0078)
-    cmake_policy(SET CMP0078 OLD)
+    cmake_policy(SET CMP0078 NEW)
   endif()
   if (POLICY CMP0086)
-    cmake_policy(SET CMP0086 OLD)
+    cmake_policy(SET CMP0086 NEW)
   endif()
   include(UseSWIG)
 

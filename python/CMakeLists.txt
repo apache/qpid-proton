@@ -203,7 +203,7 @@ endif ()
 # python test: python/tests/proton-test
 set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
 set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
-set (py_dll "$<TARGET_FILE_DIR:_cproton>")
+set (py_dll "$<TARGET_FILE_DIR:cproton>")
 set (py_bld "$<TARGET_FILE_DIR:qpid-proton-core>") # For windows
 set (py_tests "${py_src}/tests")
 set (tests_py "${py_src}/../tests/py")
