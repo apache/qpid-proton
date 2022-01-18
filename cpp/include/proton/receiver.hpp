@@ -45,7 +45,7 @@ PN_CPP_CLASS_EXTERN receiver : public link {
 
   public:
     /// Create an empty receiver.
-    receiver() {}
+    receiver() = default;
 
     PN_CPP_EXTERN ~receiver();
 

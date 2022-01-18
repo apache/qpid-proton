@@ -39,7 +39,7 @@ container::container(const std::string& id) :
     impl_(new impl(*this, id)) {}
 container::container() :
     impl_(new impl(*this, uuid::random().str())) {}
-container::~container() {}
+container::~container() = default;
 
 returned<connection> container::connect(const std::string &url) {
     return connect(url, connection_options());

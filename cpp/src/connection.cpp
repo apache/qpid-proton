@@ -46,7 +46,7 @@
 
 namespace proton {
 
-connection::~connection() {}
+connection::~connection() = default;
 
 transport connection::transport() const {
     return make_wrapper(pn_connection_transport(pn_object()));

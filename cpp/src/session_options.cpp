@@ -57,7 +57,7 @@ session_options::session_options() : impl_(new impl()) {}
 session_options::session_options(const session_options& x) : impl_(new impl()) {
     *this = x;
 }
-session_options::~session_options() {}
+session_options::~session_options() = default;
 
 session_options& session_options::operator=(const session_options& x) {
     *impl_ = *x.impl_;

@@ -50,7 +50,7 @@ public:
 };
 
 template <class K, class T>
-map<K,T>::map() {}
+map<K,T>::map() = default;
 
 template <class K, class T>
 map<K,T>::map(const map& x) { *this = x; }
@@ -105,7 +105,7 @@ map<K,T>& map<K,T>::operator=(map&& x) {
 }
 
 template <class K, class T>
-map<K,T>::~map() {}
+map<K,T>::~map() = default;
 
 // Make sure map_ is valid
 template <class K, class T>

@@ -46,8 +46,8 @@ namespace proton {
 namespace internal { namespace v03 {
 
 struct invocable {
-    invocable() {}
-    virtual ~invocable() {}
+    invocable() = default;
+    virtual ~invocable() = default;
 
     virtual invocable& clone() const = 0;
     virtual void operator() () = 0;
@@ -55,7 +55,7 @@ struct invocable {
 
 template <class T>
 struct invocable_cloner : invocable {
-    virtual ~invocable_cloner() {}
+    virtual ~invocable_cloner() = default;
     virtual invocable& clone() const {
         return *new T(static_cast<T const&>(*this));
     }
@@ -86,14 +86,14 @@ struct invocable_wrapper {
 class work {
   public:
     /// Create a work item.
-    work() {}
+    work() = default;
 
     work(const invocable& i): item_(i) {}
 
     /// Invoke the work item.
     void operator()() { item_(); }
 
-    ~work() {}
+    ~work() = default;
 
   private:
     invocable_wrapper item_;
@@ -264,7 +264,7 @@ namespace internal { namespace v11 {
 class work {
   public:
     /// **Unsettled API**
-    work() {}
+    work() = default;
 
     /// **Unsettled API**
     ///
@@ -282,7 +282,7 @@ class work {
     /// Execute the piece of work
     void operator()() { item_(); }
 
-    ~work() {}
+    ~work() = default;
 
   private:
     std::function<void()> item_;

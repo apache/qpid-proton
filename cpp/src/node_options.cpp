@@ -127,7 +127,7 @@ source_options::source_options() : impl_(new impl()) {}
 source_options::source_options(const source_options& x) : impl_(new impl()) {
     *this = x;
 }
-source_options::~source_options() {}
+source_options::~source_options() = default;
 
 source_options& source_options::operator=(const source_options& x) {
     *impl_ = *x.impl_;
@@ -182,7 +182,7 @@ target_options::target_options() : impl_(new impl()) {}
 target_options::target_options(const target_options& x) : impl_(new impl()) {
     *this = x;
 }
-target_options::~target_options() {}
+target_options::~target_options() = default;
 
 target_options& target_options::operator=(const target_options& x) {
     *impl_ = *x.impl_;

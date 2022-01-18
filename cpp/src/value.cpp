@@ -33,7 +33,7 @@ using codec::decoder;
 using codec::encoder;
 using codec::start;
 
-value::value() {}
+value::value() = default;
 value::value(pn_data_t *d) { data_ = make_wrapper(d); }
 value::value(const value& x) { *this = x; }
 value::value(value&& x) { swap(*this, x); }

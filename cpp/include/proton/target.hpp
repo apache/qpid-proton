@@ -45,7 +45,7 @@ template <class T> class factory;
 class target : public terminus {
   public:
     /// Create an empty target.
-    target() : terminus() {}
+    target() = default;
 
     using terminus::durability_mode;
     using terminus::expiry_policy;

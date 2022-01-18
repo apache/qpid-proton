@@ -34,7 +34,7 @@ listener::listener(): listener_(0) {}
 listener::listener(pn_listener_t* l): listener_(l) {}
 // Out-of-line big-3 with trivial implementations, in case we need them in future.
 listener::listener(const listener& l) : listener_(l.listener_) {}
-listener::~listener() {}
+listener::~listener() = default;
 listener& listener::operator=(const listener& l) { listener_ = l.listener_; return *this; }
 
 void listener::stop() {
@@ -61,7 +61,7 @@ class container& listener::container() const {
 }
 
 // Listen handler
-listen_handler::~listen_handler() {}
+listen_handler::~listen_handler() = default;
 void listen_handler::on_open(listener&) {}
 connection_options listen_handler::on_accept(listener&) { return connection_options(); }
 void listen_handler::on_error(listener&, const std::string& what)  { throw proton::error(what); }

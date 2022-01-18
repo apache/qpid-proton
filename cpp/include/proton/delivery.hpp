@@ -43,7 +43,7 @@ class delivery : public transfer {
     /// @endcond
 
   public:
-    delivery() {}
+    delivery() = default;
 
     PN_CPP_EXTERN ~delivery();
 

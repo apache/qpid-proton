@@ -116,7 +116,7 @@ receiver_options::receiver_options() : impl_(new impl()) {}
 receiver_options::receiver_options(const receiver_options& x) : impl_(new impl()) {
     *this = x;
 }
-receiver_options::~receiver_options() {}
+receiver_options::~receiver_options() = default;
 
 receiver_options& receiver_options::operator=(const receiver_options& x) {
     *impl_ = *x.impl_;

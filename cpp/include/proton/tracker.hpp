@@ -45,7 +45,7 @@ class tracker : public transfer {
 
   public:
     /// Create an empty tracker.
-    tracker() {}
+    tracker() = default;
 
     /// Get the sender for this tracker.
     PN_CPP_EXTERN class sender sender() const;

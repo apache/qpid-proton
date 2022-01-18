@@ -66,6 +66,6 @@ void link::close(const error_condition& condition) {
     close();
 }
 
-endpoint::~endpoint() {}
+endpoint::~endpoint() = default;
 
 }

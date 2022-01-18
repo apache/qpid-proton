@@ -221,7 +221,7 @@ connection_options::connection_options(const connection_options& x) : impl_(new 
     *this = x;
 }
 
-connection_options::~connection_options() {}
+connection_options::~connection_options() = default;
 
 connection_options& connection_options::operator=(const connection_options& x) {
     *impl_ = *x.impl_;

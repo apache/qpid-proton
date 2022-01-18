@@ -41,11 +41,10 @@ class binary : public std::vector<uint8_t> {
   public:
     /// @name Constructors
     /// @{
-    explicit binary() : std::vector<value_type>() {}
-    explicit binary(size_t n) : std::vector<value_type>(n) {}
-    explicit binary(size_t n, value_type x) : std::vector<value_type>(n, x) {}
+    explicit binary() = default;
+    using std::vector<value_type>::vector;
+    explicit binary(const std::vector<value_type>& v) : std::vector<value_type>(v) {}
     explicit binary(const std::string& s) : std::vector<value_type>(s.begin(), s.end()) {}
-    template <class Iter> binary(Iter first, Iter last) : std::vector<value_type>(first, last) {}
     /// @}
 
     /// Convert to std::string
