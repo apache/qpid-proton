@@ -756,7 +756,7 @@ static void proactor_rearm_overflow(pn_proactor_t *p) {
 // Close an FD and rearm overflow listeners.  Call with no listener locks held.
 int pclosefd(pn_proactor_t *p, int fd) {
   int err = close(fd);
-  if (!err) proactor_rearm_overflow(p);
+  if (!err && !p->shutting_down) proactor_rearm_overflow(p);
   return err;
 }
 
@@ -1639,13 +1639,14 @@ void pn_listener_free(pn_listener_t *l) {
 static void listener_begin_close(pn_listener_t* l) {
   if (!l->task.closing) {
     l->task.closing = true;
+    bool polling = !l->task.proactor->shutting_down;  // Is poller still running?
 
     /* Close all listening sockets */
     for (size_t i = 0; i < l->acceptors_size; ++i) {
       acceptor_t *a = &l->acceptors[i];
       psocket_t *ps = &a->psocket;
       if (ps->epoll_io.fd >= 0) {
-        if (a->armed) {
+        if (a->armed && polling) {
           shutdown(ps->epoll_io.fd, SHUT_RD);  // Force epoll event and callback
         } else {
           int fd = ps->epoll_io.fd;
