@@ -89,7 +89,7 @@ class IncomingMessageHandler(ProtonIncomingMessageHandler):
                 tags.PEER_HOSTNAME: connection.hostname,
                 'inserted_by': 'proton-message-tracing'
             }
-            if message.annotations is not None:
+            if message.annotations is not None and _trace_key in message.annotations:
                 headers = message.annotations[_trace_key]
                 span_ctx = tracer.extract(Format.TEXT_MAP, headers)
                 with tracer.start_active_span('amqp-delivery-receive', child_of=span_ctx, tags=span_tags):
