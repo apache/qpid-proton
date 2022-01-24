@@ -87,7 +87,7 @@ class IncomingMessageHandler(ProtonIncomingMessageHandler):
                 tags.MESSAGE_BUS_DESTINATION: receiver.source.address,
                 tags.PEER_ADDRESS: connection.connected_address,
                 tags.PEER_HOSTNAME: connection.hostname,
-                'inserted_by': 'proton-message-tracing'
+                tags.COMPONENT: 'proton-message-tracing'
             }
             if message.annotations is not None and _trace_key in message.annotations:
                 headers = message.annotations[_trace_key]
@@ -120,7 +120,7 @@ class Sender(ProtonSender):
             tags.MESSAGE_BUS_DESTINATION: self.target.address,
             tags.PEER_ADDRESS: connection.connected_address,
             tags.PEER_HOSTNAME: connection.hostname,
-            'inserted_by': 'proton-message-tracing'
+            tags.COMPONENT: 'proton-message-tracing'
         }
         span = tracer.start_span('amqp-delivery-send', tags=span_tags)
         headers = {}
