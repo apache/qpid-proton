@@ -2265,7 +2265,8 @@ static pn_event_batch_t *process(task_t *tsk) {
 
 // Call with both sched_mutex and eventfd_mutex held
 static void schedule_ready_list(pn_proactor_t *p) {
-  // append ready_list_first..ready_list_last to end of sched_ready_last
+  // Append ready_list_first..ready_list_last to end of sched_ready_last
+  // May see several in single do_epoll() if EINTR.
   if (p->ready_list_first) {
     if (p->sched_ready_last)
       p->sched_ready_last->ready_next = p->ready_list_first;  // join them
@@ -2275,11 +2276,11 @@ static void schedule_ready_list(pn_proactor_t *p) {
     if (!p->sched_ready_current)
       p->sched_ready_current = p->sched_ready_first;
     p->ready_list_first = p->ready_list_last = NULL;
-  }
 
-  // Track sched_ready_count to know how many threads may be needed.
-  p->sched_ready_count = p->ready_list_count;
-  p->ready_list_count = 0;
+    // Track sched_ready_count to know how many threads may be needed.
+    p->sched_ready_count += p->ready_list_count;
+    p->ready_list_count = 0;
+  }
 }
 
 // Call with schedule lock and eventfd lock held.  Called only by poller thread.
