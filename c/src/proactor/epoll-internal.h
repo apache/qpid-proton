@@ -192,7 +192,7 @@ struct pn_proactor_t {
   tslot_t *last_earmark;
   task_t *sched_ready_first;
   task_t *sched_ready_last;
-  task_t *sched_ready_current; // TODO: remove or use for sceduling priority or fairness
+  bool sched_ready_pending;
   unsigned int sched_ready_count;
   task_t *resched_first;
   task_t *resched_last;
