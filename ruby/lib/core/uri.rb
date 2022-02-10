@@ -27,13 +27,13 @@ module URI
     # @return [String] The AMQP address is the {#path} stripped of any leading "/"
     def amqp_address() path[0] == "/" ? path[1..-1] : path; end
   end
-  @@schemes['AMQP'] = AMQP
+  scheme_list['AMQP'] = AMQP
 
   # AMQPS URI scheme for the AMQP protocol over TLS
   class AMQPS < AMQP
     DEFAULT_PORT = 5671
   end
-  @@schemes['AMQPS'] = AMQPS
+  scheme_list['AMQPS'] = AMQPS
 end
 
 module Qpid::Proton
