@@ -13,9 +13,7 @@
 
 
 import errno
-import os
 import subprocess
-import sys
 
 from . import log
 
