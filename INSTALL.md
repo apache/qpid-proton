@@ -10,7 +10,7 @@ Dependencies
 Cross-platform dependencies
 
   - CMake 3.16+
-  - Python 3.9+ (required to build core C library)
+  - Python 3.9+ (required to build core C library and Python binding)
   - Swig 1.3+ (for the Ruby binding)
   - Ruby 1.9+ (for the Ruby binding)
   - Go 1.11+ (for the Go binding)
@@ -19,7 +19,7 @@ Linux dependencies
 
   - GNU Make 3.81+
   - GCC 9+
-  - Cyrus SASL 2.1+ (for SASL support)
+  - Cyrus SASL 2.1.26+ (for SASL support)
   - OpenSSL 1.0.2a+ (for SSL support)
   - JsonCpp 1.8+ for C++ connection configuration file support
 
@@ -42,7 +42,7 @@ language.
     $ yum install openssl-devel
 
     # Dependencies needed for Cyrus SASL support
-    $ yum install cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-md5
+    $ yum install cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-scram
 
     # Dependencies needed for bindings
     $ yum install swig                                       # Required for ruby binding

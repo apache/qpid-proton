@@ -324,20 +324,6 @@ class SASLMechTest(Test):
         self.t2.bind(self.c2)
         _testSaslMech(self, 'ANONYMOUS', authUser='anonymous')
 
-    def testCRAMMD5(self):
-        common.ensureCanTestExtendedSASL()
-
-        self.t1.bind(self.c1)
-        self.t2.bind(self.c2)
-        _testSaslMech(self, 'CRAM-MD5')
-
-    def testDIGESTMD5(self):
-        common.ensureCanTestExtendedSASL()
-
-        self.t1.bind(self.c1)
-        self.t2.bind(self.c2)
-        _testSaslMech(self, 'DIGEST-MD5')
-
     # PLAIN shouldn't work without encryption without special setting
     def testPLAINfail(self):
         common.ensureCanTestExtendedSASL()
@@ -365,15 +351,12 @@ class SASLMechTest(Test):
         self.t2.bind(self.c2)
         _testSaslMech(self, 'PLAIN')
 
-# SCRAM not supported before Cyrus SASL 2.1.26
-# so not universal and hence need a test for support
-# to keep it in tests.
-#  def testSCRAMSHA1(self):
-#    common.ensureCanTestExtendedSASL()
-#
-#    self.t1.bind(self.c1)
-#    self.t2.bind(self.c2)
-#    _testSaslMech(self, 'SCRAM-SHA-1')
+    def testSCRAMSHA1(self):
+        common.ensureCanTestExtendedSASL()
+
+        self.t1.bind(self.c1)
+        self.t2.bind(self.c2)
+        _testSaslMech(self, 'SCRAM-SHA-1')
 
 
 def _sslConnection(domain, transport, connection):
@@ -548,7 +531,7 @@ class SASLEventTest(engine.CollectorTest):
         self.c1.collect(self.collector)
         self.t1.bind(self.c1)
         self.t2.bind(self.c2)
-        _testSaslMech(self, 'DIGEST-MD5')
+        _testSaslMech(self, 'SCRAM-SHA-1')
         self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
                     Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
                     Event.CONNECTION_REMOTE_OPEN)
@@ -558,7 +541,7 @@ class SASLEventTest(engine.CollectorTest):
         self.c2.collect(self.collector)
         self.t1.bind(self.c1)
         self.t2.bind(self.c2)
-        _testSaslMech(self, 'DIGEST-MD5')
+        _testSaslMech(self, 'SCRAM-SHA-1')
         self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
                     Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
                     Event.CONNECTION_REMOTE_OPEN)
@@ -570,7 +553,7 @@ class SASLEventTest(engine.CollectorTest):
         self.c1.collect(self.collector)
         self.t1.bind(self.c1)
         self.t2.bind(self.c2)
-        _testSaslMech(self, 'DIGEST-MD5', clientUser=clientUser, authenticated=False)
+        _testSaslMech(self, 'SCRAM-SHA-1', clientUser=clientUser, authenticated=False)
         self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
                     Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
                     Event.TRANSPORT_ERROR,
@@ -584,7 +567,7 @@ class SASLEventTest(engine.CollectorTest):
         self.c2.collect(self.collector)
         self.t1.bind(self.c1)
         self.t2.bind(self.c2)
-        _testSaslMech(self, 'DIGEST-MD5', clientUser=clientUser, authenticated=False)
+        _testSaslMech(self, 'SCRAM-SHA-1', clientUser=clientUser, authenticated=False)
         self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
                     Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
                     Event.TRANSPORT_ERROR,
@@ -597,7 +580,7 @@ class SASLEventTest(engine.CollectorTest):
         self.s2.allowed_mechs('IMPOSSIBLE')
         self.t1.bind(self.c1)
         self.t2.bind(self.c2)
-        _testSaslMech(self, 'DIGEST-MD5', authenticated=False)
+        _testSaslMech(self, 'SCRAM-SHA-1', authenticated=False)
         self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
                     Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
                     Event.TRANSPORT_ERROR,
@@ -609,7 +592,7 @@ class SASLEventTest(engine.CollectorTest):
         self.s2.allowed_mechs('IMPOSSIBLE')
         self.t1.bind(self.c1)
         self.t2.bind(self.c2)
-        _testSaslMech(self, 'DIGEST-MD5', authenticated=False)
+        _testSaslMech(self, 'SCRAM-SHA-1', authenticated=False)
         self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
                     Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
                     Event.TRANSPORT_TAIL_CLOSED,
