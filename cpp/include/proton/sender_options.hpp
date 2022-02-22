@@ -83,14 +83,8 @@ class sender_options {
     PN_CPP_EXTERN sender_options& delivery_mode(delivery_mode);
 
     /**
-     * Automatically settle messages (default is true).
-     *
-     * \note
-     * Sender **auto-settlement** only occurs for a delivery after the
-     * sender receives a settled disposition for that delivery. Otherwise,
-     * there would be no way to receive any further events for that delivery
-     * (such as the subsequent on_settle message that might be expected when
-     * the receiver finally settles the message).
+     * If ``True`` (default), automatically settle messages upon receiving a settled
+     * disposition for that delivery. Otherwise messages must be explicitly settled.
      */
     PN_CPP_EXTERN sender_options& auto_settle(bool);
 

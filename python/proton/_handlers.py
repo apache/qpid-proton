@@ -48,12 +48,9 @@ class OutgoingMessageHandler(Handler):
     A utility for simpler and more intuitive handling of delivery
     events related to outgoing i.e. sent messages.
 
-    :param auto_settle: If ``True``, settle all messages (default). Otherwise
+    :param auto_settle: If ``True`` (default), automatically settle messages
+        upon receiving a settled disposition for that delivery. Otherwise
         messages must be explicitly settled.
-
-        .. note:: Sender auto-settlement only occurs for a delivery after the
-            sender receives a settled disposition for that delivery.
-
     :type auto_settle: ``bool``
     :param delegate: A client handler for the endpoint event
     """
@@ -667,19 +664,12 @@ class MessagingHandler(Handler, Acking):
     simpler to deal with and/or avoids repetitive tasks for common use
     cases.
 
-    .. note:: Sender **auto-settlement** only occurs for a delivery after the
-        sender receives a settled disposition for that delivery. Otherwise,
-        there would be no way to receive any further events for that delivery
-        (such as the subsequent on_settle message that might be expected when
-        the receiver finally settles the message).
-
     :param prefetch: Initial flow credit for receiving messages, defaults to 10.
     :param auto_accept: If ``True``, accept all messages (default). Otherwise
         messages must be individually accepted or rejected.
-    :param auto_settle: If ``True``, settle all messages (default). Otherwise
-        messages must be explicitly settled. Sender auto-settlement only occurs
-        for a delivery after the sender receives a settled disposition for that
-        delivery.
+    :param auto_settle: If ``True`` (default), automatically settle messages
+        upon receiving a settled disposition for that delivery. Otherwise
+        messages must be explicitly settled.
     :param peer_close_is_error: If ``True``, a peer endpoint closing will be
         treated as an error with an error callback. Otherwise (default), the
         normal callbacks for the closing will occur.
@@ -962,19 +952,12 @@ class TransactionalClientHandler(MessagingHandler, TransactionHandler):
     and provides a convenience method :meth:`accept` for performing
     a transactional acceptance of received messages.
 
-    .. note:: Sender **auto-settlement** only occurs for a delivery after the
-        sender receives a settled disposition for that delivery. Otherwise,
-        there would be no way to receive any further events for that delivery
-        (such as the subsequent on_settle message that might be expected when
-        the receiver finally settles the message).
-
     :param prefetch: Initial flow credit for receiving messages, defaults to 10.
     :param auto_accept: If ``True``, accept all messages (default). Otherwise
         messages must be individually accepted or rejected.
-    :param auto_settle: If ``True``, settle all messages (default). Otherwise
-        messages must be explicitly settled. Sender auto-settlement only occurs
-        for a delivery after the sender receives a settled disposition for that
-        delivery.
+    :param auto_settle: If ``True`` (default), automatically settle messages
+        upon receiving a settled disposition for that delivery. Otherwise
+        messages must be explicitly settled.
     :param peer_close_is_error: If ``True``, a peer endpoint closing will be
         treated as an error with an error callback. Otherwise (default), the
         normal callbacks for the closing will occur.
