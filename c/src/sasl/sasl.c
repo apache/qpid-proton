@@ -946,7 +946,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
     switch (element_type) {
       case PNE_SYM8:
         while (element_count) {
-          pni_consumer_readv8(&subconsumer, &symbol);
+          if (!pni_consumer_readv8(&subconsumer, &symbol)) break;
           if (pni_sasl_client_included_mech(sasl->included_mechanisms, symbol)) {
             pn_string_addf(mechs, "%.*s ", (int)symbol.size, symbol.start);
           }
@@ -955,7 +955,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
         break;
       case PNE_SYM32:
         while (element_count) {
-          pni_consumer_readv32(&subconsumer, &symbol);
+          if (!pni_consumer_readv32(&subconsumer, &symbol)) break;
           if (pni_sasl_client_included_mech(sasl->included_mechanisms, symbol)) {
             pn_string_addf(mechs, "%.*s ", (int)symbol.size, symbol.start);
           }

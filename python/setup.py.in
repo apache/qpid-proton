@@ -125,7 +125,6 @@ class Configure(build_ext):
 
         # Look for any optional libraries that proton needs, and adjust the
         # source list and compile flags as necessary.
-        library_dirs = []
         libraries = []
         includes = []
         macros = []
@@ -146,7 +145,6 @@ class Configure(build_ext):
         # pkg-config for a minimum version 0. If it's installed, it should
         # return True and we'll use it. Otherwise, we'll use the stub.
         if misc.pkg_config_version_installed('openssl', atleast='0'):
-            library_dirs += [misc.pkg_config_get_var('openssl', 'libdir')]
             libraries += ['ssl', 'crypto']
             includes += [misc.pkg_config_get_var('openssl', 'includedir')]
             sources.append(os.path.join(proton_src, 'ssl', 'openssl.c'))
@@ -216,7 +214,6 @@ class Configure(build_ext):
 
         # lastly replace the libqpid-proton-core dependency with libraries required
         # by the Proton objects:
-        _cproton.library_dirs = library_dirs
         _cproton.libraries = libraries
 
     def libqpid_proton_installed(self, version):

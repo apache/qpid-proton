@@ -539,13 +539,13 @@ static inline bool consume_descriptor(pni_consumer_t* consumer, pni_consumer_t *
   if (!pni_consumer_readf8(consumer, &type)) return false;
   switch (type) {
     case PNE_DESCRIPTOR: {
-      bool lq = consume_ulong(consumer, descriptor);
+      if (!consume_ulong(consumer, descriptor)) return false;
       size_t sposition = consumer->position;
       uint8_t type;
-      consume_single_value_not_described(consumer, &type);
+      if (!consume_single_value_not_described(consumer, &type)) return false;
       size_t scsize = consumer->position > sposition ? consumer->position-sposition : 0;
       *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+sposition, .position=0, .size=scsize};
-      return lq;
+      return true;
     }
     default:
       pni_consumer_skip_value_not_described(consumer, type);
