@@ -173,8 +173,7 @@ class DescListIgnoreTypeNode(ListNode):
         return [
             f'{self.mk_indent(indent)}{{',
             f'{self.mk_indent(indent+1)}pni_consumer_t subconsumer;',
-            f'{self.mk_indent(indent+1)}uint64_t dummy;',
-            f'{self.mk_indent(indent+1)}{self.mk_funcall("consume_descriptor", prefix+["&subconsumer", "&dummy"])};',
+            f'{self.mk_indent(indent+1)}{self.mk_funcall("consume_described", prefix+["&subconsumer"])};',
             f'{self.mk_indent(indent+1)}pni_consumer_t consumer = subconsumer;',
             *super().gen_consume_code(prefix, first_arg, indent + 1),
             f'{self.mk_indent(indent)}}}',

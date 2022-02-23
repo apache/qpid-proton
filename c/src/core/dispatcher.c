@@ -87,7 +87,7 @@ static int pni_dispatch_frame(pn_frame_t frame, pn_logger_t *logger, pn_transpor
   uint64_t lcode;
   pni_consumer_t consumer = make_consumer_from_bytes(frame_payload);
   pni_consumer_t subconsumer;
-  if (!consume_descriptor(&consumer, &subconsumer, &lcode)) {
+  if (!consume_described_ulong_descriptor(&consumer, &subconsumer, &lcode)) {
     PN_LOG(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame");
     return PN_ERR;
   }

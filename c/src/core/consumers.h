@@ -213,7 +213,7 @@ static inline bool pni_consumer_skip_value_not_described(pni_consumer_t* consume
 
 static inline bool pni_consumer_skip_value(pni_consumer_t* consumer, uint8_t type) {
   // Check for described type
-  if (type==0) {
+  if (type==PNE_DESCRIPTOR) {
     // Skip descriptor
     if (!pni_consumer_readf8(consumer, &type)) return false;
     if (!pni_consumer_skip_value_not_described(consumer, type)) return false;
@@ -238,7 +238,7 @@ static inline bool consume_single_value(pni_consumer_t* consumer, uint8_t* type)
   uint8_t t;
   if (!pni_consumer_readf8(consumer, &t)) return false;
   *type = t;
-  if (t==0) {
+  if (t==PNE_DESCRIPTOR) {
     uint8_t dummy;
     // Descriptor
     bool dq = consume_single_value_not_described(consumer, &dummy);
@@ -246,7 +246,7 @@ static inline bool consume_single_value(pni_consumer_t* consumer, uint8_t* type)
     bool vq = consume_single_value_not_described(consumer, &dummy);
     return dq && vq;
   } else {
-    return pni_consumer_skip_value(consumer, t);
+    return pni_consumer_skip_value_not_described(consumer, t);
   }
 }
 
@@ -532,20 +532,46 @@ static inline bool consume_atom(pni_consumer_t* consumer, pn_atom_t *atom) {
 
 // XXX: assuming numeric -
 // if we get a symbol we should map it to the numeric value and dispatch on that
-static inline bool consume_descriptor(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint64_t *descriptor) {
+static inline bool consume_described_ulong_descriptor(pni_consumer_t* consumer, pni_consumer_t *subconsumer, uint64_t *descriptor) {
   *descriptor = 0;
   *subconsumer = (pni_consumer_t){.output_start=NULL, .position=0, .size=0};
   uint8_t type;
   if (!pni_consumer_readf8(consumer, &type)) return false;
   switch (type) {
     case PNE_DESCRIPTOR: {
-      if (!consume_ulong(consumer, descriptor)) return false;
+      bool dq = consume_ulong(consumer, descriptor);
       size_t sposition = consumer->position;
-      uint8_t type;
-      if (!consume_single_value_not_described(consumer, &type)) return false;
-      size_t scsize = consumer->position > sposition ? consumer->position-sposition : 0;
-      *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+sposition, .position=0, .size=scsize};
-      return true;
+      uint8_t dummy;
+      bool vq = consume_single_value(consumer, &dummy);
+      if (dq && vq) {
+        size_t scsize = consumer->position > sposition ? consumer->position-sposition : 0;
+        *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+sposition, .position=0, .size=scsize};
+        return true;
+      }
+      return false;
+    }
+    default:
+      pni_consumer_skip_value_not_described(consumer, type);
+      return false;
+  }
+}
+
+static inline bool consume_described(pni_consumer_t* consumer, pni_consumer_t *subconsumer) {
+  *subconsumer = (pni_consumer_t){.output_start=NULL, .position=0, .size=0};
+  uint8_t type;
+  if (!pni_consumer_readf8(consumer, &type)) return false;
+  switch (type) {
+    case PNE_DESCRIPTOR: {
+      uint8_t dummy;
+      bool dq = consume_single_value_not_described(consumer, &dummy);
+      size_t sposition = consumer->position;
+      bool vq = consume_single_value(consumer, &dummy);
+      if (dq && vq) {
+        size_t scsize = consumer->position > sposition ? consumer->position-sposition : 0;
+        *subconsumer = (pni_consumer_t){.output_start=consumer->output_start+sposition, .position=0, .size=scsize};
+        return true;
+      }
+      return false;
     }
     default:
       pni_consumer_skip_value_not_described(consumer, type);
@@ -625,19 +651,19 @@ static inline bool consume_array(pni_consumer_t* consumer, pni_consumer_t *subco
 }
 
 static inline bool consume_described_anything(pni_consumer_t* consumer) {
-  uint64_t type;
-  pni_consumer_t subconsumer;
-  return consume_descriptor(consumer, &subconsumer, &type);
+  uint8_t type;
+  bool tq = consume_single_value(consumer, &type);
+  return tq && type==PNE_DESCRIPTOR;
 }
 
 static inline bool consume_described_type_anything(pni_consumer_t* consumer, uint64_t *type) {
   pni_consumer_t subconsumer;
-  return consume_descriptor(consumer, &subconsumer, type);
+  return consume_described_ulong_descriptor(consumer, &subconsumer, type);
 }
 
 static inline bool consume_described_maybe_type_anything(pni_consumer_t* consumer, bool *qtype, uint64_t *type) {
   pni_consumer_t subconsumer;
-  *qtype = consume_descriptor(consumer, &subconsumer, type);
+  *qtype = consume_described_ulong_descriptor(consumer, &subconsumer, type);
   return *qtype;
 }
 
@@ -654,21 +680,20 @@ static inline bool consume_copy(pni_consumer_t *consumer, pn_data_t *data) {
 
 static inline bool consume_described_maybe_type_raw(pni_consumer_t *consumer, bool *qtype, uint64_t *type, pn_bytes_t *raw) {
   pni_consumer_t subconsumer;
-  *qtype = consume_descriptor(consumer, &subconsumer, type);
+  *qtype = consume_described_ulong_descriptor(consumer, &subconsumer, type);
   return *qtype && consume_raw(&subconsumer, raw);
 }
 
 static inline bool consume_described_maybe_type_maybe_anything(pni_consumer_t *consumer, bool *qtype, uint64_t *type, bool *qanything) {
   pni_consumer_t subconsumer;
-  *qtype = consume_descriptor(consumer, &subconsumer, type);
+  *qtype = consume_described_ulong_descriptor(consumer, &subconsumer, type);
   *qanything = consume_anything(&subconsumer);
   return *qtype && *qanything;
 }
 
 static inline bool consume_described_copy(pni_consumer_t *consumer, pn_data_t *data) {
   pni_consumer_t subconsumer;
-  uint64_t type;
-  return consume_descriptor(consumer, &subconsumer, &type) && consume_copy(&subconsumer, data);
+  return consume_described(consumer, &subconsumer) && consume_copy(&subconsumer, data);
 }
 
 static inline bool consume_string(pni_consumer_t *consumer, pn_bytes_t *string) {
