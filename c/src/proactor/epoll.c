@@ -250,8 +250,8 @@ void task_init(task_t *tsk, task_type_t t, pn_proactor_t *p) {
  * are needed to cross or reconcile the two portions of the list.
  */
 
-// Call with sched lock held.
-static void pop_ready_task(task_t *tsk) {
+// Call with sched lock held and sched_ready_count > 0.
+static task_t *sched_ready_pop_front(pn_proactor_t *p) {
   // every task on the sched_ready_list is either currently running,
   // or to be scheduled.  schedule() will not "see" any of the ready_next
   // pointers until ready and working have transitioned to 0
@@ -262,22 +262,19 @@ static void pop_ready_task(task_t *tsk) {
   // !ready .. schedule() .. on ready_list .. on sched_ready_list .. working task .. !sched_ready && !ready
   //
   // Intervening locks at each transition ensures ready_next has memory coherence throughout the ready task scheduling cycle.
-  // TODO: sched_ready list changed to sequential processing.  Review need for sched_ready_current.
-  pn_proactor_t *p = tsk->proactor;
-  if (tsk == p->sched_ready_current)
-    p->sched_ready_current = tsk->ready_next;
-  assert (tsk == p->sched_ready_first);
   assert (p->sched_ready_count);
+  task_t *tsk = p->sched_ready_first;
   p->sched_ready_count--;
   if (tsk == p->sched_ready_last) {
     p->sched_ready_first = p->sched_ready_last = NULL;
   } else {
     p->sched_ready_first = tsk->ready_next;
   }
-  if (!p->sched_ready_first) {
-    p->sched_ready_last = NULL;
-    assert(p->sched_ready_count == 0);
+  if (p->sched_ready_count == 0) {
+    assert(!p->sched_ready_first);
+    p->sched_ready_pending = false;
   }
+  return tsk;
 }
 
 // Call only as the poller task that has already called schedule_ready_list() and already
@@ -2265,21 +2262,20 @@ static pn_event_batch_t *process(task_t *tsk) {
 
 // Call with both sched_mutex and eventfd_mutex held
 static void schedule_ready_list(pn_proactor_t *p) {
-  // append ready_list_first..ready_list_last to end of sched_ready_last
+  // Append ready_list_first..ready_list_last to end of sched_ready_last
+  // May see several in single do_epoll() if EINTR.
   if (p->ready_list_first) {
     if (p->sched_ready_last)
       p->sched_ready_last->ready_next = p->ready_list_first;  // join them
     if (!p->sched_ready_first)
       p->sched_ready_first = p->ready_list_first;
     p->sched_ready_last = p->ready_list_last;
-    if (!p->sched_ready_current)
-      p->sched_ready_current = p->sched_ready_first;
     p->ready_list_first = p->ready_list_last = NULL;
-  }
 
-  // Track sched_ready_count to know how many threads may be needed.
-  p->sched_ready_count = p->ready_list_count;
-  p->ready_list_count = 0;
+    // Track sched_ready_count to know how many threads may be needed.
+    p->sched_ready_count += p->ready_list_count;
+    p->ready_list_count = 0;
+  }
 }
 
 // Call with schedule lock and eventfd lock held.  Called only by poller thread.
@@ -2402,17 +2398,14 @@ static task_t *next_runnable(pn_proactor_t *p, tslot_t *ts) {
     }
   }
 
-  // rest of sched_ready list
-  while (p->sched_ready_count) {
-    tsk = p->sched_ready_current;
+  // sched_ready list tasks deferred in poller_do_epoll()
+  while (p->sched_ready_pending) {
+    tsk = sched_ready_pop_front(p);
     assert(tsk->ready); // eventfd_mutex required post ready set and pre move to sched_ready_list
     if (post_ready(p, tsk)) {
-      pop_ready_task(tsk);  // updates sched_ready_current
       assert(!tsk->runnables_idx && !tsk->runner);
       assign_thread(ts, tsk);
       return tsk;
-    } else {
-      pop_ready_task(tsk);
     }
   }
 
@@ -2500,7 +2493,7 @@ static pn_event_batch_t *next_event_batch(pn_proactor_t* p, bool can_block) {
 static bool poller_do_epoll(struct pn_proactor_t* p, tslot_t *ts, bool can_block) {
   // As poller with lots to do, be mindful of hogging the sched lock.  Release when making kernel calls.
   assert(!p->resched_cutoff);
-  assert(!p->sched_ready_first);
+  assert(!p->sched_ready_first && !p->sched_ready_pending);
   int n_events;
   task_t *tsk;
   bool unpolled_work = false;
@@ -2607,21 +2600,20 @@ static bool poller_do_epoll(struct pn_proactor_t* p, tslot_t *ts, bool can_block
   if (warm_tries < 0)
     warm_tries = 0;
 
-  task_t *ctsk = p->sched_ready_current;
   int max_runnables = p->runnables_capacity;
   while (p->sched_ready_count && p->n_runnables < max_runnables && warm_tries) {
-    assert(ctsk);
+    task_t *ctsk = sched_ready_pop_front(p);
     tsk = post_ready(p, ctsk);
-    pop_ready_task(ctsk);
     warm_tries--;
     if (tsk)
       make_runnable(tsk);
-    ctsk = ctsk->ready_next;
   }
-  p->sched_ready_current = ctsk;
+  // sched_ready list is now either consumed or partially deferred.
+  // Allow next_runnable() to see any remaining sched_ready tasks.
+  p->sched_ready_pending = p->sched_ready_count > 0;
 
   while (p->resched_cutoff && p->n_runnables < max_runnables && warm_tries) {
-    ctsk = resched_pop_front(p);
+    task_t *ctsk = resched_pop_front(p);
     assert(ctsk->runner == RESCHEDULE_PLACEHOLDER && !ctsk->runnables_idx);
     ctsk->runner = NULL;  // Allow task to run again.
     warm_tries--;
