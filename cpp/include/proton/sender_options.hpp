@@ -82,7 +82,10 @@ class sender_options {
     /// Set the delivery mode on the sender.
     PN_CPP_EXTERN sender_options& delivery_mode(delivery_mode);
 
-    /// Automatically settle messages (default is true).
+    /**
+     * If ``True`` (default), automatically settle messages upon receiving a settled
+     * disposition for that delivery. Otherwise messages must be explicitly settled.
+     */
     PN_CPP_EXTERN sender_options& auto_settle(bool);
 
     /// Options for the source node of the sender.

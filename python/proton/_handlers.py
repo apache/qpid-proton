@@ -48,7 +48,8 @@ class OutgoingMessageHandler(Handler):
     A utility for simpler and more intuitive handling of delivery
     events related to outgoing i.e. sent messages.
 
-    :param auto_settle: If ``True``, settle all messages (default). Otherwise
+    :param auto_settle: If ``True`` (default), automatically settle messages
+        upon receiving a settled disposition for that delivery. Otherwise
         messages must be explicitly settled.
     :type auto_settle: ``bool``
     :param delegate: A client handler for the endpoint event
@@ -666,7 +667,8 @@ class MessagingHandler(Handler, Acking):
     :param prefetch: Initial flow credit for receiving messages, defaults to 10.
     :param auto_accept: If ``True``, accept all messages (default). Otherwise
         messages must be individually accepted or rejected.
-    :param auto_settle: If ``True``, settle all messages (default). Otherwise
+    :param auto_settle: If ``True`` (default), automatically settle messages
+        upon receiving a settled disposition for that delivery. Otherwise
         messages must be explicitly settled.
     :param peer_close_is_error: If ``True``, a peer endpoint closing will be
         treated as an error with an error callback. Otherwise (default), the
@@ -951,9 +953,10 @@ class TransactionalClientHandler(MessagingHandler, TransactionHandler):
     a transactional acceptance of received messages.
 
     :param prefetch: Initial flow credit for receiving messages, defaults to 10.
-    :param auto_accept: If ``True``, accept all messages (default). Otherwise messages
-        must be individually accepted or rejected.
-    :param auto_settle: If ``True``, settle all messages (default). Otherwise
+    :param auto_accept: If ``True``, accept all messages (default). Otherwise
+        messages must be individually accepted or rejected.
+    :param auto_settle: If ``True`` (default), automatically settle messages
+        upon receiving a settled disposition for that delivery. Otherwise
         messages must be explicitly settled.
     :param peer_close_is_error: If ``True``, a peer endpoint closing will be
         treated as an error with an error callback. Otherwise (default), the
