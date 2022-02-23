@@ -19,10 +19,10 @@ Linux dependencies
 
   - GNU Make 3.81+
   - GCC 4.8.4+
-  - Cyrus SASL 2.1+ (for SASL support)
+  - Cyrus SASL 2.1.26+ (for SASL support)
   - OpenSSL 1.0+ (for SSL support)
   - JsonCpp 1.8+ for C++ connection configuration file support
-  - Python 2.7, 3.5+ (for the Python binding)
+  - Python 3.5+ (for the Python binding)
 
 Windows dependencies
 
@@ -44,7 +44,7 @@ language.
     $ yum install openssl-devel
 
     # Dependencies needed for Cyrus SASL support
-    $ yum install cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-md5
+    $ yum install cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-scram
 
     # Dependencies needed for bindings
     $ yum install swig                                       # Required for all bindings
