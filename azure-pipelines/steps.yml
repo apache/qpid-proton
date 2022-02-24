@@ -18,7 +18,7 @@ steps:
   inputs:
     workingDirectory: 'BLD'
     cmakeArgs: --build . --config $(Config)
-- script: ctest -C $(Config) -V -T Test --no-compress-output
+- script: ctest -C $(Config) -V -T Test --no-compress-output $(CtestExtraArgs)
   displayName: CMakeTest
   workingDirectory: 'BLD'
   continueOnError: true
