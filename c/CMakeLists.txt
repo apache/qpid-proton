@@ -391,6 +391,15 @@ elseif (PROACTOR AND NOT PROACTOR STREQUAL "none")
   message(FATAL_ERROR "Cannot build the ${PROACTOR} proactor")
 endif()
 
+if (BUILD_TLS)
+  if((PROACTOR_OK STREQUAL epoll) AND (SSL_IMPL STREQUAL openssl))
+    set (qpid-proton-tls src/tls/openssl.c)
+    message(STATUS "Building the raw connection TLS library")
+  else ()
+    message(FATAL_ERROR "Cannot currently build the raw connection TLS library without the epoll proactor and OpenSSL")
+  endif ()
+endif (BUILD_TLS)
+
 source_group("API Header Files" FILES ${qpid-proton-include} ${qpid-proton-include-extra})
 
 set_source_files_properties (
@@ -540,6 +549,51 @@ if (BUILD_STATIC_LIBS)
     EXPORT_NAME qpid-proton)
 endif(BUILD_STATIC_LIBS)
 
+if (qpid-proton-tls)
+  set(HAS_TLS True)
+  set_source_files_properties (${qpid-proton-tls} PROPERTIES
+    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${C_STANDARD_FLAGS}"
+    )
+
+  add_library (qpid-proton-tls-objects OBJECT ${qpid-proton-tls})
+  target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
+  target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+  set_target_properties(qpid-proton-tls-objects PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    COMPILE_FLAGS "${LTO}"
+    LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+  target_compile_definitions(qpid-proton-tls-objects PRIVATE qpid_proton_tls_EXPORTS)
+  set(TARGET_OBJECTS_qpid-proton-tls-objects "$<TARGET_OBJECTS:qpid-proton-tls-objects>")
+
+  # Can't use target_link_libraries() because cmake 2.8.12 doesn't allow object libraries as the first param
+  # otherwise for cmake 3.9 and on this would be:
+  #   target_link_libraries (qpid-proton-tls-objects ${SSL_LIB} ${PLATFORM_LIBS})
+  target_compile_definitions(qpid-proton-tls-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-tls,COMPILE_DEFINITIONS>)
+  target_compile_options    (qpid-proton-tls-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-tls,COMPILE_OPTIONS>)
+  target_include_directories(qpid-proton-tls-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-tls,INCLUDE_DIRECTORIES>)
+
+  add_library (qpid-proton-tls SHARED $<TARGET_OBJECTS:qpid-proton-tls-objects>)
+  target_link_libraries (qpid-proton-tls  LINK_PUBLIC qpid-proton-core)
+  target_link_libraries (qpid-proton-tls  LINK_PRIVATE ${SSL_LIB} ${PLATFORM_LIBS})
+  set_target_properties (qpid-proton-tls
+    PROPERTIES
+    VERSION   "${PN_LIB_TLS_VERSION}"
+    SOVERSION "${PN_LIB_TLS_MAJOR_VERSION}"
+    LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
+    COMPILE_FLAGS "${LTO}"
+    EXPORT_NAME tls
+    )
+  if (BUILD_STATIC_LIBS)
+    add_library (qpid-proton-tls-static STATIC ${qpid-proton-tls})
+    target_compile_definitions(qpid-proton-tls-static PUBLIC PROTON_DECLARE_STATIC)
+    target_link_libraries (qpid-proton-tls-static PRIVATE ${PLATFORM_LIBS})
+    set_target_properties(qpid-proton-tls-static PROPERTIES
+      EXPORT_NAME tls)
+    set(TARGET_qpid-proton-tls-static qpid-proton-tls-static)
+  endif(BUILD_STATIC_LIBS)
+endif ()
+
+
 # Install executables and libraries
 install(TARGETS qpid-proton qpid-proton-core
   EXPORT  ProtonTargets
@@ -591,6 +645,31 @@ if (HAS_PROACTOR)
   endif (MSVC)
 endif ()
 
+if (HAS_TLS)
+  install(TARGETS qpid-proton-tls ${STATIC_LIBS}
+    EXPORT  ProtonTargets
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+    INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+  if (BUILD_STATIC_LIBS)
+    install(TARGETS qpid-proton-tls-static
+      EXPORT  ProtonTargetsStatic
+      RUNTIME DESTINATION bin
+      ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+      LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+      INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+  endif()
+
+  # Install windows pdb files
+  if (MSVC)
+    install(FILES $<TARGET_PDB_FILE:qpid-proton-tls>
+      DESTINATION bin
+      CONFIGURATIONS RelWithDebInfo Debug
+      OPTIONAL)
+  endif (MSVC)
+endif ()
+
 # Install header files
 file(GLOB headers "${CMAKE_CURRENT_BINARY_DIR}/include/proton/*.[hi]")
 install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
@@ -617,6 +696,9 @@ configure_lib(PROTONCORELIB qpid-proton-core)
 if(HAS_PROACTOR)
   configure_lib(PROTONPROACTORLIB qpid-proton-proactor)
 endif(HAS_PROACTOR)
+if(HAS_TLS)
+  configure_lib(PROTONTLSLIB qpid-proton-tls)
+endif(HAS_TLS)
 
 install(EXPORT ProtonTargets
   FILE ProtonTargets.cmake

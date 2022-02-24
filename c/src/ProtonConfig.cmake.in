@@ -67,4 +67,11 @@ if (HAS_PROACTOR)
   set (Proton_Proactor_FOUND True)
 endif()
 
+set (HAS_TLS @HAS_TLS@)
+if (HAS_TLS)
+  set (Proton_Tls_INCLUDE_DIRS @PACKAGE_INCLUDE_INSTALL_DIR@)
+  set (Proton_Tls_LIBRARIES Proton::tls)
+  set (Proton_Tls_FOUND True)
+endif()
+
 check_required_components(Proton)

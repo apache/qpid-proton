@@ -167,6 +167,7 @@ option(ENABLE_FUZZ_TESTING "Enable building fuzzers and regression testing with 
 option(ENABLE_BENCHMARKS "Enable building and running benchmarks with Google Benchmark" ${DEFAULT_BENCHMARKS})
 
 option(BUILD_EXAMPLES "Enable building example programs" ON)
+option(BUILD_TLS "Enable building separate TLS library for Proton raw connections" OFF)
 
 # Set any additional compiler specific flags
 set (LTO_GNU "-flto -fno-fat-lto-objects")

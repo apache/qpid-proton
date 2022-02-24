@@ -119,6 +119,13 @@ if (CMAKE_CXX_COMPILER)
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
   endif(HAS_PROACTOR)
+
+  if(HAS_TLS)
+    # Tests for qpid-proton-tls raw TLS library
+    add_c_test(c-tls-test tls_test.cpp $<TARGET_OBJECTS:qpid-proton-tls-objects>)
+    target_link_libraries(c-tls-test qpid-proton-core qpid-proton-proactor ${SSL_LIB} ${PLATFORM_LIBS})
+  endif(HAS_TLS)
+
 else (CMAKE_CXX_COMPILER)
   message(WARNING "No C++ compiler, some C library tests were not built")
 endif (CMAKE_CXX_COMPILER)
