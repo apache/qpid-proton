@@ -238,6 +238,7 @@ PN_HANDLE(PNI_PYTRACER);
 %typemap(out) pn_msgid_t {
   switch ($1.type) {
     case PN_NULL:
+      Py_INCREF(Py_None);
       $result = Py_None;
       break;
     case PN_ULONG:
@@ -261,6 +262,7 @@ PN_HANDLE(PNI_PYTRACER);
         $result = PyLong_FromLong(v);
         break;
       }
+      Py_INCREF(Py_None);
       $result = Py_None;
       break;
     }
@@ -272,6 +274,7 @@ PN_HANDLE(PNI_PYTRACER);
       }
     }
     default:
+      Py_INCREF(Py_None);
       $result = Py_None;
       break;
   }
