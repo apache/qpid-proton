@@ -1595,7 +1595,10 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
       case PN_REJECTED: {
         pn_bytes_t cond;
         pn_bytes_t desc;
-        pn_amqp_decode_DqEDqEsSCee(disp_data, &cond, &desc, pn_condition_info(&remote->condition));
+        pn_data_t *info = pn_condition_info(&remote->condition);
+        pn_data_clear(info);
+        pn_amqp_decode_DqEDqEsSCee(disp_data, &cond, &desc, info);
+        pn_data_rewind(info);
         pn_condition_set(&remote->condition, cond, desc);
 
         break;
@@ -1608,7 +1611,9 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
         bool failed;
         bool qundeliverable;
         bool undeliverable;
+        pn_data_clear(remote->annotations);
         pn_amqp_decode_DqEQoQoCe(disp_data, &qfailed, &failed, &qundeliverable, &undeliverable, remote->annotations);
+        pn_data_rewind(remote->annotations);
 
         if (qfailed) {
           remote->failed = failed;
@@ -1619,7 +1624,9 @@ static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t
         break;
       }
       default:
+        pn_data_clear(remote->data);
         pn_amqp_decode_DqC(disp_data, remote->data);
+        pn_data_rewind(remote->data);
         break;
     }
   }
