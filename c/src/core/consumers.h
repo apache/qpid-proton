@@ -223,6 +223,19 @@ static inline bool pni_consumer_skip_value(pni_consumer_t* consumer, uint8_t typ
   return pni_consumer_skip_value_not_described(consumer, type);
 }
 
+static inline bool pni_islist(pni_consumer_t* consumer) {
+  uint8_t t;
+  if (!pni_consumer_readf8(consumer, &t)) return false;
+  switch (t) {
+    case PNE_LIST0:
+    case PNE_LIST8:
+    case PNE_LIST32:
+      return true;
+    default:
+      return false;
+  }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 static inline bool consume_single_value_not_described(pni_consumer_t* consumer, uint8_t* type) {
