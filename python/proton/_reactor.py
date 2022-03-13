@@ -23,7 +23,8 @@ import logging
 import re
 import os
 import queue
-from typing import Any, Dict, Iterator, Optional, List, Union, Callable, TYPE_CHECKING
+from typing import Any, Dict, Iterator, Optional, List, Union, Callable, TYPE_CHECKING, Tuple, Type
+
 try:
     from typing import Literal
 except ImportError:
@@ -57,8 +58,10 @@ from ._selectable import Selectable
 
 if TYPE_CHECKING:
     from ._endpoints import Receiver, Sender
+    from ._data import PythonAMQPData
     from ._handlers import TransactionHandler
     from socket import socket
+    from types import TracebackType
     from uuid import UUID
 
 
@@ -129,11 +132,11 @@ class Reactor(object):
         self._handler = Handler()
         self._timerheap = []
         self._timers = 0
-        self.errors = []
+        self.errors: List[Tuple[Type[BaseException], BaseException, 'TracebackType']] = []
         for h in handlers:
             self.handler.add(h, on_error=self.on_error)
 
-    def on_error(self, info):
+    def on_error(self, info: Tuple[Type[BaseException], BaseException, 'TracebackType']) -> None:
         self.errors.append(info)
         self.yield_()
 
@@ -148,23 +151,23 @@ class Reactor(object):
         """
         return handler
 
-    def _get_global(self):
+    @property
+    def global_handler(self) -> Handler:
         return self._global_handler
 
-    def _set_global(self, handler):
+    @global_handler.setter
+    def global_handler(self, handler: Handler) -> None:
         self._global_handler = self._make_handler(handler)
 
-    global_handler = property(_get_global, _set_global)
-
-    def _get_timeout(self):
+    @property
+    def timeout(self) -> float:
         return self._timeout
 
-    def _set_timeout(self, secs):
+    @timeout.setter
+    def timeout(self, secs: float) -> None:
         self._timeout = secs
 
-    timeout = property(_get_timeout, _set_timeout)
-
-    def yield_(self):
+    def yield_(self) -> None:
         self._yield = True
 
     def mark(self) -> float:
@@ -176,15 +179,15 @@ class Reactor(object):
     def now(self) -> float:
         return self._now
 
-    def _get_handler(self):
+    @property
+    def handler(self) -> Handler:
         return self._handler
 
-    def _set_handler(self, handler):
+    @handler.setter
+    def handler(self, handler: Handler) -> None:
         self._handler = self._make_handler(handler)
 
-    handler = property(_get_handler, _set_handler)
-
-    def run(self):
+    def run(self) -> None:
         """
         Start the processing of events and messages for this container.
         """
@@ -349,7 +352,7 @@ class Reactor(object):
         result.collect(self._collector)
         return result
 
-    def connection_to_host(self, host, port, handler=None):
+    def connection_to_host(self, host, port, handler: Optional[Handler] = None) -> Connection:
         """Create an outgoing Connection that will be managed by the reactor.
         The reactor's pn_iohandler will create a socket connection to the host
         once the connection is opened.
@@ -358,7 +361,7 @@ class Reactor(object):
         self.set_connection_host(conn, host, port)
         return conn
 
-    def set_connection_host(self, connection, host, port):
+    def set_connection_host(self, connection: Connection, host, port) -> None:
         """Change the address used by the connection.  The address is
         used by the reactor's iohandler to create an outgoing socket
         connection.  This must be set prior to opening the connection.
@@ -398,7 +401,7 @@ class Reactor(object):
 
     def push_event(
             self,
-            obj: Union[Task, 'Container', Selectable],
+            obj: Union['Reactor', Task, 'Container', Selectable],
             etype: EventType
     ) -> None:
         self._collector.put(obj, etype)
@@ -569,11 +572,11 @@ class Transaction(object):
     def declare(self) -> None:
         self._declare = self._send_ctrl(symbol(u'amqp:declare:list'), [None])
 
-    def discharge(self, failed):
+    def discharge(self, failed: bool) -> None:
         self.failed = failed
         self._discharge = self._send_ctrl(symbol(u'amqp:discharge:list'), [self.id, failed])
 
-    def _send_ctrl(self, descriptor, value):
+    def _send_ctrl(self, descriptor: 'PythonAMQPData', value: 'PythonAMQPData') -> Delivery:
         delivery = self.txn_ctrl.send(Message(body=Described(descriptor, value)))
         delivery.transaction = self
         return delivery
@@ -772,10 +775,9 @@ class Filter(ReceiverOption):
 
     :param filter_set: A map of filters with :class:`proton.symbol` keys
         containing the filter name, and the value a filter string.
-    :type filter_set: ``dict``
     """
 
-    def __init__(self, filter_set={}):
+    def __init__(self, filter_set: Dict[symbol, Described] = {}) -> None:
         self.filter_set = filter_set
 
     def apply(self, receiver: 'Receiver') -> None:
@@ -987,14 +989,14 @@ class Backoff(object):
         return self.iter
 
 
-def make_backoff_wrapper(backoff):
+def make_backoff_wrapper(
+        backoff: Optional[Union[List[Union[float, int]], bool, Backoff]]
+) -> Optional[Union[List[Union[float, int]], bool, Backoff]]:
     """
     Make a wrapper for a backoff object:
     If the object conforms to the old protocol (has reset and next methods) then
     wrap it in an iterable that returns an iterator suitable for the new backoff approach
     otherwise assume it is fine as it is!
-    :param backoff:
-    :return:
     """
     class WrappedBackoff(object):
         def __init__(self, backoff):

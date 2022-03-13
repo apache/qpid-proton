@@ -18,7 +18,7 @@
 #
 
 import uuid
-from typing import Callable, List, Tuple, Union, Optional, Any, Dict, Iterable, overload, TypeVar
+from typing import Callable, List, Tuple, Union, Optional, Any, Dict, Iterable, TypeVar
 try:
     from typing import Literal
 except ImportError:
@@ -27,7 +27,7 @@ except ImportError:
         def __getitem__(self, item):
             pass
 
-    class Literal(metaclass=GenericMeta):
+    class Literal(metaclass=GenericMeta):  # type: ignore[no-redef]
         pass
 
 from cproton import PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE, PN_CHAR, PN_DECIMAL128, PN_DECIMAL32, PN_DECIMAL64, \

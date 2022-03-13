@@ -1328,7 +1328,14 @@ class IOHandler(Handler):
 
 
 class ConnectSelectable(Selectable):
-    def __init__(self, sock, reactor, addrs, transport, iohandler):
+    def __init__(
+            self,
+            sock: socket.socket,
+            reactor: 'Container',
+            addrs: List[Any],
+            transport: Transport,
+            iohandler: IOHandler
+    ) -> None:
         super(ConnectSelectable, self).__init__(sock, reactor)
         self.writing = True
         self._addrs = addrs
