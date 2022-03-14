@@ -530,51 +530,54 @@ static inline void pni_emitter_data(pni_emitter_t* emitter, pn_data_t* data) {
 }
 
 static inline void emit_copy(pni_emitter_t* emitter, pni_compound_context* compound, pn_data_t* data) {
-  emit_accumulated_nulls(emitter, compound);
   if (!data || pn_data_size(data) == 0) {
-    pni_emitter_writef8(emitter, PNE_NULL);
-  } else {
-    pn_handle_t point = pn_data_point(data);
-    pn_data_rewind(data);
-    pni_emitter_data(emitter, data);
-    pn_data_restore(data, point);
+    emit_null(emitter, compound);
+    return;
   }
+
+  emit_accumulated_nulls(emitter, compound);
+  pn_handle_t point = pn_data_point(data);
+  pn_data_rewind(data);
+  pni_emitter_data(emitter, data);
+  pn_data_restore(data, point);
   compound->count++;
 }
 
 static inline void emit_multiple(pni_emitter_t* emitter, pni_compound_context* compound, pn_data_t* data) {
-  pn_handle_t point = {0};
-  if (data) {
-    point = pn_data_point(data);
-    pn_data_rewind(data);
-    // Rewind and position to first node so data type is defined.
-    pn_data_next(data);
+  if (!data || pn_data_size(data) == 0) {
+    emit_null(emitter, compound);
+    return;
   }
 
-  emit_accumulated_nulls(emitter, compound);
-  if (!data || pn_data_size(data) == 0) {
-    pni_emitter_writef8(emitter, PNE_NULL);
-  } else if (pn_data_type(data) == PN_ARRAY) {
-    switch (pn_data_get_array(data)) {
+  pn_handle_t point = pn_data_point(data);
+  pn_data_rewind(data);
+  // Rewind and position to first node so data type is defined.
+  pn_data_next(data);
+
+  if (pn_data_type(data) == PN_ARRAY) {
+      switch (pn_data_get_array(data)) {
       case 0:
-        pni_emitter_writef8(emitter, PNE_NULL);
-        break;
+        emit_null(emitter, compound);
+        pn_data_restore(data, point);
+        return;
       case 1:
+        emit_accumulated_nulls(emitter, compound);
         pn_data_enter(data);
         pn_data_narrow(data);
         pni_emitter_data(emitter, data);
         pn_data_widen(data);
         break;
       default:
+        emit_accumulated_nulls(emitter, compound);
         pni_emitter_data(emitter, data);
     }
   } else {
+    emit_accumulated_nulls(emitter, compound);
     pni_emitter_data(emitter, data);
   }
 
   compound->count++;
-  if (data)
-    pn_data_restore(data, point);
+  pn_data_restore(data, point);
 }
 
 static inline void emit_described_type_copy(pni_emitter_t* emitter, pni_compound_context* compound, uint64_t descriptor, pn_data_t* data) {
