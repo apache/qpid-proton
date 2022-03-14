@@ -534,12 +534,23 @@ static inline void emit_copy(pni_emitter_t* emitter, pni_compound_context* compo
   if (!data || pn_data_size(data) == 0) {
     pni_emitter_writef8(emitter, PNE_NULL);
   } else {
+    pn_handle_t point = pn_data_point(data);
+    pn_data_rewind(data);
     pni_emitter_data(emitter, data);
+    pn_data_restore(data, point);
   }
   compound->count++;
 }
 
 static inline void emit_multiple(pni_emitter_t* emitter, pni_compound_context* compound, pn_data_t* data) {
+  pn_handle_t point = {0};
+  if (data) {
+    point = pn_data_point(data);
+    pn_data_rewind(data);
+    // Rewind and position to first node so data type is defined.
+    pn_data_next(data);
+  }
+
   emit_accumulated_nulls(emitter, compound);
   if (!data || pn_data_size(data) == 0) {
     pni_emitter_writef8(emitter, PNE_NULL);
@@ -560,7 +571,10 @@ static inline void emit_multiple(pni_emitter_t* emitter, pni_compound_context* c
   } else {
     pni_emitter_data(emitter, data);
   }
+
   compound->count++;
+  if (data)
+    pn_data_restore(data, point);
 }
 
 static inline void emit_described_type_copy(pni_emitter_t* emitter, pni_compound_context* compound, uint64_t descriptor, pn_data_t* data) {
