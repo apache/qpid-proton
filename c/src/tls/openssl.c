@@ -1462,10 +1462,6 @@ static inline uint32_t room(pbuffer_t const *b) {
   return 0;
 }
 
-static inline size_t size_min(uint32_t a, uint32_t b) {
-  return (a <= b) ? a : b;
-}
-
 bool pn_tls_is_secure(pn_tls_t * tls) {
   return tls->handshake_ok && !tls->pn_tls_err && !tls->stopped;
 }
