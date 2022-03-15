@@ -2271,6 +2271,8 @@ static int pn_tls_alpn_cb(SSL *ssn,
 int pn_tls_config_set_alpn_protocols(pn_tls_config_t *domain, const char **protocols, size_t protocol_count) {
   unsigned char *wire_bytes;
   size_t wb_len;
+  if ((protocols == NULL && protocol_count != 0) || (protocols && protocol_count == 0))
+    return PN_ARG_ERR;
   if (protocols == NULL && protocol_count == 0) {
     free(domain->alpn_list);
     domain->alpn_list = NULL;
