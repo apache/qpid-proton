@@ -1101,8 +1101,12 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
   bool reply;
   uint16_t remote_channel;
   pn_sequence_t next;
+  uint32_t incoming_window;
+  uint32_t outgoing_window;
+  bool handle_max_q;
+  uint32_t handle_max;
 
-  pn_amqp_decode_DqEQHIe(payload, &reply, &remote_channel, &next);
+  pn_amqp_decode_DqEQHIIIQIe(payload, &reply, &remote_channel, &next, &incoming_window, &outgoing_window, &handle_max_q, &handle_max);
 
   // AMQP 1.0 section 2.7.1 - if the peer doesn't honor our channel_max --
   // express our displeasure by closing the connection with a framing error.
@@ -1131,6 +1135,9 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
     ssn = pn_session(transport->connection);
   }
   ssn->state.incoming_transfer_count = next;
+  if (handle_max_q) {
+    ssn->state.remote_handle_max = handle_max;
+  }
   pni_map_remote_channel(ssn, channel);
   PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_ACTIVE);
   pn_collector_put(transport->connection->collector, PN_OBJECT, ssn, PN_SESSION_REMOTE_OPEN);
@@ -1238,6 +1245,13 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
     pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
+    if (strheap) free(strheap);
+    pn_free(rem_props);
+    return PN_EOS;
+  }
+  if (handle > ssn->local_handle_max) {
+    pn_do_error(transport, "amqp:connection:framing-error",
+                "remote handle %u is above handle_max %u", handle, ssn->local_handle_max);
     if (strheap) free(strheap);
     pn_free(rem_props);
     return PN_EOS;
@@ -1944,12 +1958,13 @@ static int pni_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpo
       }
       state->incoming_window = pni_session_incoming_window(ssn);
       state->outgoing_window = pni_session_outgoing_window(ssn);
-      /* "DL[?HIII]" */
-      pn_bytes_t buf = pn_amqp_encode_DLEQHIIIe(transport->frame, BEGIN,
+      /* "DL[?HIIII]" */
+      pn_bytes_t buf = pn_amqp_encode_DLEQHIIIIe(transport->frame, BEGIN,
                     ((int16_t) state->remote_channel >= 0), state->remote_channel,
                     state->outgoing_transfer_count,
                     state->incoming_window,
-                    state->outgoing_window);
+                    state->outgoing_window,
+                    ssn->local_handle_max);
       pn_framing_send_amqp(transport, state->local_channel, buf);
     }
   }
@@ -1979,9 +1994,8 @@ static int pni_map_local_handle(pn_link_t *link) {
   pn_link_state_t *state = &link->state;
   pn_session_state_t *ssn_state = &link->session->state;
   int valid;
-  // XXX TODO MICK: once changes are made to handle_max, change this hardcoded value to something reasonable.
-  state->local_handle = allocate_alias(ssn_state->local_handles, 65536, & valid);
-  if ( ! valid )
+  state->local_handle = allocate_alias(ssn_state->local_handles, ssn_state->remote_handle_max, &valid);
+  if ( !valid )
     return 0;
   pn_hash_put(ssn_state->local_handles, state->local_handle, link);
   pn_ep_incref(&link->endpoint);
@@ -1999,7 +2013,10 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
     if (((int16_t) ssn_state->local_channel >= 0) &&
         !(endpoint->state & PN_LOCAL_UNINIT) && state->local_handle == (uint32_t) -1)
     {
-      pni_map_local_handle(link);
+      if (! pni_map_local_handle(link)) {
+        pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_WARNING, "unable to find an open available handle within limit of %d", ssn_state->remote_handle_max );
+        return PN_ERR;
+      }
       const pn_distribution_mode_t dist_mode = (pn_distribution_mode_t) link->source.distribution_mode;
       if (link->target.type == PN_COORDINATOR) {
         /* "DL[SIoBB?DL[SIsIoC?sCnCC]DL[C]nnI]" */

@@ -1005,9 +1005,11 @@ pn_session_t *pn_session(pn_connection_t *conn)
   ssn->incoming_deliveries = 0;
   ssn->outgoing_deliveries = 0;
   ssn->outgoing_window = AMQP_MAX_WINDOW_SIZE;
+  ssn->local_handle_max = PN_IMPL_HANDLE_MAX;
 
   // begin transport state
   memset(&ssn->state, 0, sizeof(ssn->state));
+  ssn->state.remote_handle_max = UINT32_MAX;
   ssn->state.local_channel = (uint16_t)-1;
   ssn->state.remote_channel = (uint16_t)-1;
   pn_delivery_map_init(&ssn->state.incoming, 0);

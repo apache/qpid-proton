@@ -94,6 +94,8 @@ typedef struct {
   pn_sequence_t disp_first;
   pn_sequence_t disp_last;
   // XXX: stop using negative numbers
+  #define PN_IMPL_HANDLE_MAX 0x7fffffff
+  uint32_t remote_handle_max;
   uint16_t local_channel;
   uint16_t remote_channel;
   bool incoming_init;
@@ -259,6 +261,7 @@ struct pn_session_t {
   pn_list_t *freed;
   pn_record_t *context;
   size_t incoming_capacity;
+  uint32_t local_handle_max;
   pn_sequence_t incoming_bytes;
   pn_sequence_t outgoing_bytes;
   pn_sequence_t incoming_deliveries;
