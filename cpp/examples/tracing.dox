@@ -1,0 +1,107 @@
+// -*-markdown-*-
+// NOTE: doxygen can include markdown pages directly but there seems to be a bug
+// that shows messed-up line numbers in \skip \until code extracts. This file
+// is markdown wrapped in a doxygen comment - which works. The file is best viewed/edited
+// as markdown.
+
+/**
+
+@page tracing Tracing
+
+The tracing support is added using OpenTelemetry-cpp.
+
+There are two types of spans:
+1. <b>Library generated spans</b>:
+
+    Send span <b>("amqp-message-send”)</b> gets created just before sending a message and ends when that message gets settled.
+
+    Receive span <b>("amqp-message-received")</b> gets created just before receiving a message and ends as soon as the message is received.
+
+2. <b>Application generated spans</b>:
+
+    Users can also create their own spans and those spans will get linked with the library generated spans.
+
+## Usage:
+
+### 1. Initialize the exporter
+
+       opentelemetry::exporter::jaeger::JaegerExporterOptions opts;
+       std::unique_ptr<opentelemetry::sdk::trace::SpanExporter> exporter = std::unique_ptr<opentelemetry::sdk::trace::SpanExporter>(
+            new opentelemetry::exporter::jaeger::JaegerExporter(opts));
+
+Above is an example of initializing a jaeger exporter. Apart from jaeger exporter, there are many other exporters supported by OpenTelelemetry.
+
+### 2. Set the Tracer Provider
+
+       auto processor = std::unique_ptr<opentelemetry::sdk::trace::SpanProcessor>(
+            new opentelemetry::sdk::trace::SimpleSpanProcessor(std::move(exporter)));
+       auto provider = opentelemetry::nostd::shared_ptr<opentelemetry::trace::TracerProvider>(
+            new opentelemetry::sdk::trace::TracerProvider(std::move(processor));
+       opentelemetry::trace::Provider::SetTracerProvider(provider);
+
+### 3. Enable tracing in Proton C++
+
+       proton::initOpenTelemetryTracer();
+
+This will generates the library spans ("amqp-message-send" and "amqp-message-received").
+
+In addition, users can create their own spans in the application. The @ref tracing_client and @ref tracing_server examples demonstrates how to do that with jaeger exporter.
+
+## Steps to run tracing examples: 
+
+    A working example of distributed tracing using broker, tracing_server and tracing_client examples.
+
+### Start Jaeger, for example: 
+
+docker run -d --name jaeger \
+  -e COLLECTOR_ZIPKIN_HOST_PORT=:9411 \
+  -p 5775:5775/udp \
+  -p 6831:6831/udp \
+  -p 6832:6832/udp \
+  -p 5778:5778 \
+  -p 16686:16686 \
+  -p 14268:14268 \
+  -p 14250:14250 \
+  -p 9411:9411 \
+  jaegertracing/all-in-one:1.25 
+
+### Build/Install Opentelemetry-cpp: 
+
+Note: Thrift is jaeger exporter dependency.
+
+1. Clone opentelemetry-cpp  
+https://github.com/open-telemetry/opentelemetry-cpp
+
+2. cd opentelemetry-cpp
+
+3. mkdir bld 
+4. cd bld
+
+5. cmake .. -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DWITH_JAEGER=ON 
+6. make 
+7. sudo make install 
+
+### Demo with broker.
+
+
+WORKDIR cpp/examples  
+
+1. @ref broker.cpp   
+<b>In one window run:</b>  
+`./broker`  
+
+2. @ref tracing_server.cpp  
+<b>In another window run:</b>   
+`./tracing_server`
+
+3. @ref tracing_client.cpp  
+<b>In the final window:</b>  
+`./tracing_client`
+
+### Look in the Jaeger UI: 
+
+Browse to http://localhost:16686/. This should open up a console for the Jaeger tracing system.  
+Select the Service dropdown at the top of the Search options (if not already selected). 
+Hit Find Traces. 
+
+*/

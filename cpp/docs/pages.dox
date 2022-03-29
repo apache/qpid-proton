@@ -4,3 +4,4 @@
 /// @page types_page AMQP and C++ types
 /// @page mt_page Multi-threading
 /// @page io_page IO integration
+/// @page tracing Tracing
