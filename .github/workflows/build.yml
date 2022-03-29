@@ -60,6 +60,11 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         brew install libuv swig pkgconfig jsoncpp
+    - name: OTel build/install
+      if: runner.os == 'Linux'
+      working-directory: ${{github.workspace}}
+      run: sudo sh ./ci/otel.sh
+      shell: bash
     - name: cmake configure
       working-directory: ${{env.BuildDir}}
       run: cmake "${{github.workspace}}" "-DCMAKE_BUILD_TYPE=${BuildType}" "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" ${{matrix.cmake_extra}}

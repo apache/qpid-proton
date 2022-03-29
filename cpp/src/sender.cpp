@@ -33,6 +33,7 @@
 
 #include "proton_bits.hpp"
 #include "contexts.hpp"
+#include "tracing_private.hpp"
 
 #include <assert.h>
 
@@ -71,7 +72,11 @@ tracker sender::send(const message &message, const binary &tag) {
         pn_object(),
         pn_dtag((reinterpret_cast<const char *>(&tag[0])), tag.size()));
     std::vector<char> buf;
-    message.encode(buf);
+
+    Tracing& ot = Tracing::getTracing();
+    tracker track = make_wrapper<tracker>(dlv);
+    ot.message_encode(message, buf, tag, track);
+
     assert(!buf.empty());
     pn_link_send(pn_object(), &buf[0], buf.size());
     pn_link_advance(pn_object());
@@ -79,7 +84,7 @@ tracker sender::send(const message &message, const binary &tag) {
         pn_delivery_settle(dlv);
     if (!pn_link_credit(pn_object()))
         link_context::get(pn_object()).draining = false;
-    return make_wrapper<tracker>(dlv);
+    return track;
 }
 
 void sender::return_credit() {

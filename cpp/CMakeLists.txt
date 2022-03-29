@@ -36,6 +36,17 @@ else()
   set(CONNECT_CONFIG_SRC src/connect_config_dummy.cpp)
 endif()
 
+# Check for OPENTELEMETRY-CPP for distributed tracing
+find_package(opentelemetry-cpp)
+option(ENABLE_OPENTELEMETRYCPP "Use opentelemetry for distributed tracing" ${OPENTELEMETRY-CPP_FOUND})
+if (ENABLE_OPENTELEMETRYCPP)
+  include_directories(${OPENTELEMETRY_CPP_INCLUDE_DIRS})
+  set(TRACING_SRC src/tracing_opentelemetry.cpp src/tracing_stub.cpp)
+  set(TRACING_LIBS opentelemetry-cpp::trace)
+else()
+  set(TRACING_SRC src/tracing_stub.cpp src/init_tracer_stub.cpp)
+endif()
+
 list(APPEND PLATFORM_LIBS Threads::Threads)
 
 set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CXX_STANDARD}")
@@ -105,6 +116,7 @@ set(qpid-proton-cpp-source
   src/value.cpp
   src/work_queue.cpp
   ${CONNECT_CONFIG_SRC}
+  ${TRACING_SRC}
   )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
@@ -122,7 +134,7 @@ if(BUILD_STATIC_LIBS)
     EXPORT_NAME cpp)
 endif(BUILD_STATIC_LIBS)
 
-target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS})
+target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS} ${TRACING_LIBS})
 
 set_target_properties (
   qpid-proton-cpp

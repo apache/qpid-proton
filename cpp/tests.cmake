@@ -70,6 +70,11 @@ if (ENABLE_JSONCPP)
   file(COPY  "${CMAKE_CURRENT_SOURCE_DIR}/testdata" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
+if (ENABLE_OPENTELEMETRYCPP)
+  add_cpp_test(tracing_test)
+  target_link_libraries(tracing_test opentelemetry-cpp::trace opentelemetry-cpp::jaeger_trace_exporter opentelemetry-cpp::ostream_span_exporter)
+endif()
+
 # TODO aconway 2018-10-31: Catch2 tests
 # This is a simple example of a C++ test using the Catch2 framework.
 # See c/tests/ for more interesting examples.
