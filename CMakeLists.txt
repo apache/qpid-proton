@@ -296,7 +296,7 @@ pn_relative_install_dir (LIBDIR "${CMAKE_INSTALL_PREFIX}" "${LIB_INSTALL_DIR}")
 # system specified locations.
 set (BINDINGS_DIR ${LIB_INSTALL_DIR}/proton/bindings)
 
-set (SYSINSTALL_BINDINGS OFF CACHE BOOL "If SYSINSTALL_BINDINGS is OFF then proton bindings will be installed underneath ${BINDINGS_DIR} and each user will need to modify their interpreter configuration to load the appropriate binding. If SYSINSTALL_BINDINGS is ON, then each language interpreter will be queried for the appropriate directory and proton bindings will be installed and available system wide with no additional per user configuration.")
+set (SYSINSTALL_BINDINGS OFF CACHE BOOL "If SYSINSTALL_BINDINGS is ON, then each language interpreter will be queried for the appropriate directory and proton bindings will be installed in that location.")
 
 set (BINDING_LANGS PYTHON RUBY)
 

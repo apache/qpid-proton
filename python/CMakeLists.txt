@@ -46,19 +46,6 @@ set_target_properties(${SWIG_MODULE_cproton_REAL_NAME}
     PROPERTIES
     LINK_FLAGS "${CATCH_UNDEFINED}")
 
-if (CHECK_SYSINSTALL_PYTHON)
-  execute_process(COMMAND ${Python_EXECUTABLE}
-    -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(True))"
-    OUTPUT_VARIABLE PYTHON_SITEARCH_PACKAGES_DEFAULT
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
-else ()
-  set (PYTHON_SITEARCH_PACKAGES_DEFAULT ${BINDINGS_DIR}/python)
-endif ()
-
-if (NOT PYTHON_SITEARCH_PACKAGES)
-  set (PYTHON_SITEARCH_PACKAGES ${PYTHON_SITEARCH_PACKAGES_DEFAULT})
-endif()
-
 set (pysrc-generated cproton.py)
 set (pysrc
     proton/__init__.py
@@ -100,21 +87,6 @@ set(py_dist_files
     docs/tutorial.rst
     )
 
-macro (py_compile directory files artifacts)
-  foreach (src_file ${files})
-    install(CODE "execute_process(COMMAND \"${Python_EXECUTABLE}\" -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}c')\"
-                                  WORKING_DIRECTORY ${directory})")
-    install(CODE "execute_process(COMMAND \"${Python_EXECUTABLE}\" -O -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}o')\"
-                                  WORKING_DIRECTORY ${directory})")
-    list(APPEND ${artifacts} ${directory}/${src_file}
-      ${directory}/${src_file}c
-      ${directory}/${src_file}o)
-  endforeach (src_file)
-endmacro(py_compile)
-
-py_compile(${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated} CPROTON_ARTIFACTS)
-py_compile(${CMAKE_CURRENT_SOURCE_DIR} "${pysrc}" PROTON_ARTIFACTS)
-
 # Sphinx documentation
 check_python_module("sphinx" SPHINX_MODULE_FOUND)
 if (NOT SPHINX_MODULE_FOUND)
@@ -130,23 +102,50 @@ else ()
             DESTINATION "${PROTON_SHARE}/docs/api-py"
             COMPONENT documentation
             OPTIONAL)
+    set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES docs)
 endif ()
 
-install(FILES ${CPROTON_ARTIFACTS}
-        DESTINATION ${PYTHON_SITEARCH_PACKAGES}
-        COMPONENT Python)
-install(FILES ${PROTON_ARTIFACTS}
-        DESTINATION "${PYTHON_SITEARCH_PACKAGES}/proton/"
-        COMPONENT Python)
-install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
-        DESTINATION ${PYTHON_SITEARCH_PACKAGES}
-        COMPONENT Python)
+if (CHECK_SYSINSTALL_PYTHON)
+  execute_process(COMMAND ${Python_EXECUTABLE}
+    -c "from sysconfig import get_path; print(get_path('platlib'))"
+    OUTPUT_VARIABLE PYTHON_SITEARCH_PACKAGES_DEFAULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  if (NOT PYTHON_SITEARCH_PACKAGES)
+    set (PYTHON_SITEARCH_PACKAGES ${PYTHON_SITEARCH_PACKAGES_DEFAULT})
+  endif()
+
+  macro (py_compile directory files artifacts)
+    foreach (src_file ${files})
+      install(CODE "execute_process(COMMAND \"${Python_EXECUTABLE}\" -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}c')\"
+                                    WORKING_DIRECTORY ${directory})")
+      install(CODE "execute_process(COMMAND \"${Python_EXECUTABLE}\" -O -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}o')\"
+                                    WORKING_DIRECTORY ${directory})")
+      list(APPEND ${artifacts} ${directory}/${src_file}
+        ${directory}/${src_file}c
+        ${directory}/${src_file}o)
+    endforeach (src_file)
+  endmacro(py_compile)
+
+  py_compile(${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated} CPROTON_ARTIFACTS)
+  py_compile(${CMAKE_CURRENT_SOURCE_DIR} "${pysrc}" PROTON_ARTIFACTS)
+
+  install(FILES ${CPROTON_ARTIFACTS}
+          DESTINATION ${PYTHON_SITEARCH_PACKAGES}
+          COMPONENT Python)
+  install(FILES ${PROTON_ARTIFACTS}
+          DESTINATION "${PYTHON_SITEARCH_PACKAGES}/proton/"
+          COMPONENT Python)
+  install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
+          DESTINATION ${PYTHON_SITEARCH_PACKAGES}
+          COMPONENT Python)
+endif ()
+
+# Install python examples even without a 'sysinstall' python
 install(DIRECTORY examples/
         DESTINATION "${PROTON_SHARE}/examples/python"
         COMPONENT Python
         USE_SOURCE_PERMISSIONS)
-
-set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES docs)
 
 #
 # Set up the directory 'dist' for building the python native package
