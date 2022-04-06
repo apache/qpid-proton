@@ -48,12 +48,7 @@ for this and produce an appropriate error if the requirements are not met.
 import os
 
 from setuptools import setup, Extension
-from setuptools.command.sdist import sdist
 from setuptools.command.build_ext import build_ext
-from setuptools.command.build_py import build_py
-
-import distutils.sysconfig as ds_sys
-from distutils.ccompiler import new_compiler, get_default_compiler
 
 from setuputils import log
 from setuputils import misc
@@ -63,40 +58,8 @@ _PROTON_VERSION = (@PN_VERSION_MAJOR@, @PN_VERSION_MINOR@, @PN_VERSION_POINT@)
 _PROTON_VERSION_STR = "%d.%d.%d" % _PROTON_VERSION
 
 
-class Swig(build_ext):
-    def run(self):
-        """Run swig against the sources.  This will cause swig to compile the
-        cproton.i file into a .c file called cproton_wrap.c, and create
-        cproton.py.
-        """
-        ext = Extension('_cproton',
-                        sources=['cproton.i'],
-                        swig_opts=['-threads', '-Iinclude'])
-
-        if 'SWIG' in os.environ:
-            self.swig = os.environ['SWIG']
-
-        self.swig_sources(ext.sources, ext)
-
-
-class CheckSDist(sdist):
-    def run(self):
-        self.distribution.run_command('swig')
-        sdist.run(self)
-
-
-class Configure(build_ext):
-    description = "Discover Qpid Proton version"
-
-    @property
-    def compiler_type(self):
-        compiler = self.compiler
-        if compiler is None:
-            return get_default_compiler()
-        elif isinstance(compiler, str):
-            return compiler
-        else:
-            return compiler.compiler_type
+class BuildExtension(build_ext):
+    description = "Build Qpid Proton extension"
 
     def use_bundled_proton(self):
         """The proper version of libqpid-proton-core is not installed on the system,
@@ -133,11 +96,13 @@ class Configure(build_ext):
         # -D flags (None means no value, just define)
         macros += [('PROTON_DECLARE_STATIC', None)]
 
-        if self.compiler_type == 'msvc':
+        cc = self.compiler
+
+        if cc.compiler_type == 'msvc':
             sources += [
                 os.path.join(proton_src, 'compiler', 'msvc', 'start.c')
             ]
-        elif self.compiler_type == 'unix':
+        elif cc.compiler_type == 'unix':
             sources += [
                 os.path.join(proton_src, 'compiler', 'gcc', 'start.c')
             ]
@@ -157,45 +122,26 @@ class Configure(build_ext):
             sources.append(os.path.join(proton_src, 'ssl', 'ssl_stub.c'))
             log.warn("OpenSSL not installed - disabling SSL support!")
 
-        # create a temp compiler to check for optional compile-time features
-        cc = new_compiler(compiler=self.compiler_type)
-        cc.output_dir = self.build_temp
-
-        # 0.10 added an implementation for cyrus. Check
-        # if it is available before adding the implementation to the sources
-        # list. 'sasl.c` and 'default_sasl.c' are added and one of the existing
-        # implementations will be used.
         sources.append(os.path.join(proton_src, 'sasl', 'sasl.c'))
         sources.append(os.path.join(proton_src, 'sasl', 'default_sasl.c'))
 
-        # Skip the SASL detection on Windows.
-        # MSbuild scans output of Exec tasks and fails the build if it notices error-like
-        # strings there. This is a known issue with CMake and msbuild, see
-        # * https://github.com/Microsoft/msbuild/issues/2424
-        # * https://cmake.org/pipermail/cmake-developers/2015-October/026775.html
-        if cc.compiler_type != 'msvc':
-            if cc.has_function('sasl_client_done', includes=['sasl/sasl.h'], libraries=['sasl2']):
-                libraries.append('sasl2')
-                sources.append(os.path.join(proton_src, 'sasl', 'cyrus_sasl.c'))
-            else:
-                log.warn("Cyrus SASL not installed - only the ANONYMOUS and PLAIN mechanisms will be supported!")
-                sources.append(os.path.join(proton_src, 'sasl', 'cyrus_stub.c'))
+        # Check whether cyrus sasl is installed by asking pkg-config
+        # This works for all recent versions of cyrus sasl
+        if misc.pkg_config_version_installed('libsasl2', atleast='0'):
+            library_dirs += [misc.pkg_config_get_var('libsasl2', 'libdir')]
+            libraries.append('sasl2')
+            includes += [misc.pkg_config_get_var('libsasl2', 'includedir')]
+            sources.append(os.path.join(proton_src, 'sasl', 'cyrus_sasl.c'))
         else:
-            log.warn("Windows - only the ANONYMOUS and PLAIN mechanisms will be supported!")
             sources.append(os.path.join(proton_src, 'sasl', 'cyrus_stub.c'))
+            log.warn("Cyrus SASL not installed - only the ANONYMOUS and PLAIN mechanisms will be supported!")
 
         # compile all the proton sources.  We'll add the resulting list of
         # objects to the _cproton extension as 'extra objects'.  We do this
         # instead of just lumping all the sources into the extension to prevent
         # any proton-specific compilation flags from affecting the compilation
         # of the generated swig code
-
-        cc = new_compiler(compiler=self.compiler_type)
-        ds_sys.customize_compiler(cc)
-
         extra = []
-        if self.compiler_type == 'unix':
-            extra.append('-std=gnu99')
         objects = cc.compile(sources,
                              macros=macros,
                              include_dirs=[build_include,
@@ -239,7 +185,7 @@ class Configure(build_ext):
         ldirs = misc.pkg_config_get_var('libqpid-proton-core', 'libdir')
         _cproton.library_dirs.extend(ldirs.split())
 
-    def run(self):
+    def build_extensions(self):
         # check if the Proton library and headers are installed and are
         # compatible with this version of the binding.
         if self.libqpid_proton_installed(_PROTON_VERSION_STR):
@@ -247,20 +193,7 @@ class Configure(build_ext):
         else:
             # Proton not installed or compatible, use bundled proton-c sources
             self.use_bundled_proton()
-
-
-class BuildExtFirst(build_py):
-    def run(self):
-        # Make sure swig runs first and adds file etc
-        self.distribution.run_command('build_ext')
-        build_py.run(self)
-
-
-class CheckingBuildExt(build_ext):
-    def run(self):
-        # Discover qpid-proton and prerequisites in the system
-        self.distribution.run_command('configure')
-        build_ext.run(self)
+        super().build_extensions()
 
 
 setup(name='python-qpid-proton',
@@ -283,11 +216,7 @@ setup(name='python-qpid-proton',
                    "Programming Language :: Python :: 3.9",
                    "Programming Language :: Python :: 3.10"],
       cmdclass={
-          'configure': Configure,
-          'swig': Swig,
-          'build_py': BuildExtFirst,
-          'build_ext': CheckingBuildExt,
-          'sdist': CheckSDist
+          'build_ext': BuildExtension
       },
       extras_require={
           'opentracing': ['opentracing', 'jaeger_client']
@@ -296,6 +225,6 @@ setup(name='python-qpid-proton',
       # installation!  If you make changes below, you may need to update the
       # Configure class above
       ext_modules=[Extension('_cproton',
-                             sources=['cproton_wrap.c'],
+                             sources=['cprotonPYTHON_wrap.c'],
                              extra_compile_args=['-DPROTON_DECLARE_STATIC'],
                              libraries=['qpid-proton-core'])])

@@ -40,12 +40,15 @@ list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
     ${PROTON_HEADERS}
 )
 
+set(SWIG_OUTFILE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+
 swig_add_library(cproton LANGUAGE python SOURCES cproton.i)
 swig_link_libraries(cproton ${BINDING_DEPS} ${Python_LIBRARIES} -lm)
 set_target_properties(${SWIG_MODULE_cproton_REAL_NAME}
     PROPERTIES
     LINK_FLAGS "${CATCH_UNDEFINED}")
 
+set (cproton-generated cprotonPYTHON_wrap.c cproton.py)
 set (pysrc-generated cproton.py)
 set (pysrc
     proton/__init__.py
@@ -75,7 +78,6 @@ set (pysrc
     )
 # extra files included in the source distribution
 set(py_dist_files
-    cproton.i
     MANIFEST.in
     setuputils/__init__.py
     setuputils/log.py
@@ -166,32 +168,23 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
 )
 
 add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_INCLUDE_DIR} "${py_dist_dir}/include")
-
-add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/core "${py_dist_dir}/src/core")
-
-add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/compiler "${py_dist_dir}/src/compiler")
-
-add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/platform "${py_dist_dir}/src/platform")
-
-add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/ssl "${py_dist_dir}/src/ssl")
-
-add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/sasl "${py_dist_dir}/src/sasl")
-
-add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/encodings.h "${py_dist_dir}/src")
-
-add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_INCLUDE_DIR} "${py_dist_dir}/include"
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/core "${py_dist_dir}/src/core"
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/compiler "${py_dist_dir}/src/compiler"
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/platform "${py_dist_dir}/src/platform"
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/ssl "${py_dist_dir}/src/ssl"
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/sasl "${py_dist_dir}/src/sasl"
+                   COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/encodings.h "${py_dist_dir}/src"
                    COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/protocol.h "${py_dist_dir}/src")
 
 foreach(file IN LISTS py_dist_files pysrc)
 add_custom_command(TARGET py_src_dist
                    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${file} "${py_dist_dir}/${file}")
+endforeach()
+
+foreach(file IN LISTS cproton-generated)
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${file} "${py_dist_dir}/${file}")
 endforeach()
 
 # Make python source and binary packages if we have prerequisistes
