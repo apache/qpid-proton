@@ -159,12 +159,12 @@ Other Platforms
 ---------------
 
 Proton can use the http://libuv.org IO library on any platform where
-it is available. Install the libuv library and header files and adapt
-the instructions for building on Linux.
+it is available. The libuv library is not required on Linux or Windows,
+but if you wish you can use it instead of the default native IO:
+  - Install the libuv library and header files (`libuv-devel` on Fedora-based
+    and `libuv1-dev` on Debian-based).
+  - Run cmake with `-DPROACTOR=libuv`.
 
-The libuv library is not required on Linux or Windows, but if you wish
-you can use it instead of the default native IO by running cmake with
-`-Dproactor=libuv`.
 
 Installing Language Bindings
 ----------------------------
