@@ -78,18 +78,20 @@ set (C_STANDARD_FLAGS ${C_STANDARD_${CMAKE_C_COMPILER_ID}})
 set (C_EXTENDED_FLAGS ${C_EXTENDED_${CMAKE_C_COMPILER_ID}})
 
 ## C++
-check_language (CXX)
-if (CMAKE_CXX_COMPILER)
-  enable_language(CXX)
+if (BUILD_CPP)
+  check_language (CXX)
+  if (CMAKE_CXX_COMPILER)
+    enable_language(CXX)
 
-  # This effectively checks for cmake version 3.1 or later
-  if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
-    set(CMAKE_CXX_STANDARD 11)
-    set(CMAKE_CXX_EXTENSIONS OFF)
-  else ()
-    # This can only be a fairly old version of Linux in practice
-    set(CXX_STANDARD "-std=c++11")
-  endif ()
+    # This effectively checks for cmake version 3.1 or later
+    if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
+      set(CMAKE_CXX_STANDARD 11)
+      set(CMAKE_CXX_EXTENSIONS OFF)
+    else ()
+      # This can only be a fairly old version of Linux in practice
+      set(CXX_STANDARD "-std=c++11")
+    endif ()
+  endif()
 endif()
 
 # Build static C and C++ libraries in addition to shared libraries.
