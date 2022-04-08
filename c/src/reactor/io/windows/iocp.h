@@ -23,6 +23,7 @@
  */
 
 #include <proton/import_export.h>
+#include <proton/object.h>
 #include <proton/selectable.h>
 #include <proton/type_compat.h>
 

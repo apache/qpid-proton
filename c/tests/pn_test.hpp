@@ -30,6 +30,8 @@
 #include <proton/event.h>
 #include <proton/message.h>
 
+#include <proton/object.h>
+
 #include <iosfwd>
 #include <string>
 #include <vector>

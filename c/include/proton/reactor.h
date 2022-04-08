@@ -26,6 +26,7 @@
 #include <proton/type_compat.h>
 #include <proton/error.h>
 #include <proton/event.h>
+#include <proton/object.h>
 #include <proton/selectable.h>
 #include <proton/ssl.h>
 

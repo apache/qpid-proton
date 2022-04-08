@@ -27,6 +27,8 @@
 #include "proton/work_queue.hpp"
 #include "proton/message.hpp"
 
+#include "proton/object.h"
+
 #include <memory>
 
 struct pn_record_t;

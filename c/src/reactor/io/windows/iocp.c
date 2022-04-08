@@ -36,7 +36,6 @@
 #include "platform/platform.h"
 #include "core/util.h"
 
-#include <proton/object.h>
 #include <proton/error.h>
 #include <proton/transport.h>
 

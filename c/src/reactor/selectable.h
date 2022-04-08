@@ -27,6 +27,7 @@
 #endif
 
 #include <proton/selectable.h>
+#include <proton/object.h>
 
 extern const pn_class_t PN_CLASSCLASS(pn_selectable);
 

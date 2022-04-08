@@ -20,7 +20,6 @@
  */
 
 #include <proton/error.h>
-#include <proton/object.h>
 #include <proton/codec.h>
 #include "encodings.h"
 #include "encoder.h"

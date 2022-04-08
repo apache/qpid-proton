@@ -22,6 +22,8 @@
 // for pn_data
 #include <proton/codec.h>
 
+#include <proton/object.h>
+
 namespace {
 
 TEST_CASE("pn_ptr_base(pn_data)", "[object]") {

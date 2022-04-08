@@ -23,7 +23,6 @@
  */
 
 #include <proton/import_export.h>
-#include <proton/object.h>
 #include <proton/types.h>
 #include <proton/error.h>
 #include <proton/type_compat.h>

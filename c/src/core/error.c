@@ -20,7 +20,6 @@
  */
 
 #include <proton/error.h>
-#include <proton/object.h>
 
 #include "memory.h"
 #include "platform/platform.h"

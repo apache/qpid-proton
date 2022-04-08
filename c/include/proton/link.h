@@ -27,7 +27,6 @@
 #include <proton/condition.h>
 #include <proton/terminus.h>
 #include <proton/types.h>
-#include <proton/object.h>
 #include <stddef.h>
 
 #ifdef __cplusplus

@@ -22,6 +22,7 @@
 #include "selectable.h"
 
 #include <proton/error.h>
+#include <proton/object.h>
 
 #include "io.h"
 
