@@ -157,7 +157,7 @@ install(DIRECTORY examples/
 set(py_dist_dir ${CMAKE_CURRENT_BINARY_DIR}/dist)
 
 add_custom_target(py_src_dist ALL)
-add_dependencies(py_src_dist generated_c_files)
+add_dependencies(py_src_dist generated_c_files ${SWIG_MODULE_cproton_REAL_NAME})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
                ${py_dist_dir}/README.rst
