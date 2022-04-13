@@ -29,6 +29,8 @@
 #include <proton/selectable.h>
 #include <proton/object.h>
 
+#include "core/object_private.h"
+
 extern const pn_class_t PN_CLASSCLASS(pn_selectable);
 
 void *pni_selectable_get_context(pn_selectable_t *selectable);

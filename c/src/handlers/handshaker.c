@@ -19,10 +19,14 @@
  *
  */
 
+#include <proton/handlers.h>
+
 #include <proton/connection.h>
 #include <proton/session.h>
 #include <proton/link.h>
-#include <proton/handlers.h>
+
+#include "core/object_private.h"
+
 #include <assert.h>
 
 static void pn_handshaker_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {

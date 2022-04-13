@@ -19,12 +19,12 @@
  *
  */
 
+#include "core/object_private.h"
 #include "io.h"
 #include "reactor.h"
 #include "selectable.h"
 #include "platform/platform.h" // pn_i_now
 
-#include <proton/object.h>
 #include <proton/handlers.h>
 #include <proton/event.h>
 #include <proton/transport.h>

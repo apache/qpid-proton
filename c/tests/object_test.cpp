@@ -19,9 +19,10 @@
  *
  */
 
-#include "./pn_test.hpp"
+#include "pn_test.hpp"
 
-#include <proton/object.h>
+#include "core/object_private.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

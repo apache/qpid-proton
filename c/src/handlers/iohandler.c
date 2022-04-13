@@ -19,12 +19,15 @@
  *
  */
 
+#include <proton/handlers.h>
+
+#include <proton/transport.h>
+
+#include "core/object_private.h"
 #include "reactor/io.h"
 #include "reactor/reactor.h"
 #include "reactor/selector.h"
 
-#include <proton/handlers.h>
-#include <proton/transport.h>
 #include <assert.h>
 
 static const char pni_selector_handle = 0;

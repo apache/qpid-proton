@@ -18,11 +18,14 @@
  * under the License.
  *
  */
-#include <stdio.h>
+
 #include <proton/object.h>
 #include <proton/event.h>
-#include <proton/reactor.h>
+
+#include "core/object_private.h"
+
 #include <assert.h>
+#include <stdio.h>
 
 struct pn_collector_t {
   pn_list_t *pool;

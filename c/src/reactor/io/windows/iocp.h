@@ -23,9 +23,10 @@
  */
 
 #include <proton/import_export.h>
-#include <proton/object.h>
 #include <proton/selectable.h>
 #include <proton/type_compat.h>
+
+#include "core/object_private.h"
 
 typedef struct pni_acceptor_t pni_acceptor_t;
 typedef struct write_result_t write_result_t;

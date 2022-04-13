@@ -22,7 +22,7 @@
  *
  */
 
-#include <proton/object.h>
+#include "core/object_private.h"
 
 #include <stddef.h>
 

@@ -28,6 +28,8 @@
 #include "selectable.h"
 #include "selector.h"
 
+#include "core/object_private.h"
+
 #include <string.h>
 
 pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socket_t sock, pn_transport_t *transport);

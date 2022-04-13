@@ -22,11 +22,13 @@
 #include "subscription.h"
 
 #include <proton/messenger.h>
-#include <proton/object.h>
+
+#include "core/object_private.h"
+#include "messenger.h"
+
 #include <assert.h>
 #include <string.h>
 
-#include "messenger.h"
 
 struct pn_subscription_t {
   pn_messenger_t *messenger;

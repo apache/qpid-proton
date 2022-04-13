@@ -22,17 +22,19 @@
 #define PN_USE_DEPRECATED_API 1
 
 #include <proton/connection.h>
-#include <proton/object.h>
 #include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/transport.h>
 #include <proton/url.h>
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
+
+#include "core/object_private.h"
 #include "io.h"
 #include "selectable.h"
 #include "reactor.h"
+
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
 
 // XXX: overloaded for both directions
 PN_HANDLE(PN_TRANCTX)

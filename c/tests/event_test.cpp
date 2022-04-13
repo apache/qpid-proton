@@ -19,10 +19,11 @@
  *
  */
 
-#include "./pn_test.hpp"
+#include "pn_test.hpp"
 
 #include <proton/event.h>
-#include <proton/object.h>
+
+#include "core/object_private.h"
 
 TEST_CASE("event_collector") {
   pn_collector_t *collector = pn_collector();

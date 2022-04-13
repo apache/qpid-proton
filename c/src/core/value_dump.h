@@ -24,6 +24,8 @@
 
 #include "proton/types.h"
 
+#include "core/object_private.h"
+
 struct pn_fixed_string_t;
 size_t pni_value_dump(pn_bytes_t frame, struct pn_fixed_string_t *output);
 

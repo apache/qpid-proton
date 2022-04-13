@@ -49,7 +49,8 @@ int pn_void_refcount(void *object) { return -1; }
 #define pn_void_compare NULL
 #define pn_void_inspect NULL
 
-const pn_class_t PN_VOID[] = {PN_METACLASS(pn_void)};
+static const pn_class_t PN_VOID_S = PN_METACLASS(pn_void);
+const pn_class_t *PN_VOID = &PN_VOID_S;
 
 typedef struct {
   const pn_class_t *clazz;
@@ -461,4 +462,5 @@ int pn_strongref_refcount(void *object)
 #define pn_strongref_compare pn_compare
 #define pn_strongref_inspect pn_inspect
 
-const pn_class_t PN_OBJECT[] = {PN_METACLASS(pn_strongref)};
+static const pn_class_t PN_OBJECT_S = PN_METACLASS(pn_strongref);
+const pn_class_t *PN_OBJECT = &PN_OBJECT_S;

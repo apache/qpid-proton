@@ -23,8 +23,9 @@
  */
 
 #include <proton/import_export.h>
-#include <proton/object.h>
 #include <proton/types.h>
+
+#include "core/object_private.h"
 
 #ifdef __cplusplus
 extern "C" {

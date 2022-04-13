@@ -19,9 +19,11 @@
  *
  */
 
-#include <proton/object.h>
 #include <proton/reactor.h>
 #include <proton/event.h>
+
+#include "core/object_private.h"
+
 #include <string.h>
 #include <assert.h>
 

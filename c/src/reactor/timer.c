@@ -19,8 +19,10 @@
  *
  */
 
-#include <proton/object.h>
 #include <proton/reactor.h>
+
+#include "core/object_private.h"
+
 #include <assert.h>
 
 struct pn_task_t {

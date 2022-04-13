@@ -26,11 +26,11 @@
 /* TODO: Remove once pn_work_head() and related have been removed from Proton */
 #define PN_USE_DEPRECATED_API 1
 
+#include <proton/cid.h>
 #include <proton/engine.h>
 #include <proton/message.h>
 #include <proton/object.h>
 #include <proton/sasl.h>
-#include <proton/messenger.h>
 #include <proton/ssl.h>
 
 /*

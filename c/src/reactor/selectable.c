@@ -22,8 +22,8 @@
 #include "selectable.h"
 
 #include <proton/error.h>
-#include <proton/object.h>
 
+#include "core/object_private.h"
 #include "io.h"
 
 #include <assert.h>
