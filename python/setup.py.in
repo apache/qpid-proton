@@ -92,6 +92,7 @@ class BuildExtension(build_ext):
         libraries = []
         includes = []
         macros = []
+        extra = []
 
         # -D flags (None means no value, just define)
         macros += [('PROTON_DECLARE_STATIC', None)]
@@ -106,6 +107,7 @@ class BuildExtension(build_ext):
             sources += [
                 os.path.join(proton_src, 'compiler', 'gcc', 'start.c')
             ]
+            extra += ['-std=c99']
 
         # Check whether openssl is installed by poking
         # pkg-config for a minimum version 0. If it's installed, it should
@@ -141,7 +143,6 @@ class BuildExtension(build_ext):
         # instead of just lumping all the sources into the extension to prevent
         # any proton-specific compilation flags from affecting the compilation
         # of the generated swig code
-        extra = []
         objects = cc.compile(sources,
                              macros=macros,
                              include_dirs=[build_include,
@@ -164,6 +165,7 @@ class BuildExtension(build_ext):
         # by the Proton objects:
         _cproton.library_dirs = library_dirs
         _cproton.libraries = libraries
+        _cproton.extra_compile_args = ['-DPROTON_DECLARE_STATIC']
 
     def libqpid_proton_installed(self, version):
         """Check to see if the proper version of the Proton development library
@@ -226,5 +228,4 @@ setup(name='python-qpid-proton',
       # Configure class above
       ext_modules=[Extension('_cproton',
                              sources=['cprotonPYTHON_wrap.c'],
-                             extra_compile_args=['-DPROTON_DECLARE_STATIC'],
                              libraries=['qpid-proton-core'])])
