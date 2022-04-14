@@ -1,7 +1,7 @@
 Python bindings for Qpid Proton
 ===============================
 
-This module provides version @PN_VERSION_MAJOR@.@PN_VERSION_MINOR@.@PN_VERSION_POINT@ of the Proton AMQP messaging toolkit.
+This module provides a Python binding to the Proton AMQP messaging toolkit.
 
 Qpid Proton is a high-performance, lightweight messaging library. It
 can be used in the widest range of messaging applications, including

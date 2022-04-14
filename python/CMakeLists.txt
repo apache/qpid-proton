@@ -78,6 +78,9 @@ set (pysrc
     )
 # extra files included in the source distribution
 set(py_dist_files
+    setup.py
+    setup.cfg
+    README.rst
     MANIFEST.in
     setuputils/__init__.py
     setuputils/log.py
@@ -159,14 +162,6 @@ set(py_dist_dir ${CMAKE_CURRENT_BINARY_DIR}/dist)
 add_custom_target(py_src_dist ALL)
 add_dependencies(py_src_dist generated_c_files ${SWIG_MODULE_cproton_REAL_NAME})
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
-               ${py_dist_dir}/README.rst
-)
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
-               ${py_dist_dir}/setup.py
-)
-
 add_custom_command(TARGET py_src_dist
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_INCLUDE_DIR} "${py_dist_dir}/include"
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/core "${py_dist_dir}/src/core"
@@ -174,6 +169,7 @@ add_custom_command(TARGET py_src_dist
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/platform "${py_dist_dir}/src/platform"
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/ssl "${py_dist_dir}/src/ssl"
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/sasl "${py_dist_dir}/src/sasl"
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/VERSION.txt "${py_dist_dir}"
                    COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/encodings.h "${py_dist_dir}/src"
                    COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/protocol.h "${py_dist_dir}/src")
 
@@ -243,6 +239,18 @@ pn_add_test(
     ${Python_EXECUTABLE}
       ${python_coverage_options}
       ${PYTHON_TEST_COMMAND} discover -v -s "${py_tests}/integration")
+
+check_python_module("flake8" FLAKE_MODULE_FOUND)
+if (FLAKE_MODULE_FOUND)
+  option(ENABLE_PEP8_TEST "Enable pep8 python testing with flake8" ON)
+  if (ENABLE_PEP8_TEST)
+    pn_add_test(
+      INTERPRETED
+      NAME python-pep8-test
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMAND ${Python_EXECUTABLE} -m flake8)
+  endif ()
+endif ()
 
 check_python_module("tox" TOX_MODULE_FOUND)
 if (NOT TOX_MODULE_FOUND)

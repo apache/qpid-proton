@@ -31,18 +31,6 @@ using the installed Qpid Proton C library and header files. If the library and
 headers are not installed, or the installed version does not match the version
 of these python bindings, then the script will attempt to build the extension
 using the Proton C sources included in the python source distribution package.
-
-While the above removes the need of *always* having Qpid Proton C development
-files installed, it does not solve the need of having `swig` and the libraries
-qpid-proton requires installed to make this setup work.
-
-From the Python side, this scripts overrides 1 command - build_ext - and it adds a
-new one. The latter - Configure - is called from the former to setup/discover what's
-in the system. The rest of the commands and steps are done normally without any kind
-of monkey patching.
-
-TODO: On windows we now only support VS2015 and above and python 3, we should check
-for this and produce an appropriate error if the requirements are not met.
 """
 
 import os
@@ -52,10 +40,6 @@ from setuptools.command.build_ext import build_ext
 
 from setuputils import log
 from setuputils import misc
-
-
-_PROTON_VERSION = (@PN_VERSION_MAJOR@, @PN_VERSION_MINOR@, @PN_VERSION_POINT@)
-_PROTON_VERSION_STR = "%d.%d.%d" % _PROTON_VERSION
 
 
 class BuildExtension(build_ext):
@@ -167,11 +151,11 @@ class BuildExtension(build_ext):
         _cproton.libraries = libraries
         _cproton.extra_compile_args = ['-DPROTON_DECLARE_STATIC']
 
-    def libqpid_proton_installed(self, version):
+    def libqpid_proton_installed(self):
         """Check to see if the proper version of the Proton development library
         and headers are already installed
         """
-        return misc.pkg_config_version_installed('libqpid-proton-core', version)
+        return misc.pkg_config_version_installed('libqpid-proton-core', atleast='0')
 
     def use_installed_proton(self):
         """The Proton development headers and library are installed, update the
@@ -190,7 +174,7 @@ class BuildExtension(build_ext):
     def build_extensions(self):
         # check if the Proton library and headers are installed and are
         # compatible with this version of the binding.
-        if self.libqpid_proton_installed(_PROTON_VERSION_STR):
+        if self.libqpid_proton_installed():
             self.use_installed_proton()
         else:
             # Proton not installed or compatible, use bundled proton-c sources
@@ -199,29 +183,8 @@ class BuildExtension(build_ext):
 
 
 setup(name='python-qpid-proton',
-      version=_PROTON_VERSION_STR + os.environ.get('PROTON_VERSION_SUFFIX', ''),
-      description='An AMQP based messaging library.',
-      author='Apache Qpid',
-      author_email='users@qpid.apache.org',
-      url='http://qpid.apache.org/proton/',
-      packages=['proton'],
-      py_modules=['cproton'],
-      license="Apache Software License",
-      classifiers=["License :: OSI Approved :: Apache Software License",
-                   "Intended Audience :: Developers",
-                   "Programming Language :: Python",
-                   "Programming Language :: Python :: 3",
-                   "Programming Language :: Python :: 3 :: Only",
-                   "Programming Language :: Python :: 3.6",
-                   "Programming Language :: Python :: 3.7",
-                   "Programming Language :: Python :: 3.8",
-                   "Programming Language :: Python :: 3.9",
-                   "Programming Language :: Python :: 3.10"],
       cmdclass={
           'build_ext': BuildExtension
-      },
-      extras_require={
-          'opentracing': ['opentracing', 'jaeger_client']
       },
       # Note well: the following extension instance is modified during the
       # installation!  If you make changes below, you may need to update the
