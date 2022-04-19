@@ -28,23 +28,6 @@ jobs:
       vcpkg integrate install
     name: InstallExtraStuff
   - template: steps.yml
-- job: Windows_VS2017
-  variables:
-    PythonArch: 'x86'
-    CmakeConfigExtraArgs: '-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
-    CmakeGenerator: '-G "Visual Studio 15 2017"'
-    Config: 'MinSizeRel'
-    CtestExtraArgs: '-E tox'
-    VCPKG_DEFAULT_TRIPLET: x86-windows
-  pool:
-    vmImage: 'vs2017-win2016'
-  steps:
-  - script: |
-      choco install -y swig --version=4.0.1
-      vcpkg install jsoncpp
-      vcpkg integrate install
-    name: InstallExtraStuff
-  - template: steps.yml
 - job: Ubuntu
   variables:
     PythonVersion: '3.8'
