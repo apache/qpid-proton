@@ -422,9 +422,9 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_S
   #define pn_pyref_initialize NULL
   #define pn_pyref_finalize NULL
   #define pn_pyref_free NULL
-  #define pn_pyref_hashcode pn_void_hashcode
-  #define pn_pyref_compare pn_void_compare
-  #define pn_pyref_inspect pn_void_inspect
+  #define pn_pyref_hashcode NULL
+  #define pn_pyref_compare NULL
+  #define pn_pyref_inspect NULL
 
   static void pn_pyref_incref(void *object) {
     PyObject* p = (PyObject*) object;
@@ -442,10 +442,6 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_S
 
   static int pn_pyref_refcount(void *object) {
     return 1;
-  }
-
-  static const pn_class_t *pn_pyref_reify(void *object) {
-    return PN_PYREF;
   }
 
   const pn_class_t PN_PYREF[] = {PN_METACLASS(pn_pyref)};

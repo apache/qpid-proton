@@ -397,12 +397,14 @@ static bool pni_identity_equals(void *a, void *b)
 
 #define CID_pni_uintptr CID_pn_void
 #define pni_uintptr_new NULL
-#define pni_uintptr_free NULL
 #define pni_uintptr_initialize NULL
-static void pni_uintptr_incref(void *object) {}
-static void pni_uintptr_decref(void *object) {}
-static int pni_uintptr_refcount(void *object) { return -1; }
 #define pni_uintptr_finalize NULL
+#define pni_uintptr_free NULL
+
+#define pni_uintptr_incref pn_void_incref
+#define pni_uintptr_decref pn_void_decref
+#define pni_uintptr_refcount pn_void_refcount
+
 #define pni_uintptr_hashcode NULL
 #define pni_uintptr_compare NULL
 #define pni_uintptr_inspect NULL
