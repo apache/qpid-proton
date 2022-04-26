@@ -225,37 +225,101 @@ void pn_object_free(void *object)
 
 void *pn_incref(void *object)
 {
-  return pn_class_incref(PN_OBJECT, object);
+  if (object) {
+    const pn_class_t *clazz = pni_head(object)->clazz;
+    clazz->incref(object);
+  }
+  return object;
 }
 
 int pn_decref(void *object)
 {
-  return pn_class_decref(PN_OBJECT, object);
+  if (object) {
+    const pn_class_t *clazz = pni_head(object)->clazz;
+    clazz->decref(object);
+    int rc = clazz->refcount(object);
+    if (rc == 0) {
+      if (clazz->finalize) {
+        clazz->finalize(object);
+        // check the refcount again in case the finalizer created a
+        // new reference
+        rc = clazz->refcount(object);
+      }
+      if (rc == 0) {
+        clazz->free(object);
+        return 0;
+      }
+    } else {
+      return rc;
+    }
+  }
+  return 0;
 }
 
 int pn_refcount(void *object)
 {
-  return pn_class_refcount(PN_OBJECT, object);
+  assert(object);
+  const pn_class_t *clazz = pni_head(object)->clazz;
+  return clazz->refcount(object);
 }
 
 void pn_free(void *object)
 {
-  pn_class_free(PN_OBJECT, object);
+  if (object) {
+    const pn_class_t *clazz = pni_head(object)->clazz;
+    int rc = clazz->refcount(object);
+    assert(rc == 1 || rc == -1);
+    if (rc == 1) {
+      clazz->decref(object);
+      assert(clazz->refcount(object) == 0);
+      if (clazz->finalize) {
+        clazz->finalize(object);
+      }
+      if (clazz->refcount(object) == 0) {
+        clazz->free(object);
+      }
+    } else {
+      if (clazz->finalize) {
+        clazz->finalize(object);
+      }
+      clazz->free(object);
+    }
+  }
 }
 
 const pn_class_t *pn_class(void *object)
 {
-  return pn_class_reify(PN_OBJECT, object);
+  if (object) {
+    return pni_head(object)->clazz;
+  } else {
+    return PN_OBJECT;
+  }
 }
 
 uintptr_t pn_hashcode(void *object)
 {
-  return pn_class_hashcode(PN_OBJECT, object);
+  if (!object) return 0;
+
+  const pn_class_t *clazz = pni_head(object)->clazz;
+
+  if (clazz->hashcode) {
+    return clazz->hashcode(object);
+  } else {
+    return (uintptr_t) object;
+  }
 }
 
 intptr_t pn_compare(void *a, void *b)
 {
-  return pn_class_compare(PN_OBJECT, a, b);
+  if (a == b) return 0;
+
+  if (a && b) {
+    const pn_class_t *clazz = pni_head(a)->clazz;
+    if (clazz->compare) {
+      return clazz->compare(a, b);
+    }
+  }
+  return (intptr_t) a - (intptr_t) b;
 }
 
 bool pn_equals(void *a, void *b)
@@ -265,7 +329,22 @@ bool pn_equals(void *a, void *b)
 
 int pn_inspect(void *object, pn_string_t *dst)
 {
-  return pn_class_inspect(PN_OBJECT, object, dst);
+  if (!pn_string_get(dst)) {
+    pn_string_set(dst, "");
+  }
+
+  if (!object) {
+    return pn_string_addf(dst, "pn_object<%p>", object);
+  }
+
+  const pn_class_t *clazz = pni_head(object)->clazz;
+
+  if (clazz->inspect) {
+    return clazz->inspect(object, dst);
+  }
+
+  const char *name = clazz->name ? clazz->name : "<anon>";
+  return pn_string_addf(dst, "%s<%p>", name, object);
 }
 
 #define pn_weakref_new NULL
