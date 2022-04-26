@@ -140,8 +140,6 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
     return NULL;
   }
 
-  clazz = clazz->reify(context);
-
   pn_event_t *event = (pn_event_t *) pn_list_pop(collector->pool);
 
   if (!event) {
@@ -157,6 +155,10 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   } else {
     collector->tail = event;
     collector->head = event;
+  }
+
+  if (clazz==PN_OBJECT) {
+    clazz = pn_class(context);
   }
 
   event->clazz = clazz;

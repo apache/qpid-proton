@@ -538,7 +538,6 @@ static void pn_transport_finalize(void *object);
 #define pn_transport_new pn_object_new
 #define pn_transport_refcount pn_object_refcount
 #define pn_transport_decref pn_object_decref
-#define pn_transport_reify pn_object_reify
 #define pn_transport_hashcode NULL
 #define pn_transport_compare NULL
 #define pn_transport_inspect NULL

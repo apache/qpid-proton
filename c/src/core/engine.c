@@ -980,7 +980,6 @@ static void pn_session_finalize(void *object)
 #define pn_session_new pn_object_new
 #define pn_session_refcount pn_object_refcount
 #define pn_session_decref pn_object_decref
-#define pn_session_reify pn_object_reify
 #define pn_session_initialize NULL
 #define pn_session_hashcode NULL
 #define pn_session_compare NULL
@@ -1149,7 +1148,6 @@ static void pn_link_finalize(void *object)
 
 #define pn_link_refcount pn_object_refcount
 #define pn_link_decref pn_object_decref
-#define pn_link_reify pn_object_reify
 #define pn_link_initialize NULL
 #define pn_link_hashcode NULL
 #define pn_link_compare NULL
@@ -1513,7 +1511,6 @@ static void pn_disposition_clear(pn_disposition_t *ds)
 #define pn_delivery_refcount pn_object_refcount
 #define pn_delivery_decref pn_object_decref
 #define pn_delivery_free pn_object_free
-#define pn_delivery_reify pn_object_reify
 #define pn_delivery_initialize NULL
 #define pn_delivery_hashcode NULL
 #define pn_delivery_compare NULL

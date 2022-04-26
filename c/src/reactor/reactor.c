@@ -309,7 +309,7 @@ pn_reactor_t *pn_class_reactor(const pn_class_t *clazz, void *object) {
 }
 
 pn_reactor_t *pn_object_reactor(void *object) {
-  return pn_class_reactor(pn_object_reify(object), object);
+  return pn_class_reactor(pn_class(object), object);
 }
 
 pn_reactor_t *pn_event_reactor(pn_event_t *event) {

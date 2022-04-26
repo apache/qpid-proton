@@ -83,8 +83,6 @@ typedef struct timer_deadline_t {
   bool resequenced;            // An out-of-order connection timeout caught and handled.
 } timer_deadline_t;
 
-static const pn_class_t *timer_deadline_reify(void *p);
-
 // The pn_list_t calls this to maintain its sorted heap.
 static intptr_t timer_deadline_compare(void *oa, void *ob) {
   timer_deadline_t *a = (timer_deadline_t *) oa;
@@ -104,7 +102,6 @@ static intptr_t timer_deadline_compare(void *oa, void *ob) {
 #define timer_deadline_inspect NULL
 
 static const pn_class_t timer_deadline_clazz = PN_METACLASS(timer_deadline);
-static const pn_class_t *timer_deadline_reify(void *p) { return &timer_deadline_clazz; }
 
 static timer_deadline_t* timer_deadline_t_new(void) {
   // Just the struct.  Not a Proton class based object.
