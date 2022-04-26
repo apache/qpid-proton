@@ -170,9 +170,9 @@ const pn_class_t PN_CLASSCLASS(PREFIX)[] = {{       \
   pn_void_refcount,                                 \
   NULL, /* _finalize */                             \
   NULL, /* _free */                                 \
-  pn_void_hashcode,                                 \
-  pn_void_compare,                                  \
-  pn_void_inspect                                   \
+  NULL, /* _hashcode */                             \
+  NULL, /* _compare */                              \
+  NULL, /* _inspect */                              \
 }};                                                 \
 
 PN_EXTERN pn_cid_t pn_class_id(const pn_class_t *clazz);
@@ -199,9 +199,6 @@ PN_EXTERN void *pn_void_new(const pn_class_t *clazz, size_t size);
 PN_EXTERN void pn_void_incref(void *object);
 PN_EXTERN void pn_void_decref(void *object);
 PN_EXTERN int pn_void_refcount(void *object);
-PN_EXTERN uintptr_t pn_void_hashcode(void *object);
-PN_EXTERN intptr_t pn_void_compare(void *a, void *b);
-PN_EXTERN int pn_void_inspect(void *object, pn_string_t *dst);
 
 PN_EXTERN void *pn_object_new(const pn_class_t *clazz, size_t size);
 PN_EXTERN void pn_object_incref(void *object);

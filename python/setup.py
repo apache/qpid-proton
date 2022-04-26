@@ -155,7 +155,7 @@ class BuildExtension(build_ext):
         """Check to see if the proper version of the Proton development library
         and headers are already installed
         """
-        return misc.pkg_config_version_installed('libqpid-proton-core', atleast='0')
+        return misc.pkg_config_version_installed('libqpid-proton-core', atleast='0.38')
 
     def use_installed_proton(self):
         """The Proton development headers and library are installed, update the

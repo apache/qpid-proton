@@ -29,21 +29,23 @@
 #define pn_object_initialize NULL
 #define pn_object_finalize NULL
 #define pn_object_inspect NULL
-uintptr_t pn_object_hashcode(void *object) { return (uintptr_t) object; }
-intptr_t pn_object_compare(void *a, void *b) { return (intptr_t) a - (intptr_t) b; }
+#define pn_object_hashcode NULL
+#define pn_object_compare NULL
 
 const pn_class_t PN_OBJECT[] = {PN_CLASS(pn_object)};
 
-#define pn_void_initialize NULL
 void *pn_void_new(const pn_class_t *clazz, size_t size) { return pni_mem_allocate(clazz, size); }
+#define pn_void_initialize NULL
+#define pn_void_finalize NULL
+static void pn_void_free(void *object) { pni_mem_deallocate(PN_VOID, object); }
+
 void pn_void_incref(void* p) {}
 void pn_void_decref(void* p) {}
 int pn_void_refcount(void *object) { return -1; }
-#define pn_void_finalize NULL
-static void pn_void_free(void *object) { pni_mem_deallocate(PN_VOID, object); }
-uintptr_t pn_void_hashcode(void *object) { return (uintptr_t) object; }
-intptr_t pn_void_compare(void *a, void *b) { return (intptr_t) a - (intptr_t) b; }
-int pn_void_inspect(void *object, pn_string_t *dst) { return pn_string_addf(dst, "%p", object); }
+
+#define pn_void_hashcode NULL
+#define pn_void_compare NULL
+#define pn_void_inspect NULL
 
 const pn_class_t PN_VOID[] = {PN_METACLASS(pn_void)};
 
@@ -352,9 +354,10 @@ int pn_inspect(void *object, pn_string_t *dst)
 #define pn_weakref_finalize NULL
 #define pn_weakref_free NULL
 
-static void pn_weakref_incref(void *object) {}
-static void pn_weakref_decref(void *object) {}
-static int pn_weakref_refcount(void *object) { return -1; }
+#define pn_weakref_incref pn_void_incref
+#define pn_weakref_decref pn_void_decref
+#define pn_weakref_refcount pn_void_refcount
+
 static uintptr_t pn_weakref_hashcode(void *object) {
   return pn_hashcode(object);
 }
