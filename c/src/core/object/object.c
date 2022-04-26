@@ -41,12 +41,19 @@ void pn_void_decref(void* p) {}
 int pn_void_refcount(void *object) { return -1; }
 #define pn_void_finalize NULL
 static void pn_void_free(void *object) { pni_mem_deallocate(PN_VOID, object); }
-static const pn_class_t *pn_void_reify(void *object) { return PN_VOID; }
 uintptr_t pn_void_hashcode(void *object) { return (uintptr_t) object; }
 intptr_t pn_void_compare(void *a, void *b) { return (intptr_t) a - (intptr_t) b; }
 int pn_void_inspect(void *object, pn_string_t *dst) { return pn_string_addf(dst, "%p", object); }
 
 const pn_class_t PN_VOID[] = {PN_METACLASS(pn_void)};
+
+typedef struct {
+  const pn_class_t *clazz;
+  int refcount;
+} pni_head_t;
+
+#define pni_head(PTR) \
+(((pni_head_t *) (PTR)) - 1)
 
 const char *pn_class_name(const pn_class_t *clazz)
 {
@@ -70,9 +77,11 @@ void *pn_class_new(const pn_class_t *clazz, size_t size)
 
 void *pn_class_incref(const pn_class_t *clazz, void *object)
 {
-  assert(clazz);
   if (object) {
-    clazz = clazz->reify(object);
+    if (clazz==PN_OBJECT) {
+      clazz = pni_head(object)->clazz;
+    }
+
     clazz->incref(object);
   }
   return object;
@@ -80,17 +89,20 @@ void *pn_class_incref(const pn_class_t *clazz, void *object)
 
 int pn_class_refcount(const pn_class_t *clazz, void *object)
 {
-  assert(clazz);
-  clazz = clazz->reify(object);
+  if (clazz==PN_OBJECT) {
+    clazz = pn_class(object);
+  }
+
   return clazz->refcount(object);
 }
 
 int pn_class_decref(const pn_class_t *clazz, void *object)
 {
-  assert(clazz);
-
   if (object) {
-    clazz = clazz->reify(object);
+    if (clazz==PN_OBJECT) {
+      clazz = pni_head(object)->clazz;
+    }
+
     clazz->decref(object);
     int rc = clazz->refcount(object);
     if (rc == 0) {
@@ -114,9 +126,11 @@ int pn_class_decref(const pn_class_t *clazz, void *object)
 
 void pn_class_free(const pn_class_t *clazz, void *object)
 {
-  assert(clazz);
   if (object) {
-    clazz = clazz->reify(object);
+    if (clazz==PN_OBJECT) {
+      clazz = pni_head(object)->clazz;
+    }
+
     int rc = clazz->refcount(object);
     assert(rc == 1 || rc == -1);
     if (rc == 1) {
@@ -131,40 +145,19 @@ void pn_class_free(const pn_class_t *clazz, void *object)
   }
 }
 
-const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object)
-{
-  assert(clazz);
-  return clazz->reify(object);
-}
-
-uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object)
-{
-  assert(clazz);
-
-  if (!object) return 0;
-
-  clazz = clazz->reify(object);
-
-  if (clazz->hashcode) {
-    return clazz->hashcode(object);
-  } else {
-    return (uintptr_t) object;
-  }
-}
-
 intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b)
 {
-  assert(clazz);
-
   if (a == b) return 0;
 
-  clazz = clazz->reify(a);
-
-  if (a && b && clazz->compare) {
-    return clazz->compare(a, b);
-  } else {
-    return (intptr_t) a - (intptr_t) b;
+  if (a && b) {
+    if (clazz==PN_OBJECT) {
+      clazz = pni_head(a)->clazz;
+    }
+    if (clazz->compare) {
+      return clazz->compare(a, b);
+    }
   }
+  return (intptr_t) a - (intptr_t) b;
 }
 
 bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
@@ -174,9 +167,9 @@ bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
 
 int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst)
 {
-  assert(clazz);
-
-  clazz = clazz->reify(object);
+  if (clazz==PN_OBJECT) {
+      clazz = pni_head(object)->clazz;
+  }
 
   if (!pn_string_get(dst)) {
     pn_string_set(dst, "");
@@ -191,14 +184,6 @@ int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst)
   return pn_string_addf(dst, "%s<%p>", name, object);
 }
 
-typedef struct {
-  const pn_class_t *clazz;
-  int refcount;
-} pni_head_t;
-
-#define pni_head(PTR) \
-  (((pni_head_t *) (PTR)) - 1)
-
 void *pn_object_new(const pn_class_t *clazz, size_t size)
 {
   void *object = NULL;
@@ -211,14 +196,6 @@ void *pn_object_new(const pn_class_t *clazz, size_t size)
   return object;
 }
 
-const pn_class_t *pn_object_reify(void *object)
-{
-  if (object) {
-    return pni_head(object)->clazz;
-  } else {
-    return PN_OBJECT;
-  }
-}
 
 void pn_object_incref(void *object)
 {
@@ -299,9 +276,6 @@ int pn_inspect(void *object, pn_string_t *dst)
 static void pn_weakref_incref(void *object) {}
 static void pn_weakref_decref(void *object) {}
 static int pn_weakref_refcount(void *object) { return -1; }
-static const pn_class_t *pn_weakref_reify(void *object) {
-  return PN_WEAKREF;
-}
 static uintptr_t pn_weakref_hashcode(void *object) {
   return pn_hashcode(object);
 }

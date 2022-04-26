@@ -59,7 +59,6 @@ struct pn_class_t {
   int (*refcount)(void *);
   void (*finalize)(void *);
   void (*free)(void *);
-  const pn_class_t *(*reify)(void *);
   uintptr_t (*hashcode)(void *);
   intptr_t (*compare)(void *, void *);
   int (*inspect)(void *, pn_string_t *);
@@ -83,7 +82,6 @@ PN_EXTERN extern const pn_class_t PN_WEAKREF[];
     pn_object_refcount,                         \
     PREFIX ## _finalize,                        \
     pn_object_free,                             \
-    pn_object_reify,                            \
     PREFIX ## _hashcode,                        \
     PREFIX ## _compare,                         \
     PREFIX ## _inspect                          \
@@ -99,7 +97,6 @@ PN_EXTERN extern const pn_class_t PN_WEAKREF[];
     PREFIX ## _refcount,                        \
     PREFIX ## _finalize,                        \
     PREFIX ## _free,                            \
-    PREFIX ## _reify,                           \
     PREFIX ## _hashcode,                        \
     PREFIX ## _compare,                         \
     PREFIX ## _inspect                          \
@@ -107,7 +104,6 @@ PN_EXTERN extern const pn_class_t PN_WEAKREF[];
 
 /* Class to identify a plain C struct in a pn_event_t. No refcounting or memory management. */
 #define PN_STRUCT_CLASSDEF(PREFIX)                  \
-static const pn_class_t *PREFIX ## _reify(void *p); \
 const pn_class_t PN_CLASSCLASS(PREFIX)[] = {{       \
   #PREFIX,                                          \
   CID_ ## PREFIX,                                   \
@@ -118,14 +114,10 @@ const pn_class_t PN_CLASSCLASS(PREFIX)[] = {{       \
   pn_void_refcount,                                 \
   NULL, /* _finalize */                             \
   NULL, /* _free */                                 \
-  PREFIX ## _reify,                                 \
   pn_void_hashcode,                                 \
   pn_void_compare,                                  \
   pn_void_inspect                                   \
 }};                                                 \
-const pn_class_t *PREFIX ## _reify(void *p) {       \
-  return PN_CLASSCLASS(PREFIX);                     \
-}
 
 PN_EXTERN pn_cid_t pn_class_id(const pn_class_t *clazz);
 PN_EXTERN const char *pn_class_name(const pn_class_t *clazz);
@@ -143,8 +135,6 @@ PN_EXTERN int pn_class_decref(const pn_class_t *clazz, void *object);
 
 PN_EXTERN void pn_class_free(const pn_class_t *clazz, void *object);
 
-PN_EXTERN const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object);
-PN_EXTERN uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object);
 PN_EXTERN intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b);
 PN_EXTERN bool pn_class_equals(const pn_class_t *clazz, void *a, void *b);
 PN_EXTERN int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst);
@@ -158,7 +148,6 @@ PN_EXTERN intptr_t pn_void_compare(void *a, void *b);
 PN_EXTERN int pn_void_inspect(void *object, pn_string_t *dst);
 
 PN_EXTERN void *pn_object_new(const pn_class_t *clazz, size_t size);
-PN_EXTERN const pn_class_t *pn_object_reify(void *object);
 PN_EXTERN void pn_object_incref(void *object);
 PN_EXTERN int pn_object_refcount(void *object);
 PN_EXTERN void pn_object_decref(void *object);
@@ -174,8 +163,6 @@ PN_EXTERN intptr_t pn_compare(void *a, void *b);
 PN_EXTERN bool pn_equals(void *a, void *b);
 PN_EXTERN int pn_inspect(void *object, pn_string_t *dst);
 
-#define PN_REFCOUNT (0x1)
-
 PN_EXTERN pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity);
 PN_EXTERN size_t pn_list_size(pn_list_t *list);
 PN_EXTERN void *pn_list_get(pn_list_t *list, int index);
@@ -189,9 +176,6 @@ PN_EXTERN void pn_list_clear(pn_list_t *list);
 PN_EXTERN void pn_list_iterator(pn_list_t *list, pn_iterator_t *iter);
 PN_EXTERN void pn_list_minpush(pn_list_t *list, void *value);
 PN_EXTERN void *pn_list_minpop(pn_list_t *list);
-
-#define PN_REFCOUNT_KEY (0x2)
-#define PN_REFCOUNT_VALUE (0x4)
 
 PN_EXTERN pn_map_t *pn_map(const pn_class_t *key, const pn_class_t *value,
                            size_t capacity, float load_factor);
