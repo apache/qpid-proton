@@ -66,7 +66,7 @@ jobs:
     # python-tox-test fails and ruby tests segfault
     - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF -DTHREADERCISER=ON'
     - QPID_PROTON_CTEST_ARGS='-E ^ruby.*'
-  - name: clang asan
+  - name: libuv clang asan
     os: linux
     dist: focal
     before_install:
@@ -77,7 +77,7 @@ jobs:
     - CC=clang-11
     - CXX=clang++-11
     - PYTHON=python3
-    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF -DTHREADERCISER=ON'
+    - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DRUNTIME_CHECK=asan -DENABLE_TOX_TEST=OFF -DTHREADERCISER=ON'
     # otherwise, on Travis ldd gives `libclang_rt.asan-x86_64.so => not found` and binaries don't work
     - LD_LIBRARY_PATH=/usr/lib/llvm-11/lib/clang/11.0.0/lib/linux/
   - name: gcc tsan
@@ -92,6 +92,18 @@ jobs:
     # python-test, python-integration-test, and python-tox-test segfault
     - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=tsan -DENABLE_TOX_TEST=OFF -DTHREADERCISER=ON'
     - QPID_PROTON_CTEST_ARGS="-E 'python-test|python-integration-test'"
+  - name: gcc tsan libuv
+    os: linux
+    dist: focal
+    before_install:
+      - sudo apt-get install -y gcc-10 g++-10
+    env:
+      - CC=gcc-10
+      - CXX=g++-10
+      - PYTHON=python3
+      # python-test, python-integration-test, and python-tox-test segfault
+      - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DRUNTIME_CHECK=tsan -DENABLE_TOX_TEST=OFF -DTHREADERCISER=ON'
+      - QPID_PROTON_CTEST_ARGS="-E 'python-test|python-integration-test'"
   - name: coverage
     os: linux
     dist: bionic
@@ -119,6 +131,7 @@ addons:
   apt:
     packages:
     - cmake
+    - libuv1-dev
     - libssl-dev
     - libsasl2-dev
     - sasl2-bin

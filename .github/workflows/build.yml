@@ -10,14 +10,17 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
         buildType: [RelWithDebInfo]
+        proactor: [default]
         include:
+        - os: ubuntu-latest
+          proactor: libuv
+          cmake_extra: '-DPROACTOR=libuv'
         - os: windows-latest
           cmake_extra: '-A x64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
           cmake_generator: '-G "Visual Studio 16 2019"'
         - os: macOS-latest
           pkg_config_path: '/usr/local/opt/openssl@1.1/lib/pkgconfig'
           cmake_extra: '-DBUILD_RUBY=no -DTHREADERCISER=ON'
-          ctest_extra: '--exclude-regex c-threaderciser'
     env:
       BuildType: ${{matrix.buildType}}
       BuildDir: ${{github.workspace}}/BLD
@@ -49,7 +52,7 @@ jobs:
     - name: Install Linux dependencies
       if: runner.os == 'Linux'
       run: |
-        sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev
+        sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libuv1-dev
     - name: Install Windows dependencies
       if: runner.os == 'Windows'
       run: |
