@@ -41,8 +41,9 @@ struct pn_event_t {
   pn_event_type_t type;
 };
 
-static void pn_collector_initialize(pn_collector_t *collector)
+static void pn_collector_initialize(void* object)
 {
+  pn_collector_t *collector = (pn_collector_t *)object;
   collector->pool = pn_list(PN_OBJECT, 0);
   collector->head = NULL;
   collector->tail = NULL;
@@ -65,14 +66,16 @@ static void pn_collector_shrink(pn_collector_t *collector)
   pn_list_clear(collector->pool);
 }
 
-static void pn_collector_finalize(pn_collector_t *collector)
+static void pn_collector_finalize(void *object)
 {
+  pn_collector_t *collector = (pn_collector_t *)object;
   pn_collector_drain(collector);
   pn_decref(collector->pool);
 }
 
-static int pn_collector_inspect(pn_collector_t *collector, pn_string_t *dst)
+static int pn_collector_inspect(void *object, pn_string_t *dst)
 {
+  pn_collector_t *collector = (pn_collector_t *)object;
   assert(collector);
   int err = pn_string_addf(dst, "EVENTS[");
   if (err) return err;
@@ -95,11 +98,10 @@ static int pn_collector_inspect(pn_collector_t *collector, pn_string_t *dst)
 #define pn_collector_hashcode NULL
 #define pn_collector_compare NULL
 
-PN_CLASSDEF(pn_collector)
-
 pn_collector_t *pn_collector(void)
 {
-  return pn_collector_new();
+  static const pn_class_t clazz = PN_CLASS(pn_collector);
+  return (pn_collector_t *) pn_class_new(&clazz, sizeof(pn_collector_t));
 }
 
 void pn_collector_free(pn_collector_t *collector)
@@ -210,8 +212,9 @@ bool pn_collector_more(pn_collector_t *collector)
   return collector->head && collector->head->next;
 }
 
-static void pn_event_initialize(pn_event_t *event)
+static void pn_event_initialize(void *object)
 {
+  pn_event_t *event = (pn_event_t *)object;
   event->pool = NULL;
   event->type = PN_EVENT_NONE;
   event->clazz = NULL;
@@ -220,7 +223,8 @@ static void pn_event_initialize(pn_event_t *event)
   event->attachments = pn_record();
 }
 
-static void pn_event_finalize(pn_event_t *event) {
+static void pn_event_finalize(void *object) {
+  pn_event_t *event = (pn_event_t *)object;
   // decref before adding to the free list
   if (event->clazz && event->context) {
     pn_class_decref(event->clazz, event->context);
@@ -243,8 +247,9 @@ static void pn_event_finalize(pn_event_t *event) {
   pn_decref(pool);
 }
 
-static int pn_event_inspect(pn_event_t *event, pn_string_t *dst)
+static int pn_event_inspect(void *object, pn_string_t *dst)
 {
+  pn_event_t *event = (pn_event_t *)object;
   assert(event);
   assert(dst);
   const char *name = pn_event_type_name(event->type);
@@ -268,11 +273,10 @@ static int pn_event_inspect(pn_event_t *event, pn_string_t *dst)
 #define pn_event_hashcode NULL
 #define pn_event_compare NULL
 
-PN_CLASSDEF(pn_event)
-
 pn_event_t *pn_event(void)
 {
-  return pn_event_new();
+  static const pn_class_t clazz = PN_CLASS(pn_event);
+  return pn_class_new(&clazz, sizeof(pn_event_t));
 }
 
 pn_event_type_t pn_event_type(pn_event_t *event)

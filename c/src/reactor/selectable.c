@@ -66,8 +66,9 @@ struct pn_selectable_t {
   bool terminal;
 };
 
-void pn_selectable_initialize(pn_selectable_t *sel)
+void pn_selectable_initialize(void *object)
 {
+  pn_selectable_t *sel = (pn_selectable_t *)object;
   sel->fd = PN_INVALID_SOCKET;
   sel->index = -1;
   sel->attachments = pn_record();
@@ -85,8 +86,9 @@ void pn_selectable_initialize(pn_selectable_t *sel)
   sel->terminal = false;
 }
 
-void pn_selectable_finalize(pn_selectable_t *sel)
+void pn_selectable_finalize(void *object)
 {
+  pn_selectable_t *sel = (pn_selectable_t *)object;
   if (sel->finalize) {
     sel->finalize(sel);
   }
@@ -98,11 +100,10 @@ void pn_selectable_finalize(pn_selectable_t *sel)
 #define pn_selectable_inspect NULL
 #define pn_selectable_compare NULL
 
-PN_CLASSDEF(pn_selectable)
-
 pn_selectable_t *pn_selectable(void)
 {
-  return pn_selectable_new();
+  static const pn_class_t clazz = PN_CLASS(pn_selectable);
+  return pn_class_new(&clazz, sizeof(pn_selectable_t));
 }
 
 bool pn_selectable_is_reading(pn_selectable_t *sel) {

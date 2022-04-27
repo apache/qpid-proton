@@ -62,7 +62,7 @@ void *pn_class_new(const pn_class_t *clazz, size_t size)
 {
   assert(clazz);
   void *object = clazz->newinst(clazz, size);
-  if (clazz->initialize) {
+  if (object && clazz->initialize) {
     clazz->initialize(object);
   }
   return object;
