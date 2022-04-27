@@ -66,7 +66,8 @@ pn_timestamp_t pn_reactor_now(pn_reactor_t *reactor) {
   return reactor->now;
 }
 
-static void pn_reactor_initialize(pn_reactor_t *reactor) {
+static void pn_reactor_initialize(void *object) {
+  pn_reactor_t *reactor = (pn_reactor_t *)object;
   reactor->attachments = pn_record();
   reactor->io = pn_io();
   reactor->collector = pn_collector();
@@ -85,7 +86,8 @@ static void pn_reactor_initialize(pn_reactor_t *reactor) {
   pn_reactor_mark(reactor);
 }
 
-static void pn_reactor_finalize(pn_reactor_t *reactor) {
+static void pn_reactor_finalize(void *object) {
+  pn_reactor_t *reactor = (pn_reactor_t *)object;
   for (int i = 0; i < 2; i++) {
     if (reactor->wakeup[i] != PN_INVALID_SOCKET) {
       pn_close(reactor->io, reactor->wakeup[i]);
@@ -104,10 +106,9 @@ static void pn_reactor_finalize(pn_reactor_t *reactor) {
 #define pn_reactor_compare NULL
 #define pn_reactor_inspect NULL
 
-PN_CLASSDEF(pn_reactor)
-
 pn_reactor_t *pn_reactor() {
-  pn_reactor_t *reactor = pn_reactor_new();
+  static const pn_class_t clazz = PN_CLASS(pn_reactor);
+  pn_reactor_t *reactor = pn_class_new(&clazz, sizeof(pn_reactor_t));
   int err = pn_pipe(reactor->io, reactor->wakeup);
   if (err) {
     pn_free(reactor);
