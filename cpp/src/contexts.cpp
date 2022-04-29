@@ -64,7 +64,7 @@ T* get_context(pn_record_t* record, pn_handle_t handle) {
 
 context::~context() {}
 
-void *context::alloc(size_t n) { return pn_object_new(&cpp_context_class, n); }
+void *context::alloc(size_t n) { return pn_class_new(&cpp_context_class, n); }
 
 pn_class_t* context::pn_class() { return &cpp_context_class; }
 

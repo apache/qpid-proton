@@ -70,18 +70,20 @@ PN_EXTERN extern const pn_class_t PN_OBJECT[];
 PN_EXTERN extern const pn_class_t PN_VOID[];
 PN_EXTERN extern const pn_class_t PN_WEAKREF[];
 
+PN_EXTERN void pn_object_incref(void *object);
+
 #define PN_CLASSCLASS(PREFIX) PREFIX ## __class
 
 #define PN_CLASS(PREFIX) {                      \
     #PREFIX,                                    \
     CID_ ## PREFIX,                             \
-    pn_object_new,                              \
+    NULL,                                       \
     PREFIX ## _initialize,                      \
-    pn_object_incref,                           \
-    pn_object_decref,                           \
-    pn_object_refcount,                         \
+    NULL,                                       \
+    NULL,                                       \
+    NULL,                                       \
     PREFIX ## _finalize,                        \
-    pn_object_free,                             \
+    NULL,                                       \
     PREFIX ## _hashcode,                        \
     PREFIX ## _compare,                         \
     PREFIX ## _inspect                          \
@@ -101,6 +103,11 @@ PN_EXTERN extern const pn_class_t PN_WEAKREF[];
     PREFIX ## _compare,                         \
     PREFIX ## _inspect                          \
 }
+
+PN_EXTERN void *pn_void_new(const pn_class_t *clazz, size_t size);
+PN_EXTERN void pn_void_incref(void *object);
+PN_EXTERN void pn_void_decref(void *object);
+PN_EXTERN int pn_void_refcount(void *object);
 
 /* Class to identify a plain C struct in a pn_event_t. No refcounting or memory management. */
 #define PN_STRUCT_CLASSDEF(PREFIX)                  \
@@ -123,12 +130,6 @@ PN_EXTERN pn_cid_t pn_class_id(const pn_class_t *clazz);
 PN_EXTERN const char *pn_class_name(const pn_class_t *clazz);
 PN_EXTERN void *pn_class_new(const pn_class_t *clazz, size_t size);
 
-/* pn_incref, pn_decref and pn_refcount are for internal use by the proton
-   library, the should not be called by application code. Application code
-   should use the appropriate pn_*_free function (pn_link_free, pn_session_free
-   etc.) when it is finished with a proton value. Proton values should only be
-   used when handling a pn_event_t that refers to them.
-*/
 PN_EXTERN void *pn_class_incref(const pn_class_t *clazz, void *object);
 PN_EXTERN int pn_class_refcount(const pn_class_t *clazz, void *object);
 PN_EXTERN int pn_class_decref(const pn_class_t *clazz, void *object);
@@ -139,17 +140,12 @@ PN_EXTERN intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b);
 PN_EXTERN bool pn_class_equals(const pn_class_t *clazz, void *a, void *b);
 PN_EXTERN int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst);
 
-PN_EXTERN void *pn_void_new(const pn_class_t *clazz, size_t size);
-PN_EXTERN void pn_void_incref(void *object);
-PN_EXTERN void pn_void_decref(void *object);
-PN_EXTERN int pn_void_refcount(void *object);
-
-PN_EXTERN void *pn_object_new(const pn_class_t *clazz, size_t size);
-PN_EXTERN void pn_object_incref(void *object);
-PN_EXTERN int pn_object_refcount(void *object);
-PN_EXTERN void pn_object_decref(void *object);
-PN_EXTERN void pn_object_free(void *object);
-
+/* pn_incref, pn_decref and pn_refcount are for internal use by the proton
+ *   library, the should not be called by application code. Application code
+ *   should use the appropriate pn_*_free function (pn_link_free, pn_session_free
+ *   etc.) when it is finished with a proton value. Proton values should only be
+ *   used when handling a pn_event_t that refers to them.
+ */
 PN_EXTERN void *pn_incref(void *object);
 PN_EXTERN int pn_decref(void *object);
 PN_EXTERN int pn_refcount(void *object);

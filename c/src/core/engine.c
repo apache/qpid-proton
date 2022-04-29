@@ -977,9 +977,9 @@ static void pn_session_finalize(void *object)
   }
 }
 
-#define pn_session_new pn_object_new
-#define pn_session_refcount pn_object_refcount
-#define pn_session_decref pn_object_decref
+#define pn_session_new NULL
+#define pn_session_refcount NULL
+#define pn_session_decref NULL
 #define pn_session_initialize NULL
 #define pn_session_hashcode NULL
 #define pn_session_compare NULL
@@ -988,7 +988,7 @@ static void pn_session_finalize(void *object)
 pn_session_t *pn_session(pn_connection_t *conn)
 {
   assert(conn);
-#define pn_session_free pn_object_free
+#define pn_session_free NULL
   static const pn_class_t clazz = PN_METACLASS(pn_session);
 #undef pn_session_free
   pn_session_t *ssn = (pn_session_t *) pn_class_new(&clazz, sizeof(pn_session_t));
@@ -1146,8 +1146,8 @@ static void pn_link_finalize(void *object)
   pn_free(link->remote_properties);
 }
 
-#define pn_link_refcount pn_object_refcount
-#define pn_link_decref pn_object_decref
+#define pn_link_refcount NULL
+#define pn_link_decref NULL
 #define pn_link_initialize NULL
 #define pn_link_hashcode NULL
 #define pn_link_compare NULL
@@ -1155,8 +1155,8 @@ static void pn_link_finalize(void *object)
 
 pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
 {
-#define pn_link_new pn_object_new
-#define pn_link_free pn_object_free
+#define pn_link_new NULL
+#define pn_link_free NULL
   static const pn_class_t clazz = PN_METACLASS(pn_link);
 #undef pn_link_new
 #undef pn_link_free
@@ -1507,10 +1507,10 @@ static void pn_disposition_clear(pn_disposition_t *ds)
   pn_condition_clear(&ds->condition);
 }
 
-#define pn_delivery_new pn_object_new
-#define pn_delivery_refcount pn_object_refcount
-#define pn_delivery_decref pn_object_decref
-#define pn_delivery_free pn_object_free
+#define pn_delivery_new NULL
+#define pn_delivery_refcount NULL
+#define pn_delivery_decref NULL
+#define pn_delivery_free NULL
 #define pn_delivery_initialize NULL
 #define pn_delivery_hashcode NULL
 #define pn_delivery_compare NULL

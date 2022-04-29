@@ -535,16 +535,16 @@ static void pn_transport_incref(void *object)
 }
 
 static void pn_transport_finalize(void *object);
-#define pn_transport_new pn_object_new
-#define pn_transport_refcount pn_object_refcount
-#define pn_transport_decref pn_object_decref
+#define pn_transport_new NULL
+#define pn_transport_refcount NULL
+#define pn_transport_decref NULL
 #define pn_transport_hashcode NULL
 #define pn_transport_compare NULL
 #define pn_transport_inspect NULL
 
 pn_transport_t *pn_transport(void)
 {
-#define pn_transport_free pn_object_free
+#define pn_transport_free NULL
   static const pn_class_t clazz = PN_METACLASS(pn_transport);
 #undef pn_transport_free
   pn_transport_t *transport =
