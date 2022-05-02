@@ -101,6 +101,8 @@ struct write_result_t {
   pn_bytes_t buffer;
 };
 
+extern pn_class_t PN_CLASSCLASS(pni_iocpdesc);
+
 iocpdesc_t *pni_iocpdesc_create(iocp_t *, pn_socket_t s, bool external);
 iocpdesc_t *pni_iocpdesc_map_get(iocp_t *, pn_socket_t s);
 iocpdesc_t *pni_deadline_desc(iocp_t *);

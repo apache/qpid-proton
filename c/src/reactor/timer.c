@@ -62,9 +62,9 @@ intptr_t pn_task_compare(void *a, void *b) {
 #define pn_task_inspect NULL
 #define pn_task_hashcode NULL
 
+static const pn_class_t PN_CLASSCLASS(pn_task) = PN_CLASS(pn_task);
 pn_task_t *pn_task(void) {
-  static const pn_class_t clazz = PN_CLASS(pn_task);
-  pn_task_t *task = pn_class_new(&clazz, sizeof(pn_task_t));
+  pn_task_t *task = pn_class_new(&PN_CLASSCLASS(pn_task), sizeof(pn_task_t));
   return task;
 }
 
@@ -90,8 +90,8 @@ struct pn_timer_t {
 
 static void pn_timer_initialize(void *object) {
   pn_timer_t *timer = (pn_timer_t *)object;
-  timer->pool = pn_list(PN_OBJECT, 0);
-  timer->tasks = pn_list(PN_OBJECT, 0);
+  timer->pool = pn_list(&PN_CLASSCLASS(pn_task), 0);
+  timer->tasks = pn_list(&PN_CLASSCLASS(pn_task), 0);
 }
 
 static void pn_timer_finalize(void *object) {

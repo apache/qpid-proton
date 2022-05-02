@@ -28,6 +28,8 @@
 
 #include <proton/selectable.h>
 
+extern const pn_class_t PN_CLASSCLASS(pn_selectable);
+
 void *pni_selectable_get_context(pn_selectable_t *selectable);
 void pni_selectable_set_context(pn_selectable_t *selectable, void *context);
 int pni_selectable_get_index(pn_selectable_t *selectable);

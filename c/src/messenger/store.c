@@ -77,6 +77,13 @@ void pni_entry_finalize(void *object)
   }
 }
 
+#define CID_pni_entry CID_pn_object
+#define pni_entry_initialize NULL
+#define pni_entry_hashcode NULL
+#define pni_entry_compare NULL
+#define pni_entry_inspect NULL
+static const pn_class_t PN_CLASSCLASS(pni_entry) = PN_CLASS(pni_entry);
+
 pni_store_t *pni_store()
 {
   pni_store_t *store = (pni_store_t *) malloc(sizeof(pni_store_t));
@@ -89,7 +96,7 @@ pni_store_t *pni_store()
   store->window = 0;
   store->lwm = 0;
   store->hwm = 0;
-  store->tracked = pn_hash(PN_OBJECT, 0, 0.75);
+  store->tracked = pn_hash(&PN_CLASSCLASS(pni_entry), 0, 0.75);
 
   return store;
 }
@@ -199,21 +206,14 @@ pni_stream_t *pni_stream_get(pni_store_t *store, const char *address)
   return pni_stream(store, address, false);
 }
 
-#define CID_pni_entry CID_pn_object
-#define pni_entry_initialize NULL
-#define pni_entry_hashcode NULL
-#define pni_entry_compare NULL
-#define pni_entry_inspect NULL
-
 pni_entry_t *pni_store_put(pni_store_t *store, const char *address)
 {
   assert(store);
-  static const pn_class_t clazz = PN_CLASS(pni_entry);
 
   if (!address) address = "";
   pni_stream_t *stream = pni_stream_put(store, address);
   if (!stream) return NULL;
-  pni_entry_t *entry = (pni_entry_t *) pn_class_new(&clazz, sizeof(pni_entry_t));
+  pni_entry_t *entry = (pni_entry_t *) pn_class_new(&PN_CLASSCLASS(pni_entry), sizeof(pni_entry_t));
   if (!entry) return NULL;
   entry->stream = stream;
   entry->free = false;

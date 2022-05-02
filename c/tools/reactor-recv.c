@@ -157,6 +157,9 @@ void connection_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t typ
         check(cc->recv_link == NULL, "Multiple incoming links on one connection");
         cc->recv_link = link;
         pn_connection_t *conn = pn_event_connection(event);
+        if (!cc->global->active_connections) {
+          cc->global->active_connections = pn_list(pn_class(conn), 1);
+        }
         pn_list_add(cc->global->active_connections, conn);
         if (cc->global->shutting_down) {
           pn_connection_close(conn);
@@ -247,7 +250,9 @@ void connection_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t typ
   case PN_CONNECTION_UNBOUND:
     {
       pn_connection_t *conn = pn_event_connection(event);
-      pn_list_remove(cc->global->active_connections, conn);
+      if (cc->global->active_connections) {
+        pn_list_remove(cc->global->active_connections, conn);
+      }
       pn_connection_release(conn);
     }
     break;
@@ -292,7 +297,6 @@ void global_context_init(global_context_t *gc, Options_t *o, Statistics_t *s)
   gc->message = pn_message();
   check(gc->message, "failed to allocate a message");
   gc->connections = 0;
-  gc->active_connections = pn_list(PN_OBJECT, 0);
   gc->acceptor = 0;
   gc->shutting_down = false;
   gc->listener_handler = 0;

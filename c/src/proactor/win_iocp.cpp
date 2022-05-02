@@ -1186,13 +1186,13 @@ static uintptr_t pni_iocpdesc_hashcode(void *object)
 
 #define pni_iocpdesc_compare NULL
 #define pni_iocpdesc_inspect NULL
+#define CID_pni_iocpdesc CID_pn_void
+static pn_class_t PN_CLASSCLASS(pni_iocpdesc) = PN_CLASS(pni_iocpdesc);
 
 // Reference counted in the iocpdesc map, zombie_list, selector.
 static iocpdesc_t *pni_iocpdesc(pn_socket_t s)
 {
-  static const pn_cid_t CID_pni_iocpdesc = CID_pn_void;
-  static pn_class_t clazz = PN_CLASS(pni_iocpdesc);
-  iocpdesc_t *iocpd = (iocpdesc_t *) pn_class_new(&clazz, sizeof(iocpdesc_t));
+  iocpdesc_t *iocpd = (iocpdesc_t *) pn_class_new(&PN_CLASSCLASS(pni_iocpdesc), sizeof(iocpdesc_t));
   assert(iocpd);
   iocpd->socket = s;
   return iocpd;
@@ -1514,7 +1514,7 @@ void pni_iocp_initialize(void *obj)
   pni_shared_pool_create(iocp);
   iocp->completion_port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
   assert(iocp->completion_port != NULL);
-  iocp->zombie_list = pn_list(PN_OBJECT, 0);
+  iocp->zombie_list = pn_list(&PN_CLASSCLASS(pni_iocpdesc), 0);
   iocp->iocp_trace = false;
 }
 

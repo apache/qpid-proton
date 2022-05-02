@@ -24,6 +24,8 @@
 
 #include <proton/messenger.h>
 
+extern const pn_class_t PN_CLASSCLASS(pn_subscription);
+
 pn_subscription_t *pn_subscription(pn_messenger_t *messenger,
                                    const char *scheme, const char *host,
                                    const char *port);

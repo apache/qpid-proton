@@ -246,7 +246,7 @@ pn_handler_t *pn_record_get_handler(pn_record_t *record) {
 
 void pn_record_set_handler(pn_record_t *record, pn_handler_t *handler) {
   assert(record);
-  pn_record_def(record, PN_HANDLER, PN_OBJECT);
+  pn_record_def(record, PN_HANDLER, pn_class(handler));
   pn_record_set(record, PN_HANDLER, handler);
 }
 

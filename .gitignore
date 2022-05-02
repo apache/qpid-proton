@@ -3,6 +3,8 @@
 /build*/
 /bld*/
 /BLD*/
+/out
+
 *.class
 *.o
 *.d

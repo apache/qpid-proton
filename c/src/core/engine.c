@@ -41,6 +41,17 @@
 static void pni_session_bound(pn_session_t *ssn);
 static void pni_link_bound(pn_link_t *link);
 
+static void pn_delivery_incref(void *object);
+static void pn_delivery_finalize(void *object);
+#define pn_delivery_new NULL
+#define pn_delivery_refcount NULL
+#define pn_delivery_decref NULL
+#define pn_delivery_free NULL
+#define pn_delivery_initialize NULL
+#define pn_delivery_hashcode NULL
+#define pn_delivery_compare NULL
+static int pn_delivery_inspect(void *obj, pn_string_t *dst);
+static const pn_class_t PN_CLASSCLASS(pn_delivery) = PN_METACLASS(pn_delivery);
 
 // endpoints
 
@@ -541,7 +552,7 @@ pn_connection_t *pn_connection()
   conn->properties = pn_data(0);
   conn->collector = NULL;
   conn->context = pn_record();
-  conn->delivery_pool = pn_list(PN_OBJECT, 0);
+  conn->delivery_pool = pn_list(&PN_CLASSCLASS(pn_delivery), 0);
   conn->driver = NULL;
 
   return conn;
@@ -1507,14 +1518,6 @@ static void pn_disposition_clear(pn_disposition_t *ds)
   pn_condition_clear(&ds->condition);
 }
 
-#define pn_delivery_new NULL
-#define pn_delivery_refcount NULL
-#define pn_delivery_decref NULL
-#define pn_delivery_free NULL
-#define pn_delivery_initialize NULL
-#define pn_delivery_hashcode NULL
-#define pn_delivery_compare NULL
-
 int pn_delivery_inspect(void *obj, pn_string_t *dst) {
   pn_delivery_t *d = (pn_delivery_t*)obj;
   const char* dir = pn_link_is_sender(d->link) ? "sending" : "receiving";
@@ -1539,8 +1542,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   pn_list_t *pool = link->session->connection->delivery_pool;
   pn_delivery_t *delivery = (pn_delivery_t *) pn_list_pop(pool);
   if (!delivery) {
-    static const pn_class_t clazz = PN_METACLASS(pn_delivery);
-    delivery = (pn_delivery_t *) pn_class_new(&clazz, sizeof(pn_delivery_t));
+    delivery = (pn_delivery_t *) pn_class_new(&PN_CLASSCLASS(pn_delivery), sizeof(pn_delivery_t));
     if (!delivery) return NULL;
     delivery->tag = pn_buffer(16);
     delivery->bytes = pn_buffer(64);

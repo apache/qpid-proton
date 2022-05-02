@@ -41,10 +41,18 @@ struct pn_event_t {
   pn_event_type_t type;
 };
 
+static void pn_event_initialize(void *object);
+static void pn_event_finalize(void *object);
+static int pn_event_inspect(void *object, pn_string_t *string);
+#define pn_event_hashcode NULL
+#define pn_event_compare NULL
+
+static const pn_class_t PN_CLASSCLASS(pn_event) = PN_CLASS(pn_event);
+
 static void pn_collector_initialize(void* object)
 {
   pn_collector_t *collector = (pn_collector_t *)object;
-  collector->pool = pn_list(PN_OBJECT, 0);
+  collector->pool = pn_list(&PN_CLASSCLASS(pn_event), 0);
   collector->head = NULL;
   collector->tail = NULL;
   collector->prev = NULL;
@@ -278,13 +286,9 @@ static int pn_event_inspect(void *object, pn_string_t *dst)
   return pn_string_addf(dst, ")");
 }
 
-#define pn_event_hashcode NULL
-#define pn_event_compare NULL
-
 pn_event_t *pn_event(void)
 {
-  static const pn_class_t clazz = PN_CLASS(pn_event);
-  return pn_class_new(&clazz, sizeof(pn_event_t));
+  return pn_class_new(&PN_CLASSCLASS(pn_event), sizeof(pn_event_t));
 }
 
 pn_event_type_t pn_event_type(pn_event_t *event)

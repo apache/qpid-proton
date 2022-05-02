@@ -99,11 +99,11 @@ void pn_selectable_finalize(void *object)
 #define pn_selectable_hashcode NULL
 #define pn_selectable_inspect NULL
 #define pn_selectable_compare NULL
+const pn_class_t PN_CLASSCLASS(pn_selectable) = PN_CLASS(pn_selectable);
 
 pn_selectable_t *pn_selectable(void)
 {
-  static const pn_class_t clazz = PN_CLASS(pn_selectable);
-  return pn_class_new(&clazz, sizeof(pn_selectable_t));
+  return pn_class_new(&PN_CLASSCLASS(pn_selectable), sizeof(pn_selectable_t));
 }
 
 bool pn_selectable_is_reading(pn_selectable_t *sel) {
