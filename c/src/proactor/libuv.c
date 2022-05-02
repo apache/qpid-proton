@@ -886,7 +886,7 @@ static void check_wake(pconnection_t *pc) {
   uv_mutex_lock(&pc->lock);
   if (pc->wake == W_PENDING) {
     pn_connection_t *c = pc->driver.connection;
-    pn_collector_put(pn_connection_collector(c), PN_OBJECT, c, PN_CONNECTION_WAKE);
+    pn_collector_put_object(pn_connection_collector(c), c, PN_CONNECTION_WAKE);
     pc->wake = W_NONE;
   }
   uv_mutex_unlock(&pc->lock);

@@ -169,6 +169,12 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
   return event;
 }
 
+pn_event_t *pn_collector_put_object(pn_collector_t *collector, void *object, pn_event_type_t type)
+{
+  const pn_class_t *clazz = pn_class(object);
+  return pn_collector_put(collector, clazz, object, type);
+}
+
 pn_event_t *pn_collector_peek(pn_collector_t *collector)
 {
   return collector->head;

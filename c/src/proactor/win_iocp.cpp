@@ -2351,7 +2351,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, iocp_result_t *r
       bool ready = pconnection_has_event(pc);
       if (waking) {
         pn_connection_t *c = pc->driver.connection;
-        pn_collector_put(pn_connection_collector(c), PN_OBJECT, c, PN_CONNECTION_WAKE);
+        pn_collector_put_object(pn_connection_collector(c), c, PN_CONNECTION_WAKE);
         waking = false;
       }
       if (ready) {

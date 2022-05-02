@@ -78,7 +78,7 @@ void receiver::drain() {
             // Drain is already complete.  No state to communicate over the wire.
             // Create dummy flow event where "drain finish" can be detected.
             pn_connection_t *pnc = pn_session_connection(pn_link_session(pn_object()));
-            pn_collector_put(pn_connection_collector(pnc), PN_OBJECT, pn_object(), PN_LINK_FLOW);
+            pn_collector_put_object(pn_connection_collector(pnc), pn_object(), PN_LINK_FLOW);
         }
     }
 }

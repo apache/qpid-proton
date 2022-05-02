@@ -158,7 +158,7 @@ void pn_timer_tick(pn_timer_t *timer, pn_timestamp_t now) {
       pn_task_t *min = (pn_task_t *) pn_list_minpop(timer->tasks);
       assert(min == task);
       if (!min->cancelled)
-          pn_collector_put(timer->collector, PN_OBJECT, min, PN_TIMER_TASK);
+          pn_collector_put_object(timer->collector, min, PN_TIMER_TASK);
       pn_decref(min);
     } else {
       break;

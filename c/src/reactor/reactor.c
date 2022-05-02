@@ -199,7 +199,7 @@ pn_selectable_t *pn_reactor_selectable(pn_reactor_t *reactor) {
   assert(reactor);
   pn_selectable_t *sel = pn_selectable();
   pn_selectable_collect(sel, reactor->collector);
-  pn_collector_put(reactor->collector, PN_OBJECT, sel, PN_SELECTABLE_INIT);
+  pn_collector_put_object(reactor->collector, sel, PN_SELECTABLE_INIT);
   pni_selectable_set_context(sel, reactor);
   pn_list_add(reactor->children, sel);
   pn_selectable_on_release(sel, pni_selectable_release);
@@ -216,9 +216,9 @@ void pn_reactor_update(pn_reactor_t *reactor, pn_selectable_t *selectable) {
   if (!pn_record_has(record, PNI_TERMINATED)) {
     if (pn_selectable_is_terminal(selectable)) {
       pn_record_def(record, PNI_TERMINATED, PN_VOID);
-      pn_collector_put(reactor->collector, PN_OBJECT, selectable, PN_SELECTABLE_FINAL);
+      pn_collector_put_object(reactor->collector, selectable, PN_SELECTABLE_FINAL);
     } else {
-      pn_collector_put(reactor->collector, PN_OBJECT, selectable, PN_SELECTABLE_UPDATED);
+      pn_collector_put_object(reactor->collector, selectable, PN_SELECTABLE_UPDATED);
     }
   }
 }
@@ -427,7 +427,7 @@ bool pn_reactor_process(pn_reactor_t *reactor) {
       pn_collector_pop(reactor->collector);
     } else if (!reactor->stop && pni_reactor_more(reactor)) {
       if (previous != PN_REACTOR_QUIESCED && reactor->previous != PN_REACTOR_FINAL) {
-        pn_collector_put(reactor->collector, PN_OBJECT, reactor, PN_REACTOR_QUIESCED);
+        pn_collector_put_object(reactor->collector, reactor, PN_REACTOR_QUIESCED);
       } else {
         return true;
       }
@@ -438,7 +438,7 @@ bool pn_reactor_process(pn_reactor_t *reactor) {
         reactor->selectable = NULL;
       } else {
         if (reactor->previous != PN_REACTOR_FINAL)
-          pn_collector_put(reactor->collector, PN_OBJECT, reactor, PN_REACTOR_FINAL);
+          pn_collector_put_object(reactor->collector, reactor, PN_REACTOR_FINAL);
         return false;
       }
     }
@@ -483,7 +483,7 @@ int pn_reactor_wakeup(pn_reactor_t *reactor) {
 
 void pn_reactor_start(pn_reactor_t *reactor) {
   assert(reactor);
-  pn_collector_put(reactor->collector, PN_OBJECT, reactor, PN_REACTOR_INIT);
+  pn_collector_put_object(reactor->collector, reactor, PN_REACTOR_INIT);
   reactor->selectable = pni_timer_selectable(reactor);
 }
 

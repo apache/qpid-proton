@@ -35,7 +35,7 @@ TEST_CASE("event_collector") {
   pn_collector_t *collector = pn_collector();                                  \
   REQUIRE(collector);                                                          \
   pn_event_t *event =                                                          \
-      pn_collector_put(collector, PN_OBJECT, obj, (pn_event_type_t)0);         \
+      pn_collector_put_object(collector, obj, (pn_event_type_t)0);             \
   pn_decref(obj);
 
 TEST_CASE("event_collector_put") {
@@ -71,7 +71,7 @@ TEST_CASE("event_collector_pool") {
   REQUIRE(!head);
   void *obj2 = pn_class_new(PN_OBJECT, 0);
   pn_event_t *event2 =
-      pn_collector_put(collector, PN_OBJECT, obj2, (pn_event_type_t)0);
+      pn_collector_put_object(collector, obj2, (pn_event_type_t)0);
   pn_decref(obj2);
   REQUIRE(event == event2);
   pn_free(collector);
@@ -87,7 +87,7 @@ void test_event_incref(bool eventfirst) {
   REQUIRE(!pn_collector_peek(collector));
   void *obj2 = pn_class_new(PN_OBJECT, 0);
   pn_event_t *event2 =
-      pn_collector_put(collector, PN_OBJECT, obj2, (pn_event_type_t)0);
+      pn_collector_put_object(collector, obj2, (pn_event_type_t)0);
   pn_decref(obj2);
   REQUIRE(head != event2);
   if (eventfirst) {

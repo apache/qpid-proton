@@ -375,7 +375,7 @@ static void pni_emit(pn_transport_t *transport)
 {
   if (transport->connection && transport->connection->collector) {
     pn_collector_t *collector = transport->connection->collector;
-    pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT);
+    pn_collector_put_object(collector, transport, PN_TRANSPORT);
   }
 }
 

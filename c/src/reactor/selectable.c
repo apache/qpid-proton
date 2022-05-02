@@ -276,19 +276,19 @@ void pn_selectable_free(pn_selectable_t *selectable)
 }
 
 static void pni_readable(pn_selectable_t *selectable) {
-  pn_collector_put(selectable->collector, PN_OBJECT, selectable, PN_SELECTABLE_READABLE);
+  pn_collector_put_object(selectable->collector, selectable, PN_SELECTABLE_READABLE);
 }
 
 static void pni_writable(pn_selectable_t *selectable) {
-  pn_collector_put(selectable->collector, PN_OBJECT, selectable, PN_SELECTABLE_WRITABLE);
+  pn_collector_put_object(selectable->collector, selectable, PN_SELECTABLE_WRITABLE);
 }
 
 static void pni_error(pn_selectable_t *selectable) {
-  pn_collector_put(selectable->collector, PN_OBJECT, selectable, PN_SELECTABLE_ERROR);
+  pn_collector_put_object(selectable->collector, selectable, PN_SELECTABLE_ERROR);
 }
 
 static void pni_expired(pn_selectable_t *selectable) {
-  pn_collector_put(selectable->collector, PN_OBJECT, selectable, PN_SELECTABLE_EXPIRED);
+  pn_collector_put_object(selectable->collector, selectable, PN_SELECTABLE_EXPIRED);
 }
 
 void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collector) {
