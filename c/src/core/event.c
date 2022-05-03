@@ -167,10 +167,6 @@ pn_event_t *pn_collector_put(pn_collector_t *collector,
     collector->head = event;
   }
 
-  if (clazz==PN_OBJECT) {
-    clazz = pn_class(context);
-  }
-
   event->clazz = clazz;
   event->context = context;
   event->type = type;

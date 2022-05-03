@@ -162,9 +162,6 @@ void *pn_class_new(const pn_class_t *clazz, size_t size)
 void *pn_class_incref(const pn_class_t *clazz, void *object)
 {
   if (object) {
-    if (clazz==PN_OBJECT) {
-      clazz = pni_head(object)->clazz;
-    }
     pni_class_incref(clazz, object);
   }
   return object;
@@ -172,19 +169,12 @@ void *pn_class_incref(const pn_class_t *clazz, void *object)
 
 int pn_class_refcount(const pn_class_t *clazz, void *object)
 {
-  if (clazz==PN_OBJECT) {
-    clazz = pn_class(object);
-  }
-
   return pni_class_refcount(clazz, object);
 }
 
 int pn_class_decref(const pn_class_t *clazz, void *object)
 {
   if (object) {
-    if (clazz==PN_OBJECT) {
-      clazz = pni_head(object)->clazz;
-    }
     pni_class_decref(clazz, object);
     int rc = pni_class_refcount(clazz, object);
     if (rc == 0) {
@@ -209,10 +199,6 @@ int pn_class_decref(const pn_class_t *clazz, void *object)
 void pn_class_free(const pn_class_t *clazz, void *object)
 {
   if (object) {
-    if (clazz==PN_OBJECT) {
-      clazz = pni_head(object)->clazz;
-    }
-
     int rc = pni_class_refcount(clazz, object);
     assert(rc == 1 || rc == -1);
     if (rc == 1) {
@@ -232,9 +218,6 @@ intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b)
   if (a == b) return 0;
 
   if (a && b) {
-    if (clazz==PN_OBJECT) {
-      clazz = pni_head(a)->clazz;
-    }
     if (clazz->compare) {
       return clazz->compare(a, b);
     }
@@ -249,10 +232,6 @@ bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
 
 int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst)
 {
-  if (clazz==PN_OBJECT) {
-      clazz = pni_head(object)->clazz;
-  }
-
   if (!pn_string_get(dst)) {
     pn_string_set(dst, "");
   }
