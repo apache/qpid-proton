@@ -194,6 +194,7 @@ pn_connection_t* container::impl::make_connection_lh(
     cc.handler = mh;
     cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, pnc);
     cc.reconnect_url_ = url;
+    cc.active_url_ = url;
     cc.connection_options_.reset(new connection_options(opts));
 
     make_wrapper(pnc).open(*cc.connection_options_);
@@ -258,6 +259,7 @@ void container::impl::reconnect(pn_connection_t* pnc) {
     opts.update(co);
     messaging_handler* mh = opts.handler();
     cc.handler = mh;
+    cc.active_url_ = url;
 
     make_wrapper(pnc).open(co);
     start_connection(url, pnc);

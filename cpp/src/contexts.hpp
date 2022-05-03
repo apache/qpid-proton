@@ -100,6 +100,7 @@ class connection_context : public context {
     std::unique_ptr<reconnect_context> reconnect_context_;
     listener_context* listener_context_;
     work_queue work_queue_;
+    std::string active_url_;
 };
 
 class reconnect_options_base;

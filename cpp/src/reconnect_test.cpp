@@ -41,6 +41,10 @@
 
 namespace {
 
+// The actual port used for making a url.
+// Gets updated whenever a connection is open on server side.
+int listening_port_;
+
 // Wait for N things to be done.
 class waiter {
     size_t count;
@@ -99,6 +103,7 @@ class server_connection_handler : public proton::messaging_handler {
     }
 
     void on_connection_open(proton::connection &c) override {
+        listening_port_ = listener_.port();
         // Only listen for a single connection
         listener_.stop();
         if (messages_==expect_) close(c);
@@ -129,10 +134,13 @@ class server_connection_handler : public proton::messaging_handler {
 
 class tester_base: public proton::messaging_handler {
   void on_connection_open(proton::connection& c) override {
+    std::string want_url = "amqp://localhost:" + std::to_string(listening_port_);
+
     if (!c.reconnected()) {
       start_count++;
       c.open_sender("messages");
     }
+    ASSERT_EQUAL(c.url(), want_url);
     ASSERT_EQUAL(bool(open_count), c.reconnected());
     open_count++;
   }
@@ -159,6 +167,7 @@ class tester_base: public proton::messaging_handler {
   }
 
   void on_transport_close(proton::transport& t) override {
+    ASSERT_THROWS_MSG(proton::error, "No active connection", t.connection().url());
     transport_close_count++;
   }
 
@@ -249,7 +258,7 @@ int test_empty_failover() {
     return 0;
 }
 
-}
+} // namespace
 
 class stop_reconnect_tester : public proton::messaging_handler {
   public:
