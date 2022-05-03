@@ -83,6 +83,9 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Note: The value returned is not stable until the on_transport_open event is received
     PN_CPP_EXTERN std::string user() const;
 
+    /// Return the url for the connection.
+    PN_CPP_EXTERN std::string url() const;
+
     /// Open the connection.
     /// @see messaging_handler
     PN_CPP_EXTERN void open();

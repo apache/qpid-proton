@@ -93,6 +93,12 @@ session_range connection::sessions() const {
     return session_range(session_iterator(make_wrapper(pn_session_head(pn_object(), 0))));
 }
 
+std::string connection::url() const {
+    connection_context& cc = connection_context::get(pn_object());
+    if (!active()) throw proton::error("No active connection");
+    return cc.active_url_;
+}
+
 receiver_range connection::receivers() const {
   pn_link_t *lnk = pn_link_head(pn_object(), 0);
   while (lnk) {
