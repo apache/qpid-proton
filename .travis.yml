@@ -89,9 +89,9 @@ jobs:
     - CC=gcc-10
     - CXX=g++-10
     - PYTHON=python3
-    # python-test, python-integration-test, and python-tox-test segfault
-    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=tsan -DENABLE_TOX_TEST=OFF -DTHREADERCISER=ON'
-    - QPID_PROTON_CTEST_ARGS="-E 'python-test|python-integration-test'"
+    - QPID_PROTON_CMAKE_ARGS='-DRUNTIME_CHECK=tsan -DTHREADERCISER=ON'
+    # python-test, python-pep8-test, python-integration-test, and python-tox-test (currently all python tests) segfault
+    - QPID_PROTON_CTEST_ARGS="-E 'python.*test'"
   - name: coverage
     os: linux
     dist: bionic
