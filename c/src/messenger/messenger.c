@@ -389,7 +389,7 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_messenger_t *messenger,
     return NULL;
   }
 
-  pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_class_new(PN_OBJECT, sizeof(pn_listener_ctx_t));
+  pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_class_new(PN_DEFAULT, sizeof(pn_listener_ctx_t));
   ctx->messenger = messenger;
   ctx->domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
   if (messenger->certificate) {

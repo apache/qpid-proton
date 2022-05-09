@@ -26,13 +26,14 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define pn_object_initialize NULL
-#define pn_object_finalize NULL
-#define pn_object_inspect NULL
-#define pn_object_hashcode NULL
-#define pn_object_compare NULL
+#define CID_pn_default CID_pn_object
+#define pn_default_initialize NULL
+#define pn_default_finalize NULL
+#define pn_default_inspect NULL
+#define pn_default_hashcode NULL
+#define pn_default_compare NULL
 
-const pn_class_t PN_OBJECT[] = {PN_CLASS(pn_object)};
+const pn_class_t PN_DEFAULT[] = {PN_CLASS(pn_default)};
 
 void *pn_void_new(const pn_class_t *clazz, size_t size) { return pni_mem_allocate(clazz, size); }
 #define pn_void_initialize NULL
@@ -334,7 +335,7 @@ const pn_class_t *pn_class(void *object)
   if (object) {
     return pni_head(object)->clazz;
   } else {
-    return PN_OBJECT;
+    return PN_DEFAULT;
   }
 }
 
@@ -398,14 +399,53 @@ int pn_inspect(void *object, pn_string_t *dst)
 #define pn_weakref_decref pn_void_decref
 #define pn_weakref_refcount pn_void_refcount
 
-static uintptr_t pn_weakref_hashcode(void *object) {
-  return pn_hashcode(object);
-}
-static intptr_t pn_weakref_compare(void *a, void *b) {
-  return pn_compare(a, b);
-}
-static int pn_weakref_inspect(void *object, pn_string_t *dst) {
-  return pn_inspect(object, dst);
-}
+#define pn_weakref_hashcode pn_hashcode
+#define pn_weakref_compare pn_compare
+#define pn_weakref_inspect pn_inspect
 
 const pn_class_t PN_WEAKREF[] = {PN_METACLASS(pn_weakref)};
+
+#define CID_pn_strongref CID_pn_object
+#define pn_strongref_new NULL
+
+void pn_strongref_initialize(void *object) {
+  const pn_class_t *clazz = pni_head(object)->clazz;
+  if (clazz->initialize) {
+    clazz->initialize(object);
+  }
+}
+
+void pn_strongref_finalize(void *object) {
+  const pn_class_t *clazz = pni_head(object)->clazz;
+  if (clazz->finalize) {
+    clazz->finalize(object);
+  }
+}
+
+void pn_strongref_free(void *object)
+{
+  const pn_class_t *clazz = pni_head(object)->clazz;
+  pni_class_free(clazz, object);
+}
+
+void pn_strongref_incref(void *object)
+{
+  const pn_class_t *clazz = pni_head(object)->clazz;
+  pni_class_incref(clazz, object);
+}
+void pn_strongref_decref(void *object)
+{
+  const pn_class_t *clazz = pni_head(object)->clazz;
+  pni_class_decref(clazz, object);
+}
+int pn_strongref_refcount(void *object)
+{
+  const pn_class_t *clazz = pni_head(object)->clazz;
+  return pni_class_refcount(clazz, object);
+}
+
+#define pn_strongref_hashcode pn_hashcode
+#define pn_strongref_compare pn_compare
+#define pn_strongref_inspect pn_inspect
+
+const pn_class_t PN_OBJECT[] = {PN_METACLASS(pn_strongref)};

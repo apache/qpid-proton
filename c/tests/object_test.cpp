@@ -152,7 +152,7 @@ static void test_class(const pn_class_t *clazz, size_t size) {
 }
 
 TEST_CASE("object_class") {
-  test_class(PN_OBJECT, 0);
+  test_class(PN_DEFAULT, 0);
   test_class(PN_VOID, 5);
   test_class(&noop_class, 128);
 }
@@ -172,8 +172,8 @@ static void test_new(size_t size, const pn_class_t *clazz) {
 }
 
 TEST_CASE("object_class new") {
-  test_new(0, PN_OBJECT);
-  test_new(5, PN_OBJECT);
+  test_new(0, PN_DEFAULT);
+  test_new(5, PN_DEFAULT);
   test_new(128, &noop_class);
 }
 
@@ -263,7 +263,7 @@ TEST_CASE("object_compare") {
 
 TEST_CASE("object_refcounting") {
   int refs = 3;
-  void *obj = pn_class_new(PN_OBJECT, 0);
+  void *obj = pn_class_new(PN_DEFAULT, 0);
 
   CHECK(pn_refcount(obj) == 1);
 
@@ -304,10 +304,10 @@ TEST_CASE("list") {
 }
 
 TEST_CASE("list_refcount") {
-  void *one = pn_class_new(PN_OBJECT, 0);
-  void *two = pn_class_new(PN_OBJECT, 0);
-  void *three = pn_class_new(PN_OBJECT, 0);
-  void *four = pn_class_new(PN_OBJECT, 0);
+  void *one = pn_class_new(PN_DEFAULT, 0);
+  void *two = pn_class_new(PN_DEFAULT, 0);
+  void *three = pn_class_new(PN_DEFAULT, 0);
+  void *four = pn_class_new(PN_DEFAULT, 0);
 
   pn_list_t *list = pn_list(PN_OBJECT, 0);
   CHECK(!pn_list_add(list, one));
@@ -446,16 +446,16 @@ TEST_CASE("map_build_odd") {
 }
 
 TEST_CASE("map") {
-  void *one = pn_class_new(PN_OBJECT, 0);
-  void *two = pn_class_new(PN_OBJECT, 0);
-  void *three = pn_class_new(PN_OBJECT, 0);
+  void *one = pn_class_new(PN_DEFAULT, 0);
+  void *two = pn_class_new(PN_DEFAULT, 0);
+  void *three = pn_class_new(PN_DEFAULT, 0);
 
   pn_string_t *key = pn_string("key");
   pn_string_t *dup = pn_string("key");
   pn_string_t *key1 = pn_string("key1");
   pn_string_t *key2 = pn_string("key2");
 
-  pn_map_t *map = pn_map(pn_class(key), PN_OBJECT, 4, 0.75);
+  pn_map_t *map = pn_map(PN_OBJECT, PN_OBJECT, 4, 0.75);
   CHECK(pn_map_size(map) == 0);
 
   CHECK(!pn_map_put(map, key, one));
@@ -508,9 +508,9 @@ TEST_CASE("map") {
 }
 
 TEST_CASE("hash") {
-  void *one = pn_class_new(PN_OBJECT, 0);
-  void *two = pn_class_new(PN_OBJECT, 0);
-  void *three = pn_class_new(PN_OBJECT, 0);
+  void *one = pn_class_new(PN_DEFAULT, 0);
+  void *two = pn_class_new(PN_DEFAULT, 0);
+  void *three = pn_class_new(PN_DEFAULT, 0);
 
   pn_hash_t *hash = pn_hash(PN_OBJECT, 4, 0.75);
   pn_hash_put(hash, 0, NULL);
@@ -679,8 +679,8 @@ TEST_CASE("map_iteration") {
   int n = 5;
   pn_list_t *pairs = pn_list(PN_OBJECT, 2 * n);
   for (int i = 0; i < n; i++) {
-    void *key = pn_class_new(PN_OBJECT, 0);
-    void *value = pn_class_new(PN_OBJECT, 0);
+    void *key = pn_class_new(PN_DEFAULT, 0);
+    void *value = pn_class_new(PN_DEFAULT, 0);
     pn_list_add(pairs, key);
     pn_list_add(pairs, value);
     pn_decref(key);
@@ -893,9 +893,9 @@ TEST_CASE("list_compare") {
 
   CHECK(pn_equals(a, b));
 
-  void *one = pn_class_new(PN_OBJECT, 0);
-  void *two = pn_class_new(PN_OBJECT, 0);
-  void *three = pn_class_new(PN_OBJECT, 0);
+  void *one = pn_class_new(PN_DEFAULT, 0);
+  void *two = pn_class_new(PN_DEFAULT, 0);
+  void *three = pn_class_new(PN_DEFAULT, 0);
 
   pn_list_add(a, one);
   CHECK(!pn_equals(a, b));
