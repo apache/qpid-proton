@@ -51,7 +51,7 @@ typedef struct pn_record_t pn_record_t;
 
 struct pn_class_t {
   const char *name;
-  const pn_cid_t cid;
+  pn_cid_t cid;
   void *(*newinst)(const pn_class_t *, size_t);
   void (*initialize)(void *);
   void (*incref)(void *);
@@ -104,6 +104,13 @@ PN_EXTERN void pn_object_incref(void *object);
     PREFIX ## _compare,                         \
     PREFIX ## _inspect                          \
 }
+
+PN_EXTERN pn_class_t *pn_class_create(const char *name,
+                                      void (*initialize)(void*),
+                                      void (*finalize)(void*),
+                                      void (*incref)(void*),
+                                      void (*decref)(void*),
+                                      int (*refcount)(void*));
 
 PN_EXTERN void *pn_void_new(const pn_class_t *clazz, size_t size);
 PN_EXTERN void pn_void_incref(void *object);

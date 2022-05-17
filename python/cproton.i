@@ -415,16 +415,7 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_S
 
 %immutable PN_PYREF;
 %inline %{
-  extern const pn_class_t PN_PYREF[];
-
-  #define CID_pn_pyref CID_pn_void
-  #define pn_pyref_new NULL
-  #define pn_pyref_initialize NULL
-  #define pn_pyref_finalize NULL
-  #define pn_pyref_free NULL
-  #define pn_pyref_hashcode NULL
-  #define pn_pyref_compare NULL
-  #define pn_pyref_inspect NULL
+  pn_class_t* PN_PYREF;
 
   static void pn_pyref_incref(void *object) {
     PyObject* p = (PyObject*) object;
@@ -443,8 +434,6 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_S
   static int pn_pyref_refcount(void *object) {
     return 1;
   }
-
-  const pn_class_t PN_PYREF[] = {PN_METACLASS(pn_pyref)};
 
   void *pn_py2void(PyObject *object) {
     return object;
@@ -499,6 +488,10 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_S
     }
   }
 
+%}
+
+%init %{
+  PN_PYREF = pn_class_create("pn_pyref", NULL, NULL, pn_pyref_incref, pn_pyref_decref, pn_pyref_refcount);
 %}
 
 %include "proton/cproton.i"

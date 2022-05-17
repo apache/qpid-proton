@@ -42,12 +42,7 @@ namespace proton {
 
 namespace {
 void cpp_context_finalize(void* v) { reinterpret_cast<context*>(v)->~context(); }
-#define CID_cpp_context CID_pn_object
-#define cpp_context_initialize NULL
-#define cpp_context_hashcode NULL
-#define cpp_context_compare NULL
-#define cpp_context_inspect NULL
-pn_class_t cpp_context_class = PN_CLASS(cpp_context);
+pn_class_t* cpp_context_class = pn_class_create("cpp_context", nullptr, cpp_context_finalize, nullptr, nullptr, nullptr);
 
 // Handles
 PN_HANDLE(CONNECTION_CONTEXT)
@@ -64,9 +59,9 @@ T* get_context(pn_record_t* record, pn_handle_t handle) {
 
 context::~context() {}
 
-void *context::alloc(size_t n) { return pn_class_new(&cpp_context_class, n); }
+void *context::alloc(size_t n) { return pn_class_new(cpp_context_class, n); }
 
-pn_class_t* context::pn_class() { return &cpp_context_class; }
+pn_class_t* context::pn_class() { return cpp_context_class; }
 
 connection_context::connection_context() :
     container(0), default_session(0), link_gen(0), handler(0), listener_context_(0)

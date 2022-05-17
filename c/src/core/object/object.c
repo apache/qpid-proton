@@ -59,6 +59,26 @@ typedef struct {
 #define pni_head(PTR) \
 (((pni_head_t *) (PTR)) - 1)
 
+pn_class_t *pn_class_create(const char *name,
+                            void (*initialize)(void*),
+                            void (*finalize)(void*),
+                            void (*incref)(void*),
+                            void (*decref)(void*),
+                            int (*refcount)(void*))
+{
+  pn_class_t *clazz = malloc(sizeof( pn_class_t));
+  *clazz = (pn_class_t) {
+    .name = name,
+    .cid = CID_pn_void,
+    .initialize = initialize,
+    .finalize = finalize,
+    .incref = incref,
+    .decref = decref,
+    .refcount = refcount
+  };
+  return clazz;
+}
+
 const char *pn_class_name(const pn_class_t *clazz)
 {
   return clazz->name;
