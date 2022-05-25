@@ -31,8 +31,21 @@ endif()
 
 set (ProtonCpp_VERSION @PN_VERSION@)
 
-set (ProtonCpp_INCLUDE_DIRS @PACKAGE_INCLUDE_INSTALL_DIR@)
+set_and_check (ProtonCpp_INCLUDE_DIRS @PACKAGE_INCLUDE_INSTALL_DIR@)
 set (ProtonCpp_LIBRARIES Proton::cpp)
 set (ProtonCpp_FOUND True)
 
+function(warn_components_not_found _NAME)
+  if (${_NAME}_FIND_QUIETLY)
+    return()
+  endif()
+
+  foreach(comp ${${_NAME}_FIND_COMPONENTS})
+    if(NOT ${_NAME}_${comp}_FOUND)
+      MESSAGE(STATUS "Requested ${_NAME} component ${comp} is NOT FOUND")
+    endif()
+  endforeach()
+endfunction()
+
 check_required_components(ProtonCpp)
+warn_components_not_found(ProtonCpp)
