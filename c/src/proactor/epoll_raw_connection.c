@@ -322,6 +322,10 @@ task_t *pni_psocket_raw_task(psocket_t* ps) {
   return &containerof(ps, praw_connection_t, psocket)->task;
 }
 
+praw_connection_t *pni_task_raw_connection(task_t *t) {
+  return containerof(t, praw_connection_t, task);
+}
+
 psocket_t *pni_task_raw_psocket(task_t *t) {
   return &containerof(t, praw_connection_t, task)->psocket;
 }
@@ -432,4 +436,9 @@ void pni_raw_connection_done(praw_connection_t *rc) {
   unlock(&p->sched_mutex);
   if (notify) notify_poller(p);
   if (resume_thread) pni_resume(p, resume_thread);
+}
+
+void pni_raw_connection_forced_shutdown(praw_connection_t *rc) {
+  pni_raw_finalize(&rc->raw_connection);
+  praw_connection_cleanup(rc);
 }

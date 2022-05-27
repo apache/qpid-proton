@@ -110,6 +110,7 @@ struct pn_raw_connection_t {
   bool rrequestedbuffers;
   bool wrequestedbuffers;
 
+  bool connectpending;
   bool rpending;
   bool wpending;
   bool rclosedpending;

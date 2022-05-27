@@ -465,7 +465,7 @@ static inline void pni_raw_disconnect(pn_raw_connection_t *conn) {
 
 void pni_raw_connected(pn_raw_connection_t *conn) {
   pn_condition_clear(conn->condition);
-  pni_raw_put_event(conn, PN_RAW_CONNECTION_CONNECTED);
+  conn->connectpending = true;
   conn->state = pni_raw_new_state(conn, conn_connected);
 }
 
@@ -665,6 +665,9 @@ pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn) {
     pn_event_t *event = pn_collector_next(conn->collector);
     if (event) {
       return pni_log_event(conn, event);
+    } else if (conn->connectpending) {
+      pni_raw_put_event(conn, PN_RAW_CONNECTION_CONNECTED);
+      conn->connectpending = false;
     } else if (conn->wakepending) {
       pni_raw_put_event(conn, PN_RAW_CONNECTION_WAKE);
       conn->wakepending = false;

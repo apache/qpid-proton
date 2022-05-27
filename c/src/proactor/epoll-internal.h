@@ -386,9 +386,11 @@ psocket_t *pni_task_raw_psocket(task_t *t);
 pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool sched_ready);
 
 typedef struct praw_connection_t praw_connection_t;
+praw_connection_t *pni_task_raw_connection(task_t *t);
 task_t *pni_raw_connection_task(praw_connection_t *rc);
 praw_connection_t *pni_batch_raw_connection(pn_event_batch_t* batch);
 void pni_raw_connection_done(praw_connection_t *rc);
+void pni_raw_connection_forced_shutdown(praw_connection_t *rc);
 
 pni_timer_t *pni_timer(pni_timer_manager_t *tm, pconnection_t *c);
 void pni_timer_free(pni_timer_t *timer);

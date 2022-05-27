@@ -2014,6 +2014,9 @@ void pn_proactor_free(pn_proactor_t *p) {
      case LISTENER:
       listener_forced_shutdown(task_listener(tsk));
       break;
+     case RAW_CONNECTION:
+      pni_raw_connection_forced_shutdown(pni_task_raw_connection(tsk));
+      break;
      default:
       break;
     }
