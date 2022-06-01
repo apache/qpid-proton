@@ -85,9 +85,9 @@ typedef struct {
   char *encoded_data;
   size_t encoded_data_size;
   pn_url_t *send_url;
-  pn_string_t *hostname;
-  pn_string_t *container_id;
-  pn_string_t *reply_to;
+  char hostname[256];
+  char reply_to[256]; // This should be large enough for the return address
+  const char *container_id;
 } sender_context_t;
 
 void sender_context_init(sender_context_t *sc, Options_t *opts, Statistics_t *stats)
@@ -101,14 +101,13 @@ void sender_context_init(sender_context_t *sc, Options_t *opts, Statistics_t *st
   sc->encoded_data_size = sc->opts->msg_size + 4096;
   sc->encoded_data = (char *)calloc(1, sc->encoded_data_size);
   check(sc->encoded_data, "failed to allocate encoding buffer");
-  sc->container_id = pn_string("reactor-send"); // prefer uuid-like name
+  sc->container_id = "reactor-send"; // prefer uuid-like name
 
   sc->reply_message = (sc->opts->get_replies) ? pn_message() : 0;
   sc->message = pn_message();
   check(sc->message, "failed to allocate a message");
-  sc->reply_to = pn_string("amqp://");
-  pn_string_addf(sc->reply_to, "%s", pn_string_get(sc->container_id));
-  pn_message_set_reply_to(sc->message, pn_string_get(sc->reply_to));
+  snprintf(sc->reply_to, sizeof(sc->reply_to), "amqp://%s", sc->container_id);
+  pn_message_set_reply_to(sc->message, sc->reply_to);
   pn_data_t *body = pn_message_body(sc->message);
   // borrow the encoding buffer this one time
   char *data = sc->encoded_data;
@@ -118,9 +117,11 @@ void sender_context_init(sender_context_t *sc, Options_t *opts, Statistics_t *st
   sc->send_url = pn_url_parse(sc->opts->targets.addresses[0]);
   const char *host = pn_url_get_host(sc->send_url);
   const char *port = pn_url_get_port(sc->send_url);
-  sc->hostname = pn_string(host);
-  if (port && strlen(port))
-    pn_string_addf(sc->hostname, ":%s", port);
+  if (port && strlen(port)) {
+    snprintf(sc->hostname, sizeof(sc->hostname), "%s:%s", host, port);
+  } else {
+    snprintf(sc->hostname, sizeof(sc->hostname), "%s", host);
+  }
 }
 
 sender_context_t *sender_context(pn_handler_t *h)
@@ -134,9 +135,6 @@ void sender_cleanup(pn_handler_t *h)
   pn_message_free(sc->message);
   pn_message_free(sc->reply_message);
   pn_url_free(sc->send_url);
-  pn_free(sc->hostname);
-  pn_free(sc->container_id);
-  pn_free(sc->reply_to);
   free(sc->encoded_data);
 }
 
@@ -147,7 +145,7 @@ pn_message_t* get_message(sender_context_t *sc, bool sending) {
     pn_message_t *m = pn_message();
     check(m, "failed to allocate a message");
     if (sending) {
-      pn_message_set_reply_to(m, pn_string_get(sc->reply_to));
+      pn_message_set_reply_to(m, sc->reply_to);
       // copy the data
       pn_data_t *body = pn_message_body(m);
       pn_data_t *template_body = pn_message_body(sc->message);
@@ -172,8 +170,8 @@ void sender_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t type)
   case PN_CONNECTION_INIT:
     {
       pn_connection_t *conn = pn_event_connection(event);
-      pn_connection_set_container(conn, pn_string_get(sc->container_id));
-      pn_connection_set_hostname(conn, pn_string_get(sc->hostname));
+      pn_connection_set_container(conn, sc->container_id);
+      pn_connection_set_hostname(conn, sc->hostname);
       pn_connection_open(conn);
       pn_session_t *ssn = pn_session(conn);
       pn_session_open(ssn);
