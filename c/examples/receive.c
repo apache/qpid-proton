@@ -61,10 +61,9 @@ static void decode_message(pn_rwbytes_t data) {
   int err = pn_message_decode(m, data.start, data.size);
   if (!err) {
     /* Print the decoded message */
-    pn_string_t *s = pn_string(NULL);
-    pn_inspect(pn_message_body(m), s);
-    printf("%s\n", pn_string_get(s));
-    pn_free(s);
+    char *s = pn_tostring(pn_message_body(m));
+    printf("%s\n", s);
+    free(s);
     pn_message_free(m);
     free(data.start);
   } else {

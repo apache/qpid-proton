@@ -18,24 +18,25 @@
  * under the License.
  *
  */
-#include <unistd.h>
 
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <wait.h>
+
+#include <benchmark/benchmark.h>
 
 #include "proton/connection_driver.h"
 #include "proton/engine.h"
+#include "proton/listener.h"
 #include "proton/log.h"
 #include "proton/message.h"
-
-#include <benchmark/benchmark.h>
-#include <proton/listener.h>
-#include <proton/netaddr.h>
-#include <proton/proactor.h>
-#include <proton/sasl.h>
-#include <wait.h>
+#include "proton/netaddr.h"
+#include "proton/object.h"
+#include "proton/proactor.h"
+#include "proton/sasl.h"
 
 #define MAX_SIZE 1024
 
@@ -49,13 +50,12 @@ static void decode_message_buffer(pn_rwbytes_t data) {
   int err = pn_message_decode(m, data.start, data.size);
   if (!err) {
     /* Print the decoded message */
-    pn_string_t *s = pn_string(NULL);
-    pn_inspect(pn_message_body(m), s);
+    char *s = pn_tostring(pn_message_body(m));
     if (VERBOSE) {
-      printf("%s\n", pn_string_get(s));
+      printf("%s\n", s);
       fflush(stdout);
     }
-    pn_free(s);
+    free(s);
     pn_message_free(m);
     free(data.start);
   } else {
@@ -152,11 +152,10 @@ static void decode_message(pn_delivery_t *dlv) {
       // decode it into a proton message
       pn_message_t *m = pn_message();
       if (PN_OK == pn_message_decode(m, buffer, len)) {
-        pn_string_t *s = pn_string(NULL);
-        pn_inspect(pn_message_body(m), s);
+        char *s = pn_tostring(pn_message_body(m));
         if (VERBOSE)
-          printf("%s\n", pn_string_get(s));
-        pn_free(s);
+          printf("%s\n", s);
+        free(s);
       }
       pn_message_free(m);
     }

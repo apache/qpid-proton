@@ -23,8 +23,9 @@
 
 #include "core/memory.h"
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define CID_pn_default CID_pn_object
 #define pn_default_initialize NULL
@@ -367,6 +368,19 @@ int pn_inspect(void *object, pn_string_t *dst)
 
   const char *name = clazz->name ? clazz->name : "<anon>";
   return pn_string_addf(dst, "%s<%p>", name, object);
+}
+
+char *pn_tostring(void *object)
+{
+  pn_string_t *s = pn_string(NULL);
+  pn_inspect(object, s);
+
+  const char *sc = pn_string_get(s);
+  int l = pn_string_size(s)+1; // include final null
+  char *r = malloc(l);
+  strncpy(r, sc, l);
+  pn_decref(s);
+  return r;
 }
 
 #define pn_weakref_new NULL

@@ -714,12 +714,11 @@ TEST_CASE("map_iteration") {
   pn_decref(pairs);
 }
 
-#define test_inspect(o, expected)                                              \
-  do {                                                                         \
-    pn_string_t *dst = pn_string(NULL);                                        \
-    pn_inspect(o, dst);                                                        \
-    CHECK_THAT(expected, Equals(pn_string_get(dst)));                          \
-    pn_free(dst);                                                              \
+#define test_inspect(o, expected)                               \
+  do {                                                          \
+    char  *dst = pn_tostring(o);                                \
+    CHECK_THAT(expected, Equals(dst));                          \
+    free(dst);                                                  \
   } while (0)
 
 TEST_CASE("list_inspect") {

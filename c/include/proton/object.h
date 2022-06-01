@@ -156,6 +156,7 @@ PN_EXTERN uintptr_t pn_hashcode(void *object);
 PN_EXTERN intptr_t pn_compare(void *a, void *b);
 PN_EXTERN bool pn_equals(void *a, void *b);
 PN_EXTERN int pn_inspect(void *object, pn_string_t *dst);
+PN_EXTERN char *pn_tostring(void *object);
 
 PN_EXTERN pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity);
 PN_EXTERN size_t pn_list_size(pn_list_t *list);
