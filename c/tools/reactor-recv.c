@@ -80,7 +80,6 @@ typedef struct {
   char *encoded_data;
   size_t encoded_data_size;
   int connections;
-  pn_list_t *active_connections;
   bool shutting_down;
   pn_handler_t *listener_handler;
   int quiesce_count;
@@ -113,13 +112,6 @@ void global_shutdown(global_context_t *gc)
   if (gc->shutting_down) return;
   gc->shutting_down = true;
   pn_acceptor_close(gc->acceptor);
-  size_t n = pn_list_size(gc->active_connections);
-  for (size_t i = 0; i < n; i++) {
-    pn_connection_t *conn = (pn_connection_t *) pn_list_get(gc->active_connections, i);
-    if (!(pn_connection_state(conn) & PN_LOCAL_CLOSED)) {
-      pn_connection_close(conn);
-    }
-  }
 }
 
 connection_context_t *connection_context(pn_handler_t *h)
@@ -157,10 +149,6 @@ void connection_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t typ
         check(cc->recv_link == NULL, "Multiple incoming links on one connection");
         cc->recv_link = link;
         pn_connection_t *conn = pn_event_connection(event);
-        if (!cc->global->active_connections) {
-          cc->global->active_connections = pn_list(pn_class(conn), 1);
-        }
-        pn_list_add(cc->global->active_connections, conn);
         if (cc->global->shutting_down) {
           pn_connection_close(conn);
           break;
@@ -250,9 +238,6 @@ void connection_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t typ
   case PN_CONNECTION_UNBOUND:
     {
       pn_connection_t *conn = pn_event_connection(event);
-      if (cc->global->active_connections) {
-        pn_list_remove(cc->global->active_connections, conn);
-      }
       pn_connection_release(conn);
     }
     break;
@@ -313,7 +298,6 @@ void listener_cleanup(pn_handler_t *h)
   global_context_t *gc = global_context(h);
   pn_message_free(gc->message);
   free(gc->encoded_data);
-  pn_free(gc->active_connections);
 }
 
 void listener_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t type)
