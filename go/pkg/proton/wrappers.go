@@ -126,10 +126,9 @@ func (d Data) Error() error         { return PnError(C.pn_data_error(d.pn)) }
 func (d Data) Empty() bool          { return C.pn_data_size(d.pn) == 0 }
 
 func (d Data) String() string {
-	str := C.pn_string(C.CString(""))
-	defer C.pn_free(unsafe.Pointer(str))
-	C.pn_inspect(unsafe.Pointer(d.pn), str)
-	return C.GoString(C.pn_string_get(str))
+	str := C.pn_tostring(unsafe.Pointer(d.pn))
+	defer C.free(unsafe.Pointer(str))
+	return C.GoString(str)
 }
 
 // Unmarshal the value of d into value pointed at by ptr, see amqp.Unmarshal() for details
