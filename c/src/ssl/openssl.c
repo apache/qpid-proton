@@ -371,6 +371,10 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
   return preverify_ok;
 }
 
+// Temporary: PROTON-2544 for build.  Next release: replace or remove DH_xxx() functions.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 // This was introduced in v1.1
 #if OPENSSL_VERSION_NUMBER < 0x10100000
 int DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
@@ -569,6 +573,9 @@ static bool pni_init_ssl_domain( pn_ssl_domain_t * domain, pn_ssl_mode_t mode )
 
   return true;
 }
+
+// PROTON-2544: see earlier related push.  Temporary only.
+#pragma GCC diagnostic pop
 
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
