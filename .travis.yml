@@ -56,9 +56,7 @@ jobs:
     os: linux
     dist: focal
     before_install:
-      # https://travis-ci.community/t/clang-10-was-recently-broken-on-linux-unmet-dependencies-for-clang-10-clang-tidy-10-valgrind/11527
-      - sudo apt-get install -yq --allow-downgrades libc6=2.31-0ubuntu9.2 libc6-dev=2.31-0ubuntu9.2
-      - sudo apt-get install -y gcc-10 g++-10
+    - sudo apt-get install -y gcc-10 g++-10
     env:
     - CC=gcc-10
     - CXX=g++-10
@@ -70,8 +68,6 @@ jobs:
     os: linux
     dist: focal
     before_install:
-    # https://travis-ci.community/t/clang-10-was-recently-broken-on-linux-unmet-dependencies-for-clang-10-clang-tidy-10-valgrind/11527
-    - sudo apt-get install -yq --allow-downgrades libc6=2.31-0ubuntu9.2 libc6-dev=2.31-0ubuntu9.2
     - sudo apt-get install -y clang-11 llvm-11-dev
     env:
     - CC=clang-11
@@ -142,9 +138,8 @@ addons:
     update: true
 
 before_install:
-  # https://travis-ci.community/t/clang-10-was-recently-broken-on-linux-unmet-dependencies-for-clang-10-clang-tidy-10-valgrind/11527
-  - if [[ "${TRAVIS_DIST}" == "focal" ]]; then sudo apt-get install -yq --allow-downgrades libc6=2.31-0ubuntu9.2 libc6-dev=2.31-0ubuntu9.2; fi
-  - if [[ "${TRAVIS_DIST}" == "focal" ]]; then sudo -E apt-get -yq --no-install-suggests --no-install-recommends --allow-downgrades --allow-remove-essential --allow-change-held-packages install valgrind -o Debug::pkgProblemResolver=yes; fi
+  # install Valgrind only on Focal. On Xenial, we are getting `Illegal opcode at address 0x5152B15`
+  - if [[ "${TRAVIS_DIST}" == "focal" ]]; then sudo -E apt-get -yq --no-install-suggests --no-install-recommends install valgrind; fi
   # install Python 3.6.8; Travis has a mechanism for this, but that would activate it in a venv, which older CMake does not deal well with
   - if [[ "${TRAVIS_DIST}" == "xenial" ]]; then curl -sSf --retry 5 -o python-3.6.8.tar.bz2 https://storage.googleapis.com/travis-ci-language-archives/python/binaries/ubuntu/16.04/x86_64/python-3.6.8.tar.bz2; fi
   - if [[ "${TRAVIS_DIST}" == "xenial" ]]; then sudo tar xjf python-3.6.8.tar.bz2 --directory /; fi
