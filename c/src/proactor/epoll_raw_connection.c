@@ -73,7 +73,7 @@ static void praw_connection_connected_lh(praw_connection_t *prc) {
   prc->connected = true;
   if (prc->addrinfo) {
     freeaddrinfo(prc->addrinfo);
-        prc->addrinfo = NULL;
+    prc->addrinfo = NULL;
   }
   prc->ai = NULL;
   socklen_t len = sizeof(prc->remote.ss);
@@ -159,6 +159,8 @@ static void praw_connection_cleanup(praw_connection_t *prc) {
   unlock(&prc->task.mutex);
   if (can_free) {
     task_finalize(&prc->task);
+    if (prc->addrinfo)
+      freeaddrinfo(prc->addrinfo);
     free(prc);
   }
   // else proactor_disconnect logic owns prc and its final free
