@@ -199,10 +199,32 @@ void pni_logger_log_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_l
 
 void pni_logger_log_raw(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_buffer_t *output, size_t size)
 {
-  pn_string_set(logger->scratch, "\"");
-  pn_buffer_quote(output, logger->scratch, size);
-  pn_string_addf(logger->scratch, "\"");
-  pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
+  char buf[256];
+
+  pn_bytes_t bytes = pn_buffer_bytes(output);
+  const char *start = &bytes.start[bytes.size-size];
+  for (unsigned i = 0; i < size; i+=16) {
+    pn_fixed_string_t out = pn_fixed_string(buf, sizeof(buf));
+    pn_fixed_string_addf(&out, "%04x/%04x: ", i, size);
+    for (unsigned j = 0; j<16; j++) {
+      if (i+j<size) {
+        pn_fixed_string_addf(&out, "%02hhx ", start[i+j]);
+      } else {
+        pn_fixed_string_append(&out, pn_string_const("   ", 3));
+      }
+    }
+    for (unsigned j = 0; j<16; j++) {
+      if (i+j>size) break;
+      char c = start[i+j];
+      if (c>32) { // c is signed so the high bit set is negative
+        pn_fixed_string_append(&out, pn_string_const(&c, 1));
+      } else {
+        pn_fixed_string_append(&out, STR_CONST(.));
+      }
+    }
+    pn_fixed_string_terminate(&out);
+    pni_logger_log(logger, subsystem, severity, buf);
+  }
 }
 
 void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, void* object, const char *fmt, ...) {
