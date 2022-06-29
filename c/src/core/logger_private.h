@@ -30,7 +30,6 @@ extern "C" {
 struct pn_logger_t {
     pn_log_sink_t sink;
     intptr_t      sink_context;
-    pn_string_t  *scratch;
     uint16_t      sub_mask;
     uint16_t      sev_mask;
 };

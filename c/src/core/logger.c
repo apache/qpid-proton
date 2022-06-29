@@ -48,13 +48,10 @@ void pni_logger_init(pn_logger_t *logger)
 {
   *logger = the_default_logger;
   logger->sink_context = (intptr_t) logger;
-  logger->scratch = pn_string(NULL);
 }
 
 void pni_logger_fini(pn_logger_t *logger)
 {
-  pn_free(logger->scratch);
-  logger->scratch = NULL;
 }
 
 #define LOGLEVEL(x)   {sizeof(#x)-1, #x, PN_LEVEL_ ## x, PN_LEVEL_ ## x-1}
@@ -118,7 +115,6 @@ void pni_init_default_logger(void)
 
   the_default_logger.sev_mask = (pn_log_level_t) (the_default_logger.sev_mask | sev_mask);
   the_default_logger.sub_mask = (pn_log_subsystem_t) (the_default_logger.sub_mask | sub_mask);
-  the_default_logger.scratch = pn_string(NULL);
 }
 
 void pni_fini_default_logger(void)
@@ -229,12 +225,16 @@ void pni_logger_log_raw(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_lo
 
 void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, void* object, const char *fmt, ...) {
   va_list ap;
+  char buf[1024];
+  pn_fixed_string_t out = pn_fixed_string(buf, sizeof(buf));
 
   va_start(ap, fmt);
-  pn_string_vformat(logger->scratch, fmt, ap);
+  pn_fixed_string_vaddf(&out, fmt, ap);
   va_end(ap);
-  pn_inspect(object, logger->scratch);
-  pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
+
+  pn_finspect(object, &out);
+  pn_fixed_string_terminate(&out);
+  pni_logger_log(logger, subsystem, severity, buf);
 }
 
 void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t frame, const char *fmt, ...) {
@@ -245,6 +245,7 @@ void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem,
   va_start(ap, fmt);
   pn_fixed_string_vaddf(&output, fmt, ap);
   va_end(ap);
+
   size_t psize = pni_value_dump(frame, &output);
   pn_bytes_t payload = {.size=frame.size-psize, .start=frame.start+psize};
   if (payload.size>0) {
@@ -257,6 +258,7 @@ void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem,
     output.position -= sizeof(truncated);
     pn_fixed_string_append(&output, pn_string_const(truncated, sizeof(truncated)));
   }
+  pn_fixed_string_terminate(&output);
   pni_logger_log(logger, subsystem, severity, buf);
 }
 
@@ -278,6 +280,7 @@ void pni_logger_vlogf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_
     output.position -= sizeof(truncated);
     pn_fixed_string_append(&output, pn_string_const(truncated, sizeof(truncated)));
   }
+  pn_fixed_string_terminate(&output);
   pni_logger_log(logger, subsystem, severity, buf);
 }
 
