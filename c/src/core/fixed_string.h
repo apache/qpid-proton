@@ -25,6 +25,9 @@
 #include "util.h"
 
 #include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
 
 typedef struct pn_fixed_string_t {
   char    *bytes;

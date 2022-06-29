@@ -24,6 +24,7 @@
 
 #include "engine-internal.h"
 
+#include "fixed_string.h"
 #include "framing.h"
 #include "memory.h"
 #include "platform/platform.h"
@@ -50,7 +51,7 @@ static void pn_delivery_finalize(void *object);
 #define pn_delivery_initialize NULL
 #define pn_delivery_hashcode NULL
 #define pn_delivery_compare NULL
-static int pn_delivery_inspect(void *obj, pn_string_t *dst);
+static void pn_delivery_inspect(void *obj, pn_fixed_string_t *dst);
 static const pn_class_t PN_CLASSCLASS(pn_delivery) = PN_METACLASS(pn_delivery);
 
 // endpoints
@@ -1518,17 +1519,16 @@ static void pn_disposition_clear(pn_disposition_t *ds)
   pn_condition_clear(&ds->condition);
 }
 
-int pn_delivery_inspect(void *obj, pn_string_t *dst) {
+void pn_delivery_inspect(void *obj, pn_fixed_string_t *dst) {
   pn_delivery_t *d = (pn_delivery_t*)obj;
   const char* dir = pn_link_is_sender(d->link) ? "sending" : "receiving";
   pn_bytes_t bytes = pn_buffer_bytes(d->tag);
-  int err =
-    pn_string_addf(dst, "pn_delivery<%p>{%s, tag=b\"", obj, dir) ||
-    pn_quote(dst, bytes.start, bytes.size) ||
-    pn_string_addf(dst, "\", local=%s, remote=%s}",
-                   pn_disposition_type_name(d->local.type),
-                   pn_disposition_type_name(d->remote.type));
-  return err;
+  pn_fixed_string_addf(dst, "pn_delivery<%p>{%s, tag=b\"", obj, dir);
+  pn_fixed_string_quote(dst, bytes.start, bytes.size);
+  pn_fixed_string_addf(dst, "\", local=%s, remote=%s}",
+                       pn_disposition_type_name(d->local.type),
+                       pn_disposition_type_name(d->remote.type));
+  return;
 }
 
 pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {

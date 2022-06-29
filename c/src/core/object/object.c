@@ -22,6 +22,8 @@
 #include <proton/object.h>
 
 #include "core/memory.h"
+#include "core/fixed_string.h"
+#include "core/object_private.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -252,19 +254,17 @@ bool pn_class_equals(const pn_class_t *clazz, void *a, void *b)
   return pn_class_compare(clazz, a, b) == 0;
 }
 
-int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst)
+void pn_class_inspect(const pn_class_t *clazz, void *object, pn_fixed_string_t *dst)
 {
-  if (!pn_string_get(dst)) {
-    pn_string_set(dst, "");
-  }
-
   if (object && clazz->inspect) {
-    return clazz->inspect(object, dst);
+    clazz->inspect(object, dst);
+    return;
   }
 
   const char *name = clazz->name ? clazz->name : "<anon>";
 
-  return pn_string_addf(dst, "%s<%p>", name, object);
+  pn_fixed_string_addf(dst, "%s<%p>", name, object);
+  return;
 }
 
 void *pn_incref(void *object)
@@ -384,23 +384,45 @@ int pn_inspect(void *object, pn_string_t *dst)
   const pn_class_t *clazz = pni_head(object)->clazz;
 
   if (clazz->inspect) {
-    return clazz->inspect(object, dst);
+    char buf[1024];
+    pn_fixed_string_t str = pn_fixed_string(buf, sizeof(buf));
+    clazz->inspect(object, &str);
+    return pn_string_setn(dst, buf, str.position);
   }
 
   const char *name = clazz->name ? clazz->name : "<anon>";
   return pn_string_addf(dst, "%s<%p>", name, object);
 }
 
+void pn_finspect(void *object, pn_fixed_string_t *dst)
+{
+  if (!object) {
+    pn_fixed_string_addf(dst, "pn_object<%p>", object);
+    return;
+  }
+
+  const pn_class_t *clazz = pni_head(object)->clazz;
+
+  if (clazz->inspect) {
+    clazz->inspect(object, dst);
+    return;
+  }
+
+  const char *name = clazz->name ? clazz->name : "<anon>";
+  pn_fixed_string_addf(dst, "%s<%p>", name, object);
+  return;
+}
+
 char *pn_tostring(void *object)
 {
-  pn_string_t *s = pn_string(NULL);
-  pn_inspect(object, s);
+  char buf[1024];
+  pn_fixed_string_t s = pn_fixed_string(buf, sizeof(buf));
+  pn_finspect(object, &s);
+  pn_fixed_string_terminate(&s);
 
-  const char *sc = pn_string_get(s);
-  int l = pn_string_size(s)+1; // include final null
+  int l = s.position+1; // include final null
   char *r = malloc(l);
-  strncpy(r, sc, l);
-  pn_decref(s);
+  strncpy(r, buf, l);
   return r;
 }
 
@@ -415,7 +437,7 @@ char *pn_tostring(void *object)
 
 #define pn_weakref_hashcode pn_hashcode
 #define pn_weakref_compare pn_compare
-#define pn_weakref_inspect pn_inspect
+#define pn_weakref_inspect pn_finspect
 
 const pn_class_t PN_WEAKREF[] = {PN_METACLASS(pn_weakref)};
 
@@ -460,7 +482,7 @@ int pn_strongref_refcount(void *object)
 
 #define pn_strongref_hashcode pn_hashcode
 #define pn_strongref_compare pn_compare
-#define pn_strongref_inspect pn_inspect
+#define pn_strongref_inspect pn_finspect
 
 static const pn_class_t PN_OBJECT_S = PN_METACLASS(pn_strongref);
 const pn_class_t *PN_OBJECT = &PN_OBJECT_S;

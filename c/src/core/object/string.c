@@ -23,6 +23,7 @@
 #include <proton/error.h>
 #include <proton/object.h>
 
+#include "core/fixed_string.h"
 #include "core/memory.h"
 
 #include <stdio.h>
@@ -74,28 +75,27 @@ static intptr_t pn_string_compare(void *oa, void *ob)
   }
 }
 
-static int pn_string_inspect(void *obj, pn_string_t *dst)
+static void pn_string_inspect(void *obj, pn_fixed_string_t *dst)
 {
   pn_string_t *str = (pn_string_t *) obj;
   if (str->size == PNI_NULL_SIZE) {
-    return pn_string_addf(dst, "null");
+    pn_fixed_string_addf(dst, "null");
+    return;
   }
 
-  int err = pn_string_addf(dst, "\"");
-  if (err) return err;
+  pn_fixed_string_addf(dst, "\"");
 
   for (int i = 0; i < str->size; i++) {
     uint8_t c = str->bytes[i];
     if (isprint(c)) {
-      err = pn_string_addf(dst, "%c", c);
-      if (err) return err;
+      pn_fixed_string_addf(dst, "%c", c);
     } else {
-      err = pn_string_addf(dst, "\\x%.2x", c);
-      if (err) return err;
+      pn_fixed_string_addf(dst, "\\x%.2x", c);
     }
   }
 
-  return pn_string_addf(dst, "\"");
+  pn_fixed_string_addf(dst, "\"");
+  return;
 }
 
 pn_string_t *pn_string(const char *bytes)

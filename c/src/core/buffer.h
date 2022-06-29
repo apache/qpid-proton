@@ -48,7 +48,8 @@ int pn_buffer_defrag(pn_buffer_t *buf);
 pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf);
 pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf);
 pn_rwbytes_t pn_buffer_free_memory(pn_buffer_t *buf);
-int pn_buffer_quote(pn_buffer_t *buf, pn_string_t *string, size_t n);
+struct pn_string_t;
+int pn_buffer_quote(pn_buffer_t *buf, struct pn_string_t *string, size_t n);
 
 #ifdef __cplusplus
 }

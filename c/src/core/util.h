@@ -32,14 +32,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <proton/types.h>
-#include <proton/object.h>
+
+#include "object_private.h"
 
 #if __cplusplus
 extern "C" {
 #endif
 
 ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size);
-int pn_quote(pn_string_t *dst, const char *src, size_t size);
+struct pn_string_t;
+int pn_quote(struct pn_string_t *dst, const char *src, size_t size);
 bool pn_env_bool(const char *name);
 pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
 
@@ -54,7 +56,7 @@ static inline bool pn_bytes_equal(const pn_bytes_t a, const pn_bytes_t b) {
   return (a.size == b.size && !memcmp(a.start, b.start, a.size));
 }
 
-static inline pn_bytes_t pn_string_bytes(pn_string_t *s) {
+static inline pn_bytes_t pn_string_bytes(struct pn_string_t *s) {
   return pn_bytes(pn_string_size(s), pn_string_get(s));
 }
 

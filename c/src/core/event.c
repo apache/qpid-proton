@@ -22,6 +22,7 @@
 #include <proton/object.h>
 #include <proton/event.h>
 
+#include "core/fixed_string.h"
 #include "core/object_private.h"
 
 #include <assert.h>
@@ -46,7 +47,7 @@ struct pn_event_t {
 
 static void pn_event_initialize(void *object);
 static void pn_event_finalize(void *object);
-static int pn_event_inspect(void *object, pn_string_t *string);
+static void pn_event_inspect(void *object, pn_fixed_string_t *string);
 #define pn_event_hashcode NULL
 #define pn_event_compare NULL
 
@@ -84,26 +85,25 @@ static void pn_collector_finalize(void *object)
   pn_decref(collector->pool);
 }
 
-static int pn_collector_inspect(void *object, pn_string_t *dst)
+static void pn_collector_inspect(void *object, pn_fixed_string_t *dst)
 {
   pn_collector_t *collector = (pn_collector_t *)object;
   assert(collector);
-  int err = pn_string_addf(dst, "EVENTS[");
-  if (err) return err;
+  pn_fixed_string_addf(dst, "EVENTS[");
   pn_event_t *event = collector->head;
   bool first = true;
   while (event) {
     if (first) {
       first = false;
     } else {
-      err = pn_string_addf(dst, ", ");
-      if (err) return err;
+      pn_fixed_string_addf(dst, ", ");
     }
-    err = pn_inspect(event, dst);
-    if (err) return err;
+
+      pn_finspect(event, dst);
     event = event->next;
   }
-  return pn_string_addf(dst, "]");
+  pn_fixed_string_addf(dst, "]");
+  return;
 }
 
 #define pn_collector_hashcode NULL
@@ -262,27 +262,24 @@ static void pn_event_finalize(void *object) {
   pn_decref(pool);
 }
 
-static int pn_event_inspect(void *object, pn_string_t *dst)
+static void pn_event_inspect(void *object, pn_fixed_string_t *dst)
 {
   pn_event_t *event = (pn_event_t *)object;
   assert(event);
   assert(dst);
   const char *name = pn_event_type_name(event->type);
-  int err;
   if (name) {
-    err = pn_string_addf(dst, "(%s", pn_event_type_name(event->type));
+    pn_fixed_string_addf(dst, "(%s", pn_event_type_name(event->type));
   } else {
-    err = pn_string_addf(dst, "(<%u>", (unsigned int) event->type);
+    pn_fixed_string_addf(dst, "(<%u>", (unsigned int) event->type);
   }
-  if (err) return err;
   if (event->context) {
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
-    err = pn_class_inspect(event->clazz, event->context, dst);
-    if (err) return err;
+    pn_fixed_string_addf(dst, ", ");
+    pn_class_inspect(event->clazz, event->context, dst);
   }
 
-  return pn_string_addf(dst, ")");
+  pn_fixed_string_addf(dst, ")");
+  return;
 }
 
 pn_event_t *pn_event(void)

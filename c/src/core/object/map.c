@@ -19,9 +19,8 @@
  *
  */
 
-#include <proton/object.h>
-
 #include "core/memory.h"
+#include "core/fixed_string.h"
 
 #include <stddef.h>
 #include <assert.h>
@@ -94,30 +93,26 @@ static void pni_map_allocate(pn_map_t *map)
   map->size = 0;
 }
 
-static int pn_map_inspect(void *obj, pn_string_t *dst)
+static void pn_map_inspect(void *obj, pn_fixed_string_t *dst)
 {
   assert(obj);
   pn_map_t *map = (pn_map_t *) obj;
-  int err = pn_string_addf(dst, "{");
-  if (err) return err;
+  pn_fixed_string_addf(dst, "{");
   pn_handle_t entry = pn_map_head(map);
   bool first = true;
   while (entry) {
     if (first) {
       first = false;
     } else {
-      err = pn_string_addf(dst, ", ");
-      if (err) return err;
+      pn_fixed_string_addf(dst, ", ");
     }
-    err = pn_class_inspect(map->key, pn_map_key(map, entry), dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ": ");
-    if (err) return err;
-    err = pn_class_inspect(map->value, pn_map_value(map, entry), dst);
-    if (err) return err;
+    pn_class_inspect(map->key, pn_map_key(map, entry), dst);
+    pn_fixed_string_addf(dst, ": ");
+    pn_class_inspect(map->value, pn_map_value(map, entry), dst);
     entry = pn_map_next(map, entry);
   }
-  return pn_string_addf(dst, "}");
+  pn_fixed_string_addf(dst, "}");
+  return;
 }
 
 #define pn_map_initialize NULL

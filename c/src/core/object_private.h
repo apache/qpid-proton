@@ -47,6 +47,7 @@ typedef struct pn_hash_t pn_hash_t;
 typedef void *(*pn_iterator_next_t)(void *state);
 typedef struct pn_iterator_t pn_iterator_t;
 
+struct pn_fixed_string_t;
 struct pn_class_t {
     const char *name;
     pn_cid_t cid;
@@ -59,7 +60,7 @@ struct pn_class_t {
     void (*free)(void *);
     uintptr_t (*hashcode)(void *);
     intptr_t (*compare)(void *, void *);
-    int (*inspect)(void *, pn_string_t *);
+    void (*inspect)(void *, struct pn_fixed_string_t*);
 };
 
 #define PN_CLASS(PREFIX) {                      \
@@ -124,7 +125,7 @@ PN_EXTERN void pn_class_free(const pn_class_t *clazz, void *object);
 
 PN_EXTERN intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b);
 PN_EXTERN bool pn_class_equals(const pn_class_t *clazz, void *a, void *b);
-PN_EXTERN int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst);
+PN_EXTERN void pn_class_inspect(const pn_class_t *clazz, void *object, struct pn_fixed_string_t *dst);
 
 PN_EXTERN void pn_object_incref(void *object);
 
@@ -133,6 +134,7 @@ PN_EXTERN void pn_void_incref(void *object);
 PN_EXTERN void pn_void_decref(void *object);
 PN_EXTERN int pn_void_refcount(void *object);
 
+void pn_finspect(void *object, struct pn_fixed_string_t *dst);
 PN_EXTERN int pn_inspect(void *object, pn_string_t *dst);
 PN_EXTERN uintptr_t pn_hashcode(void *object);
 PN_EXTERN intptr_t pn_compare(void *a, void *b);

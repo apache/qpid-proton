@@ -19,6 +19,7 @@
  *
  */
 
+#include "core/fixed_string.h"
 #include "core/object_private.h"
 #include "io.h"
 #include "reactor.h"
@@ -364,10 +365,11 @@ pn_task_t *pn_reactor_schedule(pn_reactor_t *reactor, int delay, pn_handler_t *h
 }
 
 void pni_event_print(pn_event_t *event) {
-  pn_string_t *str = pn_string(NULL);
-  pn_inspect(event, str);
-  printf("%s\n", pn_string_get(str));
-  pn_free(str);
+  char buf[256];
+  pn_fixed_string_t str = pn_fixed_string(buf, sizeof(buf));
+  pn_finspect(event, &str);
+  pn_fixed_string_terminate(&str);
+  printf("%s\n", buf);
 }
 
 bool pni_reactor_more(pn_reactor_t *reactor) {

@@ -36,6 +36,7 @@
 #include "decoder.h"
 #include "encoder.h"
 #include "data.h"
+#include "fixed_string.h"
 #include "logger_private.h"
 #include "memory.h"
 
@@ -109,43 +110,59 @@ static const pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
   }
 }
 
-int pni_inspect_atom(pn_atom_t *atom, pn_string_t *str)
+void pni_inspect_atom(pn_atom_t *atom, pn_fixed_string_t *str)
 {
   switch (atom->type) {
   case PN_NULL:
-    return pn_string_addf(str, "null");
+    pn_fixed_string_addf(str, "null");
+    return;
   case PN_BOOL:
-    return pn_string_addf(str, atom->u.as_bool ? "true" : "false");
+    pn_fixed_string_addf(str, atom->u.as_bool ? "true" : "false");
+    return;
   case PN_UBYTE:
-    return pn_string_addf(str, "%" PRIu8, atom->u.as_ubyte);
+    pn_fixed_string_addf(str, "%" PRIu8, atom->u.as_ubyte);
+    return;
   case PN_BYTE:
-    return pn_string_addf(str, "%" PRIi8, atom->u.as_byte);
+    pn_fixed_string_addf(str, "%" PRIi8, atom->u.as_byte);
+    return;
   case PN_USHORT:
-    return pn_string_addf(str, "%" PRIu16, atom->u.as_ushort);
+    pn_fixed_string_addf(str, "%" PRIu16, atom->u.as_ushort);
+    return;
   case PN_SHORT:
-    return pn_string_addf(str, "%" PRIi16, atom->u.as_short);
+    pn_fixed_string_addf(str, "%" PRIi16, atom->u.as_short);
+    return;
   case PN_UINT:
-    return pn_string_addf(str, "%" PRIu32, atom->u.as_uint);
+    pn_fixed_string_addf(str, "%" PRIu32, atom->u.as_uint);
+    return;
   case PN_INT:
-    return pn_string_addf(str, "%" PRIi32, atom->u.as_int);
+    pn_fixed_string_addf(str, "%" PRIi32, atom->u.as_int);
+    return;
   case PN_CHAR:
-    return pn_string_addf(str, "%c",  atom->u.as_char);
+    pn_fixed_string_addf(str, "%c",  atom->u.as_char);
+    return;
   case PN_ULONG:
-    return pn_string_addf(str, "%" PRIu64, atom->u.as_ulong);
+    pn_fixed_string_addf(str, "%" PRIu64, atom->u.as_ulong);
+    return;
   case PN_LONG:
-    return pn_string_addf(str, "%" PRIi64, atom->u.as_long);
+    pn_fixed_string_addf(str, "%" PRIi64, atom->u.as_long);
+    return;
   case PN_TIMESTAMP:
-    return pn_string_addf(str, "%" PRIi64, atom->u.as_timestamp);
+    pn_fixed_string_addf(str, "%" PRIi64, atom->u.as_timestamp);
+    return;
   case PN_FLOAT:
-    return pn_string_addf(str, "%g", atom->u.as_float);
+    pn_fixed_string_addf(str, "%g", atom->u.as_float);
+    return;
   case PN_DOUBLE:
-    return pn_string_addf(str, "%g", atom->u.as_double);
+    pn_fixed_string_addf(str, "%g", atom->u.as_double);
+    return;
   case PN_DECIMAL32:
-    return pn_string_addf(str, "D32(%" PRIu32 ")", atom->u.as_decimal32);
+    pn_fixed_string_addf(str, "D32(%" PRIu32 ")", atom->u.as_decimal32);
+    return;
   case PN_DECIMAL64:
-    return pn_string_addf(str, "D64(%" PRIu64 ")", atom->u.as_decimal64);
+    pn_fixed_string_addf(str, "D64(%" PRIu64 ")", atom->u.as_decimal64);
+    return;
   case PN_DECIMAL128:
-    return pn_string_addf(str, "D128(%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
+    pn_fixed_string_addf(str, "D128(%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
                           "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx"
                           "%02hhx%02hhx)",
                           atom->u.as_decimal128.bytes[0],
@@ -164,8 +181,9 @@ int pni_inspect_atom(pn_atom_t *atom, pn_string_t *str)
                           atom->u.as_decimal128.bytes[13],
                           atom->u.as_decimal128.bytes[14],
                           atom->u.as_decimal128.bytes[15]);
+    return;
   case PN_UUID:
-    return pn_string_addf(str, "UUID(%02hhx%02hhx%02hhx%02hhx-"
+    pn_fixed_string_addf(str, "UUID(%02hhx%02hhx%02hhx%02hhx-"
                           "%02hhx%02hhx-%02hhx%02hhx-%02hhx%02hhx-"
                           "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx)",
                           atom->u.as_uuid.bytes[0],
@@ -184,11 +202,11 @@ int pni_inspect_atom(pn_atom_t *atom, pn_string_t *str)
                           atom->u.as_uuid.bytes[13],
                           atom->u.as_uuid.bytes[14],
                           atom->u.as_uuid.bytes[15]);
+    return;
   case PN_BINARY:
   case PN_STRING:
   case PN_SYMBOL:
     {
-      int err;
       const char *pfx;
       pn_bytes_t bin = atom->u.as_bytes;
       bool quote;
@@ -213,25 +231,30 @@ int pni_inspect_atom(pn_atom_t *atom, pn_string_t *str)
         break;
       default:
         assert(false);
-        return PN_ERR;
+        return;
       }
 
-      if ((err = pn_string_addf(str, "%s", pfx))) return err;
-      if (quote) if ((err = pn_string_addf(str, "\""))) return err;
-      if ((err = pn_quote(str, bin.start, bin.size))) return err;
-      if (quote) if ((err = pn_string_addf(str, "\""))) return err;
-      return 0;
+      pn_fixed_string_addf(str, "%s", pfx);
+      if (quote) pn_fixed_string_addf(str, "\"");
+      pn_fixed_string_quote(str, bin.start, bin.size);
+      if (quote) pn_fixed_string_addf(str, "\"");
+      return;
     }
   case PN_LIST:
-    return pn_string_addf(str, "<list>");
+    pn_fixed_string_addf(str, "<list>");
+    return;
   case PN_MAP:
-    return pn_string_addf(str, "<map>");
+    pn_fixed_string_addf(str, "<map>");
+    return;
   case PN_ARRAY:
-    return pn_string_addf(str, "<array>");
+    pn_fixed_string_addf(str, "<array>");
+    return;
   case PN_DESCRIBED:
-    return pn_string_addf(str, "<described>");
+    pn_fixed_string_addf(str, "<described>");
+    return;
   default:
-    return pn_string_addf(str, "<undefined: %i>", atom->type);
+    pn_fixed_string_addf(str, "<undefined: %i>", atom->type);
+    return;
   }
 }
 
@@ -248,15 +271,13 @@ static int pni_node_lindex(pn_data_t *data, pni_node_t *node)
 
 int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 {
-  pn_string_t *str = (pn_string_t *) ctx;
+  pn_fixed_string_t *str = (pn_fixed_string_t *) ctx;
   pn_atom_t *atom = (pn_atom_t *) &node->atom;
 
   pni_node_t *parent = pn_data_node(data, node->parent);
   const pn_fields_t *fields = pni_node_fields(data, parent);
   pni_node_t *grandparent = parent ? pn_data_node(data, parent->parent) : NULL;
   const pn_fields_t *grandfields = pni_node_fields(data, grandparent);
-
-  int err;
 
   if (grandfields) {
     if (atom->type == PN_NULL) {
@@ -267,32 +288,34 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
         ? (const char*)FIELD_STRINGPOOL.STRING0+FIELD_FIELDS[grandfields->first_field_index+lindex]
         : NULL;
     if (name) {
-      err = pn_string_addf(str, "%s=", name);
-      if (err) return err;
+      pn_fixed_string_addf(str, "%s=", name);
     }
   }
 
   switch (atom->type) {
   case PN_DESCRIBED:
-    return pn_string_addf(str, "@");
+    pn_fixed_string_addf(str, "@");
+    return 0;
   case PN_ARRAY:
     // XXX: need to fix for described arrays
-    return pn_string_addf(str, "@%s[", pn_type_name(node->type));
+    pn_fixed_string_addf(str, "@%s[", pn_type_name(node->type));
+    return 0;
   case PN_LIST:
-    return pn_string_addf(str, "[");
+    pn_fixed_string_addf(str, "[");
+    return 0;
   case PN_MAP:
-    return pn_string_addf(str, "{");
+    pn_fixed_string_addf(str, "{");
+    return 0;
   default:
     if (fields && node->prev == 0) {
-      err = pn_string_addf(str, "%s", (const char *)FIELD_STRINGPOOL.STRING0+FIELD_NAME[fields->name_index]);
-      if (err) return err;
-      err = pn_string_addf(str, "(");
-      if (err) return err;
-      err = pni_inspect_atom(atom, str);
-      if (err) return err;
-      return pn_string_addf(str, ")");
+      pn_fixed_string_addf(str, "%s", (const char *)FIELD_STRINGPOOL.STRING0+FIELD_NAME[fields->name_index]);
+      pn_fixed_string_addf(str, "(");
+      pni_inspect_atom(atom, str);
+      pn_fixed_string_addf(str, ")");
+      return 0;
     } else {
-      return pni_inspect_atom(atom, str);
+      pni_inspect_atom(atom, str);
+      return 0;
     }
   }
 }
@@ -311,18 +334,15 @@ pni_node_t *pni_next_nonnull(pn_data_t *data, pni_node_t *node)
 
 int pni_inspect_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 {
-  pn_string_t *str = (pn_string_t *) ctx;
-  int err;
+  pn_fixed_string_t *str = (pn_fixed_string_t *) ctx;
 
   switch (node->atom.type) {
   case PN_ARRAY:
   case PN_LIST:
-    err = pn_string_addf(str, "]");
-    if (err) return err;
+    pn_fixed_string_addf(str, "]");
     break;
   case PN_MAP:
-    err = pn_string_addf(str, "}");
-    if (err) return err;
+    pn_fixed_string_addf(str, "}");
     break;
   default:
     break;
@@ -334,15 +354,12 @@ int pni_inspect_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   if (!grandfields || node->atom.type != PN_NULL) {
     if (node->next) {
       if (parent && parent->atom.type == PN_MAP && (pni_node_lindex(data, node) % 2) == 0) {
-        err = pn_string_addf(str, "=");
-        if (err) return err;
+        pn_fixed_string_addf(str, "=");
       } else if (parent && parent->atom.type == PN_DESCRIBED && node->prev == 0) {
-        err = pn_string_addf(str, " ");
-        if (err) return err;
+        pn_fixed_string_addf(str, " ");
       } else {
         if (!grandfields || pni_next_nonnull(data, node)) {
-          err = pn_string_addf(str, ", ");
-          if (err) return err;
+          pn_fixed_string_addf(str, ", ");
         }
       }
     }
@@ -351,11 +368,11 @@ int pni_inspect_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   return 0;
 }
 
-static int pn_data_inspect(void *obj, pn_string_t *dst)
+static void pn_data_inspect(void *obj, pn_fixed_string_t *dst)
 {
   pn_data_t *data = (pn_data_t *) obj;
 
-  return pni_data_traverse(data, pni_inspect_enter, pni_inspect_exit, dst);
+  pni_data_traverse(data, pni_inspect_enter, pni_inspect_exit, dst);
 }
 
 #define pn_data_initialize NULL
@@ -1221,31 +1238,21 @@ int pn_data_scan(pn_data_t *data, const char *fmt, ...)
 
 int pn_data_print(pn_data_t *data)
 {
-  pn_string_t *str = pn_string("");
-  int err = pn_data_inspect(data, str);
-  if (err) {
-    pn_free(str);
-    return err;
-  }
-  printf("%s", pn_string_get(str));
-  pn_free(str);
+  char buf[1024];
+  pn_fixed_string_t str = pn_fixed_string(buf, sizeof(buf));
+  pn_data_inspect(data, &str);
+  pn_fixed_string_terminate(&str);
+  printf("%s", buf);
   return 0;
 }
 
 int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
 {
-  pn_string_t *str = pn_string("");
-  int err = pn_data_inspect(data, str);
-  if (err) return err;
-  if (pn_string_size(str) >= *size) {
-    pn_free(str);
-    return PN_OVERFLOW;
-  } else {
-    pn_string_put(str, bytes);
-    *size = pn_string_size(str);
-    pn_free(str);
-    return 0;
-  }
+  pn_fixed_string_t str = pn_fixed_string(bytes, *size);
+  pn_data_inspect(data, &str);
+  pn_fixed_string_terminate(&str);
+  *size = str.position;
+  return 0;
 }
 
 static size_t pni_data_id(pn_data_t *data, pni_node_t *node)
@@ -1483,13 +1490,14 @@ bool pn_data_lookup(pn_data_t *data, const char *name)
 
 void pn_data_dump(pn_data_t *data)
 {
-  pn_string_t *str = pn_string(0);
   printf("{current=%" PN_ZI ", parent=%" PN_ZI "}\n", (size_t) data->current, (size_t) data->parent);
+  char buf[256];
   for (unsigned i = 0; i < data->size; i++)
   {
     pni_node_t *node = &data->nodes[i];
-    pn_string_setn(str, "", 0);
-    pni_inspect_atom((pn_atom_t *) &node->atom, str);
+    pn_fixed_string_t str = pn_fixed_string(buf, sizeof(buf));
+    pni_inspect_atom((pn_atom_t *) &node->atom, &str);
+    pn_fixed_string_terminate(&str);
     printf("Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI 
            ", children=%" PN_ZI ", type=%s (%s)\n",
            i + 1, (size_t) node->prev,
@@ -1497,9 +1505,8 @@ void pn_data_dump(pn_data_t *data)
            (size_t) node->parent,
            (size_t) node->down,
            (size_t) node->children,
-           pn_type_name(node->atom.type), pn_string_get(str));
+           pn_type_name(node->atom.type), buf);
   }
-  pn_free(str);
 }
 
 static pni_node_t *pni_data_add(pn_data_t *data)

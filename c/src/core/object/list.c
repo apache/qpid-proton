@@ -19,8 +19,7 @@
  *
  */
 
-#include <proton/object.h>
-
+#include "core/fixed_string.h"
 #include "core/memory.h"
 
 #include <stddef.h>
@@ -236,22 +235,20 @@ static intptr_t pn_list_compare(void *oa, void *ob)
   return 0;
 }
 
-static int pn_list_inspect(void *obj, pn_string_t *dst)
+static void pn_list_inspect(void *obj, pn_fixed_string_t *dst)
 {
   assert(obj);
   pn_list_t *list = (pn_list_t *) obj;
-  int err = pn_string_addf(dst, "[");
-  if (err) return err;
+  pn_fixed_string_addf(dst, "[");
   size_t n = pn_list_size(list);
   for (size_t i = 0; i < n; i++) {
     if (i > 0) {
-      err = pn_string_addf(dst, ", ");
-      if (err) return err;
+      pn_fixed_string_addf(dst, ", ");
     }
-    err = pn_class_inspect(list->clazz, pn_list_get(list, i), dst);
-    if (err) return err;
+    pn_class_inspect(list->clazz, pn_list_get(list, i), dst);
   }
-  return pn_string_addf(dst, "]");
+  pn_fixed_string_addf(dst, "]");
+  return;
 }
 
 #define pn_list_initialize NULL
