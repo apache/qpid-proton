@@ -26,11 +26,18 @@ set_source_files_properties(cproton.i PROPERTIES CPLUSPLUS NO)
 # Suppress warnings in swig generated code.
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
+# Set Compiler extra flags for Solaris when using SunStudio
+if (CMAKE_C_COMPILER_ID STREQUAL "SunPro")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSWIGEXPORT=__global")
+endif ()
+
 
 list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/c/include/proton/cproton.i
     ${PROTON_HEADERS}
 )
+
+set(SWIG_OUTFILE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
 add_custom_command(
         OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/_proton_core.c
@@ -75,63 +82,162 @@ if (NOT PYTHON_SITEARCH_PACKAGES)
   set (PYTHON_SITEARCH_PACKAGES ${PYTHON_SITEARCH_PACKAGES_DEFAULT})
 endif()
 
+set (cproton-generated cprotonPYTHON_wrap.c cproton.py)
 set (pysrc-generated cproton.py)
-
 set (pysrc
-   proton/__init__.py
+    proton/__init__.py
+    proton/_common.py
+    proton/_condition.py
+    proton/_data.py
+    proton/_delivery.py
+    proton/_endpoints.py
+    proton/_events.py
+    proton/_exceptions.py
+    proton/_io.py
+    proton/_message.py
+    proton/_tracing.py
+    proton/_transport.py
+    proton/_url.py
+    proton/_wrapper.py
 
-   proton/_common.py
-   proton/_condition.py
-   proton/_data.py
-   proton/_delivery.py
-   proton/_endpoints.py
-   proton/_events.py
-   proton/_exceptions.py
-   proton/_io.py
-   proton/_message.py
-   proton/_tracing.py
-   proton/_transport.py
-   proton/_url.py
-   proton/_wrapper.py
+    proton/handlers.py
+    proton/reactor.py
+    proton/tracing.py
+    proton/utils.py
 
-   proton/handlers.py
-   proton/reactor.py
-   proton/tracing.py
-   proton/utils.py
-
-   proton/_handlers.py
-   proton/_reactor.py
-   proton/_selectable.py
-   proton/_utils.py
+    proton/_handlers.py
+    proton/_reactor.py
+    proton/_selectable.py
+    proton/_utils.py
+    )
+# extra files included in the source distribution
+set(py_dist_files
+    setup.py
+    setup.cfg
+    README.rst
+    MANIFEST.in
+    setuputils/__init__.py
+    setuputils/log.py
+    setuputils/misc.py
+    setuputils/PYZMQ_LICENSE.BSD
+    docs/conf.py
+    docs/index.rst
+    docs/overview.rst
+    docs/tutorial.rst
     )
 
-macro (py_compile directory files artifacts)
-  foreach (src_file ${files})
-    install(CODE "execute_process(COMMAND \"${Python_EXECUTABLE}\" -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}c')\"
-                                  WORKING_DIRECTORY ${directory})")
-    install(CODE "execute_process(COMMAND \"${Python_EXECUTABLE}\" -O -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}o')\"
-                                  WORKING_DIRECTORY ${directory})")
-    list(APPEND ${artifacts} ${directory}/${src_file}
-      ${directory}/${src_file}c
-      ${directory}/${src_file}o)
-  endforeach (src_file)
-endmacro(py_compile)
+# Sphinx documentation
+check_python_module("sphinx" SPHINX_MODULE_FOUND)
+if (NOT SPHINX_MODULE_FOUND)
+    message(STATUS "Sphinx modules not found; doc generation disabled.")
+else ()
+    add_custom_target(docs-py
+        COMMAND ${PN_ENV_SCRIPT} --
+        PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
+        LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/c"
+        ${Python_EXECUTABLE} -m sphinx "${CMAKE_CURRENT_SOURCE_DIR}/docs" "${CMAKE_CURRENT_BINARY_DIR}/docs")
+    add_dependencies(docs docs-py)
+    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/docs/"
+            DESTINATION "${PROTON_SHARE}/docs/api-py"
+            COMPONENT documentation
+            OPTIONAL)
+    set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES docs)
+endif ()
 
-py_compile(${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated} CPROTON_ARTIFACTS)
+if (CHECK_SYSINSTALL_PYTHON)
+  execute_process(COMMAND ${Python_EXECUTABLE}
+    -c "from sysconfig import get_path; print(get_path('platlib'))"
+    OUTPUT_VARIABLE PYTHON_SITEARCH_PACKAGES_DEFAULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-py_compile(${CMAKE_CURRENT_SOURCE_DIR} "${pysrc}" PROTON_ARTIFACTS)
+  if (NOT PYTHON_SITEARCH_PACKAGES)
+    set (PYTHON_SITEARCH_PACKAGES ${PYTHON_SITEARCH_PACKAGES_DEFAULT})
+  endif()
 
-install(FILES ${PROTON_ARTIFACTS}
-        DESTINATION "${PYTHON_SITEARCH_PACKAGES}/proton/"
-        COMPONENT Python)
+  macro (py_compile directory files artifacts)
+    foreach (src_file ${files})
+      install(CODE "execute_process(COMMAND \"${Python_EXECUTABLE}\" -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}c')\"
+                                    WORKING_DIRECTORY ${directory})")
+      install(CODE "execute_process(COMMAND \"${Python_EXECUTABLE}\" -O -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}o')\"
+                                    WORKING_DIRECTORY ${directory})")
+      list(APPEND ${artifacts} ${directory}/${src_file}
+        ${directory}/${src_file}c
+        ${directory}/${src_file}o)
+    endforeach (src_file)
+  endmacro(py_compile)
 
-install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
-        DESTINATION ${PYTHON_SITEARCH_PACKAGES}
-        COMPONENT Python)
+  py_compile(${CMAKE_CURRENT_BINARY_DIR} ${pysrc-generated} CPROTON_ARTIFACTS)
+  py_compile(${CMAKE_CURRENT_SOURCE_DIR} "${pysrc}" PROTON_ARTIFACTS)
+
+  install(FILES ${CPROTON_ARTIFACTS}
+          DESTINATION ${PYTHON_SITEARCH_PACKAGES}
+          COMPONENT Python)
+  install(FILES ${PROTON_ARTIFACTS}
+          DESTINATION "${PYTHON_SITEARCH_PACKAGES}/proton/"
+          COMPONENT Python)
+  install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
+          DESTINATION ${PYTHON_SITEARCH_PACKAGES}
+          COMPONENT Python)
+endif ()
+
+# Install python examples even without a 'sysinstall' python
+install(DIRECTORY examples/
+        DESTINATION "${PROTON_SHARE}/examples/python"
+        COMPONENT Python
+        USE_SOURCE_PERMISSIONS)
+
+#
+# Set up the directory 'dist' for building the python native package
+# source distribution for Pypi/pip
+#
+
+set(py_dist_dir ${CMAKE_CURRENT_BINARY_DIR}/dist)
+
+add_custom_target(py_src_dist ALL)
+add_dependencies(py_src_dist generated_c_files ${SWIG_MODULE_cproton_REAL_NAME})
+
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_INCLUDE_DIR} "${py_dist_dir}/include"
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/core "${py_dist_dir}/src/core"
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/compiler "${py_dist_dir}/src/compiler"
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/platform "${py_dist_dir}/src/platform"
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/ssl "${py_dist_dir}/src/ssl"
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR}/sasl "${py_dist_dir}/src/sasl"
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/VERSION.txt "${py_dist_dir}"
+                   COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/encodings.h "${py_dist_dir}/src"
+                   COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/protocol.h "${py_dist_dir}/src")
+
+foreach(file IN LISTS py_dist_files pysrc)
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${file} "${py_dist_dir}/${file}")
+endforeach()
+
+foreach(file IN LISTS cproton-generated)
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${file} "${py_dist_dir}/${file}")
+endforeach()
+
+# Make python source and binary packages if we have prerequisistes
+check_python_module("setuptools" SETUPTOOLS_MODULE_FOUND)
+check_python_module("wheel" WHEEL_MODULE_FOUND)
+if (SETUPTOOLS_MODULE_FOUND)
+  add_custom_target(py_pkg_src ALL
+                     WORKING_DIRECTORY dist
+                     DEPENDS py_src_dist
+		     COMMAND ${PN_ENV_SCRIPT} "SWIG=${SWIG_EXECUTABLE}" --
+		      ${Python_EXECUTABLE} setup.py sdist --dist-dir ${CMAKE_CURRENT_BINARY_DIR}/pkgs)
+  if (WHEEL_MODULE_FOUND)
+    add_custom_target(py_pkg_wheel ALL
+                       WORKING_DIRECTORY dist
+                       DEPENDS py_pkg_src
+                       COMMAND ${Python_EXECUTABLE} setup.py bdist_wheel --dist-dir ${CMAKE_CURRENT_BINARY_DIR}/pkgs)
+  endif ()
+endif ()
 
 install(TARGETS _proton_core
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)
+
 
 # python test: python3/tests/proton-test
 set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
