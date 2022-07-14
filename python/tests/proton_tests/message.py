@@ -54,10 +54,10 @@ class AccessorsTest(Test):
         self._test(name, 0, (0, 123456789, 987654321))
 
     def testId(self):
-        self._test("id", None, ("bytes", None, 123, u"string", uuid4()))
+        self._test("id", None, (b"bytes", None, 123, u"string", uuid4()))
 
     def testCorrelationId(self):
-        self._test("correlation_id", None, ("bytes", None, 123, u"string", uuid4()))
+        self._test("correlation_id", None, (b"bytes", None, 123, u"string", uuid4()))
 
     def testDurable(self):
         self._test("durable", False, (True, False))
