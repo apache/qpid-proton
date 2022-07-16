@@ -36,8 +36,110 @@ typedef enum {
   PN_INVALID = ...
 } pn_type_t;
 
+typedef struct pn_atom_t {
+  /**
+   * Indicates the type of value the atom is currently pointing to.
+   * See ::pn_type_t for details on AMQP types.
+   */
+  pn_type_t type;
+  union {
+    /**
+     * Valid when type is ::PN_BOOL.
+     */
+    bool as_bool;
 
-typedef struct { ...; } pn_atom_t;
+    /**
+     * Valid when type is ::PN_UBYTE.
+     */
+    uint8_t as_ubyte;
+
+    /**
+     * Valid when type is ::PN_BYTE.
+     */
+    int8_t as_byte;
+
+    /**
+     * Valid when type is ::PN_USHORT.
+     */
+    uint16_t as_ushort;
+
+    /**
+     * Valid when type is ::PN_SHORT.
+     */
+    int16_t as_short;
+
+    /**
+     * Valid when type is ::PN_UINT.
+     */
+    uint32_t as_uint;
+
+    /**
+     * Valid when type is ::PN_INT.
+     */
+    int32_t as_int;
+
+    /**
+     * Valid when type is ::PN_CHAR.
+     */
+    pn_char_t as_char;
+
+    /**
+     * Valid when type is ::PN_ULONG.
+     */
+    uint64_t as_ulong;
+
+    /**
+     * Valid when type is ::PN_LONG.
+     */
+    int64_t as_long;
+
+    /**
+     * Valid when type is ::PN_TIMESTAMP.
+     */
+    pn_timestamp_t as_timestamp;
+
+    /**
+     * Valid when type is ::PN_FLOAT.
+     */
+    float as_float;
+
+    /**
+     * Valid when type is ::PN_DOUBLE.
+     */
+    double as_double;
+
+    /**
+     * Valid when type is ::PN_DECIMAL32.
+     */
+    pn_decimal32_t as_decimal32;
+
+    /**
+     * Valid when type is ::PN_DECIMAL64.
+     */
+    pn_decimal64_t as_decimal64;
+
+    /**
+     * Valid when type is ::PN_DECIMAL128.
+     */
+    pn_decimal128_t as_decimal128;
+
+    /**
+     * Valid when type is ::PN_UUID.
+     */
+    pn_uuid_t as_uuid;
+
+    /**
+     * Valid when type is ::PN_BINARY or ::PN_STRING or ::PN_SYMBOL.
+     * When the type is ::PN_STRING the field will point to utf8
+     * encoded unicode. When the type is ::PN_SYMBOL, the field will
+     * point to 7-bit ASCII. In the latter two cases, the bytes
+     * pointed to are *not* necessarily null terminated.
+     */
+    pn_bytes_t as_bytes;
+  } u;
+} pn_atom_t;
+
+typedef pn_atom_t pn_msgid_t;
 
 typedef struct pn_data_t pn_data_t;
 
@@ -217,7 +319,6 @@ bool           pn_message_is_first_acquirer     (pn_message_t *msg);
 int            pn_message_set_first_acquirer    (pn_message_t *msg, bool first);
 uint32_t       pn_message_get_delivery_count    (pn_message_t *msg);
 int            pn_message_set_delivery_count    (pn_message_t *msg, uint32_t count);
-pn_data_t *    pn_message_id                    (pn_message_t *msg);
 pn_atom_t      pn_message_get_id                (pn_message_t *msg);
 int            pn_message_set_id                (pn_message_t *msg, pn_atom_t id);
 pn_bytes_t     pn_message_get_user_id           (pn_message_t *msg);
@@ -229,8 +330,8 @@ int            pn_message_set_subject           (pn_message_t *msg, const char *
 const char *   pn_message_get_reply_to          (pn_message_t *msg);
 int            pn_message_set_reply_to          (pn_message_t *msg, const char *reply_to);
 pn_data_t *    pn_message_correlation_id        (pn_message_t *msg);
-pn_atom_t      pn_message_get_correlation_id    (pn_message_t *msg);
-int            pn_message_set_correlation_id    (pn_message_t *msg, pn_atom_t id);
+pn_msgid_t     pn_message_get_correlation_id    (pn_message_t *msg);
+int            pn_message_set_correlation_id    (pn_message_t *msg, pn_msgid_t id);
 const char *   pn_message_get_content_type      (pn_message_t *msg);
 int            pn_message_set_content_type      (pn_message_t *msg, const char *type);
 const char *   pn_message_get_content_encoding  (pn_message_t *msg);
@@ -464,130 +565,32 @@ typedef struct pn_map_t pn_map_t;
 
 typedef struct pn_hash_t pn_hash_t;
 
-typedef void *(*pn_iterator_next_t)(void *state);
-
-typedef struct pn_iterator_t pn_iterator_t;
-
 typedef struct pn_record_t pn_record_t;
-
-struct pn_class_t {
-  const char *name;
-  const pn_cid_t cid;
-  void *(*newinst)(const pn_class_t *, size_t);
-  void (*initialize)(void *);
-  void (*incref)(void *);
-  void (*decref)(void *);
-  int (*refcount)(void *);
-  void (*finalize)(void *);
-  void (*free)(void *);
-  const pn_class_t *(*reify)(void *);
-  uintptr_t (*hashcode)(void *);
-  intptr_t (*compare)(void *, void *);
-  int (*inspect)(void *, pn_string_t *);
-};
 
 extern const pn_class_t PN_OBJECT[];
 
 extern const pn_class_t PN_VOID[];
-
-extern const pn_class_t PN_WEAKREF[];
 
 pn_cid_t pn_class_id(const pn_class_t *clazz);
 const char *pn_class_name(const pn_class_t *clazz);
 void *pn_class_new(const pn_class_t *clazz, size_t size);
 void *pn_class_incref(const pn_class_t *clazz, void *object);
 int pn_class_refcount(const pn_class_t *clazz, void *object);
-int pn_class_decref(const pn_class_t *clazz, void *object);
 void pn_class_free(const pn_class_t *clazz, void *object);
-const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object);
-uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object);
-intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b);
 bool pn_class_equals(const pn_class_t *clazz, void *a, void *b);
 int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst);
 void *pn_void_new(const pn_class_t *clazz, size_t size);
-void pn_void_incref(void *object);
-void pn_void_decref(void *object);
-int pn_void_refcount(void *object);
-uintptr_t pn_void_hashcode(void *object);
-intptr_t pn_void_compare(void *a, void *b);
-int pn_void_inspect(void *object, pn_string_t *dst);
-void *pn_object_new(const pn_class_t *clazz, size_t size);
-const pn_class_t *pn_object_reify(void *object);
 void pn_object_incref(void *object);
-int pn_object_refcount(void *object);
-void pn_object_decref(void *object);
-void pn_object_free(void *object);
 void *pn_incref(void *object);
 int pn_decref(void *object);
 int pn_refcount(void *object);
 void pn_free(void *object);
 const pn_class_t *pn_class(void* object);
-uintptr_t pn_hashcode(void *object);
-intptr_t pn_compare(void *a, void *b);
-bool pn_equals(void *a, void *b);
-int pn_inspect(void *object, pn_string_t *dst);
-
-#define PN_REFCOUNT ...
-
-pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity);
-size_t pn_list_size(pn_list_t *list);
-void *pn_list_get(pn_list_t *list, int index);
-void pn_list_set(pn_list_t *list, int index, void *value);
-int pn_list_add(pn_list_t *list, void *value);
-void *pn_list_pop(pn_list_t *list);
-ssize_t pn_list_index(pn_list_t *list, void *value);
-bool pn_list_remove(pn_list_t *list, void *value);
-void pn_list_del(pn_list_t *list, int index, int n);
-void pn_list_clear(pn_list_t *list);
-void pn_list_iterator(pn_list_t *list, pn_iterator_t *iter);
-void pn_list_minpush(pn_list_t *list, void *value);
-void *pn_list_minpop(pn_list_t *list);
-
-#define PN_REFCOUNT_KEY ...
-
-#define PN_REFCOUNT_VALUE ...
-
-pn_map_t *pn_map(const pn_class_t *key, const pn_class_t *value,
-                           size_t capacity, float load_factor);
-size_t pn_map_size(pn_map_t *map);
-int pn_map_put(pn_map_t *map, void *key, void *value);
-void *pn_map_get(pn_map_t *map, void *key);
-void pn_map_del(pn_map_t *map, void *key);
-pn_handle_t pn_map_head(pn_map_t *map);
-pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry);
-void *pn_map_key(pn_map_t *map, pn_handle_t entry);
-void *pn_map_value(pn_map_t *map, pn_handle_t entry);
-pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor);
-size_t pn_hash_size(pn_hash_t *hash);
-int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value);
-void *pn_hash_get(pn_hash_t *hash, uintptr_t key);
-void pn_hash_del(pn_hash_t *hash, uintptr_t key);
-pn_handle_t pn_hash_head(pn_hash_t *hash);
-pn_handle_t pn_hash_next(pn_hash_t *hash, pn_handle_t entry);
-uintptr_t pn_hash_key(pn_hash_t *hash, pn_handle_t entry);
-void *pn_hash_value(pn_hash_t *hash, pn_handle_t entry);
 
 pn_string_t *pn_string(const char *bytes);
 pn_string_t *pn_stringn(const char *bytes, size_t n);
-const char *pn_string_get(pn_string_t *string);
 size_t pn_string_size(pn_string_t *string);
-int pn_string_set(pn_string_t *string, const char *bytes);
-int pn_string_setn(pn_string_t *string, const char *bytes, size_t n);
-ssize_t pn_string_put(pn_string_t *string, char *dst);
-void pn_string_clear(pn_string_t *string);
-int pn_string_format(pn_string_t *string, const char *format, ...);
-int pn_string_vformat(pn_string_t *string, const char *format, va_list ap);
-int pn_string_addf(pn_string_t *string, const char *format, ...);
-int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap);
-int pn_string_grow(pn_string_t *string, size_t capacity);
-char *pn_string_buffer(pn_string_t *string);
-size_t pn_string_capacity(pn_string_t *string);
-int pn_string_resize(pn_string_t *string, size_t size);
-int pn_string_copy(pn_string_t *string, pn_string_t *src);
-pn_iterator_t *pn_iterator(void);
-void *pn_iterator_start(pn_iterator_t *iterator,
-                                  pn_iterator_next_t next, size_t size);
-void *pn_iterator_next(pn_iterator_t *iterator);
+
 pn_record_t *pn_record(void);
 void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz);
 bool pn_record_has(pn_record_t *record, pn_handle_t key);
@@ -731,6 +734,8 @@ void pn_disposition_set_failed(pn_disposition_t *disposition, bool failed);
 bool pn_disposition_is_undeliverable(pn_disposition_t *disposition);
 void pn_disposition_set_undeliverable(pn_disposition_t *disposition, bool undeliverable);
 pn_data_t *pn_disposition_annotations(pn_disposition_t *disposition);
+
+pn_data_t *pn_disposition_data(pn_disposition_t *disposition);
 """
 
 delivery_h = """
@@ -1056,522 +1061,11 @@ pn_session_t *pn_session_head(pn_connection_t *connection, pn_state_t state);
 pn_session_t *pn_session_next(pn_session_t *session, pn_state_t state);
 """
 
-condition_h = """
-#define PROTON_CONDITION_H 1
-
-typedef struct pn_condition_t pn_condition_t;
-
-bool pn_condition_is_set(pn_condition_t *condition);
-void pn_condition_clear(pn_condition_t *condition);
-const char *pn_condition_get_name(pn_condition_t *condition);
-int pn_condition_set_name(pn_condition_t *condition, const char *name);
-const char *pn_condition_get_description(pn_condition_t *condition);
-int pn_condition_set_description(pn_condition_t *condition, const char *description);
-pn_data_t *pn_condition_info(pn_condition_t *condition);
-int pn_condition_vformat(pn_condition_t *, const char *name, const char *fmt, ...);
-int pn_condition_format(pn_condition_t *, const char *name, const char *fmt, ...);
-bool pn_condition_is_redirect(pn_condition_t *condition);
-const char *pn_condition_redirect_host(pn_condition_t *condition);
-int pn_condition_redirect_port(pn_condition_t *condition);
-int pn_condition_copy(pn_condition_t *dest, pn_condition_t *src);
-pn_condition_t *pn_condition(void);
-void pn_condition_free(pn_condition_t *); 
+version_h = """
+#define PN_VERSION_MAJOR ...
+#define PN_VERSION_MINOR ...
+#define PN_VERSION_POINT ...
 """
-
-
-sasl_h = """
-//#define PROTON_SASL_H ...
-
-typedef struct pn_sasl_t pn_sasl_t;
-
-typedef enum {
-  PN_SASL_NONE = -1,  /** negotiation not completed */
-  PN_SASL_OK = 0,     /** authentication succeeded */
-  PN_SASL_AUTH = 1,   /** failed due to bad credentials */
-  PN_SASL_SYS = 2,    /** failed due to a system error */
-  PN_SASL_PERM = 3,   /** failed due to unrecoverable error */
-  PN_SASL_TEMP = 4    /** failed due to transient error */
-} pn_sasl_outcome_t;
-
- pn_sasl_t *pn_sasl(pn_transport_t *transport);
- bool pn_sasl_extended(void);
- void pn_sasl_done(pn_sasl_t *sasl, pn_sasl_outcome_t outcome);
- pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl);
- const char *pn_sasl_get_user(pn_sasl_t *sasl);
- const char *pn_sasl_get_authorization(pn_sasl_t *sasl);
- const char *pn_sasl_get_mech(pn_sasl_t *sasl);
- void pn_sasl_allowed_mechs(pn_sasl_t *sasl, const char *mechs);
- void pn_sasl_set_allow_insecure_mechs(pn_sasl_t *sasl, bool insecure);
- bool pn_sasl_get_allow_insecure_mechs(pn_sasl_t *sasl);
- void pn_sasl_config_name(pn_sasl_t *sasl, const char *name);
- void pn_sasl_config_path(pn_sasl_t *sasl, const char *path);
-
-"""
-
-transport_h = """
-
-typedef int pn_trace_t;
-
-typedef void (*pn_tracer_t)(pn_transport_t *transport, const char *message);
-
-
-#define PN_TRACE_OFF ...
-
-#define PN_TRACE_RAW ...
-
-#define PN_TRACE_FRM ...
-
-#define PN_TRACE_DRV ...
- 
-#define PN_TRACE_EVT ...
-
- pn_transport_t *pn_transport(void);
- void pn_transport_set_server(pn_transport_t *transport);
- void pn_transport_free(pn_transport_t *transport);
- const char *pn_transport_get_user(pn_transport_t *transport);
- void pn_transport_require_auth(pn_transport_t *transport, bool required);
- bool pn_transport_is_authenticated(pn_transport_t *transport);
- void pn_transport_require_encryption(pn_transport_t *transport, bool required);
- bool pn_transport_is_encrypted(pn_transport_t *transport);
- pn_condition_t *pn_transport_condition(pn_transport_t *transport);
- pn_logger_t *pn_transport_logger(pn_transport_t *transport);
- pn_error_t *pn_transport_error(pn_transport_t *transport);
- int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection);
- int pn_transport_unbind(pn_transport_t *transport);
- void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);
- void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t tracer);
- pn_tracer_t pn_transport_get_tracer(pn_transport_t *transport);
- void *pn_transport_get_context(pn_transport_t *transport);
- void pn_transport_set_context(pn_transport_t *transport, void *context);
- pn_record_t *pn_transport_attachments(pn_transport_t *transport);
- void pn_transport_log(pn_transport_t *transport, const char *message);
- void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, ...);
- void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...);
- uint16_t pn_transport_get_channel_max(pn_transport_t *transport);
- int pn_transport_set_channel_max(pn_transport_t *transport, uint16_t channel_max);
- uint16_t pn_transport_remote_channel_max(pn_transport_t *transport);
- uint32_t pn_transport_get_max_frame(pn_transport_t *transport);
- void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size);
- uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport);
- pn_millis_t pn_transport_get_idle_timeout(pn_transport_t *transport);
- void pn_transport_set_idle_timeout(pn_transport_t *transport, pn_millis_t timeout);
- pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport);
- ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t available);
- ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size);
- ssize_t pn_transport_capacity(pn_transport_t *transport);
- char *pn_transport_tail(pn_transport_t *transport);
- ssize_t pn_transport_push(pn_transport_t *transport, const char *src, size_t size);
- int pn_transport_process(pn_transport_t *transport, size_t size);
- int pn_transport_close_tail(pn_transport_t *transport);
- ssize_t pn_transport_pending(pn_transport_t *transport);
- const char *pn_transport_head(pn_transport_t *transport);
- ssize_t pn_transport_peek(pn_transport_t *transport, char *dst, size_t size);
- void pn_transport_pop(pn_transport_t *transport, size_t size);
- int pn_transport_close_head(pn_transport_t *transport);
- bool pn_transport_quiesced(pn_transport_t *transport);
- bool pn_transport_head_closed(pn_transport_t *transport);
- bool pn_transport_tail_closed(pn_transport_t *transport);
- bool pn_transport_closed(pn_transport_t *transport);
- int64_t pn_transport_tick(pn_transport_t *transport, int64_t now);
- uint64_t pn_transport_get_frames_output(const pn_transport_t *transport);
- uint64_t pn_transport_get_frames_input(const pn_transport_t *transport);
- pn_connection_t *pn_transport_connection(pn_transport_t *transport);
-
-
-
-
-"""
-
-
-logger_h = """
-
-typedef struct pn_logger_t pn_logger_t;
-
-typedef enum pn_log_subsystem_t {
-    PN_SUBSYSTEM_NONE    = ...,
-    PN_SUBSYSTEM_MEMORY  = ...,
-    PN_SUBSYSTEM_IO      = ...,
-    PN_SUBSYSTEM_EVENT   = ...,
-    PN_SUBSYSTEM_AMQP    = ...,
-    PN_SUBSYSTEM_SSL     = ...,
-    PN_SUBSYSTEM_SASL    = ...,
-    PN_SUBSYSTEM_BINDING = ...,
-    PN_SUBSYSTEM_ALL     = ...
-} pn_log_subsystem_t; 
-
-typedef enum pn_log_level_t {
-    PN_LEVEL_NONE     = ...,
-    PN_LEVEL_CRITICAL = ...,
-    PN_LEVEL_ERROR    = ...,
-    PN_LEVEL_WARNING  = ...,
-    PN_LEVEL_INFO     = ...,
-    PN_LEVEL_DEBUG    = ...,
-    PN_LEVEL_TRACE    = ...,
-    PN_LEVEL_FRAME    = ...,
-    PN_LEVEL_RAW      = ...,
-    PN_LEVEL_ALL      = ...
-} pn_log_level_t; 
-
-typedef void (*pn_log_sink_t)(intptr_t sink_context, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *message);
-
-pn_logger_t *pn_default_logger(void);
-const char *pn_logger_level_name(pn_log_level_t level);
-const char *pn_logger_subsystem_name(pn_log_subsystem_t subsystem);
-void pn_logger_set_mask(pn_logger_t *logger, uint16_t subsystem, uint16_t level);
-void pn_logger_reset_mask(pn_logger_t *logger, uint16_t subsystem, uint16_t level);
-void pn_logger_set_log_sink(pn_logger_t *logger, pn_log_sink_t sink, intptr_t sink_context);
-pn_log_sink_t pn_logger_get_log_sink(pn_logger_t *logger);
-intptr_t pn_logger_get_log_sink_context(pn_logger_t *logger);
-void pn_logger_logf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t level, const char *fmt, ...);
-"""
-
-object_h = """
-
-// #define PN_CLASSCLASS ...
-//   
-// #define PN_CLASSDEF ...
-//   
-// #define PN_CLASS ...
-//   
-// #define PN_METACLASS ...
-//   
-// #define PN_STRUCT_CLASSDEF ...
-
-typedef const void* pn_handle_t;
-
-typedef intptr_t pn_shandle_t;
-
-typedef struct pn_class_t pn_class_t;
-
-typedef struct pn_string_t pn_string_t;
-
-typedef struct pn_list_t pn_list_t;
-
-typedef struct pn_map_t pn_map_t;
-
-typedef struct pn_hash_t pn_hash_t;
-
-typedef void *(*pn_iterator_next_t)(void *state);
-
-typedef struct pn_iterator_t pn_iterator_t;
-
-typedef struct pn_record_t pn_record_t;
-
-
-
-struct pn_class_t {
-  const char *name;
-  const pn_cid_t cid;
-  void *(*newinst)(const pn_class_t *, size_t);
-  void (*initialize)(void *);
-  void (*incref)(void *);
-  void (*decref)(void *);
-  int (*refcount)(void *);
-  void (*finalize)(void *);
-  void (*free)(void *);
-  const pn_class_t *(*reify)(void *);
-  uintptr_t (*hashcode)(void *);
-  intptr_t (*compare)(void *, void *);
-  int (*inspect)(void *, pn_string_t *);
-};
-
-extern const pn_class_t PN_OBJECT[];
-
-extern const pn_class_t PN_VOID[];
-
-extern const pn_class_t PN_WEAKREF[];
-
-
-pn_cid_t pn_class_id(const pn_class_t *clazz);
-const char *pn_class_name(const pn_class_t *clazz);
-void *pn_class_new(const pn_class_t *clazz, size_t size);
-
-
-void *pn_class_incref(const pn_class_t *clazz, void *object);
-int pn_class_refcount(const pn_class_t *clazz, void *object);
-int pn_class_decref(const pn_class_t *clazz, void *object);
-
-void pn_class_free(const pn_class_t *clazz, void *object);
-
-const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object);
-uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object);
-intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b);
-bool pn_class_equals(const pn_class_t *clazz, void *a, void *b);
-int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst);
-
-void *pn_void_new(const pn_class_t *clazz, size_t size);
-void pn_void_incref(void *object);
-void pn_void_decref(void *object);
-int pn_void_refcount(void *object);
-uintptr_t pn_void_hashcode(void *object);
-intptr_t pn_void_compare(void *a, void *b);
-int pn_void_inspect(void *object, pn_string_t *dst);
-
-void *pn_object_new(const pn_class_t *clazz, size_t size);
-const pn_class_t *pn_object_reify(void *object);
-void pn_object_incref(void *object);
-int pn_object_refcount(void *object);
-void pn_object_decref(void *object);
-void pn_object_free(void *object);
-
-void *pn_incref(void *object);
-int pn_decref(void *object);
-int pn_refcount(void *object);
-void pn_free(void *object);
-const pn_class_t *pn_class(void* object);
-uintptr_t pn_hashcode(void *object);
-intptr_t pn_compare(void *a, void *b);
-bool pn_equals(void *a, void *b);
-int pn_inspect(void *object, pn_string_t *dst);
-
-#define PN_REFCOUNT ...
-
-pn_list_t *pn_list(const pn_class_t *clazz, size_t capacity);
-size_t pn_list_size(pn_list_t *list);
-void *pn_list_get(pn_list_t *list, int index);
-void pn_list_set(pn_list_t *list, int index, void *value);
-int pn_list_add(pn_list_t *list, void *value);
-void *pn_list_pop(pn_list_t *list);
-ssize_t pn_list_index(pn_list_t *list, void *value);
-bool pn_list_remove(pn_list_t *list, void *value);
-void pn_list_del(pn_list_t *list, int index, int n);
-void pn_list_clear(pn_list_t *list);
-void pn_list_iterator(pn_list_t *list, pn_iterator_t *iter);
-void pn_list_minpush(pn_list_t *list, void *value);
-void *pn_list_minpop(pn_list_t *list);
-
-#define PN_REFCOUNT_KEY ...
-
-#define PN_REFCOUNT_VALUE ...
-
-pn_map_t *pn_map(const pn_class_t *key, const pn_class_t *value,
-                           size_t capacity, float load_factor);
-size_t pn_map_size(pn_map_t *map);
-int pn_map_put(pn_map_t *map, void *key, void *value);
-void *pn_map_get(pn_map_t *map, void *key);
-void pn_map_del(pn_map_t *map, void *key);
-pn_handle_t pn_map_head(pn_map_t *map);
-pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry);
-void *pn_map_key(pn_map_t *map, pn_handle_t entry);
-void *pn_map_value(pn_map_t *map, pn_handle_t entry);
-
-pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor);
-size_t pn_hash_size(pn_hash_t *hash);
-int pn_hash_put(pn_hash_t *hash, uintptr_t key, void *value);
-void *pn_hash_get(pn_hash_t *hash, uintptr_t key);
-void pn_hash_del(pn_hash_t *hash, uintptr_t key);
-pn_handle_t pn_hash_head(pn_hash_t *hash);
-pn_handle_t pn_hash_next(pn_hash_t *hash, pn_handle_t entry);
-uintptr_t pn_hash_key(pn_hash_t *hash, pn_handle_t entry);
-void *pn_hash_value(pn_hash_t *hash, pn_handle_t entry);
-
-pn_string_t *pn_string(const char *bytes);
-pn_string_t *pn_stringn(const char *bytes, size_t n);
-const char *pn_string_get(pn_string_t *string);
-size_t pn_string_size(pn_string_t *string);
-int pn_string_set(pn_string_t *string, const char *bytes);
-int pn_string_setn(pn_string_t *string, const char *bytes, size_t n);
-ssize_t pn_string_put(pn_string_t *string, char *dst);
-void pn_string_clear(pn_string_t *string);
-int pn_string_format(pn_string_t *string, const char *format, ...);
-
-int pn_string_vformat(pn_string_t *string, const char *format, ...);
-int pn_string_addf(pn_string_t *string, const char *format, ...);
-
-int pn_string_vaddf(pn_string_t *string, const char *format, ...);
-int pn_string_grow(pn_string_t *string, size_t capacity);
-char *pn_string_buffer(pn_string_t *string);
-size_t pn_string_capacity(pn_string_t *string);
-int pn_string_resize(pn_string_t *string, size_t size);
-int pn_string_copy(pn_string_t *string, pn_string_t *src);
-
-pn_iterator_t *pn_iterator(void);
-void *pn_iterator_start(pn_iterator_t *iterator,
-                                  pn_iterator_next_t next, size_t size);
-void *pn_iterator_next(pn_iterator_t *iterator);
-
-
-
-pn_record_t *pn_record(void);
-void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz);
-bool pn_record_has(pn_record_t *record, pn_handle_t key);
-void *pn_record_get(pn_record_t *record, pn_handle_t key);
-void pn_record_set(pn_record_t *record, pn_handle_t key, void *value);
-void pn_record_clear(pn_record_t *record);
-"""
-
-cid_h = """
-
-typedef enum {
-  CID_pn_object = 1,
-  CID_pn_void,
-  CID_pn_weakref,
-
-  CID_pn_string,
-  CID_pn_list,
-  CID_pn_map,
-  CID_pn_hash,
-  CID_pn_record,
-
-  CID_pn_collector,
-  CID_pn_event,
-
-  CID_pn_buffer,
-  CID_pn_error,
-  CID_pn_data,
-
-  CID_pn_connection,
-  CID_pn_session,
-  CID_pn_link,
-  CID_pn_delivery,
-  CID_pn_transport,
-
-  CID_pn_message,
-
-  CID_pn_reactor,
-  CID_pn_handler,
-  CID_pn_timer,
-  CID_pn_task,
-
-  CID_pn_io,
-  CID_pn_selector,
-  CID_pn_selectable,
-
-  CID_pn_url,
-  CID_pn_strdup,
-
-  CID_pn_listener,
-  CID_pn_proactor,
-
-  CID_pn_listener_socket,
-  CID_pn_raw_connection
-} pn_cid_t;
-"""
-
-
-ssl_h = """
-typedef struct pn_ssl_domain_t pn_ssl_domain_t;
-
-typedef struct pn_ssl_t pn_ssl_t;
-
-typedef enum {
-  PN_SSL_MODE_CLIENT = ...,
-  PN_SSL_MODE_SERVER
-} pn_ssl_mode_t;
-
-typedef enum {
-  PN_SSL_RESUME_UNKNOWN,
-  PN_SSL_RESUME_NEW,
-  PN_SSL_RESUME_REUSED
-} pn_ssl_resume_status_t;
-
-bool pn_ssl_present( void );
-
-pn_ssl_domain_t *pn_ssl_domain(pn_ssl_mode_t mode);
-
-void pn_ssl_domain_free(pn_ssl_domain_t *domain);
-int  pn_ssl_domain_set_credentials(pn_ssl_domain_t *domain,
-                                            const char *credential_1,
-                                            const char *credential_2,
-                                            const char *password);
-int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
-                                const char *certificate_db);
-
-typedef enum {
-  PN_SSL_VERIFY_NULL = ...,   
-  PN_SSL_VERIFY_PEER,
-  PN_SSL_ANONYMOUS_PEER,
-  PN_SSL_VERIFY_PEER_NAME
-} pn_ssl_verify_mode_t;
-
-int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
-                                                    const pn_ssl_verify_mode_t mode,
-                                                    const char *trusted_CAs);
-int pn_ssl_domain_set_protocols(pn_ssl_domain_t *domain, const char *protocols);
-int pn_ssl_domain_set_ciphers(pn_ssl_domain_t *domain, const char *ciphers);
-int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain);
-
-pn_ssl_t *pn_ssl(pn_transport_t *transport);
-int pn_ssl_init(pn_ssl_t *ssl,
-                          pn_ssl_domain_t *domain,
-                          const char *session_id);
-bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size);
-
-int pn_ssl_get_ssf(pn_ssl_t *ssl);
-bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
-pn_ssl_resume_status_t pn_ssl_resume_status(pn_ssl_t *ssl);
-int pn_ssl_set_peer_hostname(pn_ssl_t *ssl, const char *hostname);
-int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *hostname, size_t *bufsize);
-
-const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl);
-
-typedef enum {
-  PN_SSL_CERT_SUBJECT_COUNTRY_NAME,
-  PN_SSL_CERT_SUBJECT_STATE_OR_PROVINCE,
-  PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY,
-  PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME,
-  PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT,
-  PN_SSL_CERT_SUBJECT_COMMON_NAME
-} pn_ssl_cert_subject_subfield;
-
-typedef enum {
-  PN_SSL_SHA1,
-  PN_SSL_SHA256,
-  PN_SSL_SHA512, 
-  PN_SSL_MD5     
-} pn_ssl_hash_alg;
-
-int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0,
-                                          char *fingerprint,
-                                          size_t fingerprint_length,
-                                          pn_ssl_hash_alg hash_alg);
-const char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl0, pn_ssl_cert_subject_subfield field);
-
-"""
-
-disposition_h = """
-typedef struct pn_disposition_t pn_disposition_t;
-
-
-"""
-
-
-delivery_h = """
-#define PROTON_DELIVERY_H 1
-
-typedef pn_bytes_t pn_delivery_tag_t;
-
-
- pn_delivery_tag_t pn_dtag(const char *bytes, size_t size);
- pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
- void *pn_delivery_get_context(pn_delivery_t *delivery);
- void pn_delivery_set_context(pn_delivery_t *delivery, void *context);
- pn_record_t *pn_delivery_attachments(pn_delivery_t *delivery);
- pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery);
- pn_link_t *pn_delivery_link(pn_delivery_t *delivery);
- pn_disposition_t *pn_delivery_local(pn_delivery_t *delivery);
- uint64_t pn_delivery_local_state(pn_delivery_t *delivery);
- pn_disposition_t *pn_delivery_remote(pn_delivery_t *delivery);
- uint64_t pn_delivery_remote_state(pn_delivery_t *delivery);
- bool pn_delivery_settled(pn_delivery_t *delivery);
- size_t pn_delivery_pending(pn_delivery_t *delivery);
- bool pn_delivery_partial(pn_delivery_t *delivery);
- bool pn_delivery_aborted(pn_delivery_t *delivery);
- bool pn_delivery_writable(pn_delivery_t *delivery);
- bool pn_delivery_readable(pn_delivery_t *delivery);
- bool pn_delivery_updated(pn_delivery_t *delivery);
- void pn_delivery_update(pn_delivery_t *delivery, uint64_t state);
- void pn_delivery_clear(pn_delivery_t *delivery);
- bool pn_delivery_current(pn_delivery_t *delivery);
- void pn_delivery_abort(pn_delivery_t *delivery);
- void pn_delivery_settle(pn_delivery_t *delivery);
- void pn_delivery_dump(pn_delivery_t *delivery);
- bool pn_delivery_buffered(pn_delivery_t *delivery);
- pn_delivery_t *pn_work_head(pn_connection_t *connection);
- pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
-"""
-
-
 
 
 # TODO:
@@ -1586,6 +1080,8 @@ def run_cffi_compile(output_file):
         #include <stddef.h>
         #include <proton/types.h>
         #include <proton/object.h>
+        typedef struct pn_string_t pn_string_t;
+        
         #include <proton/error.h>
         #include <proton/codec.h>
         #include <proton/message.h>
@@ -1601,52 +1097,50 @@ def run_cffi_compile(output_file):
         #include <proton/connection.h>
         #include <proton/link.h>
         #include <proton/session.h>
+        #include <proton/version.h>
 
-        extern const pn_class_t PN_PYREF[];
+      // todo: this is wrong, tied to cpython
 
-        #define CID_pn_pyref CID_pn_void
-        #define pn_pyref_new NULL
-        #define pn_pyref_initialize NULL
-        #define pn_pyref_finalize NULL
-        #define pn_pyref_free NULL
-        #define pn_pyref_hashcode pn_void_hashcode
-        #define pn_pyref_compare pn_void_compare
-        #define pn_pyref_inspect pn_void_inspect
+      #define SWIG_PYTHON_THREAD_BEGIN_BLOCK   PyGILState_STATE _pn_cffi_thread_block = PyGILState_Ensure()
+      #define SWIG_PYTHON_THREAD_END_BLOCK     PyGILState_Release(_pn_cffi_thread_block)
 
-  static void pn_pyref_incref(void *object) {
+        pn_class_t* PN_PYREF;
+        
+          static void pn_pyref_incref(void *object) {
     PyObject* p = (PyObject*) object;
-    // SWIG_PYTHON_THREAD_BEGIN_BLOCK;
-    //Py_XINCREF(p);
-    // SWIG_PYTHON_THREAD_END_BLOCK;
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    Py_XINCREF(p);
+    SWIG_PYTHON_THREAD_END_BLOCK;
   }
 
   static void pn_pyref_decref(void *object) {
     PyObject* p = (PyObject*) object;
-    // SWIG_PYTHON_THREAD_BEGIN_BLOCK;
-    //Py_XDECREF(p);
-    // SWIG_PYTHON_THREAD_END_BLOCK;
+    SWIG_PYTHON_THREAD_BEGIN_BLOCK;
+    Py_XDECREF(p);
+    SWIG_PYTHON_THREAD_END_BLOCK;
   }
 
   static int pn_pyref_refcount(void *object) {
     return 1;
   }
 
-  static const pn_class_t *pn_pyref_reify(void *object) {
-    return PN_PYREF;
-  }
+        
+        __attribute__((constructor)) static void init_pn_pyref_in_cffi() {
+            PN_PYREF = pn_class_create("pn_pyref", NULL, NULL, pn_pyref_incref, pn_pyref_decref, pn_pyref_refcount);
+            //printf("execured constructor");
+        }
 
         static const char _PN_HANDLE_PNI_PYTRACER;
         static const pn_handle_t PNI_PYTRACER = (pn_handle_t) &_PN_HANDLE_PNI_PYTRACER; 
 
-        const pn_class_t PN_PYREF[] = {PN_METACLASS(pn_pyref)};
+        // #define PN_LEGCTX (pn_handle_t 0)
 
-        #define PN_LEGCTX (pn_handle_t 0)
-
-
-        void pn_pytracer(pn_transport_t *transport, const char *message) {
-          pn_tracer_t pytracer = (void *) pn_record_get(pn_transport_attachments(transport), PNI_PYTRACER);
-          (*pytracer)(transport, message);
-        }
+        static void pn_pytracer(pn_transport_t *transport, const char *message);
+        //void pn_pytracer(pn_transport_t *transport, const char *message) {
+        //  pn_tracer_t pytracer = (void *) pn_record_get(pn_transport_attachments(transport), PNI_PYTRACER);
+        //  //(*pytracer)(transport, message);
+        //  printf("pn_pytracer: %s\\n", message);
+        //}
 
         void *pn_transport_get_pytracer(pn_transport_t *transport) {
           pn_record_t *record = pn_transport_attachments(transport);
@@ -1664,6 +1158,12 @@ def run_cffi_compile(output_file):
           pn_record_set(record, PNI_PYTRACER, obj);
           pn_transport_set_tracer(transport, pn_pytracer);
         }
+        
+        pn_connection_t *pn_cast_pn_connection(void *x) { return (pn_connection_t *) x; }
+        pn_session_t *pn_cast_pn_session(void *x) { return (pn_session_t *) x; }
+        pn_link_t *pn_cast_pn_link(void *x) { return (pn_link_t *) x; }
+        pn_delivery_t *pn_cast_pn_delivery(void *x) { return (pn_delivery_t *) x; }
+        pn_transport_t *pn_cast_pn_transport(void *x) { return (pn_transport_t *) x; }
 
 
         """,
@@ -1693,23 +1193,29 @@ def run_cffi_compile(output_file):
     ffi_builder.cdef(connection_h)
     ffi_builder.cdef(session_h)
     ffi_builder.cdef(link_h)
+    ffi_builder.cdef(version_h)
 
     ffi_builder.cdef(
-      """
-
-      extern const pn_class_t PN_PYREF[];
-
-
-      static const char _PN_HANDLE_PNI_PYTRACER;
-      static const pn_handle_t PNI_PYTRACER = (pn_handle_t) &_PN_HANDLE_PNI_PYTRACER; 
-
-      void pn_pytracer(pn_transport_t *transport, const char *message);
-      void *pn_transport_get_pytracer(pn_transport_t *transport);
-      void pn_transport_set_pytracer(pn_transport_t *transport, void *obj);
-      
-      // callback
-      //extern "Python" void *pn_void2py(*object);
-      """
+        """
+        pn_class_t* PN_PYREF;
+  
+        static const char _PN_HANDLE_PNI_PYTRACER;
+        static const pn_handle_t PNI_PYTRACER = (pn_handle_t) &_PN_HANDLE_PNI_PYTRACER; 
+  
+        extern "Python" void pn_pytracer(pn_transport_t *transport, const char *message);
+        // void pn_pytracer(pn_transport_t *transport, const char *message);
+        void *pn_transport_get_pytracer(pn_transport_t *transport);
+        void pn_transport_set_pytracer(pn_transport_t *transport, void *obj);
+        
+        pn_connection_t *pn_cast_pn_connection(void *x);
+  pn_session_t *pn_cast_pn_session(void *x);
+  pn_link_t *pn_cast_pn_link(void *x);
+  pn_delivery_t *pn_cast_pn_delivery(void *x);
+  pn_transport_t *pn_cast_pn_transport(void *x);
+        
+        // callback
+        //extern "Python" void *pn_void2py(*object);
+        """
     )
 
     ffi_builder.emit_c_code(output_file)
