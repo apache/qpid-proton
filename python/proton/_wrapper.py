@@ -17,7 +17,6 @@
 # under the License.
 #
 
-from __future__ import annotations
 from typing import Any, Callable, Optional, Union
 
 # from cproton import pn_incref, pn_decref, \
