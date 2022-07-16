@@ -19,7 +19,7 @@
 
 from __future__ import absolute_import
 
-from cproton import PN_TIMEOUT, PN_INTR
+from ._cproton import PN_TIMEOUT, PN_INTR
 
 
 class ProtonException(Exception):

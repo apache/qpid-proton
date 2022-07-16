@@ -41,7 +41,7 @@ import traceback
 import uuid
 from functools import total_ordering
 
-from cproton import PN_PYREF, PN_ACCEPTED, PN_EVENT_NONE
+from ._cproton import PN_ACCEPTED, PN_EVENT_NONE
 
 from ._common import isstring, unicode2utf8, utf82unicode
 from ._data import Described, symbol, ulong

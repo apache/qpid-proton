@@ -1,6 +1,9 @@
+from typing import Optional
+
 from _proton_core import ffi, lib
 
-from _proton_core.lib import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM, PN_SASL_SYS, PN_SASL_TEMP, \
+from _proton_core.lib import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM, PN_SASL_SYS, \
+    PN_SASL_TEMP, \
     PN_SSL_ANONYMOUS_PEER, PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY, PN_SSL_CERT_SUBJECT_COMMON_NAME, \
     PN_SSL_CERT_SUBJECT_COUNTRY_NAME, PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME, PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT, \
     PN_SSL_CERT_SUBJECT_STATE_OR_PROVINCE, PN_SSL_MD5, PN_SSL_MODE_CLIENT, PN_SSL_MODE_SERVER, PN_SSL_RESUME_NEW, \
@@ -24,15 +27,122 @@ from _proton_core.lib import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_
     pn_transport_tick, pn_transport_trace, pn_transport_unbind
 
 
+def _str_to_charp(value):
+    if value is None:
+        return ffi.NULL
+    return value.encode()  # necessary, initializer for ctype 'char *' must be a bytes or list or tuple, not str
+
+
 def pn_transport_peek(transport, size):
     dst_t = ffi.new("char []", size)
     cd = lib.pn_transport_peek(transport, dst_t, size)
-    return cd, ffi.buffer(dst_t, size)[:]
+    if cd < 0:
+        return cd, None
+    return cd, ffi.unpack(dst_t, cd)
 
 
 def pn_transport_push(transport, binary):
-    size_t = ffi.new("size_t *", len(binary))
-    src = ffi.new("char []", size_t[0])
-    lib.pn_transport_push(transport, src, size_t[0])
+    # TODO OMG, such copypaste mistake!
+    src = ffi.new("char[]", binary)
+    return lib.pn_transport_push(transport, src, len(binary))
 
-    return size_t[0]
+
+def pn_ssl_domain_set_credentials(domain, cert, key, password):
+    if password is None:
+        return lib.pn_ssl_domain_set_credentials(domain, cert.encode(), key.encode(), ffi.NULL)
+
+    return lib.pn_ssl_domain_set_credentials(domain, cert.encode(), key.encode(), password.encode())
+
+
+def pn_ssl_domain_set_trusted_ca_db(domain, certificate_db):
+    return lib.pn_ssl_domain_set_trusted_ca_db(domain, certificate_db.encode())
+
+
+def pn_ssl_domain_set_peer_authentication(domain, verify_mode, trusted_CA):
+    tca = trusted_CA
+    if tca is not None:
+        tca = tca.encode()
+    else:
+        tca = ffi.NULL
+    return lib.pn_ssl_domain_set_peer_authentication(domain, verify_mode, tca)
+
+
+def _optional_string(s) -> Optional[str]:
+    """todo pretty much everything that returns char * should get this"""
+
+    if s == ffi.NULL:
+        return None
+    return ffi.string(s).decode()
+
+
+def pn_transport_get_user(transport):
+    return _optional_string(lib.pn_transport_get_user(transport))
+
+
+def pn_sasl_get_user(sasl):
+    return _optional_string(lib.pn_sasl_get_user(sasl))
+
+
+def pn_sasl_get_authorization(sasl):
+    return _optional_string(lib.pn_sasl_get_authorization(sasl))
+
+
+def pn_ssl_init(ssl, domain, session_id):
+    return lib.pn_ssl_init(ssl, domain, _str_to_charp(session_id))
+
+
+def pn_sasl_get_mech(sasl):
+    return _optional_string(lib.pn_sasl_get_mech(sasl))
+
+
+# todo: another pattern, the buffer and the size
+def pn_ssl_get_cipher_name(ssl, size):
+    buffer = ffi.new('char[]', size)
+    rc = lib.pn_ssl_get_cipher_name(ssl, buffer, size)
+    name = ffi.string(buffer, size)
+    return rc, name
+
+
+def pn_ssl_get_protocol_name(ssl, size):
+    buffer = ffi.new('char[]', size)
+    rc = lib.pn_ssl_get_protocol_name(ssl, buffer, size)
+    name = ffi.string(buffer, size)
+    return rc, name
+
+
+def pn_ssl_get_peer_hostname(ssl, size):
+    """when size is a pointer, it is necessary to do it this way"""
+    size_t = ffi.new('size_t *', size)
+    buffer = ffi.new('char[]', size)
+    rc = lib.pn_ssl_get_peer_hostname(ssl, buffer, size_t)
+    name = ffi.string(buffer, size_t[0])
+    return rc, name
+
+
+def pn_ssl_get_cert_fingerprint(ssl, fingerprint_length, digest_name):
+    fingerprint_buffer = ffi.new('char[]', fingerprint_length)
+    rc = lib.pn_ssl_get_cert_fingerprint(ssl, fingerprint_buffer, fingerprint_length, digest_name)
+    fingerprint = ffi.string(fingerprint_buffer, fingerprint_length).decode()
+    return rc, fingerprint
+
+
+def pn_ssl_get_remote_subject_subfield(ssl, subfield_name):
+    return _optional_string(lib.pn_ssl_get_remote_subject_subfield(ssl, subfield_name))
+
+
+def pn_ssl_get_remote_subject(ssl):
+    return _optional_string(lib.pn_ssl_get_remote_subject(ssl))
+
+
+def _optional(param):
+    if param == ffi.NULL:
+        return None
+    return param
+
+
+def pn_connection_attachments(connection):
+    return _optional(lib.pn_connection_attachments(connection))
+
+
+def pn_transport_log(transport, message):
+    return lib.pn_transport_log(transport, _str_to_charp(message))

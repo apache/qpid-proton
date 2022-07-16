@@ -19,7 +19,7 @@
 
 from typing import Optional, TYPE_CHECKING
 
-from cproton import pn_condition_clear, pn_condition_set_name, pn_condition_set_description, pn_condition_info, \
+from ._cproton import pn_condition_clear, pn_condition_set_name, pn_condition_set_description, pn_condition_info, \
     pn_condition_is_set, pn_condition_get_name, pn_condition_get_description
 
 from ._data import Data, dat2obj

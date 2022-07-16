@@ -23,11 +23,10 @@ from typing import Any, Callable, Optional, Union
 # from cproton import pn_incref, pn_decref, \
 #     pn_py2void, pn_void2py, \
 #     pn_record_get, pn_record_def, pn_record_set
-
 from _proton_core import ffi
 from ._cproton import pn_incref, pn_decref, \
     pn_py2void, pn_void2py, \
-    pn_record_get, pn_record_def, pn_record_set
+    pn_record_get, pn_record_def, pn_record_set, PN_PYREF
 
 from ._exceptions import ProtonException
 
@@ -73,7 +72,7 @@ class Wrapper(object):
         if callable(impl_or_constructor) and not isinstance(impl_or_constructor, ffi.CData):
             # we are constructing a new object
             impl = impl_or_constructor()
-            if impl is None:
+            if impl is None or impl is ffi.NULL:  # TODO, this is annoying
                 self.__dict__["_impl"] = impl
                 self.__dict__["_attrs"] = EMPTY_ATTRS
                 self.__dict__["_record"] = None
@@ -88,11 +87,10 @@ class Wrapper(object):
         if get_context:
             record = get_context(impl)
             attrs = pn_record_get(record, PYCTX)
-            if attrs is None or attrs == ffi.NULL:
+            if attrs is None:
                 attrs = {}
-                _attrs = ffi.new_handle({})
                 pn_record_def(record, PYCTX, PN_PYREF)
-                pn_record_set(record, PYCTX, _attrs)
+                pn_record_set(record, PYCTX, attrs)
                 init = True
         else:
             attrs = EMPTY_ATTRS
@@ -129,7 +127,7 @@ class Wrapper(object):
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, Wrapper):
-            return addressof(self._impl) == addressof(other._impl)
+            return self._impl == other._impl
         return False
 
     def __ne__(self, other: Any) -> bool:
@@ -153,4 +151,3 @@ handle = ffi.new_handle(Wrapper)
 
 handle_int = int(ffi.cast("int", handle))
 PYCTX = ffi.cast("pn_handle_t", handle_int)
-addressof = int

@@ -17,7 +17,9 @@
 # under the License.
 #
 
-from cproton import PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEASED, pn_delivery_abort, \
+from _proton_core import ffi
+
+from ._cproton import PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEASED, pn_delivery_abort, \
     pn_delivery_aborted, pn_delivery_attachments, pn_delivery_link, pn_delivery_local, pn_delivery_local_state, \
     pn_delivery_partial, pn_delivery_pending, pn_delivery_readable, pn_delivery_remote, pn_delivery_remote_state, \
     pn_delivery_settle, pn_delivery_settled, pn_delivery_tag, pn_delivery_update, pn_delivery_updated, \
@@ -289,7 +291,7 @@ class Delivery(Wrapper):
 
     @staticmethod
     def wrap(impl):
-        if impl is None:
+        if impl is None or impl == ffi.NULL:
             return None
         else:
             return Delivery(impl)

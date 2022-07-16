@@ -22,6 +22,7 @@ from __future__ import absolute_import
 import sys
 import unittest
 
+from _proton_core import ffi
 from proton import *
 
 import common
@@ -66,19 +67,16 @@ class ClientTransportTest(Test):
         # verify that a framing error was reported
         assert self.conn.remote_condition.name == name, self.conn.remote_condition
 
-    @unittest.skip
     def testEOS(self):
         self.transport.push(b"")  # should be a noop
         self.transport.close_tail()  # should result in framing error
         self.assert_error(u'amqp:connection:framing-error')
 
-    @unittest.skip
     def testPartial(self):
         self.transport.push(b"AMQ")  # partial header
         self.transport.close_tail()  # should result in framing error
         self.assert_error(u'amqp:connection:framing-error')
 
-    @unittest.skip
     def testGarbage(self, garbage=b"GARBAGE_"):
         self.transport.push(garbage)
         self.assert_error(u'amqp:connection:framing-error')
@@ -86,37 +84,30 @@ class ClientTransportTest(Test):
         self.transport.close_tail()
         assert self.transport.pending() < 0
 
-    @unittest.skip
     def testSmallGarbage(self):
         self.testGarbage(b"XXX")
 
-    @unittest.skip
     def testBigGarbage(self):
         self.testGarbage(b"GARBAGE_XXX")
 
-    @unittest.skip
     def testHeader(self):
         self.transport.push(b"AMQP\x00\x01\x00\x00")
         self.transport.close_tail()
         self.assert_error(u'amqp:connection:framing-error')
 
-    @unittest.skip
     def testHeaderBadDOFF1(self):
         """Verify doff > size error"""
         self.testGarbage(b"AMQP\x00\x01\x00\x00\x00\x00\x00\x08\x08\x00\x00\x00")
 
-    @unittest.skip
     def testHeaderBadDOFF2(self):
         """Verify doff < 2 error"""
         self.testGarbage(b"AMQP\x00\x01\x00\x00\x00\x00\x00\x08\x01\x00\x00\x00")
 
-    @unittest.skip
     def testHeaderBadSize(self):
         """Verify size > max_frame_size error"""
         self.transport.max_frame_size = 512
         self.testGarbage(b"AMQP\x00\x01\x00\x00\x00\x00\x02\x01\x02\x00\x00\x00")
 
-    @unittest.skip
     def testProtocolNotSupported(self):
         self.transport.push(b"AMQP\x01\x01\x0a\x00")
         p = self.transport.pending()
@@ -127,12 +118,10 @@ class ClientTransportTest(Test):
         self.drain()
         assert self.transport.closed
 
-    @unittest.skip
     def testPeek(self):
         out = self.transport.peek(1024)
         assert out is not None
 
-    @unittest.skip
     def testBindAfterOpen(self):
         conn = Connection()
         ssn = conn.session()
@@ -156,7 +145,6 @@ class ClientTransportTest(Test):
         assert c.remote_hostname == "test-hostname"
         assert c.session_head(0) is not None
 
-    @unittest.skip
     def testCloseHead(self):
         n = self.transport.pending()
         assert n > 0, n
@@ -168,7 +156,6 @@ class ClientTransportTest(Test):
         n = self.transport.pending()
         assert n < 0, n
 
-    @unittest.skip
     def testCloseTail(self):
         n = self.transport.capacity()
         assert n > 0, n
@@ -180,7 +167,6 @@ class ClientTransportTest(Test):
         n = self.transport.capacity()
         assert n < 0, n
 
-    @unittest.skip
     def testUnpairedPop(self):
         conn = Connection()
         self.transport.bind(conn)
@@ -247,7 +233,7 @@ class ServerTransportTest(Test):
         assert self.conn.remote_condition.name == name, self.conn.remote_condition
 
     # TODO: This may no longer be testing anything
-    @unittest.skip
+
     def testEOS(self):
         self.transport.push(b"")  # should be a noop
         self.transport.close_tail()
@@ -255,7 +241,6 @@ class ServerTransportTest(Test):
         self.drain()
         assert self.transport.closed
 
-    @unittest.skip
     def testPartial(self):
         self.transport.push(b"AMQ")  # partial header
         self.transport.close_tail()
@@ -267,7 +252,6 @@ class ServerTransportTest(Test):
         self.drain()
         assert self.transport.closed
 
-    @unittest.skip
     def testGarbage(self, garbage=b"GARBAGE_"):
         self.transport.push(garbage)
         p = self.transport.pending()
@@ -278,21 +262,17 @@ class ServerTransportTest(Test):
         self.drain()
         assert self.transport.closed
 
-    @unittest.skip
     def testSmallGarbage(self):
         self.testGarbage(b"XXX")
 
-    @unittest.skip
     def testBigGarbage(self):
         self.testGarbage(b"GARBAGE_XXX")
 
-    @unittest.skip
     def testHeader(self):
         self.transport.push(b"AMQP\x00\x01\x00\x00")
         self.transport.close_tail()
         self.assert_error(u'amqp:connection:framing-error')
 
-    @unittest.skip
     def testProtocolNotSupported(self):
         self.transport.push(b"AMQP\x01\x01\x0a\x00")
         p = self.transport.pending()
@@ -303,12 +283,10 @@ class ServerTransportTest(Test):
         self.drain()
         assert self.transport.closed
 
-    @unittest.skip
     def testPeek(self):
         out = self.transport.peek(1024)
         assert out is not None
 
-    @unittest.skip
     def testBindAfterOpen(self):
         conn = Connection()
         ssn = conn.session()
@@ -332,7 +310,6 @@ class ServerTransportTest(Test):
         assert c.remote_hostname == "test-hostname"
         assert c.session_head(0) is not None
 
-    @unittest.skip
     def testCloseHead(self):
         n = self.transport.pending()
         assert n >= 0, n
@@ -344,7 +321,6 @@ class ServerTransportTest(Test):
         n = self.transport.pending()
         assert n < 0, n
 
-    @unittest.skip
     def testCloseTail(self):
         n = self.transport.capacity()
         assert n > 0, n
@@ -356,7 +332,6 @@ class ServerTransportTest(Test):
         n = self.transport.capacity()
         assert n < 0, n
 
-    @unittest.skip
     def testUnpairedPop(self):
         conn = Connection()
         self.transport.bind(conn)
@@ -386,7 +361,6 @@ class ServerTransportTest(Test):
         self.peer.push(dat2[len(dat1):])
         self.peer.push(dat3)
 
-    @unittest.skip
     def testEOSAfterSASL(self):
         self.transport.sasl().allowed_mechs('ANONYMOUS')
 
@@ -414,14 +388,14 @@ class ServerTransportTest(Test):
 
 class LogTest(Test):
 
-    @unittest.skip
     def testTracer(self):
         t = Transport()
         assert t.tracer is None
         messages = []
 
         def tracer(transport, message):
-            messages.append((transport, message))
+            """don't see a good way to do the type conversion elsewhere"""
+            messages.append((transport, ffi.string(message).decode()))
         t.tracer = tracer
         assert t.tracer is tracer
         t.log("one")

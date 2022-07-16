@@ -19,10 +19,7 @@
 
 from typing import Callable, Optional, Type, Union, TYPE_CHECKING, List
 
-from _proton_core import ffi
- 
-
-from _proton_core.lib import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM, PN_SASL_SYS, PN_SASL_TEMP, \
+from ._cproton import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM, PN_SASL_SYS, PN_SASL_TEMP, \
     PN_SSL_ANONYMOUS_PEER, PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY, PN_SSL_CERT_SUBJECT_COMMON_NAME, \
     PN_SSL_CERT_SUBJECT_COUNTRY_NAME, PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME, PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT, \
     PN_SSL_CERT_SUBJECT_STATE_OR_PROVINCE, PN_SSL_MD5, PN_SSL_MODE_CLIENT, PN_SSL_MODE_SERVER, PN_SSL_RESUME_NEW, \
@@ -43,7 +40,7 @@ from _proton_core.lib import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_
     pn_transport_peek, pn_transport_pending, pn_transport_pop, pn_transport_push, pn_transport_remote_channel_max, \
     pn_transport_require_auth, pn_transport_require_encryption, pn_transport_set_channel_max, \
     pn_transport_set_idle_timeout, pn_transport_set_max_frame, pn_transport_set_pytracer, pn_transport_set_server, \
-    pn_transport_tick, pn_transport_trace, pn_transport_unbind
+    pn_transport_tick, pn_transport_trace, pn_transport_unbind, pn_py2void
 
 from ._common import millis2secs, secs2millis, unicode2utf8, utf82unicode
 from ._condition import cond2obj, obj2cond
@@ -126,6 +123,8 @@ class Transport(Wrapper):
         and log message. For no tracer callback, value is ``None``.
         """
         adapter = pn_transport_get_pytracer(self._impl)
+        from proton._cproton import pn_void2py
+        adapter = pn_void2py(adapter)
         if adapter:
             return adapter.tracer
         else:
@@ -133,7 +132,8 @@ class Transport(Wrapper):
 
     @tracer.setter
     def tracer(self, tracer: Callable[['Transport', str], None]) -> None:
-        pn_transport_set_pytracer(self._impl, TraceAdapter(tracer))
+        handle = pn_py2void(TraceAdapter(tracer))
+        pn_transport_set_pytracer(self._impl, handle)
 
     def log(self, message: str) -> None:
         """

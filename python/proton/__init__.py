@@ -32,7 +32,7 @@ import logging
 import logging.config
 import os
 
-from cproton import PN_VERSION_MAJOR, PN_VERSION_MINOR, PN_VERSION_POINT
+from ._cproton import PN_VERSION_MAJOR, PN_VERSION_MINOR, PN_VERSION_POINT
 
 from ._condition import Condition
 from ._data import UNDESCRIBED, Array, Data, Described, char, symbol, timestamp, ubyte, ushort, uint, ulong, \

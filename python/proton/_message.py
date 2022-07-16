@@ -44,9 +44,10 @@ from ._cproton import PN_DEFAULT_PRIORITY, PN_OVERFLOW, pn_error_text, pn_messag
     pn_message_set_delivery_count, pn_message_set_durable, pn_message_set_expiry_time, pn_message_set_first_acquirer, \
     pn_message_set_group_id, pn_message_set_group_sequence, pn_message_set_id, pn_message_set_inferred, pn_message_set_priority, \
     pn_message_set_reply_to, pn_message_set_reply_to_group_id, pn_message_set_subject, \
-    pn_message_set_ttl, pn_message_set_user_id
+    pn_message_set_ttl, pn_message_set_user_id, \
+    PN_UUID
 
-from ._cproton import *
+#from ._cproton import *
 
 #from . import _compat
 from ._common import isinteger, millis2secs, secs2millis, unicode2utf8, utf82unicode

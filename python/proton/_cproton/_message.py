@@ -38,9 +38,9 @@ def from_pn_atom_t(value):
     if value.type == PN_ULONG:
         return value.u.as_ulong
     if value.type == PN_BINARY:
-        return ffi.string(value.u.as_bytes.start, value.u.as_bytes.size)
+        return ffi.unpack(value.u.as_bytes.start, value.u.as_bytes.size)
     if value.type == PN_UUID:
-        return uuid.UUID(bytes=ffi.string(value.u.as_uuid.bytes))
+        return uuid.UUID(bytes=ffi.unpack(value.u.as_uuid.bytes, 16))
     assert False
 
 
@@ -109,31 +109,31 @@ def pn_message_set_user_id(msg, value):
 
 
 def pn_message_set_content_encoding(msg, value):
-    return lib.pn_message_set_content_encoding(msg, value.encode())
+     return lib.pn_message_set_content_encoding(msg, value)
 
 
 def pn_message_set_reply_to(msg, value):
-    return lib.pn_message_set_reply_to(msg, value.encode())
+    return lib.pn_message_set_reply_to(msg, value)
 
 
 def pn_message_set_subject(msg, value):
-    return lib.pn_message_set_subject(msg, value.encode())
+    return lib.pn_message_set_subject(msg, value)
 
 
 def pn_message_set_address(msg, value):
-    return lib.pn_message_set_address(msg, value.encode())
+    return lib.pn_message_set_address(msg, value)
 
 
 def pn_message_set_reply_to_group_id(msg, value):
-    return lib.pn_message_set_reply_to_group_id(msg, value.encode())
+    return lib.pn_message_set_reply_to_group_id(msg, value)
 
 
 def pn_message_set_group_id(msg, value):
-    return lib.pn_message_set_group_id(msg, value.encode())
+    return lib.pn_message_set_group_id(msg, value)
 
 
 def pn_message_set_content_type(msg, value):
-    return lib.pn_message_set_content_type(msg, value.encode())
+    return lib.pn_message_set_content_type(msg, value)
 
 
 def pn_message_encode(msg, sz):

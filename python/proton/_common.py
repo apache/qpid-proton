@@ -52,11 +52,13 @@ def unicode2utf8(string: Optional[str]) -> Optional[str]:
     types to UTF8 to avoid zero bytes introduced by other multi-byte encodings.
     This method will throw if the string cannot be converted.
     """
-    if string is None or string == ffi.NULL:
-        return None
+    assert string != ffi.NULL
+    if string is None or string == ffi.NULL:  # todo what's the directon of the conversion here?
+        return ffi.NULL
     elif isinstance(string, str):
         # The swig binding converts py3 str -> utf8 char* and back automatically
-        return string
+        # TODO but cffi won't, and there is additional problem about the value lifetime which I am unsure about
+        return string.encode()
     elif isinstance(string, ffi.CData):
         return ffi.string(string)
     # Anything else illegal - specifically python3 bytes

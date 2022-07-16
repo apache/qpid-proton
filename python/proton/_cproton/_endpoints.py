@@ -34,9 +34,45 @@ from _proton_core.lib import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN
     pn_link_properties, pn_link_remote_properties
 
 
-def pn_connection_set_container(connection, name):
-    lib.pn_connection_set_container(connection, name.encode())
+# TODO trololo, had pass here
+def pn_record_get(record, pyctx):
+    """Calling ffi.from_handle(p) is invalid and will likely crash if the cdata object returned by new_handle() is not kept alive!"""
+    ret = lib.pn_record_get(record, pyctx)
+    if ret == ffi.NULL:
+        return None
+    return ffi.from_handle(ret)  # todo start using py2void thing...
 
 
-def pn_connection_set_hostname(connection, name):
-    lib.pn_connection_hostname(connection, name.encode())
+def pn_record_set(record, pyctx, payload):
+    """todo skip return for void methods
+    trololo, forgot to write this"""
+    return lib.pn_record_set(record, pyctx, ffi.new_handle(payload))
+
+
+def pn_connection_remote_container(connection):
+    op = lib.pn_connection_remote_container(connection)
+    # if op == ffi.cast("char *", ffi.NULL):
+    if op == ffi.NULL:
+        return None
+    return ffi.string(op).decode()
+
+
+def pn_connection_remote_hostname(connection):
+    ret = lib.pn_connection_remote_hostname(connection)
+    if ret == ffi.NULL:
+        return None
+    return ffi.string(ret).decode()
+
+
+def pn_session_head(connection, state):
+    ret = lib.pn_session_head(connection, state)
+    if ret == ffi.NULL:
+        return None
+    return ret
+
+
+def pn_condition_get_name(cond):
+    ret = lib.pn_condition_get_name(cond)
+    if ret == ffi.NULL:
+        return None
+    return ffi.string(ret).decode()

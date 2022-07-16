@@ -23,8 +23,8 @@ import os
 
 from proton import *
 
-from . import common
-from .common import Skipped, pump
+import common
+from common import Skipped, pump
 
 
 def _testpath(file):

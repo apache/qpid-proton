@@ -21,11 +21,11 @@ from __future__ import absolute_import
 import time
 import sys
 import json
-from .common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
+from common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
 from proton import SSLDomain
 from proton.reactor import Container
 from proton.handlers import MessagingHandler
-from .ssl import _testpath
+from ssl import _testpath
 
 
 def write_connect_conf(obj):
