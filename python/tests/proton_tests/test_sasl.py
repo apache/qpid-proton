@@ -24,7 +24,7 @@ import os
 from proton import *
 
 import common
-import engine
+import test_engine
 from common import pump, Skipped
 
 
@@ -528,9 +528,9 @@ class SSLSASLTest(Test):
         _testSaslMech(self, mech, clientUser=None, authUser=None, encrypted=None, authenticated=False)
 
 
-class SASLEventTest(engine.CollectorTest):
+class SASLEventTest(test_engine.CollectorTest):
     def setUp(self):
-        engine.CollectorTest.setUp(self)
+        test_engine.CollectorTest.setUp(self)
         self.t1 = Transport()
         self.s1 = SASL(self.t1)
         self.t2 = Transport(Transport.SERVER)

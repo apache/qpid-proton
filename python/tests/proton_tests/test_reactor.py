@@ -25,7 +25,7 @@ from proton.reactor import Container, ApplicationEvent, EventInjector, Selector,
 from proton.handlers import Handshaker, MessagingHandler
 from proton import Handler, Url, symbol
 
-from .common import Test, SkipTest, TestServer, free_tcp_port, free_tcp_ports, ensureCanTestExtendedSASL
+from common import Test, SkipTest, TestServer, free_tcp_port, free_tcp_ports, ensureCanTestExtendedSASL
 
 
 class Barf(Exception):
