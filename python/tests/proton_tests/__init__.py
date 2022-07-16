@@ -16,19 +16,3 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-
-from __future__ import absolute_import
-
-from . import codec
-from . import engine
-from . import message
-from . import handler
-from . import reactor
-from . import sasl
-from . import transport
-from . import ssl
-from . import interop
-from . import soak
-from . import url
-from . import utils
-from . import connect
