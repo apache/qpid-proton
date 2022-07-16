@@ -34,6 +34,12 @@ from _proton_core.lib import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN
     pn_link_properties, pn_link_remote_properties
 
 
+def _optional(value):
+    if value == ffi.NULL:
+        return None
+    return value
+
+
 # TODO trololo, had pass here
 def pn_record_get(record, pyctx):
     """Calling ffi.from_handle(p) is invalid and will likely crash if the cdata object returned by new_handle() is not kept alive!"""
@@ -76,3 +82,33 @@ def pn_condition_get_name(cond):
     if ret == ffi.NULL:
         return None
     return ffi.string(ret).decode()
+
+
+def pn_delivery(link, tag):
+    b = tag.encode()
+    cp = ffi.new('char[]', b)
+    pn_bytes_t_tag = {'start': cp, 'size': len(b)}
+    return lib.pn_delivery(link, pn_bytes_t_tag)
+
+
+def pn_link_send(link, data):
+    size = len(data)
+    return lib.pn_link_send(link, data, size)
+
+
+def pn_link_recv(link, limit: int):
+    buffer = ffi.new('char[]', limit)
+    cb = lib.pn_link_recv(link, buffer, limit)
+    if cb < 0:
+        return cb, None  # don't forget this!
+    return cb, ffi.unpack(buffer, cb)  # careful about null bytes in things that are not strings
+
+
+def pn_delivery_tag(delivery) -> str:
+    """Todo when autogenerating these things based on c types, write pyi file or put python inline"""
+    pn_bytes_t = lib.pn_delivery_tag(delivery)
+    return ffi.unpack(pn_bytes_t.start, pn_bytes_t.size).decode()
+
+
+def pn_link_next(link, mask):
+    return _optional(lib.pn_link_next(link, mask))

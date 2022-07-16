@@ -10,9 +10,19 @@ def _from_str_to_charp(value):
     return value.encode()
 
 
+def _optional_str(value):
+    if value == ffi.NULL:
+        return None
+    return ffi.string(value).decode()
+
+
 def pn_condition_set_name(cond, name):
     return lib.pn_condition_set_name(cond, _from_str_to_charp(name))
 
 
 def pn_condition_set_description(cond, description):
     return lib.pn_condition_set_description(cond, _from_str_to_charp(description))
+
+
+def pn_condition_get_description(cond):
+    return _optional_str(lib.pn_condition_get_description(cond))
