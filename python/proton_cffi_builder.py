@@ -1148,7 +1148,7 @@ def run_cffi_compile(output_file):
           if (obj) {
             return obj;
           } else {
-            NULL;
+            return NULL;
           }
         }
 

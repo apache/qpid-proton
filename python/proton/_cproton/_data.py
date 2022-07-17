@@ -23,7 +23,8 @@ def pn_data_lookup(data, name):
 
 
 def pn_data_encode(data, sz):
-    dst = ffi.new('char *[]', sz)
+    """"""
+    dst = ffi.new('char[]', sz)
     encoded_size = lib.pn_data_encode(data, dst, sz)
     if encoded_size >= 0:
         dst = ffi.buffer(dst, encoded_size)
@@ -50,11 +51,14 @@ def pn_data_put_symbol(data, s):
 
 
 def pn_data_get_decimal128(data):
-    return ffi.buffer(lib.pn_data_get_decimal128(data).bytes)
+    res = lib.pn_data_get_decimal128(data)
+    # copy data before res goes out of scope; the lifetime-related behavior here is quite unexpected
+    return ffi.buffer(res.bytes)[:]
 
 
 def pn_data_get_uuid(data):
-    return bytes(ffi.buffer(lib.pn_data_get_uuid(data).bytes))
+    res = lib.pn_data_get_uuid(data)
+    return bytes(ffi.buffer(res.bytes))
 
 
 def pn_data_get_binary(data):

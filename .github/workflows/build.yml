@@ -70,7 +70,7 @@ jobs:
       run: cmake "${{github.workspace}}" "-DCMAKE_BUILD_TYPE=${BuildType}" "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" -DRUNTIME_CHECK=${{matrix.runtimeCheck}} -DBUILD_BINDINGS="python" ${{matrix.cmake_extra}}
       shell: bash
     - name: cmake build/install
-      run: cmake --build "${BuildDir}" --config ${BuildType} -t install --parallel 2
+      run: cmake --build "${BuildDir}" --config "${BuildType}" -t install --parallel 2
       shell: bash
     - id: ctest
       name: ctest
