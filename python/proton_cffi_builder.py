@@ -574,22 +574,11 @@ extern const pn_class_t PN_VOID[];
 pn_cid_t pn_class_id(const pn_class_t *clazz);
 const char *pn_class_name(const pn_class_t *clazz);
 void *pn_class_new(const pn_class_t *clazz, size_t size);
-void *pn_class_incref(const pn_class_t *clazz, void *object);
-int pn_class_refcount(const pn_class_t *clazz, void *object);
-void pn_class_free(const pn_class_t *clazz, void *object);
-bool pn_class_equals(const pn_class_t *clazz, void *a, void *b);
-int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst);
-void *pn_void_new(const pn_class_t *clazz, size_t size);
-void pn_object_incref(void *object);
 void *pn_incref(void *object);
 int pn_decref(void *object);
 int pn_refcount(void *object);
 void pn_free(void *object);
 const pn_class_t *pn_class(void* object);
-
-pn_string_t *pn_string(const char *bytes);
-pn_string_t *pn_stringn(const char *bytes, size_t n);
-size_t pn_string_size(pn_string_t *string);
 
 pn_record_t *pn_record(void);
 void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz);
@@ -1104,7 +1093,8 @@ def run_cffi_compile(output_file):
       #define SWIG_PYTHON_THREAD_BEGIN_BLOCK   PyGILState_STATE _pn_cffi_thread_block = PyGILState_Ensure()
       #define SWIG_PYTHON_THREAD_END_BLOCK     PyGILState_Release(_pn_cffi_thread_block)
 
-        pn_class_t* PN_PYREF;
+// /Users/runner/hostedtoolcache/Python/3.6.15/x64/lib/python3.6/site-packages/cffi/cparser.py:165: UserWarning: Global variable 'PN_PYREF' in cdef(): for consistency with C it should have a storage class specifier (usually 'extern')
+          pn_class_t* PN_PYREF;
         
           static void pn_pyref_incref(void *object) {
     PyObject* p = (PyObject*) object;
@@ -1124,11 +1114,42 @@ def run_cffi_compile(output_file):
     return 1;
   }
 
-        
+#if defined(_MSC_VER)
+
+#define WIN32_LEAN_AMD_MEAN
+#include <windows.h>
+
+BOOL WINAPI DllMain(HINSTANCE dLL, DWORD reason, LPVOID reserved)
+{
+// Perform actions based on the reason for calling.
+  switch (reason)
+  {
+  case DLL_PROCESS_ATTACH:
+    // Initialize once for each new process.
+    PN_PYREF = pn_class_create("pn_pyref", NULL, NULL, pn_pyref_incref, pn_pyref_decref, pn_pyref_refcount);
+    break;
+
+  case DLL_THREAD_ATTACH:
+    // Do thread-specific initialization.
+    break;
+
+  case DLL_THREAD_DETACH:
+    // Do thread-specific cleanup.
+    break;
+
+  case DLL_PROCESS_DETACH:
+    // Perform any necessary cleanup.
+    //pn_fini();
+    break;
+  }
+  return TRUE;
+}
+#else        
         __attribute__((constructor)) static void init_pn_pyref_in_cffi() {
             PN_PYREF = pn_class_create("pn_pyref", NULL, NULL, pn_pyref_incref, pn_pyref_decref, pn_pyref_refcount);
             //printf("execured constructor");
         }
+#endif
 
         static const char _PN_HANDLE_PNI_PYTRACER;
         static const pn_handle_t PNI_PYTRACER = (pn_handle_t) &_PN_HANDLE_PNI_PYTRACER; 
