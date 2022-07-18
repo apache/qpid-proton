@@ -152,7 +152,7 @@ before_install:
 install:
 - echo "Using PYTHON=${PYTHON:=python}"
 - ${PYTHON} -m pip install --user --upgrade pip
-- ${PYTHON} -m pip install --user coverage setuptools wheel tox virtualenv flake8
+- ${PYTHON} -m pip install --user coverage setuptools wheel tox virtualenv flake8 cffi
 # PROTON-2125 suppress annoying deprecation warning from Minitest in Ruby tests
 - gem install minitest:4.3.2 simplecov:0.18.0 codecov
 
