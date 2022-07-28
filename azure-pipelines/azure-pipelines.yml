@@ -11,19 +11,19 @@ variables:
   PythonVersion: '3.7'
   PythonArch: 'x64'
   CmakeConfigExtraArgs: ''
+  CmakeGenerator: '-G "Unix Makefiles"'
   StaticLibs: yes
 
 jobs:
-- job: Windows_VS2019
+- job: Windows
   variables:
     CmakeConfigExtraArgs: '-A x64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
-    CmakeGenerator: '-G "Visual Studio 16 2019"'
+    CmakeGenerator: '-G "Visual Studio 17 2022"'
     VCPKG_DEFAULT_TRIPLET: x64-windows
   pool:
-    vmImage: 'windows-2019'
+    vmImage: 'windows-latest'
   steps:
   - script: |
-      choco install -y swig --version=4.0.1
       vcpkg install jsoncpp
       vcpkg integrate install
     name: InstallExtraStuff
@@ -32,7 +32,7 @@ jobs:
   variables:
     PythonVersion: '3.8'
   pool:
-    vmImage: 'ubuntu-18.04'
+    vmImage: 'ubuntu-latest'
   steps:
   - script: |
       sudo apt-get update
@@ -45,7 +45,7 @@ jobs:
     PKG_CONFIG_PATH: '/usr/local/opt/openssl@1.1/lib/pkgconfig'
     CmakeConfigExtraArgs: '-DBUILD_RUBY=no'
   pool:
-    vmImage: 'macOS-10.15'
+    vmImage: 'macOS-latest'
   steps:
   - script: |
       brew update
