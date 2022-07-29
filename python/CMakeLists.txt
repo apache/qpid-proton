@@ -203,12 +203,14 @@ endif ()
 # python test: python/tests/proton-test
 set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
 set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
-set (py_bld "$<TARGET_FILE_DIR:qpid-proton-core>") # For windows
+# These are only needed on Windows due to build differences
+set (py_dll "$<$<PLATFORM_ID:Windows>:$<TARGET_FILE_DIR:cproton>>")
+set (py_bld "$<$<PLATFORM_ID:Windows>:$<TARGET_FILE_DIR:qpid-proton-core>>")
 set (py_tests "${py_src}/tests")
 set (tests_py "${py_src}/../tests/py")
 
 set (py_path ${CMAKE_BINARY_DIR}/c/tools ${py_bld} $ENV{PATH})
-set (py_pythonpath ${py_tests} ${py_src} ${py_bin} ${tests_py} $ENV{PYTHONPATH})
+set (py_pythonpath ${py_tests} ${py_src} ${py_bin} ${py_dll} ${tests_py} $ENV{PYTHONPATH})
 to_native_path ("${py_pythonpath}" py_pythonpath)
 to_native_path ("${py_path}" py_path)
 
