@@ -1949,10 +1949,12 @@ static void encrypt(pn_tls_t *tls) {
 
   while (true) {
     // Insert unencrypted data into BIO.
+    // This loop must run even if tls->pn_tls_err, in order to extract the error message for the peer.
     // OpenSSL maps each write to a separate TLS record.
     // The SSL can take 16KB + a bit before blocking.
     // TODO: consider allowing application to configure BIO buffer size on encrypt side.
-    while (pending && !tls->enc_wblocked && tls->can_shutdown && !tls->pn_tls_err) {
+
+    while (pending && !tls->enc_wblocked && tls->can_shutdown) {
       size_t n = pending->size - tls->encrypt_pending_offset;
       if (n) {
         char *bytes = pending->bytes + pending->offset + tls->encrypt_pending_offset;
@@ -2012,8 +2014,9 @@ static void encrypt(pn_tls_t *tls) {
       }
     }
 
-    // Done if output buffers exhausted or all available encrypted bytes drained from BIO.
-    if (!curr_result || tls->enc_rblocked)
+    // Done if not possible to move any more bytes from input to output bufs
+    if ((!pending || tls->enc_wblocked || !tls->can_shutdown) // write side
+        && (!curr_result || tls->enc_rblocked)) // read side
       break;
   }
 }
@@ -2095,8 +2098,10 @@ static void decrypt(pn_tls_t *tls) {
       }
     }
 
-    // Done if outbufs exhausted or all inbufs decrypted
-    if (!curr_result || tls->dec_rblocked || tls->dec_closed)
+    // Done if not possible to move any more bytes from input to output bufs
+    if (tls->dec_closed) break;
+    if ((!pending || tls->dec_wblocked) // write side
+        && (!curr_result || tls->dec_rblocked)) // read side
       break;
   }
 
@@ -2124,7 +2129,7 @@ int pn_tls_process(pn_tls_t* tls) {
     decrypt(tls);  // Do this first.  May generate handshake or other on encrypt side.
     if (tls->validating) validate_strict(tls);
   }
-  // We keep sending if there is a "minor" error that may result in an error message for the peer
+  // We keep sending as long as we might generate an error message for the peer
   if (!(tls->pn_tls_err && tls->openssl_err_type == SSL_ERROR_SYSCALL)) {
     encrypt(tls);
     if (tls->validating) validate_strict(tls);
