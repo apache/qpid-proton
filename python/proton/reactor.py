@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 from ._reactor import Container, ApplicationEvent, EventInjector, Handler,\
     LinkOption, ReceiverOption, SenderOption,\
     AtLeastOnce, AtMostOnce, DynamicNodeProperties, Filter, Selector, \

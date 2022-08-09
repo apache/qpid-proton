@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 from cproton import PN_DEFAULT_PRIORITY, PN_STRING, PN_UUID, PN_OVERFLOW, pn_error_text, pn_message, \
     pn_message_annotations, pn_message_body, pn_message_clear, pn_message_decode, \
     pn_message_encode, pn_message_error, pn_message_free, pn_message_get_address, pn_message_get_content_encoding, \

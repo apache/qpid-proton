@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 import time
 
 from proton.reactor import Container, ApplicationEvent, EventInjector, Selector, Backoff

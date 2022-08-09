@@ -21,10 +21,6 @@
 PROTON-2121 python-qpid-proton 0.28 BlockingConnection leaks connections (does not close file descriptors)
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import contextlib
 import gc
 import os

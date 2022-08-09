@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 from ._tracing import (
     get_tracer, init_tracer
 )

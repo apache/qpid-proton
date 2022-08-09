@@ -26,7 +26,6 @@ The proton APIs consist of the following classes:
  - :class:`Message`    -- A class for creating and/or accessing AMQP message content.
  - :class:`Data`       -- A class for creating and/or accessing arbitrary AMQP encoded data.
 """
-from __future__ import absolute_import
 
 import logging
 import logging.config
