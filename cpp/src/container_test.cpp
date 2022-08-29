@@ -574,6 +574,116 @@ void test_container_mt_close_race() {
     }
 }
 
+class schedule_cancel : public proton::messaging_handler {
+    proton::listener listener;
+    test_listen_handler listen_handler;
+    long long w1_handle;
+    long long w2_handle;
+    long long w3_handle;
+    long long w4_handle;
+    long long w5_handle;
+
+    void change_w1_state(proton::container* c) {
+        w1_state = 1;
+    }
+
+    void change_w2_state(proton::container* c) {
+        w2_state = 1;
+    }
+
+    void change_w3_state(proton::container* c) {
+        w3_state = 1;
+    }
+
+    void change_w4_state(proton::container* c) {
+        w4_state = 1;
+    }
+
+    void change_w5_state(proton::container* c) {
+        w5_state = 1;
+    }
+
+    void on_container_start(proton::container& c) override {
+        ASSERT(w1_state==0);
+        ASSERT(w2_state==0);
+        ASSERT(w3_state==0);
+        ASSERT(w4_state==0);
+        ASSERT(w5_state==0);
+
+        listener = c.listen("//:0", listen_handler);
+
+        // We will cancel this scheduled task before its execution.
+        w1_handle = c.schedule(proton::duration(250), proton::make_work(&schedule_cancel::change_w1_state, this, &c));
+
+        // We will cancel this scheduled task before its execution and will try to cancel it again.
+        w2_handle = c.schedule(proton::duration(260), proton::make_work(&schedule_cancel::change_w2_state, this, &c));
+
+        // We will not cancel this scheduled task.
+        w3_handle = c.schedule(proton::duration(35), proton::make_work(&schedule_cancel::change_w3_state, this, &c));
+
+        // We will try to cancel this task before its execution from different thread i.e connection thread.
+        w4_handle = c.schedule(proton::duration(270), proton::make_work(&schedule_cancel::change_w4_state, this, &c));
+
+        // We will try to cancel this task after its execution from different thread i.e. connection thread.
+        w5_handle = c.schedule(proton::duration(0), proton::make_work(&schedule_cancel::change_w5_state, this, &c));
+
+        // Cancel the first scheduled task.
+        c.cancel(w1_handle);
+
+        // Try cancelling the second scheduled task two times.
+        c.cancel(w2_handle);
+        c.cancel(w2_handle);
+
+        // Try cancelling invalid work handle.
+        c.cancel(-1);
+        c.auto_stop(false);
+    }
+
+    // Get here twice - once for listener, once for connector
+    void on_connection_open(proton::connection &c) override {
+        c.close();
+    }
+
+    void on_connection_close(proton::connection &c) override {
+        // Cross-thread cancelling
+
+        ASSERT(w4_state==0);
+        // Cancel the fourth task before its execution.
+        c.container().cancel(w4_handle);
+
+        ASSERT(w5_state==1);
+        // Cancel the already executed fifth task.
+        c.container().cancel(w5_handle);
+
+        c.container().stop();
+    }
+
+    void on_transport_error(proton::transport & t) override {
+        // Do nothing - ignore transport errors - we're going to get one when
+        // the container stops.
+    }
+
+public:
+    schedule_cancel(): w1_state(0), w2_state(0), w3_state(0), w4_state(0), w5_state(0) {}
+
+    int w1_state;
+    int w2_state;
+    int w3_state;
+    int w4_state;
+    int w5_state;
+};
+
+int test_container_schedule_cancel() {
+    schedule_cancel t;
+    proton::container(t).run(2);
+    ASSERT(t.w1_state==0); // The value of w1_state remained 0 because we cancelled the associated task before its execution.
+    ASSERT(t.w2_state==0); // The value of w2_state remained 0 because we cancelled the associated task before its execution.
+    ASSERT(t.w3_state==1); // The value of w3_state changed to 1 because we hadn't cancelled this task.
+    ASSERT(t.w4_state==0); // The value of w4_state remained 0 because we cancelled the associated task before its execution.
+    ASSERT(t.w5_state==1); // The value of w5_state changed to 1 because the task was already executed before we cancelled it.
+    return 0;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -595,5 +705,6 @@ int main(int argc, char** argv) {
     RUN_ARGV_TEST(failed, test_container_mt_stop_empty());
     RUN_ARGV_TEST(failed, test_container_mt_stop());
     RUN_ARGV_TEST(failed, test_container_mt_close_race());
+    RUN_ARGV_TEST(failed, test_container_schedule_cancel());
     return failed;
 }
