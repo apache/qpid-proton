@@ -42,6 +42,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include <mutex>
 # define MUTEX(x) std::mutex x;
@@ -84,7 +85,8 @@ class container::impl {
     void run(int threads);
     void stop(const error_condition& err);
     void auto_stop(bool set);
-    void schedule(duration, work);
+    work_handle schedule(duration, work);
+    void cancel(work_handle);
     template <class T> static void set_handler(T s, messaging_handler* h);
     template <class T> static messaging_handler* get_handler(T s);
     messaging_handler* get_handler(pn_event_t *event);
@@ -125,10 +127,13 @@ class container::impl {
     struct scheduled {
         timestamp time; // duration from epoch for task
         work task;
+        work_handle w_handle;
 
         // We want to get to get the *earliest* first so test is "reversed"
         bool operator < (const scheduled& r) const { return  r.time < time; }
     };
+    work_handle current_work_handle_ = 0;
+    std::unordered_set<work_handle> is_active_; // Stores the active work_handles
     std::vector<scheduled> deferred_; // This vector is kept as a heap
     MUTEX(deferred_lock_)
 
