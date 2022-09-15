@@ -1205,6 +1205,9 @@ static int init_ssl_socket(pn_tls_t *ssl, pn_tls_config_t *domain)
     return -1;
   }
 
+  // Enable "write as much as you hve buffer space for", similar to BIOs and raw sockets.
+  SSL_set_mode(ssl->ssl, SSL_MODE_ENABLE_PARTIAL_WRITE);
+
   // store backpointer
   SSL_set_ex_data(ssl->ssl, tls_ex_data_index, ssl);
 
