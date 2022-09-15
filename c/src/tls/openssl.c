@@ -1646,6 +1646,7 @@ size_t pn_tls_give_encrypt_output_buffers(pn_tls_t* tls, pn_raw_buffer_t const* 
     // Get next free
     assert(tls->eresult_buffers[current-1].type == buff_empty);
     raw_buffer_to_pbuffer(bufs + i, &tls->eresult_buffers[current-1], buff_eresult_blank);
+    tls->eresult_buffers[current-1].size = 0;
     previous = current;
     current = tls->eresult_buffers[current-1].next;
   }
@@ -1673,6 +1674,7 @@ size_t pn_tls_give_decrypt_output_buffers(pn_tls_t* tls, pn_raw_buffer_t const* 
     // Get next free
     assert(tls->dresult_buffers[current-1].type == buff_empty);
     raw_buffer_to_pbuffer(bufs + i, &tls->dresult_buffers[current-1], buff_dresult_blank);
+    tls->dresult_buffers[current-1].size = 0;
     previous = current;
     current = tls->dresult_buffers[current-1].next;
   }
