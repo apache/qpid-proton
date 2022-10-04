@@ -108,10 +108,13 @@ set(qpid-proton-cpp-source
   )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
+target_compile_definitions(qpid-proton-cpp
+  PRIVATE "PN_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+
 if(BUILD_STATIC_LIBS)
   add_library(qpid-proton-cpp-static STATIC ${qpid-proton-cpp-source})
   target_compile_definitions(qpid-proton-cpp-static
-    PRIVATE PROTON_DECLARE_STATIC
+    PRIVATE PROTON_DECLARE_STATIC "PN_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
     PUBLIC PN_CPP_DECLARE_STATIC)
   set_target_properties (
     qpid-proton-cpp-static
