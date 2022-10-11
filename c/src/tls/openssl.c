@@ -442,8 +442,18 @@ size_t pn_tls_get_session_error_string(pn_tls_t* tls, char *buf, size_t buf_len)
   return strlen(buf);
 }
 
-size_t pn_tls_get_encrypt_input_buffer_capacity(pn_tls_t *tls) { return tls->encrypt_buffer_empty_count; }
-size_t pn_tls_get_decrypt_input_buffer_capacity(pn_tls_t *tls) { return tls->decrypt_buffer_empty_count; }
+size_t pn_tls_get_encrypt_input_buffer_capacity(pn_tls_t *tls) {
+  if (tls->enc_closed || tls->stopped || tls->pn_tls_err)
+    return 0;
+  return tls->encrypt_buffer_empty_count;
+}
+
+size_t pn_tls_get_decrypt_input_buffer_capacity(pn_tls_t *tls) {
+    if (tls->dec_closed || tls->stopped || tls->pn_tls_err)
+        return 0;
+    return tls->decrypt_buffer_empty_count;
+}
+
 size_t pn_tls_get_encrypt_output_buffer_capacity(pn_tls_t *tls) { return tls->eresult_empty_count; }
 size_t pn_tls_get_decrypt_output_buffer_capacity(pn_tls_t *tls) { return tls->dresult_empty_count; }
 
@@ -1566,8 +1576,6 @@ static void pbuffer_to_raw_buffer(pbuffer_t *pbuf, pn_raw_buffer_t *rbuf) {
 size_t pn_tls_give_encrypt_input_buffers(pn_tls_t* tls, pn_raw_buffer_t const* bufs, size_t count_bufs) {
   assert(tls);
 
-  if (tls->enc_closed || tls->stopped || tls->pn_tls_err)
-    return 0;
   size_t can_take = pn_min(count_bufs, pn_tls_get_encrypt_input_buffer_capacity(tls));
   if ( can_take==0 ) return 0;
 
@@ -1602,8 +1610,6 @@ size_t pn_tls_give_encrypt_input_buffers(pn_tls_t* tls, pn_raw_buffer_t const* b
 size_t pn_tls_give_decrypt_input_buffers(pn_tls_t* tls, pn_raw_buffer_t const* bufs, size_t count_bufs) {
   assert(tls);
 
-  if (tls->dec_closed || tls->stopped || tls->pn_tls_err)
-    return 0;
   size_t can_take = pn_min(count_bufs, pn_tls_get_decrypt_input_buffer_capacity(tls));
   if ( can_take==0 ) return 0;
 
