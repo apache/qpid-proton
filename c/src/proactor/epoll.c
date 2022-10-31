@@ -1209,14 +1209,14 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
   if (!pconnection_rclosed(pc)) {
     pn_rwbytes_t rbuf = pn_connection_driver_read_buffer(&pc->driver);
     if (rbuf.size > 0 && !pc->read_blocked) {
-      ssize_t n = read(pc->psocket.epoll_io.fd, rbuf.start, rbuf.size);
+      ssize_t n = recv(pc->psocket.epoll_io.fd, rbuf.start, rbuf.size, 0);
       if (n > 0) {
         pn_connection_driver_read_done(&pc->driver, n);
         // If n == rbuf.size then we should enlarge the buffer and see if there is more to read
         if ((size_t)n==rbuf.size) {
           rbuf = pn_connection_driver_read_buffer_sized(&pc->driver, n*2);
           if (rbuf.size > 0) {
-            n = read(pc->psocket.epoll_io.fd, rbuf.start, rbuf.size);
+            n = recv(pc->psocket.epoll_io.fd, rbuf.start, rbuf.size, 0);
             if (n > 0) {
               pn_connection_driver_read_done(&pc->driver, n);
             }
