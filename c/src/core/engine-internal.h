@@ -140,7 +140,7 @@ struct pn_transport_t {
   pn_data_t *remote_desired_capabilities;
   pn_data_t *remote_properties;
   pn_data_t *disp_data;
-  // DEFAULT_MAX_FRAME_SIZE see PROTON-2460
+  // DEFAULT_MAX_FRAME_SIZE see PROTON-2640
 #define PN_DEFAULT_MAX_FRAME_SIZE (32*1024)
   uint32_t   local_max_frame;
   uint32_t   remote_max_frame;
