@@ -2946,3 +2946,13 @@ int64_t pn_proactor_now_64(void) {
   clock_gettime(CLOCK_MONOTONIC, &t);
   return ((int64_t)t.tv_sec) * 1000 + t.tv_nsec / 1000000;
 }
+
+void pn_connection_write_flush(pn_connection_t *c) {
+  pconnection_t *pc = get_pconnection(c);
+  if (pc) {
+    // Assume can write and have frames to write.  Booleans will be correctly re-evaluated in write_flush().
+    pc->write_blocked = false;
+    pc->output_drained = false;
+    write_flush(pc);  // May generate transport event.
+  }
+}

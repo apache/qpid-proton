@@ -1368,6 +1368,9 @@ int64_t pn_proactor_now_64(void) {
   return uv_hrtime() / 1000000; // uv_hrtime returns time in nanoseconds
 }
 
+// Empty stub for pending write flush functionality.
+void pn_connection_write_flush(pn_connection_t *connection) {}
+
 // Empty stubs for raw connection code
 pn_raw_connection_t *pn_raw_connection(void) { return NULL; }
 void pn_proactor_raw_connect(pn_proactor_t *p, pn_raw_connection_t *rc, const char *addr) {}
