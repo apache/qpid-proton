@@ -140,9 +140,8 @@ struct pn_transport_t {
   pn_data_t *remote_desired_capabilities;
   pn_data_t *remote_properties;
   pn_data_t *disp_data;
-  //#define PN_DEFAULT_MAX_FRAME_SIZE (16*1024)
-/* This is wrong and bad  we should really use a sensible starting size not unlimited */
-#define PN_DEFAULT_MAX_FRAME_SIZE (0)  /* for now, allow unlimited size */
+  // DEFAULT_MAX_FRAME_SIZE see PROTON-2460
+#define PN_DEFAULT_MAX_FRAME_SIZE (32*1024)
   uint32_t   local_max_frame;
   uint32_t   remote_max_frame;
   pn_condition_t remote_condition;
