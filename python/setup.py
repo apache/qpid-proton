@@ -54,7 +54,7 @@ class BuildExtension(build_ext):
         setup_path = os.path.dirname(os.path.realpath(__file__))
         base = self.get_finalized_command('build').build_base
         build_include = os.path.join(base, 'include')
-        proton_base = os.path.abspath(os.path.join(setup_path))
+        proton_base = os.path.relpath(setup_path)
         proton_src = os.path.join(proton_base, 'src')
         proton_core_src = os.path.join(proton_base, 'src', 'core')
         proton_include = os.path.join(proton_base, 'include')
