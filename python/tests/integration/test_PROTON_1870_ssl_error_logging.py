@@ -38,14 +38,13 @@ except ImportError:
 import socket
 import ssl
 import threading
+import unittest
 
 import cproton
 
 import proton.handlers
 import proton.utils
 import proton.reactor
-
-from test_unittest import unittest
 
 
 class Broker(proton.handlers.MessagingHandler):
