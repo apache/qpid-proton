@@ -137,19 +137,25 @@ static bool handle(app_data_t* app, pn_event_t* event) {
           pn_delivery(sender, pn_dtag((const char *)&app->sent, sizeof(app->sent)));
           pn_link_send(sender, msgbuf.start, msgbuf.size - HOLDBACK); /* Send some part of message */
           app->in_progress = true;
-          /* Return from this link flow event and abort the message on next, */
+          /* Return from this link flow event and abort the message on future FLOW, */
           break;
         } else {
           pn_delivery_t * pnd = pn_link_current(sender);
-          pn_delivery_abort(pnd);
-          /* aborted delivery is presettled and never ack'd. */
-          if (++app->aborted == app->message_count) {
-            printf("%d messages started and aborted\n", app->aborted);
-            pn_connection_close(pn_event_connection(event));
-            /* Continue handling events till we receive TRANSPORT_CLOSED */
+          if (pn_delivery_pending(pnd) == 0) {
+            // All message data from pn_link_send has been processed to physical frames.
+            pn_delivery_abort(pnd);
+            /* aborted delivery is presettled and never ack'd. */
+            if (++app->aborted == app->message_count) {
+              printf("%d messages started and aborted\n", app->aborted);
+              pn_connection_close(pn_event_connection(event));
+              /* Continue handling events till we receive TRANSPORT_CLOSED */
+            }
+            ++app->sent;
+            app->in_progress = false;
+          } else {
+            // Keep checking FLOW events until all message data forwarded to peer.
+            break;
           }
-          ++app->sent;
-          app->in_progress = false;
         }
      }
      break;
