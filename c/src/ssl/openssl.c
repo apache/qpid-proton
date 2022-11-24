@@ -114,6 +114,7 @@ struct pni_ssl_t {
   bool ssl_closed;      // shutdown complete, or SSL error
   bool read_blocked;    // SSL blocked until more network data is read
   bool write_blocked;   // SSL blocked until data is written to network
+  bool handshake_ok;
   int err_reason;
 
   char *subject;
@@ -1275,6 +1276,10 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
         ssl->write_blocked = false;
         work_pending = work_pending || max_len > 0;
         ssl_log(transport, PN_LEVEL_TRACE, "Read %d bytes from BIO Layer", available );
+      } else if ( !ssl->handshake_ok && !ssl->ssl_closed ) {
+        // OpenSSL bug workaround 1.0.x -> unknown.  Harmless in all versions.
+        // See PROTON-2643. SSL_do_handshake() prevents forgetting to refill the BIO.
+        ssl->handshake_ok = (SSL_do_handshake(ssl->ssl) == 1);
       }
     }
 
