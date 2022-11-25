@@ -114,6 +114,20 @@ void test_value() {
     ASSERT_THROWS(conversion_error, m.value(bad));
 }
 
+void test_copy_constructor() {
+    proton::map<string, scalar> m = std::map<string, scalar>{{"a", 2}, {"b", 3}};
+    ASSERT_EQUAL(scalar(2), m.get("a"));
+    ASSERT_EQUAL(scalar(3), m.get("b"));
+    ASSERT_EQUAL(2U, m.size());
+}
+
+void test_initializer_list_constructor() {
+    proton::map<string, scalar> m({{"a", 2}, {"b", 3}});
+    ASSERT_EQUAL(scalar(2), m.get("a"));
+    ASSERT_EQUAL(scalar(3), m.get("b"));
+    ASSERT_EQUAL(2U, m.size());
+}
+
 }
 
 int main(int, char**) {
@@ -122,5 +136,7 @@ int main(int, char**) {
     RUN_TEST(failed, test_use());
     RUN_TEST(failed, test_cppmap());
     RUN_TEST(failed, test_value());
+    RUN_TEST(failed, test_copy_constructor());
+    RUN_TEST(failed, test_initializer_list_constructor());
     return failed;
 }
