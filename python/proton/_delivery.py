@@ -24,7 +24,7 @@ from cproton import PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEA
     pn_delivery_writable, pn_disposition_annotations, pn_disposition_condition, pn_disposition_data, \
     pn_disposition_get_section_number, pn_disposition_get_section_offset, pn_disposition_is_failed, \
     pn_disposition_is_undeliverable, pn_disposition_set_failed, pn_disposition_set_section_number, \
-    pn_disposition_set_section_offset, pn_disposition_set_undeliverable, pn_disposition_type, pn_work_next
+    pn_disposition_set_section_offset, pn_disposition_set_undeliverable, pn_disposition_type
 
 from ._condition import cond2obj, obj2cond
 from ._data import dat2obj, obj2dat
@@ -400,16 +400,6 @@ class Delivery(Wrapper):
         The delivery cannot be aborted after it has been completely delivered.
         """
         pn_delivery_abort(self._impl)
-
-    @property
-    def work_next(self) -> Optional['Delivery']:
-        """Deprecated: use on_message(), on_accepted(), on_rejected(),
-        on_released(), and on_settled() instead.
-
-        The next :class:`Delivery` on the connection that has pending
-        operations.
-        """
-        return Delivery.wrap(pn_work_next(self._impl))
 
     @property
     def link(self) -> Union['Receiver', 'Sender']:

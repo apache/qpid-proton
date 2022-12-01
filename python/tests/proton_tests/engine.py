@@ -844,28 +844,6 @@ class TransferTest(Test):
         gc.collect()
         assert not gc.garbage
 
-    def test_work_queue(self):
-        assert self.c1.work_head is None
-        self.snd.delivery("tag")
-        assert self.c1.work_head is None
-        self.rcv.flow(1)
-        self.pump()
-        d = self.c1.work_head
-        assert d is not None
-        tag = d.tag
-        assert tag == "tag", tag
-        assert d.writable
-
-        n = self.snd.send(b"this is a test")
-        assert self.snd.advance()
-        assert self.c1.work_head is None
-
-        self.pump()
-
-        d = self.c2.work_head
-        assert d.tag == "tag"
-        assert d.readable
-
     def test_multiframe(self):
         self.rcv.flow(1)
         self.snd.delivery("tag")
@@ -1030,15 +1008,6 @@ class TransferTest(Test):
             n = self.snd.send(msg)
             assert n == len(msg)
             assert self.snd.advance()
-
-        # handle all disposition changes to sent messages
-        d = self.c1.work_head
-        while d:
-            next_d = d.work_next
-            if d.updated:
-                d.update(Delivery.ACCEPTED)
-                d.settle()
-            d = next_d
 
         # submit some more deliveries
         for m in range(1450, 1500):

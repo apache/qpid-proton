@@ -53,7 +53,7 @@ from cproton import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN_DIST_MOD
     pn_terminus_get_durability, pn_terminus_get_expiry_policy, pn_terminus_get_timeout, pn_terminus_get_type, \
     pn_terminus_is_dynamic, pn_terminus_outcomes, pn_terminus_properties, pn_terminus_set_address, \
     pn_terminus_set_distribution_mode, pn_terminus_set_durability, pn_terminus_set_dynamic, \
-    pn_terminus_set_expiry_policy, pn_terminus_set_timeout, pn_terminus_set_type, pn_work_head, \
+    pn_terminus_set_expiry_policy, pn_terminus_set_timeout, pn_terminus_set_type, \
     pn_link_properties, pn_link_remote_properties
 
 from ._common import unicode2utf8, utf82unicode
@@ -464,27 +464,6 @@ class Connection(Wrapper, Endpoint):
             mask, else ``None`` if no link matches.
         """
         return Link.wrap(pn_link_head(self._impl, mask))
-
-    @property
-    def work_head(self) -> Optional[Delivery]:
-        """Deprecated: use on_message(), on_accepted(), on_rejected(),
-        on_released(), and on_settled() instead.
-
-        Extracts the first delivery on the connection that has pending
-        operations.
-
-        Retrieves the first delivery on the Connection that has pending
-        operations. A readable delivery indicates message data is waiting
-        to be read. A writable delivery indicates that message data may be
-        sent. An updated delivery indicates that the delivery's disposition
-        has changed. A delivery will never be both readable and writable,
-        but it may be both readable and updated or both writable and
-        updated.
-
-        :return: The first delivery object that needs to be serviced, or ``None`` if none.
-        :rtype: :class:`Delivery` or ``None``
-        """
-        return Delivery.wrap(pn_work_head(self._impl))
 
     @property
     def error(self):
