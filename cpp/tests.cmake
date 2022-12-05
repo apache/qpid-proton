@@ -62,6 +62,7 @@ add_cpp_test(reconnect_test)
 add_cpp_test(link_test)
 add_cpp_test(credit_test)
 add_cpp_test(delivery_test)
+add_cpp_test(context_test)
 if (ENABLE_JSONCPP)
   add_cpp_test(connect_config_test)
   target_link_libraries(connect_config_test qpid-proton-core) # For pn_sasl_enabled

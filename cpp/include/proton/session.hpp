@@ -99,6 +99,12 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Return the receivers on this session.
     PN_CPP_EXTERN receiver_range receivers() const;
 
+    /// Set user data on this session.
+    PN_CPP_EXTERN void user_data(void* user_data) const;
+
+    /// Get user data from this session.
+    PN_CPP_EXTERN void* user_data() const;
+
     /// @cond INTERNAL
   friend class internal::factory<session>;
   friend class session_iterator;

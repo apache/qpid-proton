@@ -94,6 +94,12 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// **Unsettled API** - Properties supplied by the remote link endpoint.
     PN_CPP_EXTERN std::map<symbol, value> properties() const;
 
+    /// Set user data on this link.
+    PN_CPP_EXTERN void user_data(void* user_data) const;
+
+    /// Get user data from this link.
+    PN_CPP_EXTERN void* user_data() const;
+
   protected:
     /// @cond INTERNAL
     

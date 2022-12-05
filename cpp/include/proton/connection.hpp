@@ -202,6 +202,12 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// existing parameters as if `connection_options::update()` was used.
     PN_CPP_EXTERN void update_options(const connection_options&);
 
+    /// Set user data on this connection.
+    PN_CPP_EXTERN void user_data(void* user_data) const;
+
+    /// Get user data from this connection.
+    PN_CPP_EXTERN void* user_data() const;
+
     /// @cond INTERNAL
   friend class internal::factory<connection>;
   friend class container;

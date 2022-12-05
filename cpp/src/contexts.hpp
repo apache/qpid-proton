@@ -103,6 +103,7 @@ class connection_context : public context {
     listener_context* listener_context_;
     work_queue work_queue_;
     std::string active_url_;
+    void* user_data_;
 };
 
 class reconnect_options_base;
@@ -127,6 +128,7 @@ class listener_context : public context {
 
     listen_handler* listen_handler_;
     std::unique_ptr<const connection_options> connection_options_;
+    void* user_data_;
 };
 
 class link_context : public context {
@@ -140,6 +142,7 @@ class link_context : public context {
     bool auto_accept;
     bool auto_settle;
     bool draining;
+    void* user_data_;
 };
 
 class session_context : public context {
@@ -148,6 +151,16 @@ class session_context : public context {
     static session_context& get(pn_session_t* s);
 
     messaging_handler* handler;
+    void* user_data_;
+};
+
+class transfer_context : public context {
+  public:
+    transfer_context() : handler(0) {}
+    static transfer_context& get(pn_delivery_t* s);
+
+    messaging_handler* handler;
+    void* user_data_;
 };
 
 }
