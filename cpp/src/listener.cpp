@@ -60,6 +60,16 @@ class container& listener::container() const {
     return *reinterpret_cast<class container*>(c);
 }
 
+void listener::user_data(void* user_data) const {
+    listener_context& lc = listener_context::get(listener_);
+    lc.user_data_ = user_data;
+}
+
+void* listener::user_data() const {
+    listener_context& lc = listener_context::get(listener_);
+    return lc.user_data_;
+}
+
 // Listen handler
 listen_handler::~listen_handler() = default;
 void listen_handler::on_open(listener&) {}

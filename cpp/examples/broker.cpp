@@ -80,13 +80,10 @@ bool verbose;
 class Queue;
 class Sender;
 
-typedef std::map<proton::sender, Sender*> senders;
-
 class Sender : public proton::messaging_handler {
     friend class connection_handler;
 
     proton::sender sender_;
-    senders& senders_;
     proton::work_queue& work_queue_;
     std::string queue_name_;
     Queue* queue_;
@@ -97,15 +94,19 @@ class Sender : public proton::messaging_handler {
     void on_sender_close(proton::sender &sender) override;
 
 public:
-    Sender(proton::sender s, senders& ss) :
-        sender_(s), senders_(ss), work_queue_(s.work_queue()), queue_(0), pending_credit_(0)
-    {}
+    Sender(proton::sender s) :
+        sender_(s), work_queue_(s.work_queue()), queue_(0), pending_credit_(0)
+    {
+        s.user_data(this);
+    }
 
     bool add(proton::work f) {
         return work_queue_.add(f);
     }
 
-
+    static Sender* get(const proton::sender& s) {
+        return reinterpret_cast<Sender*>(s.user_data());
+    }
     void boundQueue(Queue* q, std::string qn);
     void sendMsg(proton::message m) {
         DOUT(std::cerr << "Sender:   " << this << " sending\n";);
@@ -204,7 +205,6 @@ void Sender::on_sender_close(proton::sender &sender) {
         // If so, we should have a way to mark the sender deleted, so we can delete
         // on queue binding
     }
-    senders_.erase(sender);
 }
 
 void Sender::boundQueue(Queue* q, std::string qn) {
@@ -346,7 +346,6 @@ void Receiver::queueMsgToNamedQueue(proton::message& m, std::string address) {
 
 class connection_handler : public proton::messaging_handler {
     QueueManager& queue_manager_;
-    senders senders_;
 
 public:
     connection_handler(QueueManager& qm) :
@@ -363,8 +362,7 @@ public:
     // A sender sends messages from a queue to a subscriber.
     void on_sender_open(proton::sender &sender) override {
         std::string qn = sender.source().dynamic() ? "" : sender.source().address();
-        Sender* s = new Sender(sender, senders_);
-        senders_[sender] = s;
+        Sender* s = new Sender(sender);
         queue_manager_.add([=]{queue_manager_.findQueueSender(s, qn);});
     }
 
@@ -384,14 +382,11 @@ public:
     void on_session_close(proton::session &session) override {
         // Unsubscribe all senders that belong to session.
         for (proton::sender_iterator i = session.senders().begin(); i != session.senders().end(); ++i) {
-            senders::iterator j = senders_.find(*i);
-            if (j == senders_.end()) continue;
-            Sender* s = j->second;
+            Sender* s = Sender::get(*i);
             if (s->queue_) {
                 auto q = s->queue_;
                 s->queue_->add([=]{q->unsubscribe(s);});
             }
-            senders_.erase(j);
         }
     }
 
@@ -403,9 +398,7 @@ public:
     void on_transport_close(proton::transport& t) override {
         // Unsubscribe all senders.
         for (proton::sender_iterator i = t.connection().senders().begin(); i != t.connection().senders().end(); ++i) {
-            senders::iterator j = senders_.find(*i);
-            if (j == senders_.end()) continue;
-            Sender* s = j->second;
+            Sender* s = Sender::get(*i);
             if (s->queue_) {
                 auto q = s->queue_;
                 s->queue_->add([=]{q->unsubscribe(s);});

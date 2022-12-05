@@ -77,6 +77,12 @@ class transfer : public internal::object<pn_delivery_t> {
     /// Return true if the transfer has been settled.
     PN_CPP_EXTERN bool settled() const;
 
+    /// Set user data on this transfer.
+    PN_CPP_EXTERN void user_data(void* user_data) const;
+
+    /// Get user data from this transfer.
+    PN_CPP_EXTERN void* user_data() const;
+
     /// @cond INTERNAL
   friend class internal::factory<transfer>;
     /// @endcond

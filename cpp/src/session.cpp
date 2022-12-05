@@ -136,4 +136,16 @@ session_iterator session_iterator::operator++() {
     return *this;
 }
 
+void session::user_data(void* user_data) const {
+    pn_session_t* ssn = pn_object();
+    session_context& sctx = session_context::get(ssn);
+    sctx.user_data_ = user_data;
+}
+
+void* session::user_data() const {
+    pn_session_t* ssn = pn_object();
+    session_context& sctx = session_context::get(ssn);
+    return sctx.user_data_;
+}
+
 } // namespace proton

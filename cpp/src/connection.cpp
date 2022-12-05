@@ -223,4 +223,14 @@ void connection::update_options(const connection_options& options) {
     cc.connection_options_->update(options);
 }
 
+void connection::user_data(void* user_data) const {
+    connection_context& cc = connection_context::get(pn_object());
+    cc.user_data_ = user_data;
+}
+
+void* connection::user_data() const {
+    connection_context& cc = connection_context::get(pn_object());
+    return cc.user_data_;
+}
+
 } // namespace proton

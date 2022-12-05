@@ -30,10 +30,11 @@
 #include "proton/reconnect_options.hpp"
 
 #include <proton/connection.h>
-#include <proton/object.h>
+#include <proton/delivery.h>
 #include <proton/link.h>
 #include <proton/listener.h>
 #include <proton/message.h>
+#include <proton/object.h>
 #include <proton/session.h>
 
 #include <typeinfo>
@@ -49,6 +50,7 @@ PN_HANDLE(CONNECTION_CONTEXT)
 PN_HANDLE(LISTENER_CONTEXT)
 PN_HANDLE(SESSION_CONTEXT)
 PN_HANDLE(LINK_CONTEXT)
+PN_HANDLE(TRANSFER_CONTEXT)
 
 template <class T>
 T* get_context(pn_record_t* record, pn_handle_t handle) {
@@ -87,6 +89,10 @@ link_context& link_context::get(pn_link_t* l) {
 
 session_context& session_context::get(pn_session_t* s) {
     return ref<session_context>(id(pn_session_attachments(s), SESSION_CONTEXT));
+}
+
+transfer_context& transfer_context::get(pn_delivery_t* s) {
+    return ref<transfer_context>(id(pn_delivery_attachments(s), TRANSFER_CONTEXT));
 }
 
 }

@@ -49,4 +49,15 @@ enum transfer::state transfer::state() const { return static_cast<enum state>(pn
 
 std::string to_string(enum transfer::state s) { return pn_disposition_type_name(s); }
 std::ostream& operator<<(std::ostream& o, const enum transfer::state s) { return o << to_string(s); }
+
+void transfer::user_data(void* user_data) const {
+    transfer_context& cc = transfer_context::get(pn_object());
+    cc.user_data_ = user_data;
+}
+
+void* transfer::user_data() const {
+    transfer_context& cc = transfer_context::get(pn_object());
+    return cc.user_data_;
+}
+
 }
