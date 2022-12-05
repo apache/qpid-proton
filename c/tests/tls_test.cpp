@@ -471,3 +471,71 @@ TEST_CASE("missing client cert") {
   set_rbuf(&early_data_buf, NULL, 0, 0);
   reset_rbuf(&early_data_buf);
 }
+
+TEST_CASE("buffer release on pn_tls_stop()") {
+  pn_raw_buffer_t bufs[4];
+  size_t give_count = 0;
+  size_t take_count = 0;
+  TestPeer client(false);
+  client.init();  // ... up to pn_tls_start()
+  pn_tls_t *tls = client.tls;
+
+  // Confirm we can add them but not take out empty buffers until after pn_tls_top()
+  size_t count = 1;
+  for (size_t i = 0; i < count; i++)
+    bufs[i] = new_rbuf(512);
+  give_count += count;
+  REQUIRE(pn_tls_give_encrypt_input_buffers(tls, bufs, count) == count);
+  REQUIRE(pn_tls_take_encrypt_input_buffers(tls, bufs, count) == 0);
+
+  count = 2;
+  for (size_t i = 0; i < count; i++)
+    bufs[i] = new_rbuf(512);
+  give_count += count;
+  REQUIRE(pn_tls_give_decrypt_input_buffers(tls, bufs, count) == count);
+  REQUIRE(pn_tls_take_decrypt_input_buffers(tls, bufs, count) == 0);
+
+  count = 3;
+  for (size_t i = 0; i < count; i++)
+    bufs[i] = new_rbuf(512);
+  give_count += count;
+  REQUIRE(pn_tls_give_encrypt_output_buffers(tls, bufs, count) == count);
+  REQUIRE(pn_tls_get_encrypt_output_buffer_count(tls) == 0);
+  REQUIRE(pn_tls_take_encrypt_output_buffers(tls, bufs, count) == 0);
+
+  count = 4;
+  for (size_t i = 0; i < count; i++)
+    bufs[i] = new_rbuf(512);
+  give_count += count;
+  REQUIRE(pn_tls_give_decrypt_output_buffers(tls, bufs, count) == count);
+  REQUIRE(pn_tls_get_decrypt_output_buffer_count(tls) == 0);
+  REQUIRE(pn_tls_take_decrypt_output_buffers(tls, bufs, count) == 0);
+
+  pn_tls_stop(tls);
+
+  count = pn_tls_take_encrypt_input_buffers(tls, bufs, 4);
+  for (size_t i = 0; i < count; i++)
+    free_rbuf(bufs[i]);
+  take_count += count;
+
+  count = pn_tls_take_decrypt_input_buffers(tls, bufs, 4);
+  for (size_t i = 0; i < count; i++)
+    free_rbuf(bufs[i]);
+  take_count += count;
+
+  size_t avail = pn_tls_get_encrypt_output_buffer_count(tls);
+  count = pn_tls_take_encrypt_output_buffers(tls, bufs, 4);
+  REQUIRE(avail == count);
+  for (size_t i = 0; i < count; i++)
+    free_rbuf(bufs[i]);
+  take_count += count;
+
+  avail = pn_tls_get_decrypt_output_buffer_count(tls);
+  count = pn_tls_take_decrypt_output_buffers(tls, bufs, 4);
+  REQUIRE(avail == count);
+  for (size_t i = 0; i < count; i++)
+    free_rbuf(bufs[i]);
+  take_count += count;
+
+  REQUIRE(take_count == give_count);
+}

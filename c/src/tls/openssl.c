@@ -222,7 +222,8 @@ struct pn_tls_t {
 static void encrypt(pn_tls_t *);
 static void decrypt(pn_tls_t *);
 static int pn_tls_alpn_cb(SSL *ssn, const unsigned char **out, unsigned char *outlen, const unsigned char *in, unsigned int inlen, void *arg);
-
+static void release_buffers(pn_tls_t *
+);
 
 static void tls_initialize_buffers(pn_tls_t *tls) {
   // Link together free lists
@@ -1143,6 +1144,8 @@ int pn_tls_stop(pn_tls_t *tls) {
   if (tls->stopped)
     return PN_ARG_ERR;
   tls->stopped = true;
+  release_buffers(tls);
+  if (tls->validating) validate_strict(tls);
   return 0;
 }
 
@@ -1925,6 +1928,59 @@ static buff_ptr current_decrypted_result(pn_tls_t *tls) {
     return p;  //  Has room so keep filling.
   // Otherwise, use a blank reult if available.
   return tls->dresult_first_blank;
+}
+
+static void release_buffers(pn_tls_t *tls) {
+  // encrypt input
+  for(;tls->encrypt_first_pending;) {
+    buff_ptr p = tls->encrypt_first_pending;
+    assert(tls->encrypt_buffers[p-1].type == buff_encrypt_pending);
+    if (!tls->encrypt_first_done) {
+      tls->encrypt_first_done = p;
+    }
+    if (tls->encrypt_last_done) {
+      tls->encrypt_buffers[tls->encrypt_last_done-1].next = p;
+    }
+    tls->encrypt_last_done = p;
+    tls->encrypt_first_pending = tls->encrypt_buffers[p-1].next;
+
+    tls->encrypt_buffers[p-1].next = 0;
+    tls->encrypt_buffers[p-1].type = buff_encrypt_done;
+  }
+
+  // decrypt input
+  for(;tls->decrypt_first_pending;) {
+    buff_ptr p = tls->decrypt_first_pending;
+    assert(tls->decrypt_buffers[p-1].type == buff_decrypt_pending);
+    if (!tls->decrypt_first_done) {
+      tls->decrypt_first_done = p;
+    }
+    if (tls->decrypt_last_done) {
+      tls->decrypt_buffers[tls->decrypt_last_done-1].next = p;
+    }
+    tls->decrypt_last_done = p;
+    tls->decrypt_first_pending = tls->decrypt_buffers[p-1].next;
+
+    tls->decrypt_buffers[p-1].next = 0;
+    tls->decrypt_buffers[p-1].type = buff_decrypt_done;
+  }
+
+  // encrypt output
+  for(;tls->eresult_first_blank;) {
+    buff_ptr p = tls->eresult_first_blank;
+    assert(tls->eresult_buffers[p-1].type == buff_eresult_blank);
+    blank_eresult_pop(tls, p);
+    encrypted_result_add(tls, p);
+  }
+
+  // decrypt output
+  for(;tls->dresult_first_blank;) {
+    buff_ptr p = tls->dresult_first_blank;
+    assert(tls->dresult_buffers[p-1].type == buff_dresult_blank);
+    blank_dresult_pop(tls, p);
+    decrypted_result_add(tls, p);
+  }
+
 }
 
 static bool try_shutdown(pn_tls_t *tls) {
