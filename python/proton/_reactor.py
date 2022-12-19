@@ -43,7 +43,7 @@ from functools import total_ordering
 
 from cproton import PN_PYREF, PN_ACCEPTED, PN_EVENT_NONE
 
-from ._common import isstring, unicode2utf8, utf82unicode
+from ._common import isstring, unicode2utf8
 from ._data import Described, symbol, ulong
 from ._delivery import Delivery
 from ._endpoints import Connection, Endpoint, Link, Session, Terminus
@@ -797,9 +797,9 @@ class Selector(Filter):
     :param name: Name of the selector, defaults to ``"selector"``.
     """
 
-    def __init__(self, value: Union[bytes, str], name: str = 'selector') -> None:
+    def __init__(self, value: str, name: str = 'selector') -> None:
         super(Selector, self).__init__({symbol(name): Described(
-            symbol('apache.org:selector-filter:string'), utf82unicode(value))})
+            symbol('apache.org:selector-filter:string'), value)})
 
 
 class DurableSubscription(ReceiverOption):

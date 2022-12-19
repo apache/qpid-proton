@@ -623,6 +623,3 @@ class SelectorTest(Test):
 
     def test_unicode_selector(self):
         assert Selector(u"Hello").filter_set[symbol('selector')].value == u"Hello"
-
-    def test_non_unicode_selector(self):
-        assert Selector(b"Hello").filter_set[symbol('selector')].value == u"Hello"
