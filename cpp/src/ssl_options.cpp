@@ -131,6 +131,12 @@ ssl_client_options::ssl_client_options(const std::string &trust_db, enum ssl::ve
     set_client_verify_mode(dom, mode);
 }
 
+ssl_client_options::ssl_client_options(const ssl_certificate &cert, enum ssl::verify_mode mode) : impl_(new impl) {
+    pn_ssl_domain_t* dom = impl_->pn_domain();
+    set_cred(dom, cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
+    set_client_verify_mode(dom, mode);
+}
+
 ssl_client_options::ssl_client_options(const ssl_certificate &cert, const std::string &trust_db, enum ssl::verify_mode mode) : impl_(new impl) {
     pn_ssl_domain_t* dom = impl_->pn_domain();
     set_cred(dom, cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
