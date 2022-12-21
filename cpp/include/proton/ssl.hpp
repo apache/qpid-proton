@@ -163,6 +163,10 @@ class ssl_client_options {
                                      enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
 
     /// Create SSL client with a client certificate.
+    PN_CPP_EXTERN ssl_client_options(const ssl_certificate&,
+                                     enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
+
+    /// Create SSL client with a client certificate and a custom certificate trust database.
     PN_CPP_EXTERN ssl_client_options(const ssl_certificate&, const std::string &trust_db,
                                      enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
 
