@@ -82,7 +82,7 @@ static inline void pn_fixed_string_quote(pn_fixed_string_t *str, const char *dat
   char *out = &str->bytes[str->position];
   ssize_t out_size = pn_quote_data(out, bytes_left, data, size);
   // The only error (ie value less than 0) that can come from pn_quote_data is PN_OVERFLOW
-  if ( out_size>0 ) {
+  if ( out_size>=0 ) {
     str->position += out_size;
   } else {
     str->position = str->size;
