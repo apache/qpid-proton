@@ -50,7 +50,7 @@ class TxServer(MessagingHandler):
 
     def on_start(self, event):
         self.container = event.container
-        self.conn = event.container.connect(self.host, reconnect=False)
+        self.conn = event.container.connect(self.host, reconnect=False, desired_capabilities=["ANONYMOUS-RELAY"])
         self.receiver = event.container.create_receiver(self.conn, self.address)
         self.senders = {}
         self.relay = None
@@ -67,7 +67,7 @@ class TxServer(MessagingHandler):
                            correlation_id=event.message.correlation_id)
         self.container.declare_transaction(self.conn, handler=TxRequest(response, sender, event.delivery))
 
-    def on_connection_open(self, event):
+    def on_connection_opened(self, event):
         if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
             self.relay = self.container.create_sender(self.conn, None)
 

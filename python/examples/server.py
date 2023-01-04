@@ -33,9 +33,15 @@ class Server(MessagingHandler):
     def on_start(self, event):
         print("Listening on", self.url)
         self.container = event.container
-        self.conn = event.container.connect(self.url)
-        self.receiver = event.container.create_receiver(self.conn, self.address)
-        self.server = self.container.create_sender(self.conn, None)
+        self.conn = event.container.connect(self.url, desired_capabilities=["ANONYMOUS-RELAY"])
+
+    def on_connection_opened(self, event):
+        if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
+            self.receiver = event.container.create_receiver(self.conn, self.address)
+            self.server = self.container.create_sender(self.conn, None)
+        else:
+            print("Server needs a broker which supports ANONYMOUS-RELAY")
+            event.connection.close()
 
     def on_message(self, event):
         print("Received", event.message)
