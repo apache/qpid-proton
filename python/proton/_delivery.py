@@ -24,7 +24,8 @@ from cproton import PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEA
     pn_delivery_writable, pn_disposition_annotations, pn_disposition_condition, pn_disposition_data, \
     pn_disposition_get_section_number, pn_disposition_get_section_offset, pn_disposition_is_failed, \
     pn_disposition_is_undeliverable, pn_disposition_set_failed, pn_disposition_set_section_number, \
-    pn_disposition_set_section_offset, pn_disposition_set_undeliverable, pn_disposition_type
+    pn_disposition_set_section_offset, pn_disposition_set_undeliverable, pn_disposition_type, \
+    isnull
 
 from ._condition import cond2obj, obj2cond
 from ._data import dat2obj, obj2dat
@@ -289,7 +290,7 @@ class Delivery(Wrapper):
 
     @staticmethod
     def wrap(impl):
-        if impl is None:
+        if isnull(impl):
             return None
         else:
             return Delivery(impl)

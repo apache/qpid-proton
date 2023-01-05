@@ -54,9 +54,9 @@ from cproton import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN_DIST_MOD
     pn_terminus_is_dynamic, pn_terminus_outcomes, pn_terminus_properties, pn_terminus_set_address, \
     pn_terminus_set_distribution_mode, pn_terminus_set_durability, pn_terminus_set_dynamic, \
     pn_terminus_set_expiry_policy, pn_terminus_set_timeout, pn_terminus_set_type, \
-    pn_link_properties, pn_link_remote_properties
+    pn_link_properties, pn_link_remote_properties, \
+    isnull
 
-from ._common import unicode2utf8, utf82unicode
 from ._condition import cond2obj, obj2cond
 from ._data import Data, dat2obj, obj2dat, PropertyDict, SymbolList
 from ._delivery import Delivery
@@ -161,13 +161,16 @@ class Connection(Wrapper, Endpoint):
 
     @staticmethod
     def wrap(impl):
-        if impl is None:
+        if isnull(impl):
             return None
         else:
             return Connection(impl)
 
-    def __init__(self, impl: Callable[[], Any] = pn_connection) -> None:
-        Wrapper.__init__(self, impl, pn_connection_attachments)
+    def __init__(self, impl: Any = None) -> None:
+        if impl is None:
+            Wrapper.__init__(self, constructor=pn_connection, get_context=pn_connection_attachments)
+        else:
+            Wrapper.__init__(self, impl, pn_connection_attachments)
 
     def _init(self) -> None:
         Endpoint._init(self)
@@ -219,11 +222,11 @@ class Connection(Wrapper, Endpoint):
     @property
     def container(self) -> str:
         """The container name for this connection object."""
-        return utf82unicode(pn_connection_get_container(self._impl))
+        return pn_connection_get_container(self._impl)
 
     @container.setter
     def container(self, name: str) -> None:
-        pn_connection_set_container(self._impl, unicode2utf8(name))
+        pn_connection_set_container(self._impl, name)
 
     @property
     def hostname(self) -> Optional[str]:
@@ -233,11 +236,11 @@ class Connection(Wrapper, Endpoint):
         This value will be sent in the Open performative, and will be used by SSL
         and SASL layers to identify the peer.
         """
-        return utf82unicode(pn_connection_get_hostname(self._impl))
+        return pn_connection_get_hostname(self._impl)
 
     @hostname.setter
     def hostname(self, name: str) -> None:
-        pn_connection_set_hostname(self._impl, unicode2utf8(name))
+        pn_connection_set_hostname(self._impl, name)
 
     @property
     def user(self) -> Optional[str]:
@@ -252,11 +255,11 @@ class Connection(Wrapper, Endpoint):
         like Kerberos where the credentials are implicit in the environment,
         or to explicitly use the ``ANONYMOUS`` SASL mechanism)
         """
-        return utf82unicode(pn_connection_get_user(self._impl))
+        return pn_connection_get_user(self._impl)
 
     @user.setter
     def user(self, name: str) -> None:
-        pn_connection_set_user(self._impl, unicode2utf8(name))
+        pn_connection_set_user(self._impl, name)
 
     @property
     def authorization(self) -> str:
@@ -269,11 +272,11 @@ class Connection(Wrapper, Endpoint):
         If not set then implicitly the requested authorization is the same as the
         authentication user.
         """
-        return utf82unicode(pn_connection_get_authorization(self._impl))
+        return pn_connection_get_authorization(self._impl)
 
     @authorization.setter
     def authorization(self, name: str) -> None:
-        pn_connection_set_authorization(self._impl, unicode2utf8(name))
+        pn_connection_set_authorization(self._impl, name)
 
     @property
     def password(self) -> None:
@@ -288,7 +291,7 @@ class Connection(Wrapper, Endpoint):
 
     @password.setter
     def password(self, name: str) -> None:
-        pn_connection_set_password(self._impl, unicode2utf8(name))
+        pn_connection_set_password(self._impl, name)
 
     @property
     def remote_container(self) -> Optional[str]:
@@ -553,7 +556,7 @@ class Session(Wrapper, Endpoint):
     """A container of links"""
     @staticmethod
     def wrap(impl):
-        if impl is None:
+        if isnull(impl):
             return None
         else:
             return Session(impl)
@@ -675,7 +678,7 @@ class Session(Wrapper, Endpoint):
 
         :param name: Name of sender
         """
-        return Sender(pn_sender(self._impl, unicode2utf8(name)))
+        return Sender(pn_sender(self._impl, name))
 
     def receiver(self, name: str) -> 'Receiver':
         """
@@ -683,7 +686,7 @@ class Session(Wrapper, Endpoint):
 
         :param name: Name of receiver
         """
-        return Receiver(pn_receiver(self._impl, unicode2utf8(name)))
+        return Receiver(pn_receiver(self._impl, name))
 
     def free(self) -> None:
         """
@@ -717,7 +720,7 @@ class Link(Wrapper, Endpoint):
 
     @staticmethod
     def wrap(impl):
-        if impl is None:
+        if isnull(impl):
             return None
         if pn_link_is_sender(impl):
             return Sender(impl)
@@ -974,7 +977,7 @@ class Link(Wrapper, Endpoint):
         """
         The name of the link.
         """
-        return utf82unicode(pn_link_name(self._impl))
+        return pn_link_name(self._impl)
 
     @property
     def is_sender(self) -> bool:
@@ -1312,11 +1315,11 @@ class Terminus(object):
     @property
     def address(self) -> Optional[str]:
         """The address that identifies the source or target node"""
-        return utf82unicode(pn_terminus_get_address(self._impl))
+        return pn_terminus_get_address(self._impl)
 
     @address.setter
     def address(self, address: str) -> None:
-        self._check(pn_terminus_set_address(self._impl, unicode2utf8(address)))
+        self._check(pn_terminus_set_address(self._impl, address))
 
     @property
     def durability(self) -> int:

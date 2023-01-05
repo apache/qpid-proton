@@ -345,7 +345,7 @@ add_subdirectory(c)
 
 # Add bindings that do not require swig here - the directory name must be the same as the binding name
 # See below for swig bindings
-set(BINDINGS cpp go)
+set(BINDINGS cpp go python)
 
 if (CMAKE_CXX_COMPILER)
   set (DEFAULT_CPP ON)
@@ -363,9 +363,14 @@ if (GO_EXE)
   endif()
 endif (GO_EXE)
 
+# Prerequisites for Python wrapper:
+if (Python_Development_FOUND)
+  set (DEFAULT_PYTHON ON)
+endif ()
+
 if(SWIG_FOUND)
   # Add any new swig bindings here - the directory name must be the same as the binding name
-  list(APPEND BINDINGS python ruby)
+  list(APPEND BINDINGS ruby)
 
   include(UseSWIG)
 
@@ -379,11 +384,6 @@ if(SWIG_FOUND)
   #
   # If the prerequisites for the binding are present set a variable called
   # DEFAULT_{uppercase name of binding} to ON
-
-  # Prerequisites for Python wrapper:
-  if (Python_Development_FOUND)
-    set (DEFAULT_PYTHON ON)
-  endif ()
 
   # Prerequisites for Ruby:
   find_package(Ruby)
@@ -400,7 +400,7 @@ endif()
 # BUILD_XXX variables to enable/disable bindings.
 #
 if (NOT DEFINED BUILD_BINDINGS)
-    set(BUILD_BINDINGS "${BINDINGS}")
+  set(BUILD_BINDINGS "${BINDINGS}")
 endif()
 
 foreach(BINDING ${BINDINGS})
@@ -411,7 +411,7 @@ foreach(BINDING ${BINDINGS})
   endif()
   option(BUILD_${UBINDING} "Build ${BINDING} language binding" ${DEFAULT_${UBINDING}})
   if (BUILD_${UBINDING})
-      add_subdirectory(${BINDING})
+    add_subdirectory(${BINDING})
   endif ()
 endforeach(BINDING)
 

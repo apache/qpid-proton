@@ -41,9 +41,8 @@ import traceback
 import uuid
 from functools import total_ordering
 
-from cproton import PN_PYREF, PN_ACCEPTED, PN_EVENT_NONE
+from cproton import PN_ACCEPTED, PN_EVENT_NONE
 
-from ._common import isstring, unicode2utf8
 from ._data import Described, symbol, ulong
 from ._delivery import Delivery
 from ._endpoints import Connection, Endpoint, Link, Session, Terminus
@@ -335,7 +334,7 @@ class Reactor(object):
             handler: Optional[Handler] = None,
     ) -> 'Acceptor':
         impl = self._make_handler(handler)
-        a = Acceptor(self, unicode2utf8(host), int(port), impl)
+        a = Acceptor(self, host, int(port), impl)
         if a:
             return a
         else:
@@ -497,7 +496,6 @@ class ApplicationEvent(EventBase):
                 eventtype = EventType(typename)
                 self.TYPES[typename] = eventtype
         super(ApplicationEvent, self).__init__(eventtype)
-        self.clazz = PN_PYREF
         self.connection = connection
         self.session = session
         self.link = link
@@ -1466,7 +1464,7 @@ class Container(Reactor):
 
         :return: New sender instance.
         """
-        if isstring(context):
+        if isinstance(context, str):
             context = Url(context)
         if isinstance(context, Url) and not target:
             target = context.path
@@ -1527,7 +1525,7 @@ class Container(Reactor):
 
         :return: New receiver instance.
         """
-        if isstring(context):
+        if isinstance(context, str):
             context = Url(context)
         if isinstance(context, Url) and not source:
             source = context.path

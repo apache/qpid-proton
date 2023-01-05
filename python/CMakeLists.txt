@@ -17,39 +17,8 @@
 # under the License.
 #
 
-# NB For python the SWIG module name must have the same name as the input .i file for CMake to generate the
-# correct dependencies
-
-set(CMAKE_SWIG_FLAGS "-threads" "-DUINTPTR_SIZE=${CMAKE_SIZEOF_VOID_P}")
-
 include_directories (${PN_C_INCLUDE_DIR} ${Python_INCLUDE_DIRS})
 
-set_source_files_properties(cproton.i PROPERTIES CPLUSPLUS NO)
-
-# Suppress warnings in swig generated code.
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-
-# Set Compiler extra flags for Solaris when using SunStudio
-if (CMAKE_C_COMPILER_ID STREQUAL "SunPro")
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSWIGEXPORT=__global")
-endif ()
-
-
-list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
-    ${CMAKE_SOURCE_DIR}/c/include/proton/cproton.i
-    ${PROTON_HEADERS}
-)
-
-set(SWIG_OUTFILE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
-
-swig_add_library(cproton LANGUAGE python SOURCES cproton.i)
-swig_link_libraries(cproton ${BINDING_DEPS} ${Python_LIBRARIES} -lm)
-set_target_properties(${SWIG_MODULE_cproton_REAL_NAME}
-    PROPERTIES
-    LINK_FLAGS "${CATCH_UNDEFINED}")
-
-set (cproton-generated cprotonPYTHON_wrap.c cproton.py)
-set (pysrc-generated cproton.py)
 set (pysrc
     proton/__init__.py
     proton/_common.py
@@ -80,12 +49,12 @@ set (pysrc
 set(py_dist_files
     setup.py
     setup.cfg
+    pyproject.toml
     README.rst
     MANIFEST.in
-    setuputils/__init__.py
-    setuputils/log.py
-    setuputils/misc.py
-    setuputils/PYZMQ_LICENSE.BSD
+    ext_build.py
+    cproton.h
+    cproton.py
     docs/conf.py
     docs/index.rst
     docs/overview.rst

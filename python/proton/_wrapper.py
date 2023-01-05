@@ -17,12 +17,10 @@
 # under the License.
 #
 
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional
 
-from cproton import pn_incref, pn_decref, \
-    pn_py2void, pn_void2py, \
-    pn_record_get, pn_record_def, pn_record_set, \
-    PN_PYREF
+from cproton import addressof, pn_incref, pn_decref, \
+    pn_record_get_py, pn_record_def_py, pn_record_set_py
 
 from ._exceptions import ProtonException
 
@@ -43,7 +41,7 @@ EMPTY_ATTRS = EmptyAttrs()
 
 
 class Wrapper(object):
-    """ Wrapper for python objects that need to be stored in event contexts and be retrived again from them
+    """ Wrapper for python objects that need to be stored in event contexts and be retrieved again from them
         Quick note on how this works:
         The actual *python* object has only 3 attributes which redirect into the wrapped C objects:
         _impl   The wrapped C object itself
@@ -61,13 +59,14 @@ class Wrapper(object):
 
     def __init__(
             self,
-            impl_or_constructor: Union[Any, Callable[[], Any]],
+            impl: Any = None,
             get_context: Optional[Callable[[Any], Any]] = None,
+            constructor: Callable[[], Any] = None
     ) -> None:
         init = False
-        if callable(impl_or_constructor):
+        if impl is None and constructor is not None:
             # we are constructing a new object
-            impl = impl_or_constructor()
+            impl = constructor()
             if impl is None:
                 self.__dict__["_impl"] = impl
                 self.__dict__["_attrs"] = EMPTY_ATTRS
@@ -77,16 +76,15 @@ class Wrapper(object):
             init = True
         else:
             # we are wrapping an existing object
-            impl = impl_or_constructor
             pn_incref(impl)
 
         if get_context:
             record = get_context(impl)
-            attrs = pn_void2py(pn_record_get(record, PYCTX))
+            attrs = pn_record_get_py(record)
             if attrs is None:
                 attrs = {}
-                pn_record_def(record, PYCTX, PN_PYREF)
-                pn_record_set(record, PYCTX, pn_py2void(attrs))
+                pn_record_def_py(record)
+                pn_record_set_py(record, attrs)
                 init = True
         else:
             attrs = EMPTY_ATTRS
@@ -137,7 +135,3 @@ class Wrapper(object):
         return '<%s.%s 0x%x ~ 0x%x>' % (self.__class__.__module__,
                                         self.__class__.__name__,
                                         id(self), addressof(self._impl))
-
-
-PYCTX = int(pn_py2void(Wrapper))
-addressof = int

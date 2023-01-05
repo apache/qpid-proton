@@ -40,9 +40,10 @@ from cproton import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SA
     pn_transport_peek, pn_transport_pending, pn_transport_pop, pn_transport_push, pn_transport_remote_channel_max, \
     pn_transport_require_auth, pn_transport_require_encryption, pn_transport_set_channel_max, \
     pn_transport_set_idle_timeout, pn_transport_set_max_frame, pn_transport_set_pytracer, pn_transport_set_server, \
-    pn_transport_tick, pn_transport_trace, pn_transport_unbind
+    pn_transport_tick, pn_transport_trace, pn_transport_unbind, \
+    isnull
 
-from ._common import millis2secs, secs2millis, unicode2utf8, utf82unicode
+from ._common import millis2secs, secs2millis
 from ._condition import cond2obj, obj2cond
 from ._exceptions import EXCEPTIONS, SSLException, SSLUnavailable, SessionException, TransportException
 from ._wrapper import Wrapper
@@ -86,17 +87,20 @@ class Transport(Wrapper):
 
     @staticmethod
     def wrap(impl: Optional[Callable]) -> Optional['Transport']:
-        if impl is None:
+        if isnull(impl):
             return None
         else:
-            return Transport(_impl=impl)
+            return Transport(impl=impl)
 
     def __init__(
             self,
             mode: 'Optional[int]' = None,
-            _impl: 'Callable' = pn_transport,
+            impl: 'Callable' = None,
     ) -> None:
-        Wrapper.__init__(self, _impl, pn_transport_attachments)
+        if impl is None:
+            Wrapper.__init__(self, constructor=pn_transport, get_context=pn_transport_attachments)
+        else:
+            Wrapper.__init__(self, impl, pn_transport_attachments)
         if mode == Transport.SERVER:
             pn_transport_set_server(self._impl)
         elif mode is None or mode == Transport.CLIENT:
@@ -643,7 +647,7 @@ class SASL(Wrapper):
         """
         if isinstance(mechs, list):
             mechs = " ".join(mechs)
-        pn_sasl_allowed_mechs(self._sasl, unicode2utf8(mechs))
+        pn_sasl_allowed_mechs(self._sasl, mechs)
 
     @property
     def allow_insecure_mechs(self) -> bool:
@@ -887,10 +891,7 @@ class SSL(object):
 
         :return: The cypher name, or ``None`` if no cipher in use.
         """
-        rc, name = pn_ssl_get_cipher_name(self._ssl, 128)
-        if rc:
-            return name
-        return None
+        return pn_ssl_get_cipher_name(self._ssl, 128)
 
     def protocol_name(self) -> Optional[str]:
         """
@@ -904,10 +905,7 @@ class SSL(object):
         :return: The protocol name if SSL is active, or ``None`` if SSL connection
                  is not ready or active.
         """
-        rc, name = pn_ssl_get_protocol_name(self._ssl, 128)
-        if rc:
-            return name
-        return None
+        return pn_ssl_get_protocol_name(self._ssl, 128)
 
     SHA1 = PN_SSL_SHA1
     """Produces hash that is 20 bytes long using SHA-1"""
@@ -1044,10 +1042,7 @@ class SSL(object):
                             :const:`SHA256`, :const:`SHA512`,  :const:`MD5`.
         :return: Hex fingerprint in a string, or ``None`` if an error occurred.
         """
-        rc, fingerprint_str = pn_ssl_get_cert_fingerprint(self._ssl, fingerprint_length, digest_name)
-        if rc == PN_OK:
-            return fingerprint_str
-        return None
+        return pn_ssl_get_cert_fingerprint(self._ssl, fingerprint_length, digest_name)
 
     # Convenience functions for obtaining fingerprint for specific hashing algorithms
     def _get_cert_fingerprint_unknown_hash_alg(self) -> None:
@@ -1146,11 +1141,11 @@ class SSL(object):
             :meth:`SSLDomain.set_peer_authentication`."""
         err, name = pn_ssl_get_peer_hostname(self._ssl, 1024)
         self._check(err)
-        return utf82unicode(name)
+        return name
 
     @peer_hostname.setter
     def peer_hostname(self, hostname: Optional[str]) -> None:
-        self._check(pn_ssl_set_peer_hostname(self._ssl, unicode2utf8(hostname)))
+        self._check(pn_ssl_set_peer_hostname(self._ssl, hostname))
 
 
 class SSLSessionDetails(object):

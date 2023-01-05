@@ -1067,7 +1067,7 @@ class Data:
         :param u: a uuid value.
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        self._check(pn_data_put_uuid(self._data, u.bytes))
+        self._check(pn_data_put_uuid(self._data, u))
 
     def put_binary(self, b: bytes) -> None:
         """
@@ -1103,7 +1103,7 @@ class Data:
         :param s: a unicode string
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        self._check(pn_data_put_string(self._data, s.encode("utf8")))
+        self._check(pn_data_put_string(self._data, s))
 
     def put_symbol(self, s: Union[str, symbol]) -> None:
         """
@@ -1112,7 +1112,7 @@ class Data:
         :param s: the symbol name
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        self._check(pn_data_put_symbol(self._data, s.encode('ascii')))
+        self._check(pn_data_put_symbol(self._data, s))
 
     def get_list(self) -> int:
         """
@@ -1346,7 +1346,7 @@ class Data:
         :return: If the current node is a UUID, its value, ``None`` otherwise.
         """
         if pn_data_type(self._data) == Data.UUID:
-            return uuid.UUID(bytes=pn_data_get_uuid(self._data))
+            return pn_data_get_uuid(self._data)
         else:
             return None
 
@@ -1364,7 +1364,7 @@ class Data:
 
         :return: If the current node is a string, its value, ``""`` otherwise.
         """
-        return pn_data_get_string(self._data).decode("utf8")
+        return pn_data_get_string(self._data)
 
     def get_symbol(self) -> symbol:
         """
@@ -1372,7 +1372,7 @@ class Data:
 
         :return: If the current node is a symbol, its value, ``""`` otherwise.
         """
-        return symbol(pn_data_get_symbol(self._data).decode('ascii'))
+        return symbol(pn_data_get_symbol(self._data))
 
     def copy(self, src: 'Data') -> None:
         """

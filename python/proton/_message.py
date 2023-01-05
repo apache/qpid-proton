@@ -31,7 +31,7 @@ from cproton import PN_DEFAULT_PRIORITY, PN_STRING, PN_UUID, PN_OVERFLOW, pn_err
     pn_message_set_reply_to, pn_message_set_reply_to_group_id, pn_message_set_subject, \
     pn_message_set_ttl, pn_message_set_user_id
 
-from ._common import isinteger, millis2secs, secs2millis, unicode2utf8, utf82unicode
+from ._common import millis2secs, secs2millis
 from ._data import char, Data, symbol, ulong, AnnotationDict
 from ._endpoints import Link
 from ._exceptions import EXCEPTIONS, MessageException
@@ -277,10 +277,6 @@ class Message(object):
 
     @id.setter
     def id(self, value: Optional[Union[str, bytes, 'UUID', int]]) -> None:
-        if isinteger(value):
-            value = ulong(value)
-        elif isinstance(value, UUID):
-            value = (PN_UUID, value.bytes)
         pn_message_set_id(self._msg, value)
 
     @property
@@ -301,11 +297,11 @@ class Message(object):
 
         :raise: :exc:`MessageException` if there is any Proton error when using the setter.
         """
-        return utf82unicode(pn_message_get_address(self._msg))
+        return pn_message_get_address(self._msg)
 
     @address.setter
     def address(self, value: str) -> None:
-        self._check(pn_message_set_address(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_address(self._msg, value))
 
     @property
     def subject(self) -> Optional[str]:
@@ -313,11 +309,11 @@ class Message(object):
 
         :raise: :exc:`MessageException` if there is any Proton error when using the setter.
         """
-        return utf82unicode(pn_message_get_subject(self._msg))
+        return pn_message_get_subject(self._msg)
 
     @subject.setter
     def subject(self, value: str) -> None:
-        self._check(pn_message_set_subject(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_subject(self._msg, value))
 
     @property
     def reply_to(self) -> Optional[str]:
@@ -325,11 +321,11 @@ class Message(object):
 
         :raise: :exc:`MessageException` if there is any Proton error when using the setter.
         """
-        return utf82unicode(pn_message_get_reply_to(self._msg))
+        return pn_message_get_reply_to(self._msg)
 
     @reply_to.setter
     def reply_to(self, value: str) -> None:
-        self._check(pn_message_set_reply_to(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_reply_to(self._msg, value))
 
     @property
     def correlation_id(self) -> Optional[Union['UUID', ulong, str, bytes]]:
@@ -350,10 +346,6 @@ class Message(object):
 
     @correlation_id.setter
     def correlation_id(self, value: Optional[Union[str, bytes, 'UUID', int]]) -> None:
-        if isinteger(value):
-            value = ulong(value)
-        elif isinstance(value, UUID):
-            value = (PN_UUID, value.bytes)
         pn_message_set_correlation_id(self._msg, value)
 
     @property
@@ -362,11 +354,11 @@ class Message(object):
 
         :raise: :exc:`MessageException` if there is any Proton error when using the setter.
         """
-        return symbol(utf82unicode(pn_message_get_content_type(self._msg)))
+        return symbol(pn_message_get_content_type(self._msg))
 
     @content_type.setter
     def content_type(self, value: str) -> None:
-        self._check(pn_message_set_content_type(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_content_type(self._msg, value))
 
     @property
     def content_encoding(self) -> symbol:
@@ -374,11 +366,11 @@ class Message(object):
 
         :raise: :exc:`MessageException` if there is any Proton error when using the setter.
         """
-        return symbol(utf82unicode(pn_message_get_content_encoding(self._msg)))
+        return symbol(pn_message_get_content_encoding(self._msg))
 
     @content_encoding.setter
     def content_encoding(self, value: str) -> None:
-        self._check(pn_message_set_content_encoding(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_content_encoding(self._msg, value))
 
     @property
     def expiry_time(self) -> float:  # TODO doc said int
@@ -410,11 +402,11 @@ class Message(object):
 
         :raise: :exc:`MessageException` if there is any Proton error when using the setter.
         """
-        return utf82unicode(pn_message_get_group_id(self._msg))
+        return pn_message_get_group_id(self._msg)
 
     @group_id.setter
     def group_id(self, value: str) -> None:
-        self._check(pn_message_set_group_id(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_group_id(self._msg, value))
 
     @property
     def group_sequence(self) -> int:
@@ -434,11 +426,11 @@ class Message(object):
 
         :raise: :exc:`MessageException` if there is any Proton error when using the setter.
         """
-        return utf82unicode(pn_message_get_reply_to_group_id(self._msg))
+        return pn_message_get_reply_to_group_id(self._msg)
 
     @reply_to_group_id.setter
     def reply_to_group_id(self, value: str) -> None:
-        self._check(pn_message_set_reply_to_group_id(self._msg, unicode2utf8(value)))
+        self._check(pn_message_set_reply_to_group_id(self._msg, value))
 
     @property
     def instructions(self) -> Optional[AnnotationDict]:

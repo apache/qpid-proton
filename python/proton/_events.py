@@ -22,13 +22,14 @@ import threading
 from cproton import PN_CONNECTION_BOUND, PN_CONNECTION_FINAL, PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_CLOSE, \
     PN_CONNECTION_LOCAL_OPEN, PN_CONNECTION_REMOTE_CLOSE, PN_CONNECTION_REMOTE_OPEN, PN_CONNECTION_UNBOUND, PN_DELIVERY, \
     PN_LINK_FINAL, PN_LINK_FLOW, PN_LINK_INIT, PN_LINK_LOCAL_CLOSE, PN_LINK_LOCAL_DETACH, PN_LINK_LOCAL_OPEN, \
-    PN_LINK_REMOTE_CLOSE, PN_LINK_REMOTE_DETACH, PN_LINK_REMOTE_OPEN, PN_PYREF, PN_SESSION_FINAL, PN_SESSION_INIT, \
+    PN_LINK_REMOTE_CLOSE, PN_LINK_REMOTE_DETACH, PN_LINK_REMOTE_OPEN, PN_SESSION_FINAL, PN_SESSION_INIT, \
     PN_SESSION_LOCAL_CLOSE, PN_SESSION_LOCAL_OPEN, PN_SESSION_REMOTE_CLOSE, PN_SESSION_REMOTE_OPEN, PN_TIMER_TASK, \
     PN_TRANSPORT, PN_TRANSPORT_CLOSED, PN_TRANSPORT_ERROR, PN_TRANSPORT_HEAD_CLOSED, PN_TRANSPORT_TAIL_CLOSED, \
     pn_cast_pn_connection, pn_cast_pn_delivery, pn_cast_pn_link, pn_cast_pn_session, pn_cast_pn_transport, \
-    pn_class_name, pn_collector, pn_collector_free, pn_collector_more, pn_collector_peek, pn_collector_pop, \
-    pn_collector_put, pn_collector_release, pn_event_class, pn_event_connection, pn_event_context, pn_event_delivery, \
-    pn_event_link, pn_event_session, pn_event_transport, pn_event_type, pn_event_type_name, pn_py2void, pn_void2py
+    pn_collector, pn_collector_free, pn_collector_more, pn_collector_peek, pn_collector_pop, \
+    pn_collector_put_pyref, pn_collector_release, pn_event_connection, pn_event_context, pn_event_delivery, pn_event_link, \
+    pn_event_session, pn_event_transport, pn_event_type, pn_event_class_name, pn_event_type_name, \
+    isnull, void2py
 
 from ._delivery import Delivery
 from ._endpoints import Connection, Link, Session
@@ -48,8 +49,8 @@ class Collector:
     def __init__(self) -> None:
         self._impl = pn_collector()
 
-    def put(self, obj: 'Selectable', etype: 'EventType') -> None:
-        pn_collector_put(self._impl, PN_PYREF, pn_py2void(obj), etype.number)
+    def put(self, obj: Any, etype: 'EventType') -> None:
+        pn_collector_put_pyref(self._impl, obj, etype)
 
     def peek(self) -> Optional['Event']:
         return Event.wrap(pn_collector_peek(self._impl))
@@ -173,8 +174,8 @@ def _internal(name: str) -> EventType:
 
 
 wrappers = {
-    "pn_void": lambda x: pn_void2py(x),
-    "pn_pyref": lambda x: pn_void2py(x),
+    "pn_void": lambda x: void2py(x),
+    "pn_pyref": lambda x: void2py(x),
     "pn_connection": lambda x: Connection.wrap(pn_cast_pn_connection(x)),
     "pn_session": lambda x: Session.wrap(pn_cast_pn_session(x)),
     "pn_link": lambda x: Link.wrap(pn_cast_pn_link(x)),
@@ -399,22 +400,20 @@ class Event(EventBase):
 
     @staticmethod
     def wrap(impl):
-        if impl is None:
+        if isnull(impl):
             return None
 
         number = pn_event_type(impl)
-        cls = pn_event_class(impl)
-
-        if cls:
-            clsname = pn_class_name(cls)
+        clsname = pn_event_class_name(impl)
+        if clsname:
             context = wrappers[clsname](pn_event_context(impl))
 
             # check for an application defined ApplicationEvent and return that.  This
             # avoids an expensive wrap operation invoked by event.context
-            if cls == PN_PYREF and isinstance(context, EventBase):
+            if isinstance(context, EventBase):
                 return context
         else:
-            clsname = None
+            context = None
 
         event = Event(impl, number, clsname, context)
         return event

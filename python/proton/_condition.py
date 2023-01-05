@@ -83,7 +83,7 @@ class Condition:
 def obj2cond(obj, cond: Condition) -> None:
     pn_condition_clear(cond)
     if obj:
-        pn_condition_set_name(cond, str(obj.name))
+        pn_condition_set_name(cond, obj.name)
         pn_condition_set_description(cond, obj.description)
         info = Data(pn_condition_info(cond))
         if obj.info:
