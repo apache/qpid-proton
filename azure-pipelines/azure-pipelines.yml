@@ -8,7 +8,7 @@
 #
 variables:
   Config: 'RelWithDebInfo'
-  PythonVersion: '3.7'
+  PythonVersion: '3.9'
   PythonArch: 'x64'
   CmakeConfigExtraArgs: ''
   CmakeGenerator: '-G "Unix Makefiles"'
@@ -41,7 +41,6 @@ jobs:
   - template: steps.yml
 - job: MacOS
   variables:
-    PythonVersion: '3.6'
     PKG_CONFIG_PATH: '/usr/local/opt/openssl@1.1/lib/pkgconfig'
     CmakeConfigExtraArgs: '-DBUILD_RUBY=no'
   pool:

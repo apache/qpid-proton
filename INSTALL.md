@@ -10,7 +10,7 @@ Dependencies
 Cross-platform dependencies
 
   - CMake 2.8.12+
-  - Python (required to build core C library, minimum version depends on platform)
+  - Python 3.8+ (required to build core C library)
   - Swig 1.3+ (for the bindings)
   - Ruby 1.9+ (for the Ruby binding)
   - Go 1.11+ (for the Go binding)
@@ -22,12 +22,10 @@ Linux dependencies
   - Cyrus SASL 2.1+ (for SASL support)
   - OpenSSL 1.0+ (for SSL support)
   - JsonCpp 1.8+ for C++ connection configuration file support
-  - Python 2.7, 3.5+ (for the Python binding)
 
 Windows dependencies
 
   - Visual Studio 2015 or newer (regular or C++ Express)
-  - Python 3.5+ (for the Python binding)
 
 CMake (Linux)
 -------------
