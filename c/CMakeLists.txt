@@ -729,8 +729,6 @@ install (FILES
   DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
 install (FILES
   ../tools/cmake/Modules/FindCyrusSASL.cmake
-  ../tools/cmake/Modules/FindOpenSSL.cmake
-  ../tools/cmake/Modules/FindThreads.cmake
   DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
 
 if (ENABLE_BENCHMARKS)
