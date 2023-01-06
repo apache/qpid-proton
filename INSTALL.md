@@ -9,7 +9,7 @@ Dependencies
 
 Cross-platform dependencies
 
-  - CMake 2.8.12+
+  - CMake 3.16+
   - Python 3.8+ (required to build core C library)
   - Swig 1.3+ (for the bindings)
   - Ruby 1.9+ (for the Ruby binding)

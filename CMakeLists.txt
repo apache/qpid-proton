@@ -17,7 +17,7 @@
 # under the License.
 #
 
-cmake_minimum_required (VERSION 2.8.12)
+cmake_minimum_required (VERSION 3.16)
 
 project (Proton C)
 
@@ -140,9 +140,6 @@ endif()
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set (NOENABLE_WARNING_ERROR ON)
   set (LIB_SUFFIX "")
-  if (POLICY CMP0042)
-    cmake_policy (SET CMP0042 NEW)
-  endif ()
 endif ()
 
 # Benchmarks should be disabled by default
@@ -370,12 +367,6 @@ if(SWIG_FOUND)
   # Add any new swig bindings here - the directory name must be the same as the binding name
   list(APPEND BINDINGS python ruby)
 
-  if (POLICY CMP0078)
-    cmake_policy(SET CMP0078 NEW)
-  endif()
-  if (POLICY CMP0086)
-    cmake_policy(SET CMP0086 NEW)
-  endif()
   include(UseSWIG)
 
   # All swig modules should include ${PROTON_HEADERS} in SWIG_MODULE_<name>_EXTRA_DEPS
