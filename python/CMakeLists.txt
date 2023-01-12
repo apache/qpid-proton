@@ -218,14 +218,43 @@ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
   set (python_coverage_options -m coverage run --parallel-mode)
 endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
+# Create Python virtual environment to run tests
+set(pytest_venv "${py_bin}/pytest_env")
+# Have to use a conditional here as you can't use generator expressions in OUTPUT or BYPRODUCTS
+if (WIN32)
+ set(py_venv_bin "Scripts")
+else()
+ set(py_venv_bin "bin")
+endif()
+set(pytest_bin "${pytest_venv}/${py_venv_bin}")
+set(pytest_executable "${pytest_bin}/python${CMAKE_EXECUTABLE_SUFFIX}")
+
+add_custom_command(
+  OUTPUT ${pytest_venv}/env.txt
+  COMMAND ${Python_EXECUTABLE} -m venv ${pytest_venv}
+  COMMAND ${pytest_executable} -m pip freeze > ${pytest_venv}/env.txt
+  BYPRODUCTS ${pytest_executable}
+)
+
+# Install proton in venv
+add_custom_target(
+  pytest_cproton_install
+  WORKING_DIRECTORY ${py_dist_dir}
+  COMMAND ${pytest_executable} setup.py develop
+  DEPENDS ${pytest_venv}/env.txt
+)
+add_dependencies(pytest_cproton_install py_src_dist)
+
+add_custom_target(pytest_install ALL)
+add_dependencies(pytest_install pytest_cproton_install)
+
 pn_add_test(
   INTERPRETED
   NAME python-test
   PREPEND_ENVIRONMENT
     "PATH=${py_path}"
-    "PYTHONPATH=${py_pythonpath}"
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-  COMMAND ${Python_EXECUTABLE} ${python_coverage_options} -- "${py_tests}/proton-test")
+  COMMAND ${pytest_executable} ${python_coverage_options} -- "${py_tests}/proton-test")
 set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
 set(PYTHON_TEST_COMMAND "-m" "unittest")
@@ -234,10 +263,9 @@ pn_add_test(
   NAME python-integration-test
   PREPEND_ENVIRONMENT
     "PATH=${py_path}"
-    "PYTHONPATH=${py_pythonpath}"
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
   COMMAND
-    ${Python_EXECUTABLE}
+    ${pytest_executable}
       ${python_coverage_options}
       ${PYTHON_TEST_COMMAND} discover -v -s "${py_tests}/integration")
 
@@ -269,14 +297,14 @@ else ()
       add_custom_command(TARGET py_src_dist
         COMMAND ${CMAKE_COMMAND} -E copy
         "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini"
-        "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
+        "${py_dist_dir}/tox.ini")
       pn_add_test(
         INTERPRETED
         NAME python-tox-test
+        WORKING_DIRECTORY ${py_dist_dir}
         PREPEND_ENVIRONMENT
           "PATH=${py_path}"
           "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-          "SWIG=${SWIG_EXECUTABLE}"
           "TOXENV=${TOX_ENVLIST}"
           "PY_TEST_DIR=${CMAKE_CURRENT_SOURCE_DIR}/tests"
         COMMAND ${Python_EXECUTABLE} -m tox)
