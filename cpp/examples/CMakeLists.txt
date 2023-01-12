@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-cmake_minimum_required (VERSION 2.8.12)
+cmake_minimum_required (VERSION 3.16)
 
 project(ProtonCppExamples C CXX)
 
@@ -24,34 +24,8 @@ find_package(ProtonCpp REQUIRED)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 
-# The following block is purely for CMake 2.8.12
-# Remove it when we no longer support CMake 2.8.12
-if(NOT TARGET Threads::Threads)
-  add_library(Threads::Threads UNKNOWN IMPORTED)
-
-  if(THREADS_HAVE_PTHREAD_ARG)
-    set_target_properties(Threads::Threads PROPERTIES
-      INTERFACE_COMPILE_OPTIONS "-pthread"
-    )
-  endif()
-
-  if(CMAKE_THREAD_LIBS_INIT)
-    set_target_properties(Threads::Threads PROPERTIES
-      IMPORTED_LOCATION "${CMAKE_THREAD_LIBS_INIT}"
-    )
-  endif()
-endif()
-
-# This effectively checks for cmake version 3.1 or later
-if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
-  set(CMAKE_CXX_STANDARD 11)
-  set(CMAKE_CXX_EXTENSIONS OFF)
-else ()
-  # This can only be a fairly old version of Linux in practice
-  set(CXX_STANDARD "-std=c++11")
-  add_definitions(${CXX_STANDARD})
-endif()
-
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Single-threaded examples
 foreach(example
