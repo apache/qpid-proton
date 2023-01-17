@@ -82,7 +82,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: python-pkgs
-        path: ${{env.BuildDir}}/python/pkgs
+        path: ${{env.BuildDir}}/python/dist
     - id: ctest
       name: ctest
       working-directory: ${{env.BuildDir}}
