@@ -1,0 +1,6 @@
+pip
+setuptools
+wheel
+flake8
+tox>=1.7.2
+cffi>=1.0.0
