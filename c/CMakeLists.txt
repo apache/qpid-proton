@@ -108,6 +108,7 @@ add_custom_target(
   DEPENDS
     ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
     ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+    ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
     ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.c
     ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.h
     ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.c
