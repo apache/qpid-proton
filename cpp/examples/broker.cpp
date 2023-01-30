@@ -114,6 +114,8 @@ public:
     }
     void unsubscribed() {
         DOUT(std::cerr << "Sender:   " << this << " deleting\n";);
+        sender_.user_data(nullptr);
+        sender_.close();
         delete this;
     }
 };
@@ -383,7 +385,7 @@ public:
         // Unsubscribe all senders that belong to session.
         for (proton::sender_iterator i = session.senders().begin(); i != session.senders().end(); ++i) {
             Sender* s = Sender::get(*i);
-            if (s->queue_) {
+            if (s && s->queue_) {
                 auto q = s->queue_;
                 s->queue_->add([=]{q->unsubscribe(s);});
             }
@@ -399,7 +401,7 @@ public:
         // Unsubscribe all senders.
         for (proton::sender_iterator i = t.connection().senders().begin(); i != t.connection().senders().end(); ++i) {
             Sender* s = Sender::get(*i);
-            if (s->queue_) {
+            if (s && s->queue_) {
                 auto q = s->queue_;
                 s->queue_->add([=]{q->unsubscribe(s);});
             }
