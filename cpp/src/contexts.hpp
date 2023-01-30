@@ -133,7 +133,9 @@ class listener_context : public context {
 
 class link_context : public context {
   public:
-    link_context() : handler(0), credit_window(10), pending_credit(0), auto_accept(true), auto_settle(true), draining(false) {}
+    link_context() :
+      handler(nullptr), credit_window(10), pending_credit(0), auto_accept(true), auto_settle(true), draining(false), user_data_(nullptr)
+    {}
     static link_context& get(pn_link_t* l);
 
     messaging_handler* handler;
@@ -147,7 +149,7 @@ class link_context : public context {
 
 class session_context : public context {
   public:
-    session_context() : handler(0) {}
+    session_context() : handler(0), user_data_(nullptr) {}
     static session_context& get(pn_session_t* s);
 
     messaging_handler* handler;
@@ -156,10 +158,9 @@ class session_context : public context {
 
 class transfer_context : public context {
   public:
-    transfer_context() : handler(0) {}
+    transfer_context() : user_data_(nullptr) {}
     static transfer_context& get(pn_delivery_t* s);
 
-    messaging_handler* handler;
     void* user_data_;
 };
 

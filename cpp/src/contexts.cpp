@@ -66,14 +66,14 @@ void *context::alloc(size_t n) { return pn_class_new(cpp_context_class, n); }
 pn_class_t* context::pn_class() { return cpp_context_class; }
 
 connection_context::connection_context() :
-    container(0), default_session(0), link_gen(0), handler(0), listener_context_(0)
+    container(nullptr), default_session(nullptr), link_gen(nullptr), handler(nullptr), listener_context_(nullptr), user_data_(nullptr)
 {}
 
 reconnect_context::reconnect_context(const reconnect_options_base& ro) :
     reconnect_options_(ro), retries_(0), current_url_(-1), stop_reconnect_(false), reconnected_(false)
 {}
 
-listener_context::listener_context() : listen_handler_(0) {}
+listener_context::listener_context() : listen_handler_(nullptr), user_data_(nullptr) {}
 
 connection_context& connection_context::get(pn_connection_t *c) {
     return ref<connection_context>(id(pn_connection_attachments(c), CONNECTION_CONTEXT));
