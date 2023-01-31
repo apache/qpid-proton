@@ -154,10 +154,10 @@ endif()
 
 if (pydist_cmds)
   add_custom_command(OUTPUT .timestamp.dist
-                     DEPENDS .timestamp.copied_pysrc ${pysrc_files}
-		             COMMAND ${CMAKE_COMMAND} -E remove -f .timestamp.dist
-		             COMMAND ${Python_EXECUTABLE} setup.py ${pydist_cmds}
-		             COMMAND ${CMAKE_COMMAND} -E touch .timestamp.dist)
+    DEPENDS .timestamp.cproton_ffi
+    COMMAND ${CMAKE_COMMAND} -E remove -f .timestamp.dist
+    COMMAND ${Python_EXECUTABLE} setup.py ${pydist_cmds}
+    COMMAND ${CMAKE_COMMAND} -E touch .timestamp.dist)
   add_custom_target(pydist ALL DEPENDS .timestamp.dist)
 endif ()
 
