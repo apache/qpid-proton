@@ -159,8 +159,8 @@ int pn_ssl_get_peer_hostname_py(pn_ssl_t *ssl, char *hostname, size_t size) {
 }
 
 const char *pn_event_class_name_py(pn_event_t *event) {
-    pn_class_t *class = pn_event_class(event);
-    return class ? pn_class_name(class) : class;
+    const pn_class_t *class = pn_event_class(event);
+    return class ? pn_class_name(class) : 0;
 }
 
 void init() {
