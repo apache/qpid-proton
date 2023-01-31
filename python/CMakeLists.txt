@@ -148,7 +148,7 @@ check_python_module("wheel" WHEEL_MODULE_FOUND)
 if (SETUPTOOLS_MODULE_FOUND)
   set (pydist_cmds sdist)
   if (WHEEL_MODULE_FOUND)
-    set (pydist_cmds sdist bdist_wheel)
+    set (pydist_cmds sdist bdist_wheel --py-limited-api=cp38)
   endif()
 endif()
 
