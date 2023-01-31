@@ -45,7 +45,7 @@ language.
     $ yum install cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-md5
 
     # Dependencies needed for bindings
-    $ yum install swig                                       # Required for all bindings
+    $ yum install swig                                       # Required for ruby binding
     $ yum install python-devel                               # Python
     $ yum install ruby-devel rubygem-minitest                # Ruby
     $ yum install jsoncpp-devel                              # C++ optional config file
@@ -82,7 +82,7 @@ From the directory where you found this `INSTALL.md` file:
 
     # Set the install prefix. You may need to adjust it depending on your
     # system.
-    $ cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DSYSINSTALL_BINDINGS=ON
+    $ cmake .. -DCMAKE_INSTALL_PREFIX=/usr
 
     # Omit the docs target if you do not wish to build or install
     # documentation.
@@ -107,20 +107,20 @@ Studio and used to build the Proton library.
 
 The following packages must be installed:
 
-  - Visual Studio 2015 or newer (regular or C++ Express)
+  - Visual Studio 2017 or newer (Community or Enterprise Editions)
   - Python (www.python.org)
   - CMake (www.cmake.org)
 
-Additional packages are required for the language bindings:
+Additional packages are required for language bindings:
 
-  - Swig (www.swig.org)
+  - Swig (www.swig.org) for the ruby bindings
   - Development headers and libraries for the language of choice
 
 Notes:
   - Be sure to install relevant Microsoft Service Packs and updates
   - python.exe, cmake.exe and swig.exe _must_ all be added to your PATH
-  - Chocolatey is a useful tool that can be used to install cmake, python
-    and swig (see https://chocolatey.org/)
+  - Chocolatey or scoop are useful tools that can be used to install cmake, python
+    and swig (see https://chocolatey.org/ or https://scoop.sh/)
 
 To generate the Visual Studio project files, from the directory where you found
 this `INSTALL.md` file:
@@ -131,7 +131,15 @@ this `INSTALL.md` file:
 
 If CMake doesn't guess things correctly, useful additional arguments are:
 
-    -G "Visual Studio 10"
+    -G "Visual Studio 15 2017"
+or
+
+    -G "Visual Studio 16 2019"
+or
+
+    -G "Visual Studio 17 2022"
+and
+
     -DSWIG_EXECUTABLE=C:\swigwin-2.0.7\swig.exe
 
 Refer to the CMake documentation for more information.
@@ -167,33 +175,17 @@ but if you wish you can use it instead of the default native IO:
 Installing Language Bindings
 ----------------------------
 
-Most dynamic languages provide a way for asking where to install
-libraries in order to place them in a default search path.
+For the Python and Ruby language bindings the primary product is a package file that can be installed with the language specific package manager.
 
-When `SYSINSTALL_BINDINGS` is enabled (`ON`), the
-`CMAKE_INSTALL_PREFIX` does not affect the location for where the
-language bindings (Python and Ruby) are installed. For those
-elements, the location is determined by the language interpreter
-itself; that is, each interpreter is queried for the proper location
-for extensions.
+### Python
+The built python packages will be found in the `python/dist` sub-directory of the build directory. They can be installed into an instance of python by using a comand like:
 
-When `SYSINSTALL_BINDINGS` is disabled (`OFF`), Proton installs all
-dynamic language bindings into a central, default location:
+    > python -m pip install python/dist/python_qpid_proton-0.39.0-cp311-cp311-linux_x86_64.whl
 
-    BINDINGS=${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}/proton/bindings
+### Ruby
+The built ruby gem can be found in the `ruby/gem` sub-directory of the build directory. It can be installed into a ruby installation by using a command like:
 
-In order to use these bindings, you'll need to configure your
-interpreter to load the bindings from the appropriate directory.
-
-  - Python - Add ${BINDINGS}/python to PYTHONPATH
-  - Ruby   - Add ${BINDINGS}/ruby to RUBYLIB
-
-You can configure the build to install a specific binding to the
-location specified by the system interpreter with the
-SYSINSTALL_[LANGUAGE] options, where [LANGUAGE] is one of PYTHON
-or RUBY.
-
-    $ cmake .. -DSYSINSTALL_PYTHON=ON
+    > gem install ruby/gem/qpid_proton-0.39.0.gem
 
 Disabling Language Bindings
 ---------------------------
