@@ -569,11 +569,9 @@ TEST_CASE("raw connection") {
       REQUIRE_FALSE(pni_raw_can_read(p));
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_CLOSED_WRITE);
       REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_DRAIN_BUFFERS);
-      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_READ);
       rgiven = pn_raw_connection_take_read_buffers(p, &read[0], rtaken);
       REQUIRE(pni_raw_validate(p));
       CHECK(rgiven==rtaken);
-      REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_WRITTEN);
       wgiven = pn_raw_connection_take_written_buffers(p, &written[0], wtaken);
       REQUIRE(pni_raw_validate(p));
       CHECK(wgiven==wtaken);
@@ -633,27 +631,9 @@ TEST_CASE("raw connection") {
         REQUIRE(pni_raw_validate(p));
         CHECK(pn_raw_connection_is_write_closed(p));
         REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_CLOSED_WRITE);
-        // TODO: Remove  the inapplicable tests when the drain buffers completely replaces read/written
-        SECTION("Ensure get read/written events before disconnect if not drained") {
-          REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_DRAIN_BUFFERS);
-          REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_READ);
-          REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_WRITTEN);
-        }
-        SECTION("Ensure no read/written events before disconnect if drained") {
+        SECTION("Ensure drain buffers event before disconnect if not drained") {
           REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_DRAIN_BUFFERS);
           while(pn_raw_connection_take_read_buffers(p, &read[0], read.size())>0);
-          while(pn_raw_connection_take_written_buffers(p, &written[0], written.size())>0);
-        }
-        SECTION("Ensure no written events before disconnect if write drained") {
-          REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_DRAIN_BUFFERS);
-          REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_READ);
-          while(pn_raw_connection_take_read_buffers(p, &read[0], read.size())>0);
-          while(pn_raw_connection_take_written_buffers(p, &written[0], written.size())>0);
-        }
-        SECTION("Ensure no read events before disconnect if read drained") {
-          REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_DRAIN_BUFFERS);
-          while(pn_raw_connection_take_read_buffers(p, &read[0], read.size())>0);
-          REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_WRITTEN);
           while(pn_raw_connection_take_written_buffers(p, &written[0], written.size())>0);
         }
         SECTION("Ensure no events before disconnect if already drained") {

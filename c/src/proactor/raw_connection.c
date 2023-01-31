@@ -701,21 +701,7 @@ pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn) {
         }
         conn->disconnect_state = disc_drain_msg;
         break;
-      // TODO: We'll leave the read/written events in here for the moment for backward compatibility
-      // remove them soon (after dispatch uses DRAIN_BUFFER)
       case disc_drain_msg:
-        if (conn->rbuffer_first_read) {
-          pni_raw_put_event(conn, PN_RAW_CONNECTION_READ);
-        }
-        conn->disconnect_state = disc_read_msg;
-        break;
-      case disc_read_msg:
-        if (conn->wbuffer_first_written) {
-          pni_raw_put_event(conn, PN_RAW_CONNECTION_WRITTEN);
-        }
-        conn->disconnect_state = disc_written_msg;
-        break;
-      case disc_written_msg:
         pni_raw_put_event(conn, PN_RAW_CONNECTION_DISCONNECTED);
         conn->disconnectpending = false;
         conn->disconnect_state = disc_fini;
