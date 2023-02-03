@@ -158,7 +158,10 @@ if (pydist_cmds)
     COMMAND ${CMAKE_COMMAND} -E remove -f .timestamp.dist
     COMMAND ${Python_EXECUTABLE} setup.py ${pydist_cmds}
     COMMAND ${CMAKE_COMMAND} -E touch .timestamp.dist)
-  add_custom_target(pydist ALL DEPENDS .timestamp.dist)
+  add_custom_target(pydist DEPENDS .timestamp.dist)
+  add_custom_target(pytest_cffi ALL DEPENDS pydist)
+else()
+  add_custom_target(pytest_cffi ALL DEPENDS .timestamp.cproton_ffi)
 endif ()
 
 # python test: python/tests/proton-test
@@ -205,8 +208,6 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E touch .timestamp.cproton_ffi
   DEPENDS ${pytest_venv}/env.txt .timestamp.copied_pysrc ${pysrc_files}
 )
-
-add_custom_target(pytest_cffi ALL DEPENDS .timestamp.cproton_ffi)
 
 pn_add_test(
   INTERPRETED
