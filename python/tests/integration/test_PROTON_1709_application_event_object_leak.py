@@ -21,10 +21,12 @@
 PROTON-1709 [python] ApplicationEvent causing memory growth
 """
 
+import array
 import gc
 import platform
 import threading
 import unittest
+
 
 import proton
 from proton.handlers import MessagingHandler
@@ -36,10 +38,12 @@ class Program(MessagingHandler):
         self.injector = injector
         self.counter = 0
         self.on_start_ = threading.Event()
+        self.on_start_continue_ = threading.Event()
 
     def on_reactor_init(self, event):
         event.reactor.selectable(self.injector)
         self.on_start_.set()
+        self.on_start_continue_.wait()
 
     def on_count_up(self, event):
         self.counter += 1
@@ -47,6 +51,7 @@ class Program(MessagingHandler):
 
     def on_done(self, event):
         event.subject.stop()
+        gc.collect()
 
 
 class Proton1709Test(unittest.TestCase):
@@ -58,20 +63,21 @@ class Proton1709Test(unittest.TestCase):
         p = Program(injector)
         c = Container(p)
         t = threading.Thread(target=c.run)
-        t.start()
+        object_counts = array.array('L', [0]*3)
 
+        t.start()
         p.on_start_.wait()
 
-        object_counts = []
-
         gc.collect()
-        object_counts.append(len(gc.get_objects()))
+        object_counts[0] = len(gc.get_objects())
+
+        p.on_start_continue_.set()
 
         for i in range(100):
             injector.trigger(ApplicationEvent("count_up"))
 
         gc.collect()
-        object_counts.append(len(gc.get_objects()))
+        object_counts[1] = len(gc.get_objects())
 
         self.assertEqual(len(proton.EventType.TYPES), event_types_count + 1)
 
@@ -81,7 +87,7 @@ class Proton1709Test(unittest.TestCase):
         t.join()
 
         gc.collect()
-        object_counts.append(len(gc.get_objects()))
+        object_counts[2] = len(gc.get_objects())
 
         self.assertEqual(p.counter, 100)
 
@@ -89,3 +95,4 @@ class Proton1709Test(unittest.TestCase):
                         "Object counts should not be increasing too fast: {0}".format(object_counts))
         self.assertTrue(object_counts[2] - object_counts[0] <= 10,
                         "No objects should be leaking at the end: {0}".format(object_counts))
+

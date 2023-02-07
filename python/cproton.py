@@ -296,24 +296,27 @@ def pn_transport_set_pytracer(transport, tracer):
     attrs['_tracer'] = tracer
     lib.pn_transport_set_tracer(transport, lib.pn_pytracer)
 
-
+retained_objects = set()
 lib.init()
-global_root = set()
 
+
+def retained_count():
+    """ Debugging aid to give the number of wrapper objects retained by the bindings"""
+    return len(retained_objects)
 
 @ffi.def_extern()
 def pn_pyref_incref(obj):
-    global_root.add(obj)
+    retained_objects.add(obj)
 
 
 @ffi.def_extern()
 def pn_pyref_decref(obj):
-    global_root.discard(obj)
+    retained_objects.discard(obj)
 
 
 def pn_collector_put_pyref(collector, obj, etype):
     d = ffi.new_handle(obj)
-    global_root.add(d)
+    retained_objects.add(d)
     lib.pn_collector_put_py(collector, d, etype.number)
 
 
@@ -333,7 +336,7 @@ def pn_record_set_py(record, value):
         d = ffi.NULL
     else:
         d = ffi.new_handle(value)
-        global_root.add(d)
+        retained_objects.add(d)
     lib.pn_record_set_py(record, d)
 
 
