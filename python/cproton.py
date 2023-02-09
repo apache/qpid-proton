@@ -17,6 +17,7 @@
 # under the License.
 #
 
+import atexit
 from uuid import UUID
 
 from cproton_ffi import ffi, lib
@@ -299,6 +300,9 @@ def pn_transport_set_pytracer(transport, tracer):
 retained_objects = set()
 lib.init()
 
+@atexit.register
+def clear_retained_objects():
+    retained_objects.clear()
 
 def retained_count():
     """ Debugging aid to give the number of wrapper objects retained by the bindings"""

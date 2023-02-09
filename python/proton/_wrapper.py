@@ -47,8 +47,6 @@ class Wrapper(object):
         _impl   The wrapped C object itself
         _attrs  This is a special pn_record_t holding a PYCTX which is a python dict
                 every attribute in the python object is actually looked up here
-        _record This is the C record itself (so actually identical to _attrs really but
-                a different python type
 
         Because the objects actual attributes are stored away they must be initialised *after* the wrapping
         is set up. This is the purpose of the _init method in the wrapped  object. Wrapper.__init__ will call
@@ -70,7 +68,6 @@ class Wrapper(object):
             if impl is None:
                 self.__dict__["_impl"] = impl
                 self.__dict__["_attrs"] = EMPTY_ATTRS
-                self.__dict__["_record"] = None
                 raise ProtonException(
                     "Wrapper failed to create wrapped object. Check for file descriptor or memory exhaustion.")
             init = True
@@ -89,10 +86,8 @@ class Wrapper(object):
         else:
             attrs = EMPTY_ATTRS
             init = False
-            record = None
         self.__dict__["_impl"] = impl
         self.__dict__["_attrs"] = attrs
-        self.__dict__["_record"] = record
         if init:
             self._init()
 
