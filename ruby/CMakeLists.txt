@@ -83,31 +83,6 @@ if (GEM_EXE)
   add_custom_target(ruby-gem ALL DEPENDS ${GEM_FILE})
 endif ()
 
-## CMake-based install
-
-if (CHECK_SYSINSTALL_RUBY)
-  execute_process(COMMAND ${RUBY_EXECUTABLE}
-    -r rbconfig -e "print RbConfig::CONFIG['vendorarchdir'] || ''"
-    RESULT_VARIABLE RESULT_RUBY_ARCHLIB_DIR
-    OUTPUT_VARIABLE OUTPUT_RUBY_ARCHLIB_DIR)
-
-  if(OUTPUT_RUBY_ARCHLIB_DIR STREQUAL "")
-    execute_process(COMMAND ${RUBY_EXECUTABLE}
-      -r rbconfig -e "print RbConfig::CONFIG['archdir'] || ''"
-      RESULT_VARIABLE RESULT_RUBY_ARCHLIB_DIR
-      OUTPUT_VARIABLE OUTPUT_RUBY_ARCHLIB_DIR)
-  endif()
-
-  set(RUBY_ARCHLIB_DIR_DEFAULT "${OUTPUT_RUBY_ARCHLIB_DIR}")
-
-  if (NOT RUBY_ARCHLIB_DIR)
-    set (RUBY_ARCHLIB_DIR ${RUBY_ARCHLIB_DIR_DEFAULT})
-  endif()
-
-  install(TARGETS cproton-ruby DESTINATION ${RUBY_ARCHLIB_DIR} COMPONENT Ruby)
-  install(DIRECTORY lib/ DESTINATION ${RUBY_ARCHLIB_DIR} COMPONENT Ruby)
-endif (CHECK_SYSINSTALL_RUBY)
-
 install(DIRECTORY examples/
         DESTINATION "${PROTON_SHARE}/examples/ruby"
         COMPONENT Ruby

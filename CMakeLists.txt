@@ -63,16 +63,9 @@ set (PN_C_LIBRARY_DIR "${CMAKE_BINARY_DIR}/c")
 set (PN_C_SOURCE_DIR "${CMAKE_BINARY_DIR}/c/src")
 
 ## C
-if (DEFINED CMAKE_C_COMPILE_FEATURES)
-  set(CMAKE_C_STANDARD 99)
-  set(CMAKE_C_EXTENSIONS OFF)
-  set(CMAKE_C_STANDARD_REQUIRED ON)
-else()
-  set (C_STANDARD_GNU -std=c99)
-  set (C_EXTENDED_GNU -std=gnu99)
-  set (C_STANDARD_Clang -std=c99)
-  set (C_EXTENDED_Clang -std=gnu99)
-endif()
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set (C_STANDARD_FLAGS ${C_STANDARD_${CMAKE_C_COMPILER_ID}})
 set (C_EXTENDED_FLAGS ${C_EXTENDED_${CMAKE_C_COMPILER_ID}})
@@ -83,13 +76,8 @@ if (CMAKE_CXX_COMPILER)
   enable_language(CXX)
 
   # This effectively checks for cmake version 3.1 or later
-  if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
-    set(CMAKE_CXX_STANDARD 11)
-    set(CMAKE_CXX_EXTENSIONS OFF)
-  else ()
-    # This can only be a fairly old version of Linux in practice
-    set(CXX_STANDARD "-std=c++11")
-  endif ()
+  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
 # Build static C and C++ libraries in addition to shared libraries.
@@ -167,13 +155,6 @@ option(BUILD_EXAMPLES "Enable building example programs" ON)
 option(BUILD_TLS "Enable building separate TLS library for Proton raw connections" OFF)
 
 # Set any additional compiler specific flags
-set (LTO_GNU "-flto -fno-fat-lto-objects")
-set (LTO_Clang "-flto=thin")
-set (LTO_MSVC "/GL")
-set (LINK_LTO_GNU "-flto -fno-fat-lto-objects")
-set (LINK_LTO_Clang "-flto=thin")
-set (LINK_LTO_MSVC "/LTCG")
-
 set (WERROR_GNU "-Werror")
 set (WERROR_Clang "-Werror")
 set (WERROR_MSVC "")
@@ -200,8 +181,7 @@ set (HIDE_SYMBOLS_Clang "-fvisibility=hidden")
 set (HIDE_SYMBOLS_SunPro "-xldscope=hidden")
 
 if (ENABLE_LINKTIME_OPTIMIZATION)
-  set (LTO ${LTO_${CMAKE_C_COMPILER_ID}})
-  set (LINK_LTO ${LINK_LTO_${CMAKE_C_COMPILER_ID}})
+  set (CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif (ENABLE_LINKTIME_OPTIMIZATION)
 
 if (ENABLE_WARNING_ERROR)
@@ -288,23 +268,6 @@ pn_relative_install_dir (INCLUDEDIR "${CMAKE_INSTALL_PREFIX}" "${INCLUDE_INSTALL
 pn_relative_install_dir (LIBDIR "${CMAKE_INSTALL_PREFIX}" "${LIB_INSTALL_DIR}")
 
 ## LANGUAGE BINDINGS
-
-# Default directory for language bindings not being installed into
-# system specified locations.
-set (BINDINGS_DIR ${LIB_INSTALL_DIR}/proton/bindings)
-
-set (SYSINSTALL_BINDINGS OFF CACHE BOOL "If SYSINSTALL_BINDINGS is ON, then each language interpreter will be queried for the appropriate directory and proton bindings will be installed in that location.")
-
-set (BINDING_LANGS PYTHON RUBY)
-
-foreach (LANG ${BINDING_LANGS})
-  set (SYSINSTALL_${LANG} OFF CACHE BOOL "Install ${LANG} bindings into interpreter specified location.")
-  if (SYSINSTALL_BINDINGS OR SYSINSTALL_${LANG})
-    set (CHECK_SYSINSTALL_${LANG} ON)
-  else ()
-    set (CHECK_SYSINSTALL_${LANG} OFF)
-  endif ()
-endforeach()
 
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton)
 # End of variables used during install

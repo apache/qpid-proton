@@ -40,13 +40,13 @@ if (CMAKE_CXX_COMPILER)
 
   add_library(test_main OBJECT test_main.cpp)
   set_target_properties(test_main PROPERTIES
-    COMPILE_FLAGS "${CXX_STANDARD} ${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS} ${LTO}")
+    COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
 
   macro(add_c_test exe)
     add_executable(${exe} $<TARGET_OBJECTS:test_main> pn_test.cpp ${ARGN})
     set_target_properties(${exe} PROPERTIES
-      COMPILE_FLAGS "${CXX_STANDARD} ${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS} ${LTO}"
-      LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+      COMPILE_FLAGS "${CXX_WARNING_FLAGS}"
+      LINK_FLAGS "${CATCH_UNDEFINED}")
     pn_add_test(
       EXECUTABLE
       NAME ${exe}
@@ -92,7 +92,7 @@ if (CMAKE_CXX_COMPILER)
     if (THREADERCISER)
       add_executable(c-threaderciser threaderciser.c)
       set_target_properties(c-threaderciser
-        PROPERTIES COMPILE_FLAGS "${C_STANDARD_FLAGS} ${COMPILE_WARNING_FLAGS}")
+        PROPERTIES COMPILE_FLAGS "${COMPILE_WARNING_FLAGS}")
       target_link_libraries (c-threaderciser qpid-proton-proactor Threads::Threads)
       pn_add_test(
         EXECUTABLE

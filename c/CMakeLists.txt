@@ -431,8 +431,7 @@ add_library (qpid-proton-core-objects OBJECT ${qpid-proton-core-src})
 add_dependencies (qpid-proton-core-objects generated_c_files)
 set_target_properties(qpid-proton-core-objects PROPERTIES
   POSITION_INDEPENDENT_CODE ON
-  COMPILE_FLAGS "${LTO}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+  LINK_FLAGS "${CATCH_UNDEFINED}")
 target_compile_definitions(qpid-proton-core-objects PRIVATE qpid_proton_core_EXPORTS)
 target_link_libraries (qpid-proton-core-objects ${SSL_LIB} ${SASL_LIB} ${PLATFORM_LIBS})
 
@@ -440,8 +439,7 @@ add_library (qpid-proton-platform-io-objects OBJECT ${qpid-proton-platform-io})
 set_target_properties(qpid-proton-platform-io-objects PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   C_EXTENSIONS ON
-  COMPILE_FLAGS "${LTO}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+  LINK_FLAGS "${CATCH_UNDEFINED}")
 target_compile_definitions(qpid-proton-platform-io-objects PRIVATE qpid_proton_EXPORTS)
 target_link_libraries (qpid-proton-platform-io-objects ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 
@@ -451,8 +449,7 @@ set_target_properties (qpid-proton-core
   PROPERTIES
   VERSION   "${PN_LIB_CORE_VERSION}"
   SOVERSION "${PN_LIB_CORE_MAJOR_VERSION}"
-  COMPILE_FLAGS "${LTO}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
+  LINK_FLAGS "${CATCH_UNDEFINED}"
   EXPORT_NAME core)
 
 if (BUILD_STATIC_LIBS)
@@ -472,8 +469,7 @@ if (qpid-proton-proactor)
   add_library (qpid-proton-proactor-objects OBJECT ${qpid-proton-proactor})
   set_target_properties(qpid-proton-proactor-objects PROPERTIES
     POSITION_INDEPENDENT_CODE ON
-    COMPILE_FLAGS "${LTO}"
-    LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+    LINK_FLAGS "${CATCH_UNDEFINED}")
   target_compile_definitions(qpid-proton-proactor-objects PRIVATE qpid_proton_proactor_EXPORTS)
   target_link_libraries (qpid-proton-proactor-objects ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 
@@ -484,8 +480,7 @@ if (qpid-proton-proactor)
     PROPERTIES
     VERSION   "${PN_LIB_PROACTOR_VERSION}"
     SOVERSION "${PN_LIB_PROACTOR_MAJOR_VERSION}"
-    LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
-    COMPILE_FLAGS "${LTO}"
+    LINK_FLAGS "${CATCH_UNDEFINED}"
     EXPORT_NAME proactor
     )
   if (BUILD_STATIC_LIBS)
@@ -514,8 +509,7 @@ set_target_properties (qpid-proton
   PROPERTIES
   VERSION   "${PN_LIB_LEGACY_VERSION}"
   SOVERSION "${PN_LIB_LEGACY_MAJOR_VERSION}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
-  COMPILE_FLAGS "${LTO}"
+  LINK_FLAGS "${CATCH_UNDEFINED}"
   EXPORT_NAME qpid-proton
 )
 
@@ -544,8 +538,7 @@ if (qpid-proton-tls)
   target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
   set_target_properties(qpid-proton-tls-objects PROPERTIES
     POSITION_INDEPENDENT_CODE ON
-    COMPILE_FLAGS "${LTO}"
-    LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+    LINK_FLAGS "${CATCH_UNDEFINED}")
   target_compile_definitions(qpid-proton-tls-objects PRIVATE qpid_proton_tls_EXPORTS)
   target_link_libraries (qpid-proton-tls-objects ${SSL_LIB} ${PLATFORM_LIBS})
 
@@ -556,8 +549,7 @@ if (qpid-proton-tls)
     PROPERTIES
     VERSION   "${PN_LIB_TLS_VERSION}"
     SOVERSION "${PN_LIB_TLS_MAJOR_VERSION}"
-    LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
-    COMPILE_FLAGS "${LTO}"
+    LINK_FLAGS "${CATCH_UNDEFINED}"
     EXPORT_NAME tls
     )
   if (BUILD_STATIC_LIBS)
