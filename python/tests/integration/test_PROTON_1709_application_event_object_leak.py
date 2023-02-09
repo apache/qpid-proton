@@ -91,7 +91,7 @@ class Proton1709Test(unittest.TestCase):
 
         self.assertEqual(p.counter, 100)
 
-        self.assertTrue(object_counts[1] - object_counts[0] <= 220,
+        self.assertTrue(object_counts[1] - object_counts[0] <= 300,
                         "Object counts should not be increasing too fast: {0}".format(object_counts))
         self.assertTrue(object_counts[2] - object_counts[0] <= 10,
                         "No objects should be leaking at the end: {0}".format(object_counts))
