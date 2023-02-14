@@ -118,7 +118,12 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
 
     if (pn_link_is_receiver(lnk)) {
         delivery d(make_wrapper<delivery>(dlv));
-        if (!pn_delivery_partial(dlv) && pn_delivery_readable(dlv)) {
+        if (pn_delivery_aborted(dlv)) {
+            pn_delivery_settle(dlv);
+            pn_link_flow(lnk, 1);
+            pn_link_advance(lnk);
+        }
+        else if (!pn_delivery_partial(dlv) && pn_delivery_readable(dlv)) {
             // generate on_message
             pn_connection_t *pnc = pn_session_connection(pn_link_session(lnk));
             connection_context& ctx = connection_context::get(pnc);
