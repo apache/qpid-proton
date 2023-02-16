@@ -59,7 +59,7 @@ class Wrapper(object):
             self,
             impl: Any = None,
             get_context: Optional[Callable[[Any], Any]] = None,
-            constructor: Callable[[], Any] = None
+            constructor: Optional[Callable[[], Any]] = None
     ) -> None:
         init = False
         if impl is None and constructor is not None:

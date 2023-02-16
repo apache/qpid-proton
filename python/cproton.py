@@ -163,7 +163,7 @@ def isnull(obj):
 
 
 def addressof(obj):
-    return ffi.cast('uint64_t', obj)
+    return int(ffi.cast('uint64_t', obj))
 
 
 def void2py(void):
