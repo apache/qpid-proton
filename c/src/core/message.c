@@ -22,6 +22,7 @@
 #include "platform/platform_fmt.h"
 
 #include "data.h"
+#include "encodings.h"
 #include "max_align.h"
 #include "message-internal.h"
 #include "protocol.h"
@@ -45,6 +46,10 @@
 struct pn_message_t {
   pn_atom_t id;
   pn_atom_t correlation_id;
+  pn_bytes_t instructions_raw;
+  pn_bytes_t annotations_raw;
+  pn_bytes_t properties_raw;
+  pn_bytes_t body_raw;
   pn_timestamp_t expiry_time;
   pn_timestamp_t creation_time;
   pn_string_t *user_id;
@@ -58,10 +63,10 @@ struct pn_message_t {
 
   pn_data_t *id_deprecated;
   pn_data_t *correlation_id_deprecated;
-  pn_data_t *instructions;
-  pn_data_t *annotations;
-  pn_data_t *properties;
-  pn_data_t *body;
+  pn_data_t *instructions_deprecated;
+  pn_data_t *annotations_deprecated;
+  pn_data_t *properties_deprecated;
+  pn_data_t *body_deprecated;
   pn_error_t *error;
 
   pn_sequence_t group_sequence;
@@ -151,12 +156,16 @@ void pn_message_finalize(void *obj)
   pn_free(msg->reply_to_group_id);
   pni_msgid_clear(&msg->id);
   pni_msgid_clear(&msg->correlation_id);
-  if (msg->id_deprecated) pn_data_free(msg->id_deprecated);
-  if (msg->correlation_id_deprecated) pn_data_free(msg->correlation_id_deprecated);
-  pn_data_free(msg->instructions);
-  pn_data_free(msg->annotations);
-  pn_data_free(msg->properties);
-  pn_data_free(msg->body);
+  pn_bytes_free(msg->instructions_raw);
+  pn_bytes_free(msg->annotations_raw);
+  pn_bytes_free(msg->properties_raw);
+  pn_bytes_free(msg->body_raw);
+  pn_data_free(msg->id_deprecated);
+  pn_data_free(msg->correlation_id_deprecated);
+  pn_data_free(msg->instructions_deprecated);
+  pn_data_free(msg->annotations_deprecated);
+  pn_data_free(msg->properties_deprecated);
+  pn_data_free(msg->body_deprecated);
   pn_error_free(msg->error);
 }
 
@@ -284,30 +293,30 @@ void pn_message_inspect(void *obj, pn_fixed_string_t *dst)
     comma = true;
   }
 
-  if (pn_data_size(msg->instructions)) {
+  if (pn_data_size(msg->instructions_deprecated)) {
     pn_fixed_string_addf(dst, "instructions=");
-    pn_finspect(msg->instructions, dst);
+    pn_finspect(msg->instructions_deprecated, dst);
     pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
-  if (pn_data_size(msg->annotations)) {
+  if (pn_data_size(msg->annotations_deprecated)) {
     pn_fixed_string_addf(dst, "annotations=");
-    pn_finspect(msg->annotations, dst);
+    pn_finspect(msg->annotations_deprecated, dst);
     pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
-  if (pn_data_size(msg->properties)) {
+  if (pn_data_size(msg->properties_deprecated)) {
     pn_fixed_string_addf(dst, "properties=");
-    pn_finspect(msg->properties, dst);
+    pn_finspect(msg->properties_deprecated, dst);
     pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
-  if (pn_data_size(msg->body)) {
+  if (pn_data_size(msg->body_deprecated)) {
     pn_fixed_string_addf(dst, "body=");
-    pn_finspect(msg->body, dst);
+    pn_finspect(msg->body_deprecated, dst);
     pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
@@ -346,14 +355,18 @@ static pn_message_t *pni_message_new(size_t size)
   msg->group_id = pn_string(NULL);
   msg->group_sequence = 0;
   msg->reply_to_group_id = pn_string(NULL);
+  msg->instructions_raw = (pn_bytes_t){0, 0};
+  msg->annotations_raw = (pn_bytes_t){0, 0};
+  msg->properties_raw = (pn_bytes_t){0, 0};
+  msg->body_raw = (pn_bytes_t){0, 0};
 
   msg->inferred = false;
   msg->id_deprecated = NULL;
   msg->correlation_id_deprecated = NULL;
-  msg->instructions = pn_data(16);
-  msg->annotations = pn_data(16);
-  msg->properties = pn_data(16);
-  msg->body = pn_data(16);
+  msg->instructions_deprecated = NULL;
+  msg->annotations_deprecated = NULL;
+  msg->properties_deprecated = NULL;
+  msg->body_deprecated = NULL;
 
   msg->error = pn_error();
   return msg;
@@ -403,12 +416,20 @@ void pn_message_clear(pn_message_t *msg)
   msg->group_sequence = 0;
   pn_string_clear(msg->reply_to_group_id);
   msg->inferred = false;
+  pn_bytes_free(msg->annotations_raw);
+  pn_bytes_free(msg->instructions_raw);
+  pn_bytes_free(msg->properties_raw);
+  pn_bytes_free(msg->body_raw);
+  msg->instructions_raw = (pn_bytes_t){0, NULL};
+  msg->annotations_raw = (pn_bytes_t){0, NULL};
+  msg->properties_raw = (pn_bytes_t){0, NULL};
+  msg->body_raw = (pn_bytes_t){0, NULL};
   pn_data_clear(msg->id_deprecated);
   pn_data_clear(msg->correlation_id_deprecated);
-  pn_data_clear(msg->instructions);
-  pn_data_clear(msg->annotations);
-  pn_data_clear(msg->properties);
-  pn_data_clear(msg->body);
+  pn_data_clear(msg->instructions_deprecated);
+  pn_data_clear(msg->annotations_deprecated);
+  pn_data_clear(msg->properties_deprecated);
+  pn_data_clear(msg->body_deprecated);
 }
 
 int pn_message_errno(pn_message_t *msg)
@@ -432,6 +453,12 @@ bool pn_message_is_inferred(pn_message_t *msg)
 int pn_message_set_inferred(pn_message_t *msg, bool inferred)
 {
   assert(msg);
+  // If the inferred value changed and we're only holding the raw bytes then we need to get the
+  // deprecated pn_data_t equivalent as the raw bytes must be reconstructed from the pn_data_t
+  // interpreted in light of the inferred flag.
+  if (msg->inferred!=inferred && msg->body_raw.size>0) {
+    (void) pn_message_body(msg);
+  }
   msg->inferred = inferred;
   return 0;
 }
@@ -534,11 +561,6 @@ int pn_message_set_id(pn_message_t *msg, pn_msgid_t id)
   return 0;
 }
 
-static pn_bytes_t pn_string_get_bytes(pn_string_t *string)
-{
-  return pn_bytes(pn_string_size(string), (char *) pn_string_get(string));
-}
-
 static int pn_string_set_bytes(pn_string_t *string, pn_bytes_t bytes)
 {
   return pn_string_setn(string, bytes.start, bytes.size);
@@ -547,7 +569,7 @@ static int pn_string_set_bytes(pn_string_t *string, pn_bytes_t bytes)
 pn_bytes_t pn_message_get_user_id(pn_message_t *msg)
 {
   assert(msg);
-  return pn_string_get_bytes(msg->user_id);
+  return pn_string_bytes(msg->user_id);
 }
 int pn_message_set_user_id(pn_message_t *msg, pn_bytes_t user_id)
 {
@@ -711,6 +733,12 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
   assert(msg && bytes && size);
 
   pn_bytes_t msg_bytes = {.size=size, .start=bytes};
+  pn_bytes_t instructions_bytes = {0, 0};
+  pn_bytes_t annotations_bytes = {0, 0};
+  pn_bytes_t properties_bytes = {0, 0};
+  pn_bytes_t body_bytes = {0, 0};
+  pn_bytes_t unknown_section_bytes = {0, 0};
+
   while (msg_bytes.size) {
     bool scanned;
     uint64_t desc;
@@ -767,59 +795,68 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
         break;
       }
       case DELIVERY_ANNOTATIONS: {
-        pn_data_clear(msg->instructions);
-        pn_amqp_decode_DqC(msg_bytes, msg->instructions);
-        pn_data_rewind(msg->instructions);
+        pn_amqp_decode_DqR(msg_bytes, &instructions_bytes);
         break;
       }
       case MESSAGE_ANNOTATIONS: {
-        pn_data_clear(msg->annotations);
-        pn_amqp_decode_DqC(msg_bytes, msg->annotations);
-        pn_data_rewind(msg->annotations);
+        pn_amqp_decode_DqR(msg_bytes, &annotations_bytes);
         break;
       }
       case APPLICATION_PROPERTIES: {
-        pn_data_clear(msg->properties);
-        pn_amqp_decode_DqC(msg_bytes, msg->properties);
-        pn_data_rewind(msg->properties);
+        pn_amqp_decode_DqR(msg_bytes, &properties_bytes);
         break;
       }
       case DATA:
       case AMQP_SEQUENCE: {
         msg->inferred = true;
-        pn_data_clear(msg->body);
-        pn_amqp_decode_DqC(msg_bytes, msg->body);
-        pn_data_rewind(msg->body);
+        pn_amqp_decode_DqR(msg_bytes, &body_bytes);
         break;
       }
       case AMQP_VALUE: {
         msg->inferred = false;
-        pn_data_clear(msg->body);
-        pn_amqp_decode_DqC(msg_bytes, msg->body);
-        pn_data_rewind(msg->body);
+        pn_amqp_decode_DqR(msg_bytes, &body_bytes);
         break;
       }
       case FOOTER:
         break;
       default: {
-        pn_data_clear(msg->body);
-        pn_data_decode(msg->body, msg_bytes.start, msg_bytes.size);
-        pn_data_rewind(msg->body);
+        pn_amqp_decode_R(msg_bytes, &unknown_section_bytes);
         break;
       }
     }
     msg_bytes = (pn_bytes_t){.size=msg_bytes.size-section_size, .start=msg_bytes.start+section_size};
   }
+  pn_bytes_free(msg->instructions_raw);
+  msg->instructions_raw = pn_bytes_dup(instructions_bytes);
+  pn_bytes_free(msg->annotations_raw);
+  msg->annotations_raw = pn_bytes_dup(annotations_bytes);
+  pn_bytes_free(msg->properties_raw);
+  msg->properties_raw = pn_bytes_dup(properties_bytes);
+  pn_bytes_free(msg->body_raw);
+  msg->body_raw = pn_bytes_dup(body_bytes);
   return 0;
 }
+
 int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
 {
+  pn_rwbytes_t scratch = (pn_rwbytes_t){.size=*isize, .start=bytes};
+  if (!pni_switch_to_raw_bytes(scratch, &msg->instructions_deprecated, &msg->instructions_raw)) {
+    return PN_OVERFLOW;
+  }
+  if (!pni_switch_to_raw_bytes(scratch, &msg->annotations_deprecated, &msg->annotations_raw)) {
+    return PN_OVERFLOW;
+  }
+  if (!pni_switch_to_raw_bytes(scratch, &msg->properties_deprecated, &msg->properties_raw)) {
+    return PN_OVERFLOW;
+  }
+  if (!pni_switch_to_raw_bytes(scratch, &msg->body_deprecated, &msg->body_raw)) {
+    return PN_OVERFLOW;
+  }
   size_t remaining = *isize;
-  size_t last_size = 0;
   size_t total = 0;
 
   /* "DL[?o?B?I?o?I]" */
-  last_size = pn_amqp_encode_bytes_DLEQoQBQIQoQIe(bytes, remaining, HEADER,
+  size_t last_size = pn_amqp_encode_bytes_DLEQoQBQIQoQIe(bytes, remaining, HEADER,
                         msg->durable, msg->durable,
                          msg->priority!=HEADER_PRIORITY_DEFAULT, msg->priority,
                          (bool)msg->ttl, msg->ttl,
@@ -832,9 +869,8 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
   total += last_size;
 
 
-  if (pn_data_size(msg->instructions)) {
-    pn_data_rewind(msg->instructions);
-    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, DELIVERY_ANNOTATIONS, msg->instructions);
+  if (msg->instructions_raw.size>0) {
+    last_size = pn_amqp_encode_bytes_DLR(bytes, remaining, DELIVERY_ANNOTATIONS, msg->instructions_raw);
     if (last_size > remaining) return PN_OVERFLOW;
 
     remaining -= last_size;
@@ -842,9 +878,8 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
     total += last_size;
   }
 
-  if (pn_data_size(msg->annotations)) {
-    pn_data_rewind(msg->annotations);
-    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, MESSAGE_ANNOTATIONS, msg->annotations);
+  if (msg->annotations_raw.size>0) {
+    last_size = pn_amqp_encode_bytes_DLR(bytes, remaining, MESSAGE_ANNOTATIONS, msg->annotations_raw);
     if (last_size > remaining) return PN_OVERFLOW;
 
     remaining -= last_size;
@@ -880,9 +915,8 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
   bytes += last_size;
   total += last_size;
 
-  if (pn_data_size(msg->properties)) {
-    pn_data_rewind(msg->properties);
-    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, APPLICATION_PROPERTIES, msg->properties);
+  if (msg->properties_raw.size>0) {
+    last_size = pn_amqp_encode_bytes_DLR(bytes, remaining, APPLICATION_PROPERTIES, msg->properties_raw);
     if (last_size > remaining) return PN_OVERFLOW;
 
     remaining -= last_size;
@@ -890,32 +924,29 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
     total += last_size;
   }
 
-  if (pn_data_size(msg->body)) {
-    pn_data_rewind(msg->body);
-    pn_data_next(msg->body);
-    pn_type_t body_type = pn_data_type(msg->body);
-    pn_data_rewind(msg->body);
-
+  if (msg->body_raw.size>0) {
     uint64_t descriptor = AMQP_VALUE;
     if (msg->inferred) {
-      switch (body_type) {
-        case PN_BINARY:
-          descriptor = DATA;
-          break;
-        case PN_LIST:
-          descriptor = AMQP_SEQUENCE;
-          break;
-        default:
-          break;
+      switch ((uint8_t)msg->body_raw.start[0]) {
+      case PNE_VBIN8:
+      case PNE_VBIN32:
+        descriptor = DATA;
+        break;
+      case PNE_LIST0:
+      case PNE_LIST8:
+      case PNE_LIST32:
+        descriptor = AMQP_SEQUENCE;
+        break;
       }
     }
-    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, descriptor, msg->body);
+    last_size = pn_amqp_encode_bytes_DLR(bytes, remaining, descriptor, msg->body_raw);
     if (last_size > remaining) return PN_OVERFLOW;
 
     remaining -= last_size;
     bytes += last_size;
     total += last_size;
   }
+
   *isize = total;
   return 0;
 }
@@ -933,17 +964,17 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_error_text(pn_data_error(data)));
 
-  if (pn_data_size(msg->instructions)) {
-    pn_data_rewind(msg->instructions);
-    err = pn_data_fill(data, "DLC", DELIVERY_ANNOTATIONS, msg->instructions);
+  if (pn_data_size(msg->instructions_deprecated)) {
+    pn_data_rewind(msg->instructions_deprecated);
+    err = pn_data_fill(data, "DLC", DELIVERY_ANNOTATIONS, msg->instructions_deprecated);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
   }
 
-  if (pn_data_size(msg->annotations)) {
-    pn_data_rewind(msg->annotations);
-    err = pn_data_fill(data, "DLC", MESSAGE_ANNOTATIONS, msg->annotations);
+  if (pn_data_size(msg->annotations_deprecated)) {
+    pn_data_rewind(msg->annotations_deprecated);
+    err = pn_data_fill(data, "DLC", MESSAGE_ANNOTATIONS, msg->annotations_deprecated);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
@@ -974,18 +1005,18 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_error_text(pn_data_error(data)));
 
-  if (pn_data_size(msg->properties)) {
-    pn_data_rewind(msg->properties);
-    err = pn_data_fill(data, "DLC", APPLICATION_PROPERTIES, msg->properties);
+  if (pn_data_size(msg->properties_deprecated)) {
+    pn_data_rewind(msg->properties_deprecated);
+    err = pn_data_fill(data, "DLC", APPLICATION_PROPERTIES, msg->properties_deprecated);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
   }
 
-  if (pn_data_size(msg->body)) {
-    pn_data_rewind(msg->body);
-    pn_data_next(msg->body);
-    pn_type_t body_type = pn_data_type(msg->body);
+  if (pn_data_size(msg->body_deprecated)) {
+    pn_data_rewind(msg->body_deprecated);
+    pn_data_next(msg->body_deprecated);
+    pn_type_t body_type = pn_data_type(msg->body_deprecated);
 
     uint64_t descriptor = AMQP_VALUE;
     if (msg->inferred) {
@@ -1001,8 +1032,8 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
       }
     }
 
-    pn_data_rewind(msg->body);
-    err = pn_data_fill(data, "DLC", descriptor, msg->body);
+    pn_data_rewind(msg->body_deprecated);
+    err = pn_data_fill(data, "DLC", descriptor, msg->body_deprecated);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
@@ -1012,22 +1043,30 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
 
 pn_data_t *pn_message_instructions(pn_message_t *msg)
 {
-  return msg ? msg->instructions : NULL;
+  if (!msg) return NULL;
+  pni_switch_to_data(&msg->instructions_raw, &msg->instructions_deprecated);
+  return msg->instructions_deprecated;
 }
 
 pn_data_t *pn_message_annotations(pn_message_t *msg)
 {
-  return msg ? msg->annotations : NULL;
+  if (!msg) return NULL;
+  pni_switch_to_data(&msg->annotations_raw, &msg->annotations_deprecated);
+  return msg->annotations_deprecated;
 }
 
 pn_data_t *pn_message_properties(pn_message_t *msg)
 {
-  return msg ? msg->properties : NULL;
+  if (!msg) return NULL;
+  pni_switch_to_data(&msg->properties_raw, &msg->properties_deprecated);
+  return msg->properties_deprecated;
 }
 
 pn_data_t *pn_message_body(pn_message_t *msg)
 {
-  return msg ? msg->body : NULL;
+  if (!msg) return NULL;
+  pni_switch_to_data(&msg->body_raw, &msg->body_deprecated);
+  return msg->body_deprecated;
 }
 
 ssize_t pn_message_encode2(pn_message_t *msg, pn_rwbytes_t *buffer) {

@@ -24,6 +24,8 @@
 
 #include "engine-internal.h"
 
+#include "consumers.h"
+#include "core/frame_consumers.h"
 #include "fixed_string.h"
 #include "framing.h"
 #include "memory.h"
@@ -220,6 +222,7 @@ pn_transport_t *pn_connection_transport(pn_connection_t *connection)
 
 void pn_condition_init(pn_condition_t *condition)
 {
+  condition->info_raw = (pn_bytes_t){0, NULL};
   condition->name = NULL;
   condition->description = NULL;
   condition->info = NULL;
@@ -233,6 +236,7 @@ pn_condition_t *pn_condition(void) {
 
 void pn_condition_tini(pn_condition_t *condition)
 {
+  pn_bytes_free(condition->info_raw);
   pn_data_free(condition->info);
   pn_free(condition->description);
   pn_free(condition->name);
@@ -357,6 +361,10 @@ void pn_link_detach(pn_link_t *link)
 static void pni_terminus_free(pn_terminus_t *terminus)
 {
   pn_free(terminus->address);
+  pn_bytes_free(terminus->properties_raw);
+  pn_bytes_free(terminus->capabilities_raw);
+  pn_bytes_free(terminus->outcomes_raw);
+  pn_bytes_free(terminus->filter_raw);
   pn_free(terminus->properties);
   pn_free(terminus->capabilities);
   pn_free(terminus->outcomes);
@@ -513,9 +521,15 @@ static void pn_connection_finalize(void *object)
   pn_free(conn->auth_user);
   pn_free(conn->authzid);
   pn_free(conn->auth_password);
+  pn_bytes_free(conn->offered_capabilities_raw);
+  pn_bytes_free(conn->desired_capabilities_raw);
+  pn_bytes_free(conn->properties_raw);
   pn_free(conn->offered_capabilities);
   pn_free(conn->desired_capabilities);
   pn_free(conn->properties);
+  pn_free(conn->remote_offered_capabilities);
+  pn_free(conn->remote_desired_capabilities);
+  pn_free(conn->remote_properties);
   pni_endpoint_tini(endpoint);
   pn_free(conn->delivery_pool);
 }
@@ -548,9 +562,15 @@ pn_connection_t *pn_connection(void)
   conn->auth_user = pn_string(NULL);
   conn->authzid = pn_string(NULL);
   conn->auth_password = pn_string(NULL);
-  conn->offered_capabilities = pn_data(0);
-  conn->desired_capabilities = pn_data(0);
-  conn->properties = pn_data(0);
+  conn->offered_capabilities_raw = (pn_bytes_t){0, NULL};
+  conn->desired_capabilities_raw = (pn_bytes_t){0, NULL};
+  conn->properties_raw = (pn_bytes_t){0, NULL};
+  conn->offered_capabilities = NULL;
+  conn->desired_capabilities = NULL;
+  conn->properties = NULL;
+  conn->remote_offered_capabilities = NULL;
+  conn->remote_desired_capabilities = NULL;
+  conn->remote_properties = NULL;
   conn->collector = NULL;
   conn->context = pn_record();
   conn->delivery_pool = pn_list(&PN_CLASSCLASS(pn_delivery), 0);
@@ -647,37 +667,49 @@ void pn_connection_set_password(pn_connection_t *connection, const char *passwor
 pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connection)
 {
   assert(connection);
+  pni_switch_to_data(&connection->offered_capabilities_raw, &connection->offered_capabilities);
   return connection->offered_capabilities;
 }
 
 pn_data_t *pn_connection_desired_capabilities(pn_connection_t *connection)
 {
   assert(connection);
+  pni_switch_to_data(&connection->desired_capabilities_raw, &connection->desired_capabilities);
   return connection->desired_capabilities;
 }
 
 pn_data_t *pn_connection_properties(pn_connection_t *connection)
 {
   assert(connection);
+  pni_switch_to_data(&connection->properties_raw, &connection->properties);
   return connection->properties;
 }
 
 pn_data_t *pn_connection_remote_offered_capabilities(pn_connection_t *connection)
 {
   assert(connection);
-  return connection->transport ? connection->transport->remote_offered_capabilities : NULL;
+  if (!connection->transport)
+    return NULL;
+  pni_switch_to_data(&connection->transport->remote_offered_capabilities_raw, &connection->remote_offered_capabilities);
+  return connection->remote_offered_capabilities;
 }
 
 pn_data_t *pn_connection_remote_desired_capabilities(pn_connection_t *connection)
 {
   assert(connection);
-  return connection->transport ? connection->transport->remote_desired_capabilities : NULL;
+  if (!connection->transport)
+    return NULL;
+  pni_switch_to_data(&connection->transport->remote_desired_capabilities_raw, &connection->remote_desired_capabilities);
+  return connection->remote_desired_capabilities;
 }
 
 pn_data_t *pn_connection_remote_properties(pn_connection_t *connection)
 {
   assert(connection);
-  return connection->transport ? connection->transport->remote_properties : NULL;
+  if (!connection->transport)
+    return NULL;
+  pni_switch_to_data(&connection->transport->remote_properties_raw, &connection->remote_properties);
+  return connection->remote_properties;
 }
 
 const char *pn_connection_remote_container(pn_connection_t *connection)
@@ -1109,10 +1141,14 @@ static void pni_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->timeout = 0;
   terminus->dynamic = false;
   terminus->distribution_mode = PN_DIST_MODE_UNSPECIFIED;
-  terminus->properties = pn_data(0);
-  terminus->capabilities = pn_data(0);
-  terminus->outcomes = pn_data(0);
-  terminus->filter = pn_data(0);
+  terminus->properties_raw = (pn_bytes_t){0, NULL};
+  terminus->capabilities_raw = (pn_bytes_t){0, NULL};
+  terminus->outcomes_raw = (pn_bytes_t){0, NULL};
+  terminus->filter_raw = (pn_bytes_t){0, NULL};
+  terminus->properties = NULL;
+  terminus->capabilities = NULL;
+  terminus->outcomes = NULL;
+  terminus->filter = NULL;
 }
 
 static void pn_link_incref(void *object)
@@ -1155,7 +1191,9 @@ static void pn_link_finalize(void *object)
     pn_decref(link->session);
   }
   pn_free(link->properties);
+  pn_bytes_free(link->properties_raw);
   pn_free(link->remote_properties);
+  pn_bytes_free(link->remote_properties_raw);
 }
 
 #define pn_link_refcount NULL
@@ -1165,7 +1203,7 @@ static void pn_link_finalize(void *object)
 #define pn_link_compare NULL
 #define pn_link_inspect NULL
 
-pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
+pn_link_t *pn_link_new(int type, pn_session_t *session, pn_string_t *name)
 {
 #define pn_link_new NULL
 #define pn_link_free NULL
@@ -1177,7 +1215,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   pn_endpoint_init(&link->endpoint, type, session->connection);
   pni_add_link(session, link);
   pn_incref(session);  // keep session until link finalized
-  link->name = pn_string(name);
+  link->name = name;
   pni_terminus_init(&link->source, PN_SOURCE);
   pni_terminus_init(&link->target, PN_TARGET);
   pni_terminus_init(&link->remote_source, PN_UNSPECIFIED);
@@ -1201,7 +1239,9 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   link->detached = false;
   link->more_pending = false;
   link->properties = 0;
+  link->properties_raw = (pn_bytes_t){0, NULL};
   link->remote_properties = 0;
+  link->remote_properties_raw = (pn_bytes_t){0, NULL};
 
   // begin transport state
   link->state.local_handle = -1;
@@ -1331,22 +1371,34 @@ int pn_terminus_set_dynamic(pn_terminus_t *terminus, bool dynamic)
 
 pn_data_t *pn_terminus_properties(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->properties : NULL;
+  if (!terminus)
+    return NULL;
+  pni_switch_to_data(&terminus->properties_raw, &terminus->properties);
+  return terminus->properties;
 }
 
 pn_data_t *pn_terminus_capabilities(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->capabilities : NULL;
+  if (!terminus)
+    return NULL;
+  pni_switch_to_data(&terminus->capabilities_raw, &terminus->capabilities);
+  return terminus->capabilities;
 }
 
 pn_data_t *pn_terminus_outcomes(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->outcomes : NULL;
+  if (!terminus)
+    return NULL;
+  pni_switch_to_data(&terminus->outcomes_raw, &terminus->outcomes);
+  return terminus->outcomes;
 }
 
 pn_data_t *pn_terminus_filter(pn_terminus_t *terminus)
 {
-  return terminus ? terminus->filter : NULL;
+  if (!terminus)
+    return NULL;
+  pni_switch_to_data(&terminus->filter_raw, &terminus->filter);
+  return terminus->filter;
 }
 
 pn_distribution_mode_t pn_terminus_get_distribution_mode(const pn_terminus_t *terminus)
@@ -1376,25 +1428,57 @@ int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src)
   terminus->timeout = src->timeout;
   terminus->dynamic = src->dynamic;
   terminus->distribution_mode = src->distribution_mode;
-  err = pn_data_copy(terminus->properties, src->properties);
-  if (err) return err;
-  err = pn_data_copy(terminus->capabilities, src->capabilities);
-  if (err) return err;
-  err = pn_data_copy(terminus->outcomes, src->outcomes);
-  if (err) return err;
-  err = pn_data_copy(terminus->filter, src->filter);
-  if (err) return err;
+  pn_bytes_free(terminus->properties_raw);
+  terminus->properties_raw = pn_bytes_dup(src->properties_raw);
+  pn_bytes_free(terminus->capabilities_raw);
+  terminus->capabilities_raw = pn_bytes_dup(src->capabilities_raw);
+  pn_bytes_free(terminus->outcomes_raw);
+  terminus->outcomes_raw = pn_bytes_dup(src->outcomes_raw);
+  pn_bytes_free(terminus->filter_raw);
+  terminus->filter_raw = pn_bytes_dup(src->filter_raw);
+  if (!src->properties) {
+    pn_free(terminus->properties);
+    terminus->properties = NULL;
+  } else {
+    if (!terminus->properties) terminus->properties = pn_data(0);
+    err = pn_data_copy(terminus->properties, src->properties);
+    if (err) return err;
+  }
+  if (!src->capabilities) {
+    pn_free(terminus->capabilities);
+    terminus->capabilities = NULL;
+  } else {
+    if (!terminus->capabilities) terminus->capabilities = pn_data(0);
+    err = pn_data_copy(terminus->capabilities, src->capabilities);
+    if (err) return err;
+  }
+  if (!src->outcomes) {
+    pn_free(terminus->outcomes);
+    terminus->outcomes = NULL;
+  } else {
+    if (!terminus->outcomes) terminus->outcomes = pn_data(0);
+    err = pn_data_copy(terminus->outcomes, src->outcomes);
+    if (err) return err;
+  }
+  if (!src->filter) {
+    pn_free(terminus->filter);
+    terminus->filter = NULL;
+  } else {
+    if (!terminus->filter) terminus->filter = pn_data(0);
+    err = pn_data_copy(terminus->filter, src->filter);
+    if (err) return err;
+  }
   return 0;
 }
 
 pn_link_t *pn_sender(pn_session_t *session, const char *name)
 {
-  return pn_link_new(SENDER, session, name);
+  return pn_link_new(SENDER, session, pn_string(name));
 }
 
 pn_link_t *pn_receiver(pn_session_t *session, const char *name)
 {
-  return pn_link_new(RECEIVER, session, name);
+  return pn_link_new(RECEIVER, session, pn_string(name));
 }
 
 pn_state_t pn_link_state(pn_link_t *link)
@@ -1427,7 +1511,9 @@ pn_session_t *pn_link_session(pn_link_t *link)
 static void pn_disposition_finalize(pn_disposition_t *ds)
 {
   pn_free(ds->data);
+  pn_bytes_free(ds->data_raw);
   pn_free(ds->annotations);
+  pn_bytes_free(ds->annotations_raw);
   pn_condition_tini(&ds->condition);
 }
 
@@ -1503,8 +1589,10 @@ static void pn_delivery_finalize(void *object)
 
 static void pn_disposition_init(pn_disposition_t *ds)
 {
-  ds->data = pn_data(0);
-  ds->annotations = pn_data(0);
+  ds->data = NULL;
+  ds->data_raw = (pn_bytes_t){0, NULL};
+  ds->annotations = NULL;
+  ds->annotations_raw = (pn_bytes_t){0, NULL};
   pn_condition_init(&ds->condition);
 }
 
@@ -1517,7 +1605,11 @@ static void pn_disposition_clear(pn_disposition_t *ds)
   ds->undeliverable = false;
   ds->settled = false;
   pn_data_clear(ds->data);
+  pn_bytes_free(ds->data_raw);
+  ds->data_raw = (pn_bytes_t){0, NULL};
   pn_data_clear(ds->annotations);
+  pn_bytes_free(ds->annotations_raw);
+  ds->annotations_raw = (pn_bytes_t){0, NULL};
   pn_condition_clear(&ds->condition);
 }
 
@@ -1677,6 +1769,7 @@ uint64_t pn_disposition_type(pn_disposition_t *disposition)
 pn_data_t *pn_disposition_data(pn_disposition_t *disposition)
 {
   assert(disposition);
+  pni_switch_to_data(&disposition->data_raw, &disposition->data);
   return disposition->data;
 }
 
@@ -1731,6 +1824,7 @@ void pn_disposition_set_undeliverable(pn_disposition_t *disposition, bool undeli
 pn_data_t *pn_disposition_annotations(pn_disposition_t *disposition)
 {
   assert(disposition);
+  pni_switch_to_data(&disposition->annotations_raw, &disposition->annotations);
   return disposition->annotations;
 }
 
@@ -2005,6 +2099,10 @@ pn_data_t *pn_link_properties(pn_link_t *link)
 pn_data_t *pn_link_remote_properties(pn_link_t *link)
 {
   assert(link);
+  // Annoying inconsistency: nearly everywhere else you *HAVE* to return an empty pn_data_t not NULL
+  if (link->remote_properties_raw.size) {
+    pni_switch_to_data(&link->remote_properties_raw, &link->remote_properties);
+  }
   return link->remote_properties;
 }
 
@@ -2156,6 +2254,8 @@ void pn_condition_clear(pn_condition_t *condition)
   if (condition->name) pn_string_clear(condition->name);
   if (condition->description) pn_string_clear(condition->description);
   if (condition->info) pn_data_clear(condition->info);
+  pn_bytes_free (condition->info_raw);
+  condition->info_raw = (pn_bytes_t){0, NULL};
 }
 
 const char *pn_condition_get_name(pn_condition_t *condition)
@@ -2228,9 +2328,7 @@ int pn_condition_format(pn_condition_t *condition, const char *name, PN_PRINTF_F
 pn_data_t *pn_condition_info(pn_condition_t *condition)
 {
   assert(condition);
-  if (condition->info == NULL) {
-    condition->info = pn_data(0);
-  }
+  pni_switch_to_data(&condition->info_raw, &condition->info);
   return condition->info;
 }
 

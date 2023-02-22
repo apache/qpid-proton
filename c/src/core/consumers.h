@@ -680,17 +680,6 @@ static inline bool consume_described_maybe_type_anything(pni_consumer_t* consume
   return *qtype;
 }
 
-static inline bool consume_copy(pni_consumer_t *consumer, pn_data_t *data) {
-  size_t iposition = consumer->position;
-  uint8_t type;
-  bool tq = consume_single_value(consumer, &type);
-  if (!tq || type==PNE_NULL) return false;
-
-  pn_bytes_t value = {.size = consumer->position-iposition, .start = (const char*)consumer->output_start+iposition};
-  ssize_t err = pn_data_decode(data, value.start, value.size);
-  return err>=0 && err==(ssize_t)value.size;
-}
-
 static inline bool consume_described_maybe_type_raw(pni_consumer_t *consumer, bool *qtype, uint64_t *type, pn_bytes_t *raw) {
   pni_consumer_t subconsumer;
   *qtype = consume_described_ulong_descriptor(consumer, &subconsumer, type);
@@ -704,9 +693,9 @@ static inline bool consume_described_maybe_type_maybe_anything(pni_consumer_t *c
   return *qtype && *qanything;
 }
 
-static inline bool consume_described_copy(pni_consumer_t *consumer, pn_data_t *data) {
+static inline bool consume_described_raw(pni_consumer_t *consumer, pn_bytes_t *raw) {
   pni_consumer_t subconsumer;
-  return consume_described(consumer, &subconsumer) && consume_copy(&subconsumer, data);
+  return consume_described(consumer, &subconsumer) && consume_raw(&subconsumer, raw);
 }
 
 static inline bool consume_string(pni_consumer_t *consumer, pn_bytes_t *string) {

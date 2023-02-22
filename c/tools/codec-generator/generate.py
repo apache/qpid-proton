@@ -114,13 +114,25 @@ class ListNode(ASTNode):
             *self.gen_consume_params_list(first_arg + len(args))
         ]
 
-    def gen_emit_code(self, prefix: List[str], first_arg: int, indent: int) -> List[str]:
+    def gen_emit_list_code(self, prefix: List[str], first_arg: int, indent: int) -> List[str]:
         lines = []
         arg = first_arg
         for n in self.list:
             lines.append(n.gen_emit_code(prefix, arg, indent))
             arg += n.count_args
         return [i for i in itertools.chain(*lines)]
+
+    def gen_emit_code(self, prefix: List[str], first_arg: int, indent: int) -> List[str]:
+        return [
+            f'{self.mk_indent(indent)}for (bool small_encoding = true; ; small_encoding = false) {{',
+            f'{self.mk_indent(indent+1)}pni_compound_context c = '
+            f'{self.mk_funcall("emit_list", prefix+["small_encoding", "true"])};',
+            f'{self.mk_indent(indent+1)}pni_compound_context compound = c;',
+            *(self.gen_emit_list_code(prefix, first_arg, indent + 1)),
+            f'{self.mk_indent(indent+1)}{self.mk_funcall("emit_end_list", prefix+["small_encoding"])};',
+            f'{self.mk_indent(indent+1)}if (encode_succeeded({", ".join(prefix)})) break;',
+            f'{self.mk_indent(indent)}}}',
+        ]
 
     def gen_consume_code(self, prefix: List[str], first_arg: int, indent: int) -> List[str]:
         lines = []
@@ -154,14 +166,7 @@ class DescListNode(ListNode):
         args = self.gen_args(first_arg)
         return [
             f'{self.mk_indent(indent)}emit_descriptor({", ".join(prefix+args)});',
-            f'{self.mk_indent(indent)}for (bool small_encoding = true; ; small_encoding = false) {{',
-            f'{self.mk_indent(indent+1)}pni_compound_context c = '
-            f'{self.mk_funcall("emit_list", prefix+["small_encoding", "true"])};',
-            f'{self.mk_indent(indent+1)}pni_compound_context compound = c;',
-            *super().gen_emit_code(prefix, first_arg+len(args), indent + 1),
-            f'{self.mk_indent(indent+1)}{self.mk_funcall("emit_end_list", prefix+["small_encoding"])};',
-            f'{self.mk_indent(indent+1)}if (encode_succeeded({", ".join(prefix)})) break;',
-            f'{self.mk_indent(indent)}}}',
+            *super().gen_emit_code(prefix, first_arg+len(args), indent),
         ]
 
 
@@ -192,7 +197,7 @@ class ArrayNode(ListNode):
             f'{self.mk_indent(indent+1)}pni_compound_context c = '
             f'{self.mk_funcall("emit_array", prefix+["small_encoding"]+args)};',
             f'{self.mk_indent(indent+1)}pni_compound_context compound = c;',
-            *super().gen_emit_code(prefix, first_arg+len(args), indent + 1),
+            *super().gen_emit_list_code(prefix, first_arg+len(args), indent + 1),
             f'{self.mk_indent(indent+1)}{self.mk_funcall("emit_end_array", prefix+["small_encoding"])};',
             f'{self.mk_indent(indent+1)}if (encode_succeeded({", ".join(prefix)})) break;',
             f'{self.mk_indent(indent)}}}',
@@ -276,12 +281,20 @@ def parse_item(format: str) -> Tuple[ASTNode, str]:
         if not b:
             raise ParseError(format)
         return DescListIgnoreTypeNode(l), rest
+    elif format.startswith('['):
+        l, rest = parse_list(format[1:])
+        b, rest = expect_char(rest, ']')
+        if not b:
+            raise ParseError(format)
+        return ListNode('list', l, []), rest
     elif format.startswith('D?LR'):
         return ASTNode('described_maybe_type_raw', ['bool', 'uint64_t', 'pn_bytes_t'], consume_types=['bool*', 'uint64_t*', 'pn_bytes_t*']), format[4:]
     elif format.startswith('D?L?.'):
         return ASTNode('described_maybe_type_maybe_anything', ['bool', 'uint64_t', 'bool'], consume_types=['bool*', 'uint64_t*', 'bool*']), format[4:]
     elif format.startswith('DLC'):
         return ASTNode('described_type_copy', ['uint64_t', 'pn_data_t*'], consume_types=['uint64_t*', 'pn_data_t*']), format[3:]
+    elif format.startswith('DLR'):
+        return ASTNode('described_type_raw', ['uint64_t', 'pn_bytes_t'], consume_types=['uint64_t*', 'pn_bytes_t*']), format[3:]
     elif format.startswith('DL.'):
         return ASTNode('described_type_anything', ['uint64_t']), format[3:]
     elif format.startswith('D?L.'):
@@ -290,6 +303,8 @@ def parse_item(format: str) -> Tuple[ASTNode, str]:
         return NullNode('described_anything'), format[3:]
     elif format.startswith('D.C'):
         return ASTNode('described_copy', ['pn_data_t*'], consume_types=['pn_data_t*']), format[3:]
+    elif format.startswith('D.R'):
+        return ASTNode('described_raw', ['pn_bytes_t'], consume_types=['pn_bytes_t*']), format[3:]
     elif format.startswith('@T['):
         l, rest = parse_list(format[3:])
         b, rest = expect_char(rest, ']')
@@ -307,8 +322,10 @@ def parse_item(format: str) -> Tuple[ASTNode, str]:
         return ASTNode('symbol', ['pn_bytes_t'], consume_types=['pn_bytes_t*']), format[1:]
     elif format.startswith('S'):
         return ASTNode('string', ['pn_bytes_t'], consume_types=['pn_bytes_t*']), format[1:]
-    elif format.startswith('C'):
-        return ASTNode('copy', ['pn_data_t*'], consume_types=['pn_data_t*']), format[1:]
+    elif format.startswith('c'):
+        return ASTNode('condition', ['pn_condition_t*'], consume_types=['pn_condition_t*']), format[1:]
+    elif format.startswith('d'):
+        return ASTNode('disposition', ['pn_disposition_t*'], consume_types=['pn_disposition_t*']), format[1:]
     elif format.startswith('I'):
         return ASTNode('uint', ['uint32_t']), format[1:]
     elif format.startswith('H'):
@@ -320,7 +337,7 @@ def parse_item(format: str) -> Tuple[ASTNode, str]:
     elif format.startswith('a'):
         return ASTNode('atom', ['pn_atom_t*'], consume_types=['pn_atom_t*']), format[1:]
     elif format.startswith('M'):
-        return ASTNode('multiple', ['pn_data_t*']), format[1:]
+        return ASTNode('multiple', ['pn_bytes_t']), format[1:]
     elif format.startswith('o'):
         return ASTNode('bool', ['bool']), format[1:]
     elif format.startswith('B'):
@@ -340,7 +357,7 @@ def parse_item(format: str) -> Tuple[ASTNode, str]:
 # Need to translate '@[]*?.' to legal identifier characters
 # These will be fairly arbitrary and just need to avoid already used codes
 def make_legal_identifier(s: str) -> str:
-    subs = {'@': 'A', '[': 'E', ']': 'e', '{': 'F', '}': 'f', '*': 'j', '.': 'q', '?': 'Q'}
+    subs = {'@': 'A', '[': 'E', ']': 'e', '*': 'j', '.': 'q', '?': 'Q'}
     r = ''
     for c in s:
         if c in subs:
@@ -437,6 +454,8 @@ def emit_function(name_prefix: str, fill_spec: str, prefix_args: List[Tuple[str,
 
 prefix_emit_header = """
 #include "proton/codec.h"
+#include "proton/condition.h"
+#include "proton/disposition.h"
 #include "buffer.h"
 
 #include <stdbool.h>
@@ -447,6 +466,7 @@ prefix_emit_header = """
 
 prefix_consume_header = """
 #include "proton/codec.h"
+#include "proton/condition.h"
 
 #include <stdbool.h>
 #include <stddef.h>

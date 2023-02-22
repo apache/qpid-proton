@@ -40,6 +40,7 @@ typedef enum pn_endpoint_type_t {CONNECTION, SESSION, SENDER, RECEIVER} pn_endpo
 typedef struct pn_endpoint_t pn_endpoint_t;
 
 struct pn_condition_t {
+  pn_bytes_t info_raw;
   pn_string_t *name;
   pn_string_t *description;
   pn_data_t *info;
@@ -136,10 +137,9 @@ struct pn_transport_t {
   pn_connection_t *connection;  // reference counted
   char *remote_container;
   char *remote_hostname;
-  pn_data_t *remote_offered_capabilities;
-  pn_data_t *remote_desired_capabilities;
-  pn_data_t *remote_properties;
-  pn_data_t *disp_data;
+  pn_bytes_t remote_offered_capabilities_raw;
+  pn_bytes_t remote_desired_capabilities_raw;
+  pn_bytes_t remote_properties_raw;
   // DEFAULT_MAX_FRAME_SIZE see PROTON-2640
 #define PN_DEFAULT_MAX_FRAME_SIZE (32*1024)
   uint32_t   local_max_frame;
@@ -243,9 +243,15 @@ struct pn_connection_t {
   pn_string_t *auth_user;
   pn_string_t *authzid;
   pn_string_t *auth_password;
+  pn_bytes_t offered_capabilities_raw;
+  pn_bytes_t desired_capabilities_raw;
+  pn_bytes_t properties_raw;
   pn_data_t *offered_capabilities;
   pn_data_t *desired_capabilities;
   pn_data_t *properties;
+  pn_data_t *remote_offered_capabilities;
+  pn_data_t *remote_desired_capabilities;
+  pn_data_t *remote_properties;
   pn_collector_t *collector;
   pn_record_t *context;
   pn_list_t *delivery_pool;
@@ -270,6 +276,10 @@ struct pn_session_t {
 
 struct pn_terminus_t {
   pn_string_t *address;
+  pn_bytes_t properties_raw;
+  pn_bytes_t capabilities_raw;
+  pn_bytes_t outcomes_raw;
+  pn_bytes_t filter_raw;
   pn_data_t *properties;
   pn_data_t *capabilities;
   pn_data_t *outcomes;
@@ -297,7 +307,9 @@ struct pn_link_t {
   pn_delivery_t *current;
   pn_record_t *context;
   pn_data_t *properties;
+  pn_bytes_t properties_raw;
   pn_data_t *remote_properties;
+  pn_bytes_t remote_properties_raw;
   size_t unsettled_count;
   uint64_t max_message_size;
   uint64_t remote_max_message_size;
@@ -320,7 +332,9 @@ struct pn_disposition_t {
   pn_condition_t condition;
   uint64_t type;
   pn_data_t *data;
+  pn_bytes_t data_raw;
   pn_data_t *annotations;
+  pn_bytes_t annotations_raw;
   uint64_t section_offset;
   uint32_t section_number;
   bool failed;
@@ -357,6 +371,7 @@ struct pn_delivery_t {
 #define PN_SET_REMOTE(OLD, NEW)                                         \
   (OLD) = ((OLD) & PN_LOCAL_MASK) | (NEW)
 
+pn_link_t *pn_link_new(int type, pn_session_t *session, pn_string_t *name);
 void pn_link_dump(pn_link_t *link);
 
 void pn_dump(pn_connection_t *conn);

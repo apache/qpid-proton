@@ -48,10 +48,6 @@ struct message::impl {
     annotation_map instructions;
 
     impl(pn_message_t *msg) {
-        body.reset(pn_message_body(msg));
-        properties.reset(pn_message_properties(msg));
-        annotations.reset(pn_message_annotations(msg));
-        instructions.reset(pn_message_instructions(msg));
     }
 
     void clear() {
@@ -237,32 +233,50 @@ bool message::inferred() const { return pn_message_is_inferred(pn_msg()); }
 
 void message::inferred(bool b) { pn_message_set_inferred(pn_msg(), b); }
 
-void message::body(const value& x) { body() = x; }
+void message::body(const value& x) { impl().body.reset(pn_message_body(pn_msg())); body() = x; }
 
-const value& message::body() const { return impl().body; }
-value& message::body() { return impl().body; }
+const value& message::body() const { impl().body.reset(pn_message_body(pn_msg())); return impl().body; }
+value& message::body() {  impl().body.reset(pn_message_body(pn_msg())); return impl().body; }
 
 message::property_map& message::properties() {
+    if (impl().properties.empty()) {
+        impl().properties.reset(pn_message_properties(pn_msg()));
+    }
     return impl().properties;
 }
 
 const message::property_map& message::properties() const {
+    if (impl().properties.empty()) {
+        impl().properties.reset(pn_message_properties(pn_msg()));
+    }
     return impl().properties;
 }
 
 message::annotation_map& message::message_annotations() {
+    if (impl().annotations.empty()) {
+        impl().annotations.reset(pn_message_annotations(pn_msg()));
+    }
     return impl().annotations;
 }
 
 const message::annotation_map& message::message_annotations() const {
+    if (impl().annotations.empty()) {
+        impl().annotations.reset(pn_message_annotations(pn_msg()));
+    }
     return impl().annotations;
 }
 
 message::annotation_map& message::delivery_annotations() {
+    if (impl().instructions.empty()) {
+        impl().instructions.reset(pn_message_instructions(pn_msg()));
+    }
     return impl().instructions;
 }
 
 const message::annotation_map& message::delivery_annotations() const {
+    if (impl().instructions.empty()) {
+        impl().instructions.reset(pn_message_instructions(pn_msg()));
+    }
     return impl().instructions;
 }
 

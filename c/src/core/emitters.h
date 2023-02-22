@@ -558,49 +558,105 @@ static inline void emit_raw(pni_emitter_t* emitter, pni_compound_context* compou
   compound->count++;
 }
 
-static inline void emit_multiple(pni_emitter_t* emitter, pni_compound_context* compound, pn_data_t* data) {
-  if (!data || pn_data_size(data) == 0) {
-    emit_null(emitter, compound);
+// Keep this here as a placeholder until we do something more intelligent
+static inline void emit_multiple(pni_emitter_t* emitter, pni_compound_context* compound, const pn_bytes_t bytes) {
+  emit_raw(emitter, compound, bytes);
+}
+
+static inline void emit_described_type_raw(pni_emitter_t* emitter, pni_compound_context* compound, uint64_t descriptor, const pn_bytes_t bytes) {
+  emit_descriptor(emitter, compound, descriptor);
+  pni_compound_context c = make_compound();
+  emit_raw(emitter, &c, bytes);
+  // Can only be a single item (probably a list though)
+  compound->count++;
+}
+
+static inline void emit_condition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_condition_t* condition) {
+  if (!condition || !condition->name || !pn_string_get(condition->name)) {
+    emit_null(emitter, compound0);
     return;
   }
 
-  pn_handle_t point = pn_data_point(data);
-  pn_data_rewind(data);
-  // Rewind and position to first node so data type is defined.
-  pn_data_next(data);
-
-  if (pn_data_type(data) == PN_ARRAY) {
-      switch (pn_data_get_array(data)) {
-      case 0:
-        emit_null(emitter, compound);
-        pn_data_restore(data, point);
-        return;
-      case 1:
-        emit_accumulated_nulls(emitter, compound);
-        pn_data_enter(data);
-        pn_data_narrow(data);
-        pni_emitter_data(emitter, data);
-        pn_data_widen(data);
-        break;
-      default:
-        emit_accumulated_nulls(emitter, compound);
-        pni_emitter_data(emitter, data);
+  emit_descriptor(emitter, compound0, ERROR);
+  for (bool small_encoding = true; ; small_encoding = false) {
+    pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
+    pni_compound_context compound = c;
+    pn_bytes_t name_bytes = pn_string_bytes(condition->name);
+    if (name_bytes.size==0) {
+      emit_null(emitter, &compound);
+    } else {
+      emit_symbol_bytes(emitter, &compound, name_bytes);
     }
-  } else {
-    emit_accumulated_nulls(emitter, compound);
-    pni_emitter_data(emitter, data);
+    pn_bytes_t description_bytes = pn_string_bytes(condition->description);
+    if (description_bytes.size==0) {
+      emit_null(emitter, &compound);
+    } else {
+      emit_string_bytes(emitter, &compound, description_bytes);
+    }
+    if (condition->info) {
+      emit_copy(emitter, &compound, condition->info);
+    } else {
+      emit_raw(emitter, &compound, condition->info_raw);
+    }
+    emit_end_list(emitter, &compound, small_encoding);
+    if (encode_succeeded(emitter, &compound)) break;
   }
-
-  compound->count++;
-  pn_data_restore(data, point);
 }
 
-static inline void emit_described_type_copy(pni_emitter_t* emitter, pni_compound_context* compound, uint64_t descriptor, pn_data_t* data) {
-  emit_descriptor(emitter, compound, descriptor);
-  pni_compound_context c = make_compound();
-  emit_copy(emitter, &c, data);
-  // Can only be a single item (probably a list though)
-  compound->count++;
+static inline void emit_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_disposition_t *disposition)
+{
+  if (!disposition || !disposition->type) {
+    emit_null(emitter, compound0);
+    return;
+  }
+
+  emit_descriptor(emitter, compound0, disposition->type);
+  switch (disposition->type) {
+    case PN_RECEIVED:
+      for (bool small_encoding = true; ; small_encoding = false) {
+        pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
+        pni_compound_context compound = c;
+        emit_uint(emitter, &compound, disposition->section_number);
+        emit_ulong(emitter, &compound, disposition->section_offset);
+        emit_end_list(emitter, &compound, small_encoding);
+        if (encode_succeeded(emitter, &compound)) break;
+      }
+      return;
+    case PN_ACCEPTED:
+    case PN_RELEASED:
+      return;
+    case PN_REJECTED:
+      for (bool small_encoding = true; ; small_encoding = false) {
+        pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
+        pni_compound_context compound = c;
+        emit_condition(emitter, &compound, &disposition->condition);
+        emit_end_list(emitter, &compound, small_encoding);
+        if (encode_succeeded(emitter, &compound)) break;
+      }
+      return;
+    case PN_MODIFIED:
+      for (bool small_encoding = true; ; small_encoding = false) {
+        pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
+        pni_compound_context compound = c;
+        emit_bool(emitter, &compound, disposition->failed);
+        emit_bool(emitter, &compound, disposition->undeliverable);
+        if (disposition->annotations) {
+          emit_copy(emitter, &compound, disposition->annotations);
+        } else {
+          emit_raw(emitter, &compound, disposition->annotations_raw);
+        }
+        emit_end_list(emitter, &compound, small_encoding);
+        if (encode_succeeded(emitter, &compound)) break;
+      }
+      return;
+    default:
+      if (disposition->data) {
+        emit_copy(emitter, compound0, disposition->data);
+      } else {
+        emit_raw(emitter, compound0, disposition->data_raw);
+      }
+      return;
+  }
 }
 
 #endif // PROTON_EMITTERS_H
