@@ -19,10 +19,12 @@
 #
 
 import optparse
-from proton import Message, Url
+import sys
+from proton import Message, Url, Condition
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
+exit_status = 0
 
 class Server(MessagingHandler):
     def __init__(self, url, address):
@@ -40,8 +42,12 @@ class Server(MessagingHandler):
             self.receiver = event.container.create_receiver(self.conn, self.address)
             self.server = self.container.create_sender(self.conn, None)
         else:
-            print("Server needs a broker which supports ANONYMOUS-RELAY")
-            event.connection.close()
+            global exit_status
+            print("Server needs a broker which supports ANONYMOUS-RELAY", file=sys.stderr)
+            exit_status = 1
+            c= event.connection
+            c.condition = Condition('amqp:not-implemented', description="ANONYMOUS-RELAY required")
+            c.close()
 
     def on_message(self, event):
         print("Received", event.message)
@@ -60,3 +66,5 @@ try:
     Container(Server(url, url.path)).run()
 except KeyboardInterrupt:
     pass
+
+sys.exit(exit_status)
