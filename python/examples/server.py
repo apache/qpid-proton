@@ -26,6 +26,7 @@ from proton.reactor import Container
 
 exit_status = 0
 
+
 class Server(MessagingHandler):
     def __init__(self, url, address):
         super(Server, self).__init__()
@@ -45,7 +46,7 @@ class Server(MessagingHandler):
             global exit_status
             print("Server needs a broker which supports ANONYMOUS-RELAY", file=sys.stderr)
             exit_status = 1
-            c= event.connection
+            c = event.connection
             c.condition = Condition('amqp:not-implemented', description="ANONYMOUS-RELAY required")
             c.close()
 
