@@ -372,6 +372,7 @@ pn_type_t pn_data_type(pn_data_t *data);
 void pn_data_widen(pn_data_t *data);
 
 int pn_decref(void *object);
+char *pn_tostring(void *object);
 
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
 void pn_delivery_abort(pn_delivery_t *delivery);
@@ -680,3 +681,5 @@ void pn_record_def_py(pn_record_t *record);
 void *pn_record_get_py(pn_record_t *record);
 void pn_record_set_py(pn_record_t *record, void *value);
 int pn_ssl_get_peer_hostname_py(pn_ssl_t *ssl, char *hostname, size_t size);
+
+void free(void*);

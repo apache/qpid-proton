@@ -318,6 +318,13 @@ def pn_pyref_decref(obj):
     retained_objects.discard(obj)
 
 
+def pn_tostring(obj):
+    cs = lib.pn_tostring(obj)
+    s = ffi.string(cs).decode('utf8')
+    lib.free(cs)
+    return s
+
+
 def pn_collector_put_pyref(collector, obj, etype):
     d = ffi.new_handle(obj)
     retained_objects.add(d)
