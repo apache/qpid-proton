@@ -20,7 +20,7 @@
 
 import optparse
 import sys
-from proton import Message, Url, Condition
+from proton import Condition, Message, Url
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
@@ -36,7 +36,7 @@ class Server(MessagingHandler):
     def on_start(self, event):
         print("Listening on", self.url)
         self.container = event.container
-        self.conn = event.container.connect(self.url, desired_capabilities=["ANONYMOUS-RELAY"])
+        self.conn = event.container.connect(self.url, desired_capabilities="ANONYMOUS-RELAY")
 
     def on_connection_opened(self, event):
         if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:

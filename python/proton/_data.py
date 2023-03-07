@@ -510,7 +510,9 @@ class SymbolList(list):
     ) -> None:
         super(SymbolList, self).__init__()
         self.raise_on_error = raise_on_error
-        if t:
+        if isinstance(t, (str, symbol)):
+            self.append(t)
+        else:
             self.extend(t)
 
     def _check_list(self, t: Iterable[Any]) -> List[Any]:
@@ -520,6 +522,9 @@ class SymbolList(list):
             for v in t:
                 l.append(_check_is_symbol(v, self.raise_on_error))
         return l
+
+    def to_array(self):
+        return Array(UNDESCRIBED, PN_SYMBOL, *self)
 
     def append(self, v: str) -> None:
         """ Add a single value v to the end of the list """
@@ -540,6 +545,10 @@ class SymbolList(list):
     def __iadd__(self, t):
         """ Handles list1 += list2 """
         return super(SymbolList, self).__iadd__(self._check_list(t))
+
+    def __eq__(self, other):
+        """ Handles list1 == list2 """
+        return super().__eq__(SymbolList(other, raise_on_error=False))
 
     def __setitem__(self, i: int, t: Any) -> None:
         """ Handles list[i] = v """
@@ -1646,6 +1655,10 @@ def dat2obj(dimpl):
 
 
 def obj2dat(obj, dimpl):
+    if isinstance(obj, SymbolList):
+        if len(obj) == 0:
+            return
+        obj = obj.to_array()
     if obj is not None:
         d = Data(dimpl)
         d.put_object(obj)

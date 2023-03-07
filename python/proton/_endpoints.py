@@ -174,8 +174,8 @@ class Connection(Wrapper, Endpoint):
 
     def _init(self) -> None:
         Endpoint._init(self)
-        self.offered_capabilities = None
-        self.desired_capabilities = None
+        self.offered_capabilities_list = None
+        self.desired_capabilities_list = None
         self.properties = None
         self.url = None
         self._acceptor = None
@@ -333,7 +333,8 @@ class Connection(Wrapper, Endpoint):
 
         :type: :class:`Data`
         """
-        return dat2obj(pn_connection_remote_offered_capabilities(self._impl))
+        c = dat2obj(pn_connection_remote_offered_capabilities(self._impl))
+        return c and SymbolList(c)
 
     @property
     def remote_desired_capabilities(self):
@@ -347,7 +348,8 @@ class Connection(Wrapper, Endpoint):
 
         :type: :class:`Data`
         """
-        return dat2obj(pn_connection_remote_desired_capabilities(self._impl))
+        c = dat2obj(pn_connection_remote_desired_capabilities(self._impl))
+        return c and SymbolList(c)
 
     @property
     def remote_properties(self):
@@ -508,10 +510,7 @@ class Connection(Wrapper, Endpoint):
             self,
             offered_capability_list: Optional[Union['Array', List['symbol'], SymbolList, List[str]]]
     ) -> None:
-        if isinstance(offered_capability_list, list):
-            self.offered_capabilities_list = SymbolList(offered_capability_list, raise_on_error=False)
-        else:
-            self.offered_capabilities_list = offered_capability_list
+        self.offered_capabilities_list = SymbolList(offered_capability_list)
 
     @property
     def desired_capabilities(self) -> Optional[Union['Array', SymbolList]]:
@@ -528,10 +527,7 @@ class Connection(Wrapper, Endpoint):
             self,
             desired_capability_list: Optional[Union['Array', List['symbol'], SymbolList, List[str]]]
     ) -> None:
-        if isinstance(desired_capability_list, list):
-            self.desired_capabilities_list = SymbolList(desired_capability_list, raise_on_error=False)
-        else:
-            self.desired_capabilities_list = desired_capability_list
+        self.desired_capabilities_list = SymbolList(desired_capability_list)
 
     @property
     def properties(self) -> Optional[PropertyDict]:
