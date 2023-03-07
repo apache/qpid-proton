@@ -225,7 +225,7 @@ void pn_condition_init(pn_condition_t *condition)
   condition->info = NULL;
 }
 
-pn_condition_t *pn_condition() {
+pn_condition_t *pn_condition(void) {
   pn_condition_t *c = (pn_condition_t*)pni_mem_allocate(PN_VOID, sizeof(pn_condition_t));
   pn_condition_init(c);
   return c;
@@ -525,7 +525,7 @@ static void pn_connection_finalize(void *object)
 #define pn_connection_compare NULL
 #define pn_connection_inspect NULL
 
-pn_connection_t *pn_connection()
+pn_connection_t *pn_connection(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_connection);
   pn_connection_t *conn = (pn_connection_t *) pn_class_new(&clazz, sizeof(pn_connection_t));

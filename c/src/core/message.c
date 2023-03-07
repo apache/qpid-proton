@@ -357,7 +357,7 @@ static pn_message_t *pni_message_new(size_t size)
   return msg;
 }
 
-pn_message_t *pn_message() {
+pn_message_t *pn_message(void) {
   return pni_message_new(sizeof(pn_message_t));
 }
 

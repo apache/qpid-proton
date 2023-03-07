@@ -51,7 +51,7 @@ static void pn_iterator_finalize(void *object)
 #define pn_iterator_compare NULL
 #define pn_iterator_inspect NULL
 
-pn_iterator_t *pn_iterator()
+pn_iterator_t *pn_iterator(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_iterator);
   pn_iterator_t *it = (pn_iterator_t *) pn_class_new(&clazz, sizeof(pn_iterator_t));

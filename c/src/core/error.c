@@ -41,7 +41,7 @@ struct pn_error_t {
 
 PN_STRUCT_CLASSDEF(pn_error)
 
-pn_error_t *pn_error()
+pn_error_t *pn_error(void)
 {
   pn_error_t *error = (pn_error_t *) pni_mem_allocate(PN_CLASSCLASS(pn_error), sizeof(pn_error_t));
   if (error != NULL) {
