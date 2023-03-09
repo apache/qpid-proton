@@ -189,7 +189,7 @@ static void pn_url_inspect(void *obj, pn_fixed_string_t *dst)
 #define pn_url_initialize NULL
 
 
-pn_url_t *pn_url() {
+pn_url_t *pn_url(void) {
     static const pn_class_t clazz = PN_CLASS(pn_url);
     pn_url_t *url = (pn_url_t*) pn_class_new(&clazz, sizeof(pn_url_t));
     if (!url) return NULL;
