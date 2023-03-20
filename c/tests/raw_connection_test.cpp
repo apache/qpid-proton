@@ -832,3 +832,90 @@ TEST_CASE("raw connection") {
     }
   }
 }
+
+// WAKE tests require a running proactor.
+
+#include "../src/proactor/proactor-internal.h"
+#include "./pn_test_proactor.hpp"
+#include <proton/event.h>
+#include <proton/listener.h>
+
+namespace {
+
+class common_handler : public handler {
+  handler *accept_; // Handler for accepted connections
+  bool close_on_wake_;
+  pn_raw_connection_t *last_server_;
+
+public:
+  explicit common_handler(handler *accept = 0) : accept_(accept), close_on_wake_(false), last_server_(0) {}
+
+  void set_close_on_wake(bool b) { close_on_wake_ = b; }
+
+  pn_raw_connection_t *last_server() { return last_server_; }
+
+  bool handle(pn_event_t *e) override {
+    switch (pn_event_type(e)) {
+      /* Always stop on these noteworthy events */
+    case PN_LISTENER_OPEN:
+    case PN_LISTENER_CLOSE:
+    case PN_PROACTOR_INACTIVE:
+      return true;
+
+    case PN_LISTENER_ACCEPT: {
+      listener = pn_event_listener(e);
+      pn_raw_connection_t *rc = pn_raw_connection();
+      pn_listener_raw_accept(listener, rc);
+      last_server_ = rc;
+      return false;
+    } break;
+
+    case PN_RAW_CONNECTION_WAKE: {
+      if (close_on_wake_) {
+        pn_raw_connection_t *rc = pn_event_raw_connection(e);
+        pn_raw_connection_close(rc);
+      }
+      return true;
+    } break;
+
+
+    default:
+      return false;
+    }
+  }
+};
+
+
+} // namespace
+
+// Test waking up a connection that is idle
+TEST_CASE("proactor_raw_connection_wake") {
+  common_handler h;
+  proactor p(&h);
+  pn_listener_t *l = p.listen();
+  REQUIRE_RUN(p, PN_LISTENER_OPEN);
+
+  pn_raw_connection_t *rc = pn_raw_connection();
+  std::string addr = ":" + pn_test::listening_port(l);
+  pn_proactor_raw_connect(pn_listener_proactor(l), rc, addr.c_str());
+
+
+  REQUIRE_RUN(p, PN_LISTENER_ACCEPT);
+  REQUIRE_RUN(p, PN_RAW_CONNECTION_NEED_READ_BUFFERS);
+  REQUIRE_RUN(p, PN_RAW_CONNECTION_NEED_READ_BUFFERS);
+  CHECK(pn_proactor_get(p) == NULL); /* idle */
+    pn_raw_connection_wake(rc);
+  REQUIRE_RUN(p, PN_RAW_CONNECTION_WAKE);
+  CHECK(pn_proactor_get(p) == NULL); /* idle */
+
+  h.set_close_on_wake(true);
+  pn_raw_connection_wake(rc);
+  REQUIRE_RUN(p, PN_RAW_CONNECTION_WAKE);
+  REQUIRE_RUN(p, PN_RAW_CONNECTION_DISCONNECTED);
+  pn_raw_connection_wake(h.last_server());
+  REQUIRE_RUN(p, PN_RAW_CONNECTION_WAKE);
+  REQUIRE_RUN(p, PN_RAW_CONNECTION_DISCONNECTED);
+  pn_listener_close(l);
+  REQUIRE_RUN(p, PN_LISTENER_CLOSE);
+  REQUIRE_RUN(p, PN_PROACTOR_INACTIVE);
+}

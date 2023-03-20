@@ -50,6 +50,7 @@ struct praw_connection_t {
   struct addrinfo *ai;               /* Current connect address */
   bool connected;
   bool disconnected;
+  bool batch_empty;
 };
 
 static void psocket_error(praw_connection_t *rc, int err, const char* msg) {
@@ -317,7 +318,10 @@ static pn_event_t *pni_raw_batch_next(pn_event_batch_t *batch) {
   unlock(&rc->task.mutex);
   if (waking) pni_raw_wake(raw);
 
-  return pni_raw_event_next(raw);
+  pn_event_t *e = pni_raw_event_next(raw);
+  if (!e || pn_event_type(e) == PN_RAW_CONNECTION_DISCONNECTED)
+    rc->batch_empty = true;
+  return e;
 }
 
 task_t *pni_psocket_raw_task(psocket_t* ps) {
@@ -373,6 +377,7 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool
     if (rc->disconnected) {
       pni_raw_connect_failed(&rc->raw_connection);
       unlock(&rc->task.mutex);
+      rc->batch_empty = false;
       return &rc->batch;
     }
     if (events & (EPOLLHUP | EPOLLERR)) {
@@ -398,19 +403,38 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool
   if (wake) pni_raw_wake(&rc->raw_connection);
   if (events & EPOLLIN) pni_raw_read(&rc->raw_connection, fd, rcv, set_error);
   if (events & EPOLLOUT) pni_raw_write(&rc->raw_connection, fd, snd, set_error);
+  rc->batch_empty = false;
   return &rc->batch;
 }
 
 void pni_raw_connection_done(praw_connection_t *rc) {
   bool notify = false;
   bool ready = false;
+  bool have_event = false;
+
+  // If !batch_empty, can't be sure state machine up to date, so reschedule task if necessary.
+  if (!rc->batch_empty) {
+    if (pn_collector_peek(rc->raw_connection.collector))
+      have_event = true;
+    else {
+      pn_event_t *e = pni_raw_event_next(&rc->raw_connection);
+      // State machine up to date.
+      if (e) {
+        have_event = true;
+        // Sole event.  Can put back without order issues.
+        // Edge case, performance not important.
+        pn_collector_put(rc->raw_connection.collector, pn_event_class(e), pn_event_context(e), pn_event_type(e));
+      }
+    }
+  }
+
   lock(&rc->task.mutex);
   pn_proactor_t *p = rc->task.proactor;
   tslot_t *ts = rc->task.runner;
   rc->task.working = false;
-  notify = pni_task_wake_pending(&rc->task) && schedule(&rc->task);
   // The task may be in the ready state even if we've got no raw connection
   // wakes outstanding because we dealt with it already in pni_raw_batch_next()
+  notify = (pni_task_wake_pending(&rc->task) || have_event) && schedule(&rc->task);
   ready = rc->task.ready;
   unlock(&rc->task.mutex);
 
