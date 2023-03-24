@@ -107,7 +107,7 @@ static void pn_reactor_finalize(void *object) {
 #define pn_reactor_compare NULL
 #define pn_reactor_inspect NULL
 
-pn_reactor_t *pn_reactor() {
+pn_reactor_t *pn_reactor(void) {
   static const pn_class_t clazz = PN_CLASS(pn_reactor);
   pn_reactor_t *reactor = pn_class_new(&clazz, sizeof(pn_reactor_t));
   int err = pn_pipe(reactor->io, reactor->wakeup);
