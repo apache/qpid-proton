@@ -81,7 +81,7 @@ static void pn_transform_finalize(void *object)
 #define pn_transform_compare NULL
 #define pn_transform_inspect NULL
 
-pn_transform_t *pn_transform()
+pn_transform_t *pn_transform(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_transform);
   pn_transform_t *transform = (pn_transform_t *) pn_class_new(&clazz, sizeof(pn_transform_t));

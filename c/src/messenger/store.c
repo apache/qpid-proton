@@ -84,7 +84,7 @@ void pni_entry_finalize(void *object)
 #define pni_entry_inspect NULL
 static const pn_class_t PN_CLASSCLASS(pni_entry) = PN_CLASS(pni_entry);
 
-pni_store_t *pni_store()
+pni_store_t *pni_store(void)
 {
   pni_store_t *store = (pni_store_t *) malloc(sizeof(pni_store_t));
   if (!store) return NULL;
