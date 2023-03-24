@@ -1171,7 +1171,7 @@ void pni_iocp_finalize(void *obj)
   pni_shared_pool_free(iocp);
 }
 
-iocp_t *pni_iocp()
+iocp_t *pni_iocp(void)
 {
   static const pn_class_t clazz = PN_CLASS(pni_iocp);
   iocp_t *iocp = (iocp_t *) pn_class_new(&clazz, sizeof(iocp_t));

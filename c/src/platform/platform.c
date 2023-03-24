@@ -27,12 +27,12 @@
 
 #ifdef PN_WINAPI
 #include <windows.h>
-int pn_i_getpid() {
+int pn_i_getpid(void) {
   return (int) GetCurrentProcessId();
 }
 #else
 #include <unistd.h>
-int pn_i_getpid() {
+int pn_i_getpid(void) {
   return (int) getpid();
 }
 #endif

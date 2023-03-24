@@ -1215,7 +1215,7 @@ static void work_free(work_t *w) {
   }
 }
 
-pn_proactor_t *pn_proactor() {
+pn_proactor_t *pn_proactor(void) {
   uv_once(&global_init_once, global_init_fn);
   pn_proactor_t *p = (pn_proactor_t*)calloc(1, sizeof(pn_proactor_t));
   p->collector = pn_collector();

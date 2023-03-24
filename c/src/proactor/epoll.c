@@ -1495,7 +1495,7 @@ pn_listener_t *pn_event_listener(pn_event_t *e) {
   return (pn_event_class(e) == PN_CLASSCLASS(pn_listener)) ? (pn_listener_t*)pn_event_context(e) : NULL;
 }
 
-pn_listener_t *pn_listener() {
+pn_listener_t *pn_listener(void) {
   pn_listener_t *l = (pn_listener_t*)calloc(1, sizeof(pn_listener_t));
   if (l) {
     l->batch.next_event = listener_batch_next;
@@ -1951,7 +1951,7 @@ static void grow_poller_bufs(pn_proactor_t* p) {
     ee->wanted = EPOLLIN;      // for all subsequent rearms
 }
 
-pn_proactor_t *pn_proactor() {
+pn_proactor_t *pn_proactor(void) {
   if (getenv("PNI_EPOLL_NOWARM")) pni_warm_sched = false;
   if (getenv("PNI_EPOLL_IMMEDIATE")) pni_immediate = true;
   if (getenv("PNI_EPOLL_SPINS")) pni_spins = atoi(getenv("PNI_EPOLL_SPINS"));
