@@ -843,12 +843,11 @@ TEST_CASE("raw connection") {
 namespace {
 
 class common_handler : public handler {
-  handler *accept_; // Handler for accepted connections
   bool close_on_wake_;
   pn_raw_connection_t *last_server_;
 
 public:
-  explicit common_handler(handler *accept = 0) : accept_(accept), close_on_wake_(false), last_server_(0) {}
+  explicit common_handler() : close_on_wake_(false), last_server_(0) {}
 
   void set_close_on_wake(bool b) { close_on_wake_ = b; }
 
