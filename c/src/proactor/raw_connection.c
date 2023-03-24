@@ -475,7 +475,17 @@ void pni_raw_connect_failed(pn_raw_connection_t *conn) {
 }
 
 void pni_raw_wake(pn_raw_connection_t *conn) {
-  conn->wakepending = true;
+  if (conn->disconnect_state != disc_fini)
+    conn->wakepending = true;
+}
+
+bool pni_raw_wake_is_pending(pn_raw_connection_t *conn) {
+  return conn->wakepending;
+}
+
+bool pni_raw_can_wake(pn_raw_connection_t *conn) {
+  // True if DISCONNECTED event has not yet been extracted from the batch.
+  return (conn->disconnect_state != disc_fini);
 }
 
 void pni_raw_read(pn_raw_connection_t *conn, int sock, long (*recv)(int, void*, size_t), void(*set_error)(pn_raw_connection_t *, const char *, int)) {
