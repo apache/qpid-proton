@@ -115,14 +115,21 @@ if (CMAKE_CXX_COMPILER)
 
     set(pypath "${CMAKE_SOURCE_DIR}/tests/py")
 
-    # unset TEST_EXE_PREFIX as valgrind does not run successfully when fds are limited
-    pn_add_test(
-      UNWRAPPED
-      NAME c-fdlimit-tests
-      PREPEND_ENVIRONMENT "PATH=${path}" "PYTHONPATH=${pypath}" "${test_env}"
-      APPEND_ENVIRONMENT "TEST_EXE_PREFIX="
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
+    # Disable fdlimit test by default. Flaky throughout its history and implemntations.
+    # Very useful for proactor development, so keep around.
+    set(DEFAULT_FDLIMIT OFF)
+    option(FDLIMIT "Run the fdlimit recovery test" ${DEFAULT_FDLIMIT})
+    if (FDLIMIT)
+      # unset TEST_EXE_PREFIX as valgrind does not run successfully when fds are limited
+      pn_add_test(
+        UNWRAPPED
+        NAME c-fdlimit-tests
+        PREPEND_ENVIRONMENT "PATH=${path}" "PYTHONPATH=${pypath}" "${test_env}"
+        APPEND_ENVIRONMENT "TEST_EXE_PREFIX="
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
+    endif()
+
   endif(HAS_PROACTOR)
 
   if(HAS_TLS)
