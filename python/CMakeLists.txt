@@ -138,6 +138,8 @@ foreach(file IN LISTS py_dist_files pysrc)
   list(APPEND pysrc_files "${CMAKE_CURRENT_BINARY_DIR}/${file}")
 endforeach()
 
+add_custom_target(pysrc_copied ALL DEPENDS .timestamp.copied_pysrc ${pysrc_files})
+
 add_custom_command(OUTPUT ./tox.ini
                    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini" tox.ini
                    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini")
@@ -154,83 +156,84 @@ endif()
 
 if (pydist_cmds)
   add_custom_command(OUTPUT .timestamp.dist
-    DEPENDS .timestamp.cproton_ffi
+    DEPENDS pysrc_copied
     COMMAND ${CMAKE_COMMAND} -E remove -f .timestamp.dist
     COMMAND ${Python_EXECUTABLE} setup.py ${pydist_cmds}
     COMMAND ${CMAKE_COMMAND} -E touch .timestamp.dist)
-  add_custom_target(pydist DEPENDS .timestamp.dist)
-  add_custom_target(pytest_cffi ALL DEPENDS pydist)
-else()
-  add_custom_target(pytest_cffi ALL DEPENDS .timestamp.cproton_ffi)
+  add_custom_target(pydist ALL DEPENDS .timestamp.dist)
 endif ()
 
-# python test: python/tests/proton-test
-set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
-set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
-# These are only needed on Windows due to build differences
-set (py_bld "$<$<PLATFORM_ID:Windows>:$<TARGET_FILE_DIR:qpid-proton-core>>")
-set (py_tests "${py_src}/tests")
-set (tests_py "${py_src}/../tests/py")
+if (BUILD_TESTING)
+  add_custom_target(pytest_cffi ALL DEPENDS .timestamp.cproton_ffi)
 
-set (py_path $<TARGET_FILE_DIR:msgr-recv> ${py_bld} $ENV{PATH})
-set (py_pythonpath ${py_tests} ${py_src} ${py_bin} ${tests_py} $ENV{PYTHONPATH})
-to_native_path ("${py_pythonpath}" py_pythonpath)
-to_native_path ("${py_path}" py_path)
+  # python test: python/tests/proton-test
+  set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
+  set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
+  # These are only needed on Windows due to build differences
+  set (py_bld "$<$<PLATFORM_ID:Windows>:$<TARGET_FILE_DIR:qpid-proton-core>>")
+  set (py_tests "${py_src}/tests")
+  set (tests_py "${py_src}/../tests/py")
 
-if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-  set (python_coverage_options -m coverage run --parallel-mode)
-endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
+  set (py_path $<TARGET_FILE_DIR:msgr-recv> ${py_bld} $ENV{PATH})
+  set (py_pythonpath ${py_tests} ${py_src} ${py_bin} ${tests_py} $ENV{PYTHONPATH})
+  to_native_path ("${py_pythonpath}" py_pythonpath)
+  to_native_path ("${py_path}" py_path)
 
-# Create Python virtual environment to run tests
-set(pytest_venv "${py_bin}/pytest_env")
-# Have to use a conditional here as you can't use generator expressions in OUTPUT or BYPRODUCTS
-if (WIN32)
- set(py_venv_bin "Scripts")
-else()
- set(py_venv_bin "bin")
-endif()
-set(pytest_bin "${pytest_venv}/${py_venv_bin}")
-set(pytest_executable "${pytest_bin}/python${CMAKE_EXECUTABLE_SUFFIX}")
+  if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+    set (python_coverage_options -m coverage run --parallel-mode)
+  endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
-add_custom_command(
-  OUTPUT ${pytest_venv}/env.txt
-  COMMAND ${Python_EXECUTABLE} -m venv ${pytest_venv}
-  COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi
-  COMMAND ${pytest_executable} -m pip freeze > ${pytest_venv}/env.txt
-  BYPRODUCTS ${pytest_executable}
-)
+  # Create Python virtual environment to run tests
+  set(pytest_venv "${py_bin}/pytest_env")
+  # Have to use a conditional here as you can't use generator expressions in OUTPUT or BYPRODUCTS
+  if (WIN32)
+  set(py_venv_bin "Scripts")
+  else()
+  set(py_venv_bin "bin")
+  endif()
+  set(pytest_bin "${pytest_venv}/${py_venv_bin}")
+  set(pytest_executable "${pytest_bin}/python${CMAKE_EXECUTABLE_SUFFIX}")
 
-# Create c code for cffi extension
-add_custom_command(
-  OUTPUT .timestamp.cproton_ffi
-  COMMAND ${CMAKE_COMMAND} -E remove -f .timestamp.cproton_ffi
-  COMMAND ${pytest_executable} ext_build.py
-  COMMAND ${CMAKE_COMMAND} -E touch .timestamp.cproton_ffi
-  DEPENDS ${pytest_venv}/env.txt .timestamp.copied_pysrc ${pysrc_files}
-)
+  add_custom_command(
+    OUTPUT ${pytest_venv}/env.txt
+    COMMAND ${Python_EXECUTABLE} -m venv ${pytest_venv}
+    COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi
+    COMMAND ${pytest_executable} -m pip freeze > ${pytest_venv}/env.txt
+    BYPRODUCTS ${pytest_executable}
+  )
 
-pn_add_test(
-  INTERPRETED
-  NAME python-test
-  PREPEND_ENVIRONMENT
-    "PATH=${py_path}"
-    "PYTHONPATH=."
-    "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-  COMMAND ${pytest_executable} ${python_coverage_options} -- "${py_tests}/proton-test")
-set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+  # Create c code for cffi extension
+  add_custom_command(
+    OUTPUT .timestamp.cproton_ffi
+    COMMAND ${CMAKE_COMMAND} -E remove -f .timestamp.cproton_ffi
+    COMMAND ${pytest_executable} ext_build.py
+    COMMAND ${CMAKE_COMMAND} -E touch .timestamp.cproton_ffi
+    DEPENDS ${pytest_venv}/env.txt pysrc_copied
+  )
 
-set(PYTHON_TEST_COMMAND "-m" "unittest")
-pn_add_test(
-  INTERPRETED
-  NAME python-integration-test
-  PREPEND_ENVIRONMENT
-    "PATH=${py_path}"
-    "PYTHONPATH=.:${py_pythonpath}"
-    "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-  COMMAND
-    ${pytest_executable}
-      ${python_coverage_options}
-      ${PYTHON_TEST_COMMAND} discover -v -s "${py_tests}/integration")
+  pn_add_test(
+    INTERPRETED
+    NAME python-test
+    PREPEND_ENVIRONMENT
+      "PATH=${py_path}"
+      "PYTHONPATH=."
+      "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+    COMMAND ${pytest_executable} ${python_coverage_options} -- "${py_tests}/proton-test")
+  set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+
+  set(PYTHON_TEST_COMMAND "-m" "unittest")
+  pn_add_test(
+    INTERPRETED
+    NAME python-integration-test
+    PREPEND_ENVIRONMENT
+      "PATH=${py_path}"
+      "PYTHONPATH=.:${py_pythonpath}"
+      "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+    COMMAND
+      ${pytest_executable}
+        ${python_coverage_options}
+        ${PYTHON_TEST_COMMAND} discover -v -s "${py_tests}/integration")
+endif(BUILD_TESTING)
 
 check_python_module("flake8" FLAKE_MODULE_FOUND)
 if (FLAKE_MODULE_FOUND)
@@ -257,7 +260,7 @@ else ()
     if (CMAKE_BUILD_TYPE MATCHES "Coverage")
       message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
     else ()
-      add_custom_target(pytest_tox ALL DEPENDS pytest_cffi tox.ini)
+      add_custom_target(pytest_tox ALL DEPENDS pydist tox.ini)
       pn_add_test(
         INTERPRETED
         NAME python-tox-test
