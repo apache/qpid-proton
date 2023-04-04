@@ -33,15 +33,13 @@ from cproton import PN_CONNECTION_BOUND, PN_CONNECTION_FINAL, PN_CONNECTION_INIT
 
 from ._delivery import Delivery
 from ._endpoints import Connection, Link, Session
+from ._handler import Handler
 from ._transport import Transport
-from typing import Any, List, Optional, Union, TYPE_CHECKING, Callable, Tuple, Type
+from typing import Any, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ._reactor import Container
     from ._endpoints import Receiver, Sender
-    from ._handlers import ConnectSelectable
-    from ._selectable import Selectable
-    from types import TracebackType
+    from ._reactor import Container
 
 
 class Collector:
@@ -143,11 +141,11 @@ class EventBase(object):
         return self._type
 
     @property
-    def handler(self) -> Optional['Handler']:
+    def handler(self) -> Optional[Handler]:
         """The handler for this event type. Not implemented, always returns ``None``."""
         return None
 
-    def dispatch(self, handler: 'Handler', type: Optional[EventType] = None) -> None:
+    def dispatch(self, handler: Handler, type: Optional[EventType] = None) -> None:
         """
         Process this event by sending it to all known handlers that
         are valid for this event type.
@@ -474,7 +472,7 @@ class Event(EventBase):
         return self._context
 
     @property
-    def handler(self) -> Optional['Handler']:
+    def handler(self) -> Optional[Handler]:
         """
         The handler for this event. The handler is determined by looking
         at the following in order:
@@ -600,44 +598,3 @@ class Event(EventBase):
         is associated with it.
         """
         return self._delivery
-
-
-class LazyHandlers(object):
-    def __get__(self, obj: 'Handler', clazz: Any) -> Union['LazyHandlers', List[Any]]:
-        if obj is None:
-            return self
-        ret = []
-        obj.__dict__['handlers'] = ret
-        return ret
-
-
-class Handler(object):
-    """
-    An abstract handler for events which supports child handlers.
-    """
-    handlers = LazyHandlers()
-
-    # TODO What to do with on_error?
-    def add(
-            self,
-            handler: Any,
-            on_error: Optional[Callable[[Tuple[Type[BaseException], BaseException, 'TracebackType']], None]] = None,
-    ) -> None:
-        """
-        Add a child handler
-
-        :param handler: A child handler
-        :type handler: :class:`Handler` or one of its derivatives.
-        :param on_error: Not used
-        """
-        self.handlers.append(handler)
-
-    def on_unhandled(self, method: str, *args) -> None:
-        """
-        The callback for handling events which are not handled by
-        any other handler.
-
-        :param method: The name of the intended handler method.
-        :param args: Arguments for the intended handler method.
-        """
-        pass

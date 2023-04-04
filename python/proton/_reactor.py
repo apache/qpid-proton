@@ -46,8 +46,9 @@ from cproton import PN_ACCEPTED, PN_EVENT_NONE
 from ._data import Described, symbol, ulong
 from ._delivery import Delivery
 from ._endpoints import Connection, Endpoint, Link, Session, Terminus
-from ._events import Collector, EventType, EventBase, Handler, Event
+from ._events import Collector, EventType, EventBase, Event
 from ._exceptions import SSLUnavailable
+from ._handler import Handler
 from ._handlers import OutgoingMessageHandler, IOHandler
 from ._io import IO
 from ._message import Message

@@ -26,14 +26,15 @@ import weakref
 from ._condition import Condition
 from ._delivery import Delivery
 from ._endpoints import Endpoint
-from ._events import Event, Handler, _dispatch
+from ._events import Event, _dispatch
 from ._exceptions import ProtonException
+from ._handler import Handler
 from ._io import IO
 from ._message import Message
 from ._selectable import Selectable
 from ._transport import Transport
 from ._url import Url
-from typing import Any, List, Optional, Tuple, Union, TYPE_CHECKING, TypeVar
+from typing import Any, List, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._delivery import DispositionType

@@ -61,14 +61,15 @@ from ._condition import cond2obj, obj2cond
 from ._data import Data, dat2obj, obj2dat, PropertyDict, SymbolList
 from ._delivery import Delivery
 from ._exceptions import ConnectionException, EXCEPTIONS, LinkException, SessionException
+from ._handler import Handler
 from ._transport import Transport
 from ._wrapper import Wrapper
-from typing import Callable, Dict, List, Optional, Union, TYPE_CHECKING, Any
+from typing import Dict, List, Optional, Union, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ._condition import Condition
     from ._data import Array, PythonAMQPData, symbol
-    from ._events import Collector, Handler
+    from ._events import Collector
     from ._message import Message
 
 
@@ -113,7 +114,7 @@ class Endpoint(object):
 
     def _init(self) -> None:
         self.condition: Optional['Condition'] = None
-        self._handler: Optional['Handler'] = None
+        self._handler: Optional[Handler] = None
 
     def _update_cond(self) -> None:
         obj2cond(self.condition, self._get_cond_impl())
@@ -134,7 +135,7 @@ class Endpoint(object):
         assert False, "Subclass must override this!"
 
     @property
-    def handler(self) -> Optional['Handler']:
+    def handler(self) -> Optional[Handler]:
         """Handler for events.
 
         :getter: Get the event handler, or return ``None`` if no handler has been set.
@@ -142,12 +143,11 @@ class Endpoint(object):
         return self._handler
 
     @handler.setter
-    def handler(self, handler: Optional['Handler']) -> None:
+    def handler(self, handler: Optional[Handler]) -> None:
         # TODO Hack This is here for some very odd (IMO) backwards compat behaviour
-        from ._events import Handler
         if handler is None:
             self._handler = None
-        elif issubclass(type(handler), Handler):
+        elif isinstance(handler, Handler):
             self._handler = handler
         else:
             self._handler = Handler()

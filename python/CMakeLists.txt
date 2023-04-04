@@ -28,6 +28,7 @@ set (pysrc
     proton/_endpoints.py
     proton/_events.py
     proton/_exceptions.py
+    proton/_handler.py
     proton/_io.py
     proton/_message.py
     proton/_tracing.py
