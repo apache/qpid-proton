@@ -83,6 +83,7 @@ class ExamplesTest(unittest.TestCase):
             if sleep:
                 time.sleep(sleep)
             with run(client) as c:
+                s.terminate()
                 actual = [l.strip() for l in c.stdout]
                 inputs = ["Twas brillig, and the slithy toves",
                           "Did gire and gymble in the wabe.",
@@ -90,7 +91,6 @@ class ExamplesTest(unittest.TestCase):
                           "And the mome raths outgrabe."]
                 expected = ["%s => %s" % (l, l.upper()) for l in inputs]
                 self.assertEqual(actual, expected)
-            s.terminate()
 
     def test_sync_client_server(self):
         self.test_client_server(client=['sync_client.py'])
