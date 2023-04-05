@@ -1202,7 +1202,7 @@ class Container(Reactor):
                 self.ssl = None
             self.global_handler = GlobalOverrides(kwargs.get('global_handler', self.global_handler))
             self.trigger = None
-            self.container_id = str(_generate_uuid())
+            self.container_id = kwargs.get('container_id', str(_generate_uuid()))
             self.allow_insecure_mechs = True
             self.allowed_mechs = None
             self.sasl_enabled = True
@@ -1362,7 +1362,7 @@ class Container(Reactor):
             **kwargs
     ) -> Connection:
         conn = self.connection(handler)
-        conn.container = self.container_id or str(_generate_uuid())
+        conn.container = kwargs.get('container_id', self.container_id)
         conn.offered_capabilities = kwargs.get('offered_capabilities')
         conn.desired_capabilities = kwargs.get('desired_capabilities')
         conn.properties = kwargs.get('properties')

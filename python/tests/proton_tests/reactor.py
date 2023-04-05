@@ -441,6 +441,7 @@ class ContainerTest(Test):
             self.port = free_tcp_port()
             self.client_addr = None
             self.peer_hostname = None
+            self.peer_container_id = None
 
         def on_start(self, event):
             self.listener = event.container.listen("%s:%s" % (self.host, self.port))
@@ -448,6 +449,7 @@ class ContainerTest(Test):
         def on_connection_opened(self, event):
             self.client_addr = event.connected_address
             self.peer_hostname = event.connection.remote_hostname
+            self.peer_container_id = event.connection.remote_container
 
         def on_connection_closing(self, event):
             event.connection.close()
@@ -491,6 +493,23 @@ class ContainerTest(Test):
         assert client_handler.server_addr
         assert server_handler.peer_hostname == "localhost", server_handler.peer_hostname
         assert client_handler.server_addr.rsplit(':', 1)[1] == str(server_handler.port)
+
+    def test_container_id_1(self):
+        server_handler = ContainerTest._ServerHandler("localhost")
+        container = Container(server_handler, container_id='container123')
+        conn = container.connect(url="localhost:%s" % (server_handler.port),
+                                 handler=ContainerTest._ClientHandler(),)
+        container.run()
+        assert server_handler.peer_container_id == 'container123', server_handler.peer_container_id
+
+    def test_container_id_2(self):
+        server_handler = ContainerTest._ServerHandler("localhost")
+        container = Container(server_handler, container_id='Not_this_id')
+        conn = container.connect(url="localhost:%s" % (server_handler.port),
+                                 handler=ContainerTest._ClientHandler(),
+                                 container_id='container456')
+        container.run()
+        assert server_handler.peer_container_id == 'container456', server_handler.peer_container_id
 
     def test_virtual_host(self):
         ensureCanTestExtendedSASL()
