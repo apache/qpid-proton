@@ -129,13 +129,7 @@ module Qpid::Proton
 
       def inspect
         return "#{self.class}<nil>" unless @impl
-        pstr = Cproton.pn_string("")
-        begin
-          Cproton.pn_inspect(@impl, pstr)
-          return Cproton.pn_string_get(pstr)
-        ensure
-          Cproton.pn_free(pstr)
-        end
+        return Cproton.pn_tostring(@impl)
       end
 
       def to_s() inspect; end

@@ -25,7 +25,6 @@
 #include <proton/connection_options.hpp>
 #include <proton/error.hpp>
 #include <proton/ssl.hpp>
-#include <proton/version.h>
 
 #include <json/value.h>
 #include <json/reader.h>
@@ -89,6 +88,7 @@ static const string HOME("HOME");
 static const string ENV_VAR("MESSAGING_CONNECT_FILE");
 static const string FILE_NAME("connect.json");
 static const string HOME_FILE_NAME("/.config/messaging/" + FILE_NAME);
+static const string INSTALL_PREFIX(QUOTE(PN_INSTALL_PREFIX));
 static const string ETC_FILE_NAME("/etc/messaging/" + FILE_NAME);
 
 void parse_sasl(Value root, connection_options& opts) {
@@ -201,7 +201,7 @@ bool config_file(std::ifstream& f, std::string& name) {
     // $HOME/.config/messaging/FILE_NAME
     if (home) path.push_back(home + HOME_FILE_NAME);
     // INSTALL_PREFIX/etc/messaging/FILE_NAME
-    if (PN_INSTALL_PREFIX && *PN_INSTALL_PREFIX) path.push_back(PN_INSTALL_PREFIX + ETC_FILE_NAME);
+    if (!INSTALL_PREFIX.empty()) path.push_back(INSTALL_PREFIX + ETC_FILE_NAME);
 
     for (unsigned i = 0; i < path.size(); ++i) {
         name = path[i];

@@ -64,20 +64,55 @@ include_directories (
   )
 
 add_custom_command (
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  COMMAND ${PN_ENV_SCRIPT} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py
+  OUTPUT
+    ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  COMMAND
+    ${PN_ENV_SCRIPT} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py
   )
 
 add_custom_command (
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
-  COMMAND ${PN_ENV_SCRIPT} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
+  OUTPUT
+    ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+  COMMAND
+    ${PN_ENV_SCRIPT} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+  DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
+  )
+
+add_custom_command(
+  OUTPUT
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.c
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.h
+  COMMAND
+    ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/generate.py --emit -i ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/specs.json -o ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators
+  DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/generate.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/specs.json
+  )
+
+add_custom_command(
+  OUTPUT
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.c
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.h
+  COMMAND
+    ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/generate.py --consume -i ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/specs.json -o ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers
+  DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/generate.py
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools/codec-generator/specs.json
   )
 
 add_custom_target(
   generated_c_files
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+    ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+    ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.c
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.h
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.c
+    ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.h
   )
 
 file (GLOB_RECURSE source_files "src/*.h" "src/*.c" "src/*.cpp")
@@ -227,6 +262,7 @@ set (qpid-proton-core
   src/core/types.c
 
   src/core/framing.c
+  src/core/value_dump.c
 
   src/core/codec.c
   src/core/decoder.c
@@ -239,6 +275,9 @@ set (qpid-proton-core
   src/core/autodetect.c
   src/core/transport.c
   src/core/message.c
+
+  ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_generators.c
+  ${CMAKE_CURRENT_BINARY_DIR}/src/core/frame_consumers.c
   )
 
 set (qpid-proton-include-generated
@@ -353,6 +392,15 @@ elseif (PROACTOR AND NOT PROACTOR STREQUAL "none")
   message(FATAL_ERROR "Cannot build the ${PROACTOR} proactor")
 endif()
 
+if (BUILD_TLS)
+  if((PROACTOR_OK STREQUAL epoll) AND (SSL_IMPL STREQUAL openssl))
+    set (qpid-proton-tls src/tls/openssl.c)
+    message(STATUS "Building the raw connection TLS library")
+  else ()
+    message(FATAL_ERROR "Cannot currently build the raw connection TLS library without the epoll proactor and OpenSSL")
+  endif ()
+endif (BUILD_TLS)
+
 source_group("API Header Files" FILES ${qpid-proton-include} ${qpid-proton-include-extra})
 
 set_source_files_properties (
@@ -383,28 +431,17 @@ add_library (qpid-proton-core-objects OBJECT ${qpid-proton-core-src})
 add_dependencies (qpid-proton-core-objects generated_c_files)
 set_target_properties(qpid-proton-core-objects PROPERTIES
   POSITION_INDEPENDENT_CODE ON
-  COMPILE_FLAGS "${LTO}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+  LINK_FLAGS "${CATCH_UNDEFINED}")
 target_compile_definitions(qpid-proton-core-objects PRIVATE qpid_proton_core_EXPORTS)
-
-# Can't use target_link_libraries() because cmake 2.8.12 doesn't allow object libraries as the first param
-# otherwise for cmake 3.9 and on this would be:
-#   target_link_libraries (qpid-proton-core-objects ${SSL_LIB} ${SASL_LIB} ${PLATFORM_LIBS})
-target_compile_definitions(qpid-proton-core-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-core,COMPILE_DEFINITIONS>)
-target_compile_options    (qpid-proton-core-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-core,COMPILE_OPTIONS>)
-target_include_directories(qpid-proton-core-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-core,INCLUDE_DIRECTORIES>)
+target_link_libraries (qpid-proton-core-objects ${SSL_LIB} ${SASL_LIB} ${PLATFORM_LIBS})
 
 add_library (qpid-proton-platform-io-objects OBJECT ${qpid-proton-platform-io})
 set_target_properties(qpid-proton-platform-io-objects PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   C_EXTENSIONS ON
-  COMPILE_FLAGS "${LTO}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+  LINK_FLAGS "${CATCH_UNDEFINED}")
 target_compile_definitions(qpid-proton-platform-io-objects PRIVATE qpid_proton_EXPORTS)
-
-target_compile_definitions(qpid-proton-platform-io-objects PRIVATE $<TARGET_PROPERTY:qpid-proton,COMPILE_DEFINITIONS>)
-target_compile_options    (qpid-proton-platform-io-objects PRIVATE $<TARGET_PROPERTY:qpid-proton,COMPILE_OPTIONS>)
-target_include_directories(qpid-proton-platform-io-objects PRIVATE $<TARGET_PROPERTY:qpid-proton,INCLUDE_DIRECTORIES>)
+target_link_libraries (qpid-proton-platform-io-objects ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 
 add_library (qpid-proton-core SHARED $<TARGET_OBJECTS:qpid-proton-core-objects>)
 target_link_libraries (qpid-proton-core LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${PLATFORM_LIBS})
@@ -412,13 +449,15 @@ set_target_properties (qpid-proton-core
   PROPERTIES
   VERSION   "${PN_LIB_CORE_VERSION}"
   SOVERSION "${PN_LIB_CORE_MAJOR_VERSION}"
-  COMPILE_FLAGS "${LTO}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+  LINK_FLAGS "${CATCH_UNDEFINED}"
+  EXPORT_NAME core)
 
 if (BUILD_STATIC_LIBS)
   add_library (qpid-proton-core-static STATIC ${qpid-proton-core-src})
   target_compile_definitions(qpid-proton-core-static PUBLIC PROTON_DECLARE_STATIC)
   target_link_libraries (qpid-proton-core-static ${SSL_LIB} ${SASL_LIB} ${PLATFORM_LIBS})
+  set_target_properties(qpid-proton-core-static PROPERTIES
+    EXPORT_NAME core)
 endif(BUILD_STATIC_LIBS)
 
 if (qpid-proton-proactor)
@@ -430,17 +469,9 @@ if (qpid-proton-proactor)
   add_library (qpid-proton-proactor-objects OBJECT ${qpid-proton-proactor})
   set_target_properties(qpid-proton-proactor-objects PROPERTIES
     POSITION_INDEPENDENT_CODE ON
-    COMPILE_FLAGS "${LTO}"
-    LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+    LINK_FLAGS "${CATCH_UNDEFINED}")
   target_compile_definitions(qpid-proton-proactor-objects PRIVATE qpid_proton_proactor_EXPORTS)
-  set(TARGET_OBJECTS_qpid-proton-proactor-objects "$<TARGET_OBJECTS:qpid-proton-proactor-objects>")
-
-  # Can't use target_link_libraries() because cmake 2.8.12 doesn't allow object libraries as the first param
-  # otherwise for cmake 3.9 and on this would be:
-  #   target_link_libraries (qpid-proton-proactor-objects ${PLATFORM_LIBS} ${PROACTOR_LIBS})
-  target_compile_definitions(qpid-proton-proactor-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-proactor,COMPILE_DEFINITIONS>)
-  target_compile_options    (qpid-proton-proactor-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-proactor,COMPILE_OPTIONS>)
-  target_include_directories(qpid-proton-proactor-objects PRIVATE $<TARGET_PROPERTY:qpid-proton-proactor,INCLUDE_DIRECTORIES>)
+  target_link_libraries (qpid-proton-proactor-objects ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 
   add_library (qpid-proton-proactor SHARED $<TARGET_OBJECTS:qpid-proton-proactor-objects>)
   target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
@@ -449,13 +480,16 @@ if (qpid-proton-proactor)
     PROPERTIES
     VERSION   "${PN_LIB_PROACTOR_VERSION}"
     SOVERSION "${PN_LIB_PROACTOR_MAJOR_VERSION}"
-    LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
-    COMPILE_FLAGS "${LTO}"
+    LINK_FLAGS "${CATCH_UNDEFINED}"
+    EXPORT_NAME proactor
     )
   if (BUILD_STATIC_LIBS)
     add_library (qpid-proton-proactor-static STATIC ${qpid-proton-proactor})
     target_compile_definitions(qpid-proton-proactor-static PUBLIC PROTON_DECLARE_STATIC)
-    target_link_libraries (qpid-proton-proactor-static ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+    target_link_libraries (qpid-proton-proactor-static LINK_PUBLIC qpid-proton-core-static)
+    target_link_libraries (qpid-proton-proactor-static PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+    set_target_properties(qpid-proton-proactor-static PROPERTIES
+      EXPORT_NAME proactor)
   endif(BUILD_STATIC_LIBS)
 endif()
 
@@ -468,15 +502,15 @@ set(qpid-proton-noncore-src
 add_library (qpid-proton SHARED
   $<TARGET_OBJECTS:qpid-proton-core-objects>
   $<TARGET_OBJECTS:qpid-proton-platform-io-objects>
-  ${TARGET_OBJECTS_qpid-proton-proactor-objects}
+  $<TARGET_OBJECTS:qpid-proton-proactor-objects>
   ${qpid-proton-noncore-src})
 target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 set_target_properties (qpid-proton
   PROPERTIES
   VERSION   "${PN_LIB_LEGACY_VERSION}"
   SOVERSION "${PN_LIB_LEGACY_MAJOR_VERSION}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
-  COMPILE_FLAGS "${LTO}"
+  LINK_FLAGS "${CATCH_UNDEFINED}"
+  EXPORT_NAME qpid-proton
 )
 
 if (BUILD_STATIC_LIBS)
@@ -487,19 +521,63 @@ if (BUILD_STATIC_LIBS)
   target_compile_definitions(qpid-proton-static PUBLIC PROTON_DECLARE_STATIC)
   target_link_libraries (qpid-proton-static
     qpid-proton-core-static
-    $<$<BOOL:${HAS_PROACTOR}>:qpid-proton-proactor-static>
+    qpid-proton-proactor-static
     ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+  set_target_properties(qpid-proton-static PROPERTIES
+    EXPORT_NAME qpid-proton)
 endif(BUILD_STATIC_LIBS)
 
+if (qpid-proton-tls)
+  set(HAS_TLS True)
+  set_source_files_properties (${qpid-proton-tls} PROPERTIES
+    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${C_STANDARD_FLAGS}"
+    )
+
+  add_library (qpid-proton-tls-objects OBJECT ${qpid-proton-tls})
+  target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
+  target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+  set_target_properties(qpid-proton-tls-objects PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    LINK_FLAGS "${CATCH_UNDEFINED}")
+  target_compile_definitions(qpid-proton-tls-objects PRIVATE qpid_proton_tls_EXPORTS)
+  target_link_libraries (qpid-proton-tls-objects ${SSL_LIB} ${PLATFORM_LIBS})
+
+  add_library (qpid-proton-tls SHARED $<TARGET_OBJECTS:qpid-proton-tls-objects>)
+  target_link_libraries (qpid-proton-tls  LINK_PUBLIC qpid-proton-core)
+  target_link_libraries (qpid-proton-tls  LINK_PRIVATE ${SSL_LIB} ${PLATFORM_LIBS})
+  set_target_properties (qpid-proton-tls
+    PROPERTIES
+    VERSION   "${PN_LIB_TLS_VERSION}"
+    SOVERSION "${PN_LIB_TLS_MAJOR_VERSION}"
+    LINK_FLAGS "${CATCH_UNDEFINED}"
+    EXPORT_NAME tls
+    )
+  if (BUILD_STATIC_LIBS)
+    add_library (qpid-proton-tls-static STATIC ${qpid-proton-tls})
+    target_compile_definitions(qpid-proton-tls-static PUBLIC PROTON_DECLARE_STATIC)
+    target_link_libraries (qpid-proton-tls-static PRIVATE ${PLATFORM_LIBS})
+    set_target_properties(qpid-proton-tls-static PROPERTIES
+      EXPORT_NAME tls)
+    set(TARGET_qpid-proton-tls-static qpid-proton-tls-static)
+  endif(BUILD_STATIC_LIBS)
+endif ()
+
+
 # Install executables and libraries
-if (BUILD_STATIC_LIBS)
-  set(STATIC_LIBS qpid-proton-static qpid-proton-core-static)
-endif()
-install(TARGETS qpid-proton qpid-proton-core ${STATIC_LIBS}
-  EXPORT  proton
+install(TARGETS qpid-proton qpid-proton-core
+  EXPORT  ProtonTargets
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-  LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+  LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+  INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+if (BUILD_STATIC_LIBS)
+  install(TARGETS qpid-proton-static qpid-proton-core-static
+    EXPORT  ProtonTargetsStatic
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+    INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+endif()
 
 # Install windows pdb files
 if (MSVC)
@@ -512,18 +590,49 @@ if (MSVC)
 endif (MSVC)
 
 if (HAS_PROACTOR)
-  if (BUILD_STATIC_LIBS)
-    set(STATIC_LIBS qpid-proton-proactor-static)
-  endif()
   install(TARGETS qpid-proton-proactor ${STATIC_LIBS}
-    EXPORT  proton
+    EXPORT  ProtonTargets
     RUNTIME DESTINATION bin
     ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-    LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+    INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+  if (BUILD_STATIC_LIBS)
+    install(TARGETS qpid-proton-proactor-static
+      EXPORT  ProtonTargetsStatic
+      RUNTIME DESTINATION bin
+      ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+      LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+      INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+  endif()
 
   # Install windows pdb files
   if (MSVC)
     install(FILES $<TARGET_PDB_FILE:qpid-proton-proactor>
+      DESTINATION bin
+      CONFIGURATIONS RelWithDebInfo Debug
+      OPTIONAL)
+  endif (MSVC)
+endif ()
+
+if (HAS_TLS)
+  install(TARGETS qpid-proton-tls ${STATIC_LIBS}
+    EXPORT  ProtonTargets
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+    INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+  if (BUILD_STATIC_LIBS)
+    install(TARGETS qpid-proton-tls-static
+      EXPORT  ProtonTargetsStatic
+      RUNTIME DESTINATION bin
+      ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+      LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+      INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+  endif()
+
+  # Install windows pdb files
+  if (MSVC)
+    install(FILES $<TARGET_PDB_FILE:qpid-proton-tls>
       DESTINATION bin
       CONFIGURATIONS RelWithDebInfo Debug
       OPTIONAL)
@@ -556,12 +665,29 @@ configure_lib(PROTONCORELIB qpid-proton-core)
 if(HAS_PROACTOR)
   configure_lib(PROTONPROACTORLIB qpid-proton-proactor)
 endif(HAS_PROACTOR)
+if(HAS_TLS)
+  configure_lib(PROTONTLSLIB qpid-proton-tls)
+endif(HAS_TLS)
 
+install(EXPORT ProtonTargets
+  FILE ProtonTargets.cmake
+  NAMESPACE Proton::
+  DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
+if (BUILD_STATIC_LIBS)
+  install(EXPORT ProtonTargetsStatic
+    FILE ProtonTargetsStatic.cmake
+    NAMESPACE Proton::
+    DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
+endif()
+
+include(CMakePackageConfigHelpers)
 include(WriteBasicConfigVersionFile)
 
-configure_file(
+configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/ProtonConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfig.cmake @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfig.cmake
+  PATH_VARS INCLUDE_INSTALL_DIR
+  INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
 write_basic_config_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake
   VERSION ${PN_VERSION}
@@ -569,6 +695,9 @@ write_basic_config_version_file(
 install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake
+  DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
+install (FILES
+  ../tools/cmake/Modules/FindCyrusSASL.cmake
   DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
 
 if (ENABLE_BENCHMARKS)

@@ -21,8 +21,6 @@
 This module provides document parsing and transformation utilities for XML.
 """
 
-from __future__ import absolute_import
-
 import os
 import sys
 import xml.sax
@@ -30,21 +28,13 @@ import types
 from xml.sax.handler import ErrorHandler
 from xml.sax.xmlreader import InputSource
 
-try:
-    from io import StringIO
-except ImportError:
-    from cStringIO import StringIO
-
-if sys.version_info[0] == 2:
-    import types
-    CLASS_TYPES = (type, types.ClassType)
-else:
-    CLASS_TYPES = (type,)
+from io import StringIO
 
 from . import dom
 from . import transforms
 from . import parsers
 
+CLASS_TYPES = (type,)
 
 def transform(node, *args):
     result = node

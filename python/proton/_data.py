@@ -17,9 +17,18 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 import uuid
+from typing import Callable, List, Tuple, Union, Optional, Any, Dict, Iterable, TypeVar
+try:
+    from typing import Literal
+except ImportError:
+    # https://www.python.org/dev/peps/pep-0560/#class-getitem
+    class GenericMeta(type):
+        def __getitem__(self, item):
+            pass
+
+    class Literal(metaclass=GenericMeta):  # type: ignore[no-redef]
+        pass
 
 from cproton import PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE, PN_CHAR, PN_DECIMAL128, PN_DECIMAL32, PN_DECIMAL64, \
     PN_DESCRIBED, PN_DOUBLE, PN_FLOAT, PN_INT, PN_LIST, PN_LONG, PN_MAP, PN_NULL, PN_OVERFLOW, PN_SHORT, PN_STRING, \
@@ -43,13 +52,21 @@ from ._exceptions import DataException, EXCEPTIONS
 long = int
 unicode = str
 
+_T = TypeVar('_T')
+
+PythonAMQPData = Union[
+    Dict['PythonAMQPData', 'PythonAMQPData'],
+    List['PythonAMQPData'],
+    'Described', 'Array', int, str, 'symbol', bytes, float, None]
+"""This type annotation represents Python data structures that can be encoded as AMQP Data"""
+
 
 class UnmappedType:
 
-    def __init__(self, msg):
+    def __init__(self, msg: str) -> None:
         self.msg = msg
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "UnmappedType(%s)" % self.msg
 
 
@@ -60,12 +77,12 @@ class ulong(long):
     An unsigned 64 bit integer in the range :math:`0` to :math:`2^{64} - 1` inclusive.
     """
 
-    def __init__(self, l):
-        if (l < 0):
+    def __init__(self, l: int) -> None:
+        if l < 0:
             raise AssertionError("initializing ulong with negative value")
         super(ulong, self).__new__(ulong, l)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "ulong(%s)" % long.__repr__(self)
 
 
@@ -79,7 +96,7 @@ class timestamp(long):
     example, ``1311704463521`` represents the moment ``2011-07-26T18:21:03.521Z``.
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "timestamp(%s)" % long.__repr__(self)
 
 
@@ -90,7 +107,7 @@ class symbol(unicode):
     Symbolic values from a constrained domain, represented by a sequence of ASCII characters.
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "symbol(%s)" % unicode.__repr__(self)
 
 
@@ -101,7 +118,7 @@ class char(unicode):
     A 32 bit UTF-32BE encoded Unicode character.
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "char(%s)" % unicode.__repr__(self)
 
 
@@ -112,7 +129,7 @@ class byte(int):
     An 8 bit signed integer in the range :math:`-(2^7)` to :math:`2^7 - 1` inclusive.
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "byte(%s)" % int.__repr__(self)
 
 
@@ -123,7 +140,7 @@ class short(int):
     A 16 bit signed integer in the range :math:`-(2^{15})` to :math:`2^{15} - 1` inclusive.
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "short(%s)" % int.__repr__(self)
 
 
@@ -134,7 +151,7 @@ class int32(int):
     A 32 bit signed integer in the range :math:`-(2^{31})` to :math:`2^{31} - 1` inclusive.
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "int32(%s)" % int.__repr__(self)
 
 
@@ -145,12 +162,12 @@ class ubyte(int):
     An 8 bit unsigned integer in the range :math:`0` to :math:`2^8 - 1` inclusive.
     """
 
-    def __init__(self, i):
-        if (i < 0):
+    def __init__(self, i: int) -> None:
+        if i < 0:
             raise AssertionError("initializing ubyte with negative value")
         super(ubyte, self).__new__(ubyte, i)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "ubyte(%s)" % int.__repr__(self)
 
 
@@ -161,12 +178,12 @@ class ushort(int):
     A 16 bit unsigned integer in the range :math:`0` to :math:`2^{16} - 1` inclusive.
     """
 
-    def __init__(self, i):
-        if (i < 0):
+    def __init__(self, i: int) -> None:
+        if i < 0:
             raise AssertionError("initializing ushort with negative value")
         super(ushort, self).__new__(ushort, i)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "ushort(%s)" % int.__repr__(self)
 
 
@@ -177,12 +194,12 @@ class uint(long):
     A 32 bit unsigned integer in the range :math:`0` to :math:`2^{32} - 1` inclusive.
     """
 
-    def __init__(self, l):
-        if (l < 0):
+    def __init__(self, l: int) -> None:
+        if l < 0:
             raise AssertionError("initializing uint with negative value")
         super(uint, self).__new__(uint, l)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "uint(%s)" % long.__repr__(self)
 
 
@@ -193,7 +210,7 @@ class float32(float):
     A 32 bit floating point number (IEEE 754-2008 binary32).
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "float32(%s)" % float.__repr__(self)
 
 
@@ -204,7 +221,7 @@ class decimal32(int):
     A 32 bit decimal floating point  number (IEEE 754-2008 decimal32).
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "decimal32(%s)" % int.__repr__(self)
 
 
@@ -215,7 +232,7 @@ class decimal64(long):
     A 64 bit decimal floating point number (IEEE 754-2008 decimal64).
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "decimal64(%s)" % long.__repr__(self)
 
 
@@ -226,7 +243,7 @@ class decimal128(bytes):
     A 128-bit decimal floating-point number (IEEE 754-2008 decimal128).
     """
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "decimal128(%s)" % bytes.__repr__(self)
 
 
@@ -234,20 +251,22 @@ class Described(object):
     """
     A described AMQP type.
 
-    :ivar descriptor: A symbol describing the value.
-    :vartype descriptor: :class:`symbol`
+    :ivar descriptor: Any AMQP value can be a descriptor
     :ivar value: The described value
-    :vartype value: Any AMQP value
     """
 
-    def __init__(self, descriptor, value):
+    def __init__(
+            self,
+            descriptor: PythonAMQPData,
+            value: PythonAMQPData,
+    ) -> None:
         self.descriptor = descriptor
         self.value = value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Described(%r, %r)" % (self.descriptor, self.value)
 
-    def __eq__(self, o):
+    def __eq__(self, o: Any) -> bool:
         if isinstance(o, Described):
             return self.descriptor == o.descriptor and self.value == o.value
         else:
@@ -271,7 +290,12 @@ class Array(object):
     :ivar elements: A Python list of elements of the appropriate type.
     """
 
-    def __init__(self, descriptor, type, *elements):
+    def __init__(
+            self,
+            descriptor: PythonAMQPData,
+            type: int,
+            *elements
+    ) -> None:
         self.descriptor = descriptor
         self.type = type
         self.elements = elements
@@ -279,14 +303,14 @@ class Array(object):
     def __iter__(self):
         return iter(self.elements)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.elements:
             els = ", %s" % (", ".join(map(repr, self.elements)))
         else:
             els = ""
         return "Array(%r, %r%s)" % (self.descriptor, self.type, els)
 
-    def __eq__(self, o):
+    def __eq__(self, o: Any) -> bool:
         if isinstance(o, Array):
             return self.descriptor == o.descriptor and \
                 self.type == o.type and self.elements == o.elements
@@ -294,40 +318,46 @@ class Array(object):
             return False
 
 
-def _check_type(s, allow_ulong=False, raise_on_error=True):
+def _check_type(
+        s: _T,
+        allow_ulong: bool = False,
+        raise_on_error: bool = True
+) -> Union[symbol, ulong, _T]:
     if isinstance(s, symbol):
         return s
     if allow_ulong and isinstance(s, ulong):
         return s
     if isinstance(s, str):
-        # Must be py2 or py3 str
         return symbol(s)
-    if isinstance(s, unicode):
-        # This must be python2 unicode as we already detected py3 str above
-        return symbol(s.encode('utf-8'))
     if raise_on_error:
         raise TypeError('Non-symbol type %s: %s' % (type(s), s))
     return s
 
 
-def _check_is_symbol(s, raise_on_error=True):
+def _check_is_symbol(s: _T, raise_on_error: bool = True) -> Union[symbol, ulong, _T]:
     return _check_type(s, allow_ulong=False, raise_on_error=raise_on_error)
 
 
-def _check_is_symbol_or_ulong(s, raise_on_error=True):
+def _check_is_symbol_or_ulong(s: _T, raise_on_error: bool = True) -> Union[symbol, ulong, _T]:
     return _check_type(s, allow_ulong=True, raise_on_error=raise_on_error)
 
 
 class RestrictedKeyDict(dict):
     """Parent class for :class:`PropertyDict` and :class:`AnnotationDict`"""
 
-    def __init__(self, validation_fn, e=None, raise_on_error=True, **kwargs):
+    def __init__(
+            self,
+            validation_fn: Callable[[_T, bool], _T],
+            e: Optional[Any] = None,
+            raise_on_error: bool = True,
+            **kwargs
+    ) -> None:
         super(RestrictedKeyDict, self).__init__()
         self.validation_fn = validation_fn
         self.raise_on_error = raise_on_error
         self.update(e, **kwargs)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: Union[symbol, str], value: Any) -> None:
         """Checks if the key is a :class:`symbol` type before setting the value"""
         try:
             return super(RestrictedKeyDict, self).__setitem__(self.validation_fn(key, self.raise_on_error), value)
@@ -336,7 +366,7 @@ class RestrictedKeyDict(dict):
         # __setitem__() must raise a KeyError, not TypeError
         raise KeyError('invalid non-symbol key: %s: %s' % (type(key), key))
 
-    def update(self, e=None, **kwargs):
+    def update(self, e: Optional[Any] = None, **kwargs) -> None:
         """
         Equivalent to dict.update(), but it was needed to call :meth:`__setitem__()`
         instead of ``dict.__setitem__()``.
@@ -385,11 +415,10 @@ class PropertyDict(RestrictedKeyDict):
         is encountered as a key in the initialization, or in a subsequent operation which
         adds such an key. If ``False``, non-strings and non-symbols will be added as keys
         to the dictionary without an error.
-    :type raise_on_error: ``bool``
     :param kwargs: Keyword args for initializing a ``dict`` of the form key1=val1, key2=val2, ...
     """
 
-    def __init__(self, e=None, raise_on_error=True, **kwargs):
+    def __init__(self, e: Optional[Any] = None, raise_on_error: bool = True, **kwargs) -> None:
         super(PropertyDict, self).__init__(_check_is_symbol, e, raise_on_error, **kwargs)
 
     def __repr__(self):
@@ -424,17 +453,20 @@ class AnnotationDict(RestrictedKeyDict):
         >>> AnnotationDict({'one': 1, 2: 'two'}, raise_on_error=False)
         AnnotationDict({2: 'two', symbol(u'one'): 1})
 
-    :param e: Initialization for ``dict``
-    :type e: ``dict`` or ``list`` of ``tuple`` or ``zip`` object
+    :param e: Initializer for ``dict``: a ``dict`` or ``list`` of ``tuple`` or ``zip`` object
     :param raise_on_error: If ``True``, will raise an ``KeyError`` if a non-string, non-symbol or
         non-ulong is encountered as a key in the initialization, or in a subsequent
         operation which adds such an key. If ``False``, non-strings, non-ulongs and non-symbols
         will be added as keys to the dictionary without an error.
-    :type raise_on_error: ``bool``
     :param kwargs: Keyword args for initializing a ``dict`` of the form key1=val1, key2=val2, ...
     """
 
-    def __init__(self, e=None, raise_on_error=True, **kwargs):
+    def __init__(
+            self,
+            e: Optional[Union[Dict, List, Tuple, Iterable]] = None,
+            raise_on_error: bool = True,
+            **kwargs
+    ) -> None:
         super(AnnotationDict, self).__init__(_check_is_symbol_or_ulong, e, raise_on_error, **kwargs)
 
     def __repr__(self):
@@ -464,22 +496,26 @@ class SymbolList(list):
         >>> SymbolList(['one', symbol('two'), 3], raise_on_error=False)
         SymbolList([symbol(u'one'), symbol(u'two'), 3])
 
-    :param t: Initialization for list
-    :type t: ``list``
+    :param t: Initializer for list
     :param raise_on_error: If ``True``, will raise an ``TypeError`` if a non-string or non-symbol is
         encountered in the initialization list, or in a subsequent operation which adds such
         an element. If ``False``, non-strings and non-symbols will be added to the list without
         an error.
-    :type raise_on_error: ``bool``
     """
 
-    def __init__(self, t=None, raise_on_error=True):
+    def __init__(
+            self,
+            t: Optional[List[Any]] = None,
+            raise_on_error: bool = True
+    ) -> None:
         super(SymbolList, self).__init__()
         self.raise_on_error = raise_on_error
-        if t:
+        if isinstance(t, (str, symbol)):
+            self.append(t)
+        else:
             self.extend(t)
 
-    def _check_list(self, t):
+    def _check_list(self, t: Iterable[Any]) -> List[Any]:
         """ Check all items in list are :class:`symbol`s (or are converted to symbols). """
         l = []
         if t:
@@ -487,19 +523,22 @@ class SymbolList(list):
                 l.append(_check_is_symbol(v, self.raise_on_error))
         return l
 
-    def append(self, v):
+    def to_array(self):
+        return Array(UNDESCRIBED, PN_SYMBOL, *self)
+
+    def append(self, v: str) -> None:
         """ Add a single value v to the end of the list """
         return super(SymbolList, self).append(_check_is_symbol(v, self.raise_on_error))
 
-    def extend(self, t):
+    def extend(self, t: Iterable[str]) -> None:
         """ Add all elements of an iterable t to the end of the list """
         return super(SymbolList, self).extend(self._check_list(t))
 
-    def insert(self, i, v):
+    def insert(self, i: int, v: str) -> None:
         """ Insert a value v at index i """
         return super(SymbolList, self).insert(i, _check_is_symbol(v, self.raise_on_error))
 
-    def __add__(self, t):
+    def __add__(self, t: Iterable[Any]) -> 'SymbolList':
         """ Handles list1 + list2 """
         return SymbolList(super(SymbolList, self).__add__(self._check_list(t)), raise_on_error=self.raise_on_error)
 
@@ -507,11 +546,15 @@ class SymbolList(list):
         """ Handles list1 += list2 """
         return super(SymbolList, self).__iadd__(self._check_list(t))
 
-    def __setitem__(self, i, t):
+    def __eq__(self, other):
+        """ Handles list1 == list2 """
+        return super().__eq__(SymbolList(other, raise_on_error=False))
+
+    def __setitem__(self, i: int, t: Any) -> None:
         """ Handles list[i] = v """
         return super(SymbolList, self).__setitem__(i, _check_is_symbol(t, self.raise_on_error))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """ Representation of SymbolList """
         return 'SymbolList(%s)' % super(SymbolList, self).__repr__()
 
@@ -626,17 +669,16 @@ class Data:
     """
 
     @classmethod
-    def type_name(amqptype):
+    def type_name(cls, amqptype: int) -> str:
         """
         Return a string name for an AMQP type.
 
         :param amqptype: Numeric Proton AMQP type (`enum pn_type_t`)
-        :type amqptype: integer
-        :rtype: String describing the AMQP type with numeric value `amqptype`
+        :returns: String describing the AMQP type with numeric value `amqptype`
         """
         return Data.type_names[amqptype]
 
-    def __init__(self, capacity=16):
+    def __init__(self, capacity: int = 16) -> None:
         if isinstance(capacity, (int, long)):
             self._data = pn_data(capacity)
             self._free = True
@@ -644,25 +686,25 @@ class Data:
             self._data = capacity
             self._free = False
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self._free and hasattr(self, "_data"):
             pn_data_free(self._data)
             del self._data
 
-    def _check(self, err):
+    def _check(self, err: int) -> int:
         if err < 0:
             exc = EXCEPTIONS.get(err, DataException)
             raise exc("[%s]: %s" % (err, pn_error_text(pn_data_error(self._data))))
         else:
             return err
 
-    def clear(self):
+    def clear(self) -> None:
         """
         Clears the data object.
         """
         pn_data_clear(self._data)
 
-    def rewind(self):
+    def rewind(self) -> None:
         """
         Clears current node and sets the parent to the root node.  Clearing the
         current node sets it _before_ the first node, calling next() will advance to
@@ -671,14 +713,13 @@ class Data:
         assert self._data is not None
         pn_data_rewind(self._data)
 
-    def next(self):
+    def next(self) -> Optional[int]:
         """
         Advances the current node to its next sibling and returns its
         type. If there is no next sibling the current node remains
         unchanged and ``None`` is returned.
 
         :return: Node type or ``None``
-        :rtype: ``int`` or ``None``
         """
         found = pn_data_next(self._data)
         if found:
@@ -686,14 +727,13 @@ class Data:
         else:
             return None
 
-    def prev(self):
+    def prev(self) -> Optional[int]:
         """
         Advances the current node to its previous sibling and returns its
         type. If there is no previous sibling the current node remains
         unchanged and ``None`` is returned.
 
         :return: Node type or ``None``
-        :rtype: ``int`` or ``None``
         """
         found = pn_data_prev(self._data)
         if found:
@@ -701,7 +741,7 @@ class Data:
         else:
             return None
 
-    def enter(self):
+    def enter(self) -> bool:
         """
         Sets the parent node to the current node and clears the current node.
         Clearing the current node sets it *before* the first child,
@@ -709,25 +749,23 @@ class Data:
 
         :return: ``True`` iff the pointers to the current/parent nodes are changed,
             ``False`` otherwise.
-        :rtype: ``bool``
         """
         return pn_data_enter(self._data)
 
-    def exit(self):
+    def exit(self) -> bool:
         """
         Sets the current node to the parent node and the parent node to
         its own parent.
 
         :return: ``True`` iff the pointers to the current/parent nodes are changed,
             ``False`` otherwise.
-        :rtype: ``bool``
         """
         return pn_data_exit(self._data)
 
-    def lookup(self, name):
+    def lookup(self, name: str) -> bool:
         return pn_data_lookup(self._data, name)
 
-    def narrow(self):
+    def narrow(self) -> None:
         """
         Modify this :class:`Data` object to behave as if the current node is the
         root node of the tree. This impacts the behavior of :meth:`rewind`,
@@ -737,17 +775,16 @@ class Data:
         """
         pn_data_narrow(self._data)
 
-    def widen(self):
+    def widen(self) -> None:
         """ Reverse the effect of :meth:`narrow`. """
         pn_data_widen(self._data)
 
-    def type(self):
+    def type(self) -> Optional[int]:
         """
         Returns the type of the current node. Returns `None` if there is no
         current node.
 
         :return: The current node type enumeration.
-        :rtype: ``int`` or ``None``
         """
         dtype = pn_data_type(self._data)
         if dtype == -1:
@@ -755,21 +792,19 @@ class Data:
         else:
             return dtype
 
-    def encoded_size(self):
+    def encoded_size(self) -> int:
         """
         Returns the size in bytes needed to encode the data in AMQP format.
 
         :return: The size of the encoded data or an error code if data is invalid.
-        :rtype: ``int``
         """
         return pn_data_encoded_size(self._data)
 
-    def encode(self):
+    def encode(self) -> bytes:
         """
-        Returns a representation of the data encoded in AMQP format.
+        Returns a binary representation of the data encoded in AMQP format.
 
-        :return: The size of the encoded data
-        :rtype: ``int``
+        :return: The encoded data
         :raise: :exc:`DataException` if there is a Proton error.
         """
         size = 1024
@@ -782,18 +817,17 @@ class Data:
             else:
                 self._check(cd)
 
-    def decode(self, encoded):
+    def decode(self, encoded: bytes) -> int:
         """
         Decodes the first value from supplied AMQP data and returns the
         number of bytes consumed.
 
-        :type encoded: binary
         :param encoded: AMQP encoded binary data
         :raise: :exc:`DataException` if there is a Proton error.
         """
         return self._check(pn_data_decode(self._data, encoded))
 
-    def put_list(self):
+    def put_list(self) -> None:
         """
         Puts a list value. Elements may be filled by entering the list
         node and putting element values.
@@ -810,7 +844,7 @@ class Data:
         """
         self._check(pn_data_put_list(self._data))
 
-    def put_map(self):
+    def put_map(self) -> None:
         """
         Puts a map value. Elements may be filled by entering the map node
         and putting alternating key value pairs.
@@ -826,7 +860,7 @@ class Data:
         """
         self._check(pn_data_put_map(self._data))
 
-    def put_array(self, described, element_type):
+    def put_array(self, described: bool, element_type: int) -> None:
         """
         Puts an array value. Elements may be filled by entering the array
         node and putting the element values. The values must all be of the
@@ -851,15 +885,13 @@ class Data:
             >>> data.put_double(1.3)
             >>> data.exit()
 
-        :type described: bool
         :param described: specifies whether the array is described
-        :type element_type: int
         :param element_type: the type of the array elements
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_array(self._data, described, element_type))
 
-    def put_described(self):
+    def put_described(self) -> None:
         """
         Puts a described value. A described node has two children, the
         descriptor and the value. These are specified by entering the node
@@ -876,7 +908,7 @@ class Data:
         """
         self._check(pn_data_put_described(self._data))
 
-    def put_null(self):
+    def put_null(self) -> None:
         """
         Puts a null value.
 
@@ -884,236 +916,214 @@ class Data:
         """
         self._check(pn_data_put_null(self._data))
 
-    def put_bool(self, b):
+    def put_bool(self, b: Union[bool, int]) -> None:
         """
         Puts a boolean value.
 
         :param b: a boolean value
-        :type b: ``bool`` or ``int``
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_bool(self._data, b))
 
-    def put_ubyte(self, ub):
+    def put_ubyte(self, ub: Union[ubyte, int]) -> None:
         """
         Puts an unsigned byte value.
 
         :param ub: an integral value in the range :math:`0` to :math:`2^8 - 1` inclusive
-        :type ub: ``int``, :class:`ubyte`
         :raise: * ``AssertionError`` if parameter is out of the range :math:`0` to :math:`2^8 - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_ubyte(self._data, ub))
 
-    def put_byte(self, b):
+    def put_byte(self, b: Union[byte, int]) -> None:
         """
         Puts a signed byte value.
 
         :param b: an integral value in the range :math:`-(2^7)` to :math:`2^7 - 1` inclusive.
-        :type b: ``int``, :class:`byte`
         :raise: * ``AssertionError`` if parameter is out of the range :math:`-(2^7)` to :math:`2^7 - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_byte(self._data, b))
 
-    def put_ushort(self, us):
+    def put_ushort(self, us: Union[ushort, int]) -> None:
         """
         Puts an unsigned short value.
 
         :param us: an integral value in the range :math:`0` to :math:`2^{16} - 1` inclusive.
-        :type us: ``int``, :class:`ushort`
         :raise: * ``AssertionError`` if parameter is out of the range :math:`0` to :math:`2^{16} - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_ushort(self._data, us))
 
-    def put_short(self, s):
+    def put_short(self, s: Union[short, int]) -> None:
         """
         Puts a signed short value.
 
         :param s: an integral value in the range :math:`-(2^{15})` to :math:`2^{15} - 1` inclusive.
-        :type s: ``int``, :class:`short`
         :raise: * ``AssertionError`` if parameter is out of the range :math:`-(2^{15})` to :math:`2^{15} - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_short(self._data, s))
 
-    def put_uint(self, ui):
+    def put_uint(self, ui: Union[uint, int]) -> None:
         """
         Puts an unsigned int value.
 
         :param ui: an integral value in the range :math:`0` to :math:`2^{32} - 1` inclusive.
-        :type ui: ``int``, :class:`uint`
         :raise: * ``AssertionError`` if parameter is out of the range :math:`0` to :math:`2^{32} - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_uint(self._data, ui))
 
-    def put_int(self, i):
+    def put_int(self, i: Union[int32, int]) -> None:
         """
         Puts a signed int value.
 
         :param i: an integral value in the range :math:`-(2^{31})` to :math:`2^{31} - 1` inclusive.
-        :type i: ``int``, :class:`int32`
         :raise: * ``AssertionError`` if parameter is out of the range :math:`-(2^{31})` to :math:`2^{31} - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_int(self._data, i))
 
-    def put_char(self, c):
+    def put_char(self, c: Union[char, str]) -> None:
         """
         Puts a char value.
 
         :param c: a single character
-        :type c: ``str``, :class:`char`
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_char(self._data, ord(c)))
 
-    def put_ulong(self, ul):
+    def put_ulong(self, ul: Union[ulong, int]) -> None:
         """
         Puts an unsigned long value.
 
         :param ul: an integral value in the range :math:`0` to :math:`2^{64} - 1` inclusive.
-        :type ul: ``int``, ``long``, :class:`ulong`
         :raise: * ``AssertionError`` if parameter is out of the range :math:`0` to :math:`2^{64} - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_ulong(self._data, ul))
 
-    def put_long(self, l):
+    def put_long(self, l: Union[long, int]) -> None:
         """
         Puts a signed long value.
 
         :param l: an integral value in the range :math:`-(2^{63})` to :math:`2^{63} - 1` inclusive.
-        :type l: ``int``, ``long``
         :raise: * ``AssertionError`` if parameter is out of the range :math:`-(2^{63})` to :math:`2^{63} - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_long(self._data, l))
 
-    def put_timestamp(self, t):
+    def put_timestamp(self, t: Union[timestamp, int]) -> None:
         """
         Puts a timestamp value.
 
         :param t: a positive integral value
-        :type t: ``int``, :class:`timestamp`
         :raise: * ``AssertionError`` if parameter is negative.
                 * :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_timestamp(self._data, t))
 
-    def put_float(self, f):
+    def put_float(self, f: Union[float32, float, int]) -> None:
         """
         Puts a float value.
 
         :param f: a floating point value
-        :type f: ``float``, :class:`float32`
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_float(self._data, f))
 
-    def put_double(self, d):
+    def put_double(self, d: Union[float, int]) -> None:
         """
         Puts a double value.
 
         :param d: a floating point value.
-        :type d: ``double``
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_double(self._data, d))
 
-    def put_decimal32(self, d):
+    def put_decimal32(self, d: Union[decimal32, int]) -> None:
         """
         Puts a decimal32 value.
 
         :param d: a decimal32 number encoded in an 32-bit integral value.
-        :type d: ``int``, :class:`decimal32`
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_decimal32(self._data, d))
 
-    def put_decimal64(self, d):
+    def put_decimal64(self, d: Union[decimal64, int]) -> None:
         """
         Puts a decimal64 value.
 
         :param d: a decimal64 number encoded in an 32-bit integral value.
-        :type d: ``int``, ``long``, :class:`decimal64`
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_decimal64(self._data, d))
 
-    def put_decimal128(self, d):
+    def put_decimal128(self, d: Union[decimal128, bytes]) -> None:
         """
         Puts a decimal128 value.
 
         :param d: a decimal128 value encoded in a 16-byte binary value.
-        :type d: ``bytes``, :class:`decimal128`
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_decimal128(self._data, d))
 
-    def put_uuid(self, u):
+    def put_uuid(self, u: uuid.UUID) -> None:
         """
         Puts a UUID value.
 
         :param u: a uuid value.
-        :type u: ``uuid.UUID``
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        self._check(pn_data_put_uuid(self._data, u.bytes))
+        self._check(pn_data_put_uuid(self._data, u))
 
-    def put_binary(self, b):
+    def put_binary(self, b: bytes) -> None:
         """
         Puts a binary value.
 
         :param b: a binary value
-        :type b: ``bytes``
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_put_binary(self._data, b))
 
-    def put_memoryview(self, mv):
+    def put_memoryview(self, mv: memoryview) -> None:
         """
         Put a Python memoryview object as an AMQP binary value.
 
         :param mv: A Python memoryview object
-        :type mv: ``memoryview``
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self.put_binary(mv.tobytes())
 
-    def put_buffer(self, buff):
+    def put_buffer(self, buff: Iterable[int]) -> None:
         """
         Put a Python buffer object as an AMQP binary value.
 
         :param buff: A Python buffer object (**CHECK THIS**)
-        :type buff: Any object supporting the Python buffer interface.
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self.put_binary(bytes(buff))
 
-    def put_string(self, s):
+    def put_string(self, s: str) -> None:
         """
         Puts a unicode value.
 
         :param s: a unicode string
-        :type s: ``str`` (Python 3.x) or ``unicode`` (Python 2.x)
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        self._check(pn_data_put_string(self._data, s.encode("utf8")))
+        self._check(pn_data_put_string(self._data, s))
 
-    def put_symbol(self, s):
+    def put_symbol(self, s: Union[str, symbol]) -> None:
         """
         Puts a symbolic value.
 
         :param s: the symbol name
-        :type s: string, :class:`symbol`
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        self._check(pn_data_put_symbol(self._data, s.encode('ascii')))
+        self._check(pn_data_put_symbol(self._data, s))
 
-    def get_list(self):
+    def get_list(self) -> int:
         """
         If the current node is a list, return the number of elements,
         otherwise return 0. List elements can be accessed by entering
@@ -1130,11 +1140,10 @@ class Data:
             >>> data.exit()
 
         :return: the number of child elements of a list node
-        :rtype: ``int``
         """
         return pn_data_get_list(self._data)
 
-    def get_map(self):
+    def get_map(self) -> int:
         """
         If the current node is a map, return the number of child elements,
         otherwise return 0. Key value pairs can be accessed by entering
@@ -1151,11 +1160,10 @@ class Data:
             >>> data.exit()
 
         :return: the number of child elements of a map node
-        :rtype: ``int``
         """
         return pn_data_get_map(self._data)
 
-    def get_array(self):
+    def get_array(self) -> Tuple[int, bool, Optional[int]]:
         """
         If the current node is an array, return a tuple of the element
         count, a boolean indicating whether the array is described, and
@@ -1172,9 +1180,8 @@ class Data:
             ...    print "Element:", data.get_string()
             >>> data.exit()
 
-        :return: A tuple containing the number of array elements, the descriptor
-            (or ``None`` if no descriptor) and the enumerated array element type.
-        :rtype: ``tuple`` (``int``, ``str`` or ``None``, ``int``)
+        :return: A tuple containing the number of array elements, a bool indicating
+            whether the array is described, and the enumerated array element type.
         """
         count = pn_data_get_array(self._data)
         described = pn_data_is_array_described(self._data)
@@ -1183,7 +1190,7 @@ class Data:
             type = None
         return count, described, type
 
-    def is_described(self):
+    def is_described(self) -> bool:
         """
         Checks if the current node is a described value. The descriptor
         and value may be accessed by entering the described value.
@@ -1198,223 +1205,199 @@ class Data:
             >>> data.exit()
 
         :return: ``True`` if the current node is a described type, ``False`` otherwise.
-        :rtype: ``bool``
         """
         return pn_data_is_described(self._data)
 
-    def is_null(self):
+    def is_null(self) -> bool:
         """
         Checks if the current node is the AMQP null type.
 
         :return: ``True`` if the current node is the AMQP null type, ``False`` otherwise.
-        :rtype: ``bool``
         """
         return pn_data_is_null(self._data)
 
-    def get_bool(self):
+    def get_bool(self) -> bool:
         """
         Get the current node value as a ``bool``.
 
         :return: If the current node is a boolean type, returns its value,
             ``False`` otherwise.
-        :rtype: ``bool``
         """
         return pn_data_get_bool(self._data)
 
-    def get_ubyte(self):
+    def get_ubyte(self) -> ubyte:
         """
         Get the current node value as a :class:`ubyte`.
 
         :return: If the current node is an unsigned byte, its value, 0 otherwise.
-        :rtype: :class:`ubyte`
         """
         return ubyte(pn_data_get_ubyte(self._data))
 
-    def get_byte(self):
+    def get_byte(self) -> byte:
         """
         Get the current node value as a :class:`byte`.
 
         :return: If the current node is a signed byte, its value, 0 otherwise.
-        :rtype: :class:`byte`
         """
         return byte(pn_data_get_byte(self._data))
 
-    def get_ushort(self):
+    def get_ushort(self) -> ushort:
         """
         Get the current node value as a :class:`ushort`.
 
         :return: If the current node is an unsigned short, its value, 0 otherwise.
-        :rtype: :class:`ushort`
         """
         return ushort(pn_data_get_ushort(self._data))
 
-    def get_short(self):
+    def get_short(self) -> short:
         """
         Get the current node value as a :class:`short`.
 
         :return: If the current node is a signed short, its value, 0 otherwise.
-        :rtype: :class:`short`
         """
         return short(pn_data_get_short(self._data))
 
-    def get_uint(self):
+    def get_uint(self) -> uint:
         """
         Get the current node value as a :class:`uint`.
 
         :return: If the current node is an unsigned int, its value, 0 otherwise.
-        :rtype: :class:`uint`
         """
         return uint(pn_data_get_uint(self._data))
 
-    def get_int(self):
+    def get_int(self) -> int32:
         """
         Get the current node value as a :class:`int32`.
 
         :return: If the current node is a signed int, its value, 0 otherwise.
-        :rtype: :class:`int32`
         """
         return int32(pn_data_get_int(self._data))
 
-    def get_char(self):
+    def get_char(self) -> char:
         """
         Get the current node value as a :class:`char`.
 
         :return: If the current node is a char, its value, 0 otherwise.
-        :rtype: :class:`char`
         """
         return char(chr(pn_data_get_char(self._data)))
 
-    def get_ulong(self):
-        """
-        Get the current node value as a :class:`long`.
-
-        :return: If the current node is an unsigned long, its value, 0 otherwise.
-        :rtype: :class:`ulong`
-        """
-        return ulong(pn_data_get_ulong(self._data))
-
-    def get_long(self):
+    def get_ulong(self) -> ulong:
         """
         Get the current node value as a :class:`ulong`.
 
+        :return: If the current node is an unsigned long, its value, 0 otherwise.
+        """
+        return ulong(pn_data_get_ulong(self._data))
+
+    def get_long(self) -> long:
+        """
+        Get the current node value as a :class:`long`.
+
         :return: If the current node is an signed long, its value, 0 otherwise.
-        :rtype: :class:`long`
         """
         return long(pn_data_get_long(self._data))
 
-    def get_timestamp(self):
+    def get_timestamp(self) -> timestamp:
         """
         Get the current node value as a :class:`timestamp`.
 
         :return: If the current node is a timestamp, its value, 0 otherwise.
-        :rtype: :class:`timestamp`
         """
         return timestamp(pn_data_get_timestamp(self._data))
 
-    def get_float(self):
+    def get_float(self) -> float32:
         """
         Get the current node value as a :class:`float32`.
 
         :return: If the current node is a float, its value, 0 otherwise.
-        :rtype: :class:`float32`
         """
         return float32(pn_data_get_float(self._data))
 
-    def get_double(self):
+    def get_double(self) -> float:
         """
         Get the current node value as a ``double``.
 
         :return: If the current node is a double, its value, 0 otherwise.
-        :rtype: ``double``
         """
         return pn_data_get_double(self._data)
 
     # XXX: need to convert
-    def get_decimal32(self):
+    def get_decimal32(self) -> decimal32:
         """
         Get the current node value as a :class:`decimal32`.
 
         :return: If the current node is a decimal32, its value, 0 otherwise.
-        :rtype: :class:`decimal32`
         """
         return decimal32(pn_data_get_decimal32(self._data))
 
     # XXX: need to convert
-    def get_decimal64(self):
+    def get_decimal64(self) -> decimal64:
         """
         Get the current node value as a :class:`decimal64`.
 
         :return: If the current node is a decimal64, its value, 0 otherwise.
-        :rtype: :class:`decimal64`
         """
         return decimal64(pn_data_get_decimal64(self._data))
 
     # XXX: need to convert
-    def get_decimal128(self):
+    def get_decimal128(self) -> decimal128:
         """
         Get the current node value as a :class:`decimal128`.
 
         :return: If the current node is a decimal128, its value, 0 otherwise.
-        :rtype: :class:`decimal128`
         """
         return decimal128(pn_data_get_decimal128(self._data))
 
-    def get_uuid(self):
+    def get_uuid(self) -> Optional[uuid.UUID]:
         """
         Get the current node value as a ``uuid.UUID``.
 
         :return: If the current node is a UUID, its value, ``None`` otherwise.
-        :rtype: ``uuid.UUID`` or ``None``
         """
         if pn_data_type(self._data) == Data.UUID:
-            return uuid.UUID(bytes=pn_data_get_uuid(self._data))
+            return pn_data_get_uuid(self._data)
         else:
             return None
 
-    def get_binary(self):
+    def get_binary(self) -> bytes:
         """
         Get the current node value as ``bytes``.
 
-        :return: If the current node is binary, its value, ``""`` otherwise.
-        :rtype: ``bytes``
+        :return: If the current node is binary, its value, ``b""`` otherwise.
         """
         return pn_data_get_binary(self._data)
 
-    def get_string(self):
+    def get_string(self) -> str:
         """
         Get the current node value as ``str``.
 
         :return: If the current node is a string, its value, ``""`` otherwise.
-        :rtype: ``str``
         """
-        return pn_data_get_string(self._data).decode("utf8")
+        return pn_data_get_string(self._data)
 
-    def get_symbol(self):
+    def get_symbol(self) -> symbol:
         """
         Get the current node value as :class:`symbol`.
 
         :return: If the current node is a symbol, its value, ``""`` otherwise.
-        :rtype: :class:`symbol`
         """
-        return symbol(pn_data_get_symbol(self._data).decode('ascii'))
+        return symbol(pn_data_get_symbol(self._data))
 
-    def copy(self, src):
+    def copy(self, src: 'Data') -> None:
         """
         Copy the contents of another pn_data_t object. Any values in the
         data object will be lost.
 
         :param src: The source object from which to copy
-        :type src: :class:`Data`
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self._check(pn_data_copy(self._data, src._data))
 
-    def format(self):
+    def format(self) -> str:
         """
         Formats the contents of this :class:`Data` object in a human readable way.
 
         :return: A Formatted string containing contents of this :class:`Data` object.
-        :rtype: ``str``
         :raise: :exc:`DataException` if there is a Proton error.
         """
         sz = 16
@@ -1427,7 +1410,7 @@ class Data:
                 self._check(err)
                 return result
 
-    def dump(self):
+    def dump(self) -> None:
         """
         Dumps a debug representation of the internal state of this :class:`Data`
         object that includes its navigational state to ``cout`` (``stdout``) for
@@ -1435,13 +1418,12 @@ class Data:
         """
         pn_data_dump(self._data)
 
-    def put_dict(self, d):
+    def put_dict(self, d: Dict[Any, Any]) -> None:
         """
         A convenience method for encoding the contents of a Python ``dict``
         as an AMQP map.
 
         :param d: The dictionary to be encoded
-        :type d: ``dict``
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self.put_map()
@@ -1453,12 +1435,11 @@ class Data:
         finally:
             self.exit()
 
-    def get_dict(self):
+    def get_dict(self) -> Dict[Any, Any]:
         """
         A convenience method for decoding an AMQP map as a Python ``dict``.
 
         :returns: The decoded dictionary.
-        :rtype: ``dict``
         """
         if self.enter():
             try:
@@ -1474,13 +1455,12 @@ class Data:
                 self.exit()
             return result
 
-    def put_sequence(self, s):
+    def put_sequence(self, s: List[Any]) -> None:
         """
         A convenience method for encoding a Python ``list`` as an
         AMQP list.
 
         :param s: The sequence to be encoded
-        :type s: ``list``
         :raise: :exc:`DataException` if there is a Proton error.
         """
         self.put_list()
@@ -1491,12 +1471,11 @@ class Data:
         finally:
             self.exit()
 
-    def get_sequence(self):
+    def get_sequence(self) -> List[Any]:
         """
         A convenience method for decoding an AMQP list as a Python ``list``.
 
         :returns: The decoded list.
-        :rtype: ``list``
         """
         if self.enter():
             try:
@@ -1507,12 +1486,11 @@ class Data:
                 self.exit()
             return result
 
-    def get_py_described(self):
+    def get_py_described(self) -> Described:
         """
         A convenience method for decoding an AMQP described value.
 
         :returns: The decoded AMQP descriptor.
-        :rtype: :class:`Described`
         """
         if self.enter():
             try:
@@ -1524,7 +1502,7 @@ class Data:
                 self.exit()
             return Described(descriptor, value)
 
-    def put_py_described(self, d):
+    def put_py_described(self, d: Described) -> None:
         """
         A convenience method for encoding a :class:`Described` object
         as an AMQP described value. This method encapsulates all the steps
@@ -1542,7 +1520,7 @@ class Data:
         finally:
             self.exit()
 
-    def get_py_array(self):
+    def get_py_array(self) -> Optional[Array]:
         """
         A convenience method for decoding an AMQP array into an
         :class:`Array` object. This method encapsulates all the
@@ -1552,7 +1530,6 @@ class Data:
         representing the array and its contents. Otherwise return ``None``.
 
         :returns: The decoded AMQP array.
-        :rtype: :class:`Array`
         """
 
         count, described, type = self.get_array()
@@ -1572,14 +1549,13 @@ class Data:
                 self.exit()
             return Array(descriptor, type, *elements)
 
-    def put_py_array(self, a):
+    def put_py_array(self, a: Array) -> None:
         """
         A convenience method for encoding an :class:`Array` object as
         an AMQP array. This method encapsulates the steps described in
         :func:`put_array` into a single function.
 
         :param a: The array object to be encoded
-        :type a: :class:`Array`
         :raise: :exc:`DataException` if there is a Proton error.
         """
         described = a.descriptor != UNDESCRIBED
@@ -1653,11 +1629,11 @@ class Data:
         MAP: get_dict
     }
 
-    def put_object(self, obj):
+    def put_object(self, obj: Any) -> None:
         putter = self.put_mappings[obj.__class__]
         putter(self, obj)
 
-    def get_object(self):
+    def get_object(self) -> Optional[Any]:
         type = self.type()
         if type is None:
             return None
@@ -1679,6 +1655,10 @@ def dat2obj(dimpl):
 
 
 def obj2dat(obj, dimpl):
+    if isinstance(obj, SymbolList):
+        if len(obj) == 0:
+            return
+        obj = obj.to_array()
     if obj is not None:
         d = Data(dimpl)
         d.put_object(obj)

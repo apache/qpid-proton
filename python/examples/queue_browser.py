@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,7 +18,6 @@
 # under the License.
 #
 
-from __future__ import print_function
 from proton.reactor import Container, Copy
 from proton.handlers import MessagingHandler
 

@@ -47,6 +47,8 @@
     non-proactor-task -> proactor-task
     tslot -> sched
 
+ TODO: doc new work: warm (assigned), earmarked (assigned), runnables (unordered), sched_ready
+ list (ordered), resched list (ordered).
  TODO: document role of sched_pending and how sched_XXX (i.e. sched_interrupt)
  transitions from "private to the scheduler" to "visible to the task".
  TODO: document task.working duration can be long: from xxx_process() to xxx_done() or null batch.
@@ -248,8 +250,8 @@ void task_init(task_t *tsk, task_type_t t, pn_proactor_t *p) {
  * are needed to cross or reconcile the two portions of the list.
  */
 
-// Call with sched lock held.
-static void pop_ready_task(task_t *tsk) {
+// Call with sched lock held and sched_ready_count > 0.
+static task_t *sched_ready_pop_front(pn_proactor_t *p) {
   // every task on the sched_ready_list is either currently running,
   // or to be scheduled.  schedule() will not "see" any of the ready_next
   // pointers until ready and working have transitioned to 0
@@ -260,28 +262,28 @@ static void pop_ready_task(task_t *tsk) {
   // !ready .. schedule() .. on ready_list .. on sched_ready_list .. working task .. !sched_ready && !ready
   //
   // Intervening locks at each transition ensures ready_next has memory coherence throughout the ready task scheduling cycle.
-  pn_proactor_t *p = tsk->proactor;
-  if (tsk == p->sched_ready_current)
-    p->sched_ready_current = tsk->ready_next;
-  if (tsk == p->sched_ready_first) {
-    // normal code path
-    if (tsk == p->sched_ready_last) {
-      p->sched_ready_first = p->sched_ready_last = NULL;
-    } else {
-      p->sched_ready_first = tsk->ready_next;
-    }
-    if (!p->sched_ready_first)
-      p->sched_ready_last = NULL;
+  assert (p->sched_ready_count);
+  task_t *tsk = p->sched_ready_first;
+  p->sched_ready_count--;
+  if (tsk == p->sched_ready_last) {
+    p->sched_ready_first = p->sched_ready_last = NULL;
   } else {
-    // tsk is not first in a multi-element list
-    task_t *prev = NULL;
-    for (task_t *i = p->sched_ready_first; i != tsk; i = i->ready_next)
-      prev = i;
-    prev->ready_next = tsk->ready_next;
-    if (tsk == p->sched_ready_last)
-      p->sched_ready_last = prev;
+    p->sched_ready_first = tsk->ready_next;
   }
-  tsk->on_ready_list = false;
+  if (p->sched_ready_count == 0) {
+    assert(!p->sched_ready_first);
+    p->sched_ready_pending = false;
+  }
+  return tsk;
+}
+
+// Call only as the poller task that has already called schedule_ready_list() and already
+// incremented p->ready_list_generation.  All list elements before sched_ready_last have
+// correct generation from mutex barrier and cannot have tsk->ready_generation set to a
+// new generation until after the poller task releases the sched lock and allows tsk to
+// run again.
+inline static bool on_sched_ready_list(task_t *tsk, pn_proactor_t *p) {
+  return tsk->ready_generation && (tsk->ready_generation != p->ready_list_generation);
 }
 
 // part1: call with tsk->owner lock held, return true if notify_poller required by caller.
@@ -294,8 +296,10 @@ bool schedule(task_t *tsk) {
       tsk->ready = true;
       pn_proactor_t *p = tsk->proactor;
       lock(&p->eventfd_mutex);
+      assert(tsk->ready_generation == 0);  // Can't be on list twice
       tsk->ready_next = NULL;
-      tsk->on_ready_list = true;
+      tsk->ready_generation = p->ready_list_generation;
+      p->ready_list_count++;
       if (!p->ready_list_first) {
         p->ready_list_first = p->ready_list_last = tsk;
       } else {
@@ -323,7 +327,11 @@ void notify_poller(pn_proactor_t *p) {
 
 // call with task lock held from xxx_process().
 void schedule_done(task_t *tsk) {
-//  assert(tsk->ready > 0);
+  assert(tsk->ready);
+  lock(&tsk->proactor->eventfd_mutex);
+  assert(tsk->ready_generation != 0);
+  tsk->ready_generation = 0;
+  unlock(&tsk->proactor->eventfd_mutex);
   tsk->ready = false;
 }
 
@@ -406,7 +414,26 @@ static void resume(pn_proactor_t *p, tslot_t *ts) {
     pthread_cond_signal(&ts->cond);
   }
   unlock(&ts->mutex);
+}
 
+// Call with no lock
+void pni_resume(pn_proactor_t *p, tslot_t *ts) {
+  resume(p, ts);
+}
+
+// Call with shed_lock held
+// Caller must resume() return value if not null
+static tslot_t *resume_one_thread(pn_proactor_t *p) {
+  // If pn_proactor_get has an early return, we need to resume one suspended thread (if any)
+  // to be the new poller.
+
+  tslot_t *ts = p->suspend_list_head;
+  if (ts) {
+    LL_REMOVE(p, suspend_list, ts);
+    p->suspend_list_count--;
+    ts->state = PROCESSING;
+  }
+  return ts;
 }
 
 // Call with sched lock
@@ -414,42 +441,35 @@ static void assign_thread(tslot_t *ts, task_t *tsk) {
   assert(!tsk->runner);
   tsk->runner = ts;
   tsk->prev_runner = NULL;
-  tsk->runnable = false;
+  tsk->runnables_idx = 0;
   ts->task = tsk;
   ts->prev_task = NULL;
 }
 
 // call with sched lock
-static bool reschedule(task_t *tsk) {
-  // Special case schedule() where task is done/unassigned but sched_pending work has arrived.
-  // Should be an infrequent corner case.
-  bool notify = false;
-  pn_proactor_t *p = tsk->proactor;
-  lock(&p->eventfd_mutex);
-  assert(tsk->ready);
-  assert(!tsk->on_ready_list);
-  tsk->ready_next = NULL;
-  tsk->on_ready_list = true;
-  if (!p->ready_list_first) {
-    p->ready_list_first = p->ready_list_last = tsk;
-  } else {
-    p->ready_list_last->ready_next = tsk;
-    p->ready_list_last = tsk;
+static inline task_t *resched_pop_front(pn_proactor_t *p) {
+  assert(p->resched_cutoff);
+  task_t *tsk = p->resched_first;
+  p->resched_first = tsk->resched_next;
+  p->polled_resched_count--;
+  if (!p->resched_first)
+    p->resched_last = NULL;
+  if (tsk == p->resched_cutoff) {
+    assert(p->polled_resched_count == 0);
+    p->resched_cutoff = NULL;
   }
-  if (!p->ready_list_active) {
-    // unblock the poller via the eventfd
-    p->ready_list_active = true;
-    notify = true;
-  }
-  unlock(&p->eventfd_mutex);
-  return notify;
+  tsk->resched_next = NULL;
+  return tsk;
 }
 
-// Call with sched lock
-bool unassign_thread(tslot_t *ts, tslot_state new_state) {
+// Call with sched lock.
+// If true returned, caller must call notify_poller() after releasing the lock.
+// If resume_thread is set, the caller must call resume() after releasing the lock.
+bool unassign_thread(pn_proactor_t *p, tslot_t *ts, tslot_state new_state, tslot_t **resume_thread) {
   task_t *tsk = ts->task;
   bool notify = false;
   bool deleting = (ts->state == DELETING);
+  *resume_thread = NULL;
   ts->task = NULL;
   ts->state = new_state;
   if (tsk) {
@@ -460,28 +480,41 @@ bool unassign_thread(tslot_t *ts, tslot_state new_state) {
   // Check if unseen events or schedule() calls occurred while task was working.
 
   if (tsk && !deleting) {
-    pn_proactor_t *p = tsk->proactor;
     ts->prev_task = tsk;
     if (tsk->sched_pending) {
-      // Make sure the task is already scheduled or put it on the ready list
-      if (tsk->sched_ready) {
-        if (!tsk->on_ready_list) {
-          // Remember it for next poller
-          tsk->sched_ready = false;
-          notify = reschedule(tsk);     // back on ready list for poller to see
-        }
-        // else already scheduled
+      // New work arrived, reschedule it:
+      tsk->runner = RESCHEDULE_PLACEHOLDER;  // Block tsk from being scheduled untl resched list is processed.
+      assert(!tsk->resched_next);
+      if (p->resched_last) {
+        p->resched_last->resched_next = tsk;
+        p->resched_last = tsk;
       } else {
-        // bad corner case.  Block tsk from being scheduled again until a later post_ready()
-        tsk->runner = RESCHEDULE_PLACEHOLDER;
-        unlock(&p->sched_mutex);
-        lock(&tsk->mutex);
-        notify = schedule(tsk);
-        unlock(&tsk->mutex);
-        lock(&p->sched_mutex);
+        p->resched_first = p->resched_last = tsk;
+      }
+      p->resched_count++;
+      if (p->poller_suspended) {
+        lock(&p->eventfd_mutex);
+        if (!p->ready_list_active) {
+          p->ready_list_active = true;
+          notify = true;
+        }
+        unlock(&p->eventfd_mutex);
       }
     }
   }
+
+  // Earmark drain accounting.
+  if (ts->earmark_override) {
+    // This thread "stole" the task previously assigned to thread ts->earmark_override.
+    if (ts->earmark_override->generation == ts->earmark_override_gen) {
+      // Other (overridden) thread not seen since this thread completed the pending work on the task.
+      // Thread is perhaps gone forever, which may leave us short of a poller thread and hanging.
+      // Find a thread to resume if available.  Worst case is a spurious resume/suspend by an idle thread.
+      *resume_thread = resume_one_thread(p);
+    }
+    ts->earmark_override = NULL;
+  }
+
   return notify;
 }
 
@@ -505,10 +538,9 @@ static void remove_earmark(tslot_t *ts) {
 static void make_runnable(task_t *tsk) {
   pn_proactor_t *p = tsk->proactor;
   assert(p->n_runnables <= p->runnables_capacity);
-  assert(!tsk->runnable);
+  assert(!tsk->runnables_idx);
   if (tsk->runner) return;
 
-  tsk->runnable = true;
   // Track it as normal or warm or earmarked
   if (pni_warm_sched) {
     tslot_t *ts = tsk->prev_runner;
@@ -518,8 +550,11 @@ static void make_runnable(task_t *tsk) {
           p->warm_runnables[p->n_warm_runnables++] = tsk;
           assign_thread(ts, tsk);
         }
-        else
-          p->runnables[p->n_runnables++] = tsk;
+        else {
+          p->runnables[p->n_runnables] = tsk;
+          tsk->runnables_idx = p->n_runnables + 1; // off by one accounting
+          p->n_runnables++;
+        }
         return;
       }
       if (ts->state == UNUSED && !p->earmark_drain) {
@@ -529,7 +564,9 @@ static void make_runnable(task_t *tsk) {
       }
     }
   }
-  p->runnables[p->n_runnables++] = tsk;
+  p->runnables[p->n_runnables] = tsk;
+  tsk->runnables_idx = p->n_runnables + 1; // off by one accounting
+  p->n_runnables++;
 }
 
 
@@ -675,6 +712,7 @@ static acceptor_t *acceptor_list_next(acceptor_t **start) {
 // Add an overflowing acceptor to the overflow list. Called with listener task lock held.
 static void acceptor_set_overflow(acceptor_t *a) {
   a->overflowed = true;
+  a->listener->overflow_count++;
   pn_proactor_t *p = a->listener->task.proactor;
   lock(&p->overflow_mutex);
   acceptor_list_append(&p->overflow, a);
@@ -700,6 +738,7 @@ static void proactor_rearm_overflow(pn_proactor_t *p) {
     assert(!a->armed);
     assert(a->overflowed);
     a->overflowed = false;
+    l->overflow_count++;
     if (rearming) {
       rearm(p, &a->psocket.epoll_io);
       a->armed = true;
@@ -714,7 +753,7 @@ static void proactor_rearm_overflow(pn_proactor_t *p) {
 // Close an FD and rearm overflow listeners.  Call with no listener locks held.
 int pclosefd(pn_proactor_t *p, int fd) {
   int err = close(fd);
-  if (!err) proactor_rearm_overflow(p);
+  if (!err && !p->shutting_down) proactor_rearm_overflow(p);
   return err;
 }
 
@@ -793,8 +832,8 @@ static void pconnection_final_free(pconnection_t *pc) {
   pmutex_finalize(&pc->rearm_mutex);
   pn_condition_free(pc->disconnect_condition);
   pn_connection_driver_destroy(&pc->driver);
-  task_finalize(&pc->task);
   pni_timer_free(pc->timer);
+  task_finalize(&pc->task);
   free(pc);
 }
 
@@ -858,6 +897,7 @@ static void pconnection_forced_shutdown(pconnection_t *pc) {
 // Called from timer_manager with no locks.
 void pni_pconnection_timeout(pconnection_t  *pc) {
   bool notify = false;
+  pn_proactor_t *p = pc->task.proactor;
   uint64_t now = pn_proactor_now_64();
   lock(&pc->task.mutex);
   if (!pc->task.closing) {
@@ -870,7 +910,7 @@ void pni_pconnection_timeout(pconnection_t  *pc) {
   }
   unlock(&pc->task.mutex);
   if (notify)
-    notify_poller(pc->task.proactor);
+    notify_poller(p);
 }
 
 static pn_event_t *pconnection_batch_next(pn_event_batch_t *batch) {
@@ -923,7 +963,7 @@ static inline bool pconnection_wclosed(pconnection_t  *pc) {
    close/shutdown.  Let read()/write() return 0 or -1 to trigger cleanup logic.
 */
 static int pconnection_rearm_check(pconnection_t *pc) {
-  if (pconnection_rclosed(pc) && pconnection_wclosed(pc)) {
+  if ((pconnection_rclosed(pc) && pconnection_wclosed(pc)) || pc->psocket.epoll_io.fd == -1) {
     return 0;
   }
   uint32_t wanted_now = (pc->read_blocked && !pconnection_rclosed(pc)) ? EPOLLIN : 0;
@@ -949,35 +989,6 @@ static inline void pconnection_rearm(pconnection_t *pc, int wanted_now) {
   // Return immediately.  pc may have just been freed by another thread.
 }
 
-/* Only call when context switch is imminent.  Sched lock is highly contested. */
-// Call with both task and sched locks.
-static bool pconnection_sched_sync(pconnection_t *pc) {
-  uint32_t sync_events = 0;
-  uint32_t sync_args = pc->tick_pending << 1;
-  if (pc->psocket.sched_io_events) {
-    pc->new_events = pc->psocket.sched_io_events;
-    pc->psocket.sched_io_events = 0;
-    pc->current_arm = 0;  // or outside lock?
-    sync_events = pc->new_events;
-  }
-  if (pc->task.sched_ready) {
-    pc->task.sched_ready = false;
-    schedule_done(&pc->task);
-    sync_args |= 1;
-  }
-  pc->task.sched_pending = false;
-
-  if (sync_args || sync_events) {
-    // Only replace if poller has found new work for us.
-    pc->process_args = (1 << 2) | sync_args;
-    pc->process_events = sync_events;
-  }
-
-  // Indicate if there are free proactor threads
-  pn_proactor_t *p = pc->task.proactor;
-  return p->poller_suspended || p->suspend_list_head;
-}
-
 /* Call with task lock and having done a write_flush() to "know" the value of wbuf_remaining */
 static inline bool pconnection_work_pending(pconnection_t *pc) {
   if (pc->new_events || pni_task_wake_pending(&pc->task) || pc->tick_pending || pc->queued_disconnect)
@@ -996,14 +1007,9 @@ static void pconnection_done(pconnection_t *pc) {
   bool self_sched = false;
   lock(&pc->task.mutex);
   pc->task.working = false;  // So we can schedule() ourself if necessary.  We remain the de facto
-                             // working task instance while the lock is held.  Need sched_sync too to drain
-                             // a possible stale sched_ready.
+                             // working task instance while the lock is held.
   pc->hog_count = 0;
   bool has_event = pconnection_has_event(pc);
-  // Do as little as possible while holding the sched lock
-  lock(&p->sched_mutex);
-  pconnection_sched_sync(pc);
-  unlock(&p->sched_mutex);
 
   if (has_event || pconnection_work_pending(pc)) {
     self_sched = true;
@@ -1014,10 +1020,11 @@ static void pconnection_done(pconnection_t *pc) {
       pconnection_cleanup(pc);
       // pc may be undefined now
       lock(&p->sched_mutex);
-      notify = unassign_thread(ts, UNUSED);
+      tslot_t *resume_thread;
+      notify = unassign_thread(p, ts, UNUSED, &resume_thread);
       unlock(&p->sched_mutex);
-      if (notify)
-        notify_poller(p);
+      if (notify) notify_poller(p);
+      if (resume_thread) resume(p, resume_thread);
       return;
     }
   }
@@ -1029,10 +1036,12 @@ static void pconnection_done(pconnection_t *pc) {
 
   if (wanted) pconnection_rearm(pc, wanted);  // May free pc on another thread.  Return without touching pc again.
   lock(&p->sched_mutex);
-  if (unassign_thread(ts, UNUSED))
+  tslot_t *resume_thread;
+  if (unassign_thread(p, ts, UNUSED, &resume_thread))
     notify = true;
   unlock(&p->sched_mutex);
   if (notify) notify_poller(p);
+  if (resume_thread) resume(p, resume_thread);
   return;
 }
 
@@ -1188,7 +1197,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
 
   if (waking) {
     pn_connection_t *c = pc->driver.connection;
-    pn_collector_put(pn_connection_collector(c), PN_OBJECT, c, PN_CONNECTION_WAKE);
+    pn_collector_put_object(pn_connection_collector(c), c, PN_CONNECTION_WAKE);
     waking = false;
   }
 
@@ -1200,24 +1209,38 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
   if (!pconnection_rclosed(pc)) {
     pn_rwbytes_t rbuf = pn_connection_driver_read_buffer(&pc->driver);
     if (rbuf.size > 0 && !pc->read_blocked) {
-      ssize_t n = read(pc->psocket.epoll_io.fd, rbuf.start, rbuf.size);
+      ssize_t n = recv(pc->psocket.epoll_io.fd, rbuf.start, rbuf.size, 0);
       if (n > 0) {
         pn_connection_driver_read_done(&pc->driver, n);
+        // If n == rbuf.size then we should enlarge the buffer and see if there is more to read
+        if ((size_t)n==rbuf.size) {
+          rbuf = pn_connection_driver_read_buffer_sized(&pc->driver, n*2);
+          if (rbuf.size > 0) {
+            n = recv(pc->psocket.epoll_io.fd, rbuf.start, rbuf.size, 0);
+            if (n > 0) {
+              pn_connection_driver_read_done(&pc->driver, n);
+            }
+          }
+        }
+        // If we didn't read a full buffer (either in the first or second read) then we are blocked
+        if ((size_t)n < rbuf.size && !pn_connection_driver_read_closed(&pc->driver)) {
+          pc->read_blocked = true;
+        }
         pc->output_drained = false;
         pconnection_tick(pc);         /* check for tick changes. */
         tick_required = false;
         pc->io_doublecheck = false;
-        if (!pn_connection_driver_read_closed(&pc->driver) && (size_t)n < rbuf.size)
-          pc->read_blocked = true;
       }
-      else if (n == 0) {
+      // Need to check for EOF and errors for either read
+      if (n == 0) {
         pc->read_blocked = true;
         pn_connection_driver_read_close(&pc->driver);
-      }
-      else if (errno == EWOULDBLOCK)
-        pc->read_blocked = true;
-      else if (!(errno == EAGAIN || errno == EINTR)) {
-        psocket_error(&pc->psocket, errno, pc->disconnected ? "disconnected" : "on read from");
+      } else if (n < 0) {
+        if (errno == EWOULDBLOCK) {
+          pc->read_blocked = true;
+        } else if (!(errno == EAGAIN || errno == EINTR)) {
+          psocket_error(&pc->psocket, errno, pc->disconnected ? "disconnected" : "on read from");
+        }
       }
     }
   } else {
@@ -1250,9 +1273,6 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
   }
 
   // Never stop working while work remains.  hog_count exception to this rule is elsewhere.
-  lock(&pc->task.proactor->sched_mutex);
-  bool workers_free = pconnection_sched_sync(pc);
-  unlock(&pc->task.proactor->sched_mutex);
 
   if (pconnection_work_pending(pc)) {
     goto retry;  // TODO: get rid of goto without adding more locking
@@ -1269,8 +1289,13 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
     }
   }
 
+  // check one last time for new io before context switch
+  bool workers_free;
+  pn_proactor_t *p = pc->task.proactor;
+  lock(&p->sched_mutex);
+  workers_free = (p->suspend_list_head != NULL);
+  unlock(&p->sched_mutex);
   if (workers_free && !pc->task.closing && !pc->io_doublecheck) {
-    // check one last time for new io before context switch
     pc->io_doublecheck = true;
     pc->read_blocked = false;
     pc->write_blocked = false;
@@ -1414,7 +1439,7 @@ void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *
   }
   /* We need to issue INACTIVE on immediate failure */
   unlock(&pc->task.mutex);
-  if (notify) notify_poller(pc->task.proactor);
+  if (notify) notify_poller(p);
 }
 
 static void pconnection_tick(pconnection_t *pc) {
@@ -1426,36 +1451,40 @@ static void pconnection_tick(pconnection_t *pc) {
       lock(&pc->task.mutex);
       pc->expected_timeout = next;
       unlock(&pc->task.mutex);
-      pni_timer_set(pc->timer, next);
+      if (pni_timer_set(pc->timer, next))
+        notify_poller(pc->task.proactor);
     }
   }
 }
 
 void pn_connection_wake(pn_connection_t* c) {
-  bool notify = false;
   pconnection_t *pc = get_pconnection(c);
   if (pc) {
+    pn_proactor_t *p = pc->task.proactor;
+    bool notify = false;
+
     lock(&pc->task.mutex);
     if (!pc->task.closing) {
       notify = pni_task_wake(&pc->task);
     }
     unlock(&pc->task.mutex);
+    if (notify) notify_poller(p);
   }
-  if (notify) notify_poller(pc->task.proactor);
 }
 
 void pn_proactor_release_connection(pn_connection_t *c) {
-  bool notify = false;
   pconnection_t *pc = get_pconnection(c);
   if (pc) {
+    bool notify = false;
+    pn_proactor_t *p = pc->task.proactor;
     set_pconnection(c, NULL);
     lock(&pc->task.mutex);
     pn_connection_driver_release_connection(&pc->driver);
     pconnection_begin_close(pc);
     notify = schedule(&pc->task);
     unlock(&pc->task.mutex);
+    if (notify) notify_poller(p);
   }
-  if (notify) notify_poller(pc->task.proactor);
 }
 
 // ========================================================================
@@ -1466,7 +1495,7 @@ pn_listener_t *pn_event_listener(pn_event_t *e) {
   return (pn_event_class(e) == PN_CLASSCLASS(pn_listener)) ? (pn_listener_t*)pn_event_context(e) : NULL;
 }
 
-pn_listener_t *pn_listener() {
+pn_listener_t *pn_listener(void) {
   pn_listener_t *l = (pn_listener_t*)calloc(1, sizeof(pn_listener_t));
   if (l) {
     l->batch.next_event = listener_batch_next;
@@ -1574,7 +1603,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
 
 // call with lock held and task.working false
 static inline bool listener_can_free(pn_listener_t *l) {
-  return l->task.closing && l->close_dispatched && !l->task.ready && !l->active_count;
+  return l->task.closing && l->close_dispatched && !l->task.ready && !l->active_count && !l->overflow_count;
 }
 
 static inline void listener_final_free(pn_listener_t *l) {
@@ -1607,13 +1636,14 @@ void pn_listener_free(pn_listener_t *l) {
 static void listener_begin_close(pn_listener_t* l) {
   if (!l->task.closing) {
     l->task.closing = true;
+    bool polling = !l->task.proactor->shutting_down;  // Is poller still running?
 
     /* Close all listening sockets */
     for (size_t i = 0; i < l->acceptors_size; ++i) {
       acceptor_t *a = &l->acceptors[i];
       psocket_t *ps = &a->psocket;
       if (ps->epoll_io.fd >= 0) {
-        if (a->armed) {
+        if (a->armed && polling) {
           shutdown(ps->epoll_io.fd, SHUT_RD);  // Force epoll event and callback
         } else {
           int fd = ps->epoll_io.fd;
@@ -1632,10 +1662,6 @@ static void listener_begin_close(pn_listener_t* l) {
     }
     assert(!l->pending_count);
 
-    unlock(&l->task.mutex);
-    /* Remove all acceptors from the overflow list.  closing flag prevents re-insertion.*/
-    proactor_rearm_overflow(pn_listener_proactor(l));
-    lock(&l->task.mutex);
     pn_collector_put(l->collector, PN_CLASSCLASS(pn_listener), l, PN_LISTENER_CLOSE);
   }
 }
@@ -1643,12 +1669,13 @@ static void listener_begin_close(pn_listener_t* l) {
 void pn_listener_close(pn_listener_t* l) {
   bool notify = false;
   lock(&l->task.mutex);
-  if (!l->task.closing) {
+  pn_proactor_t *p = l->task.proactor;
+  if (p && !l->task.closing) {
     listener_begin_close(l);
     notify = schedule(&l->task);
   }
   unlock(&l->task.mutex);
-  if (notify) notify_poller(l->task.proactor);
+  if (notify) notify_poller(p);
 }
 
 static void listener_forced_shutdown(pn_listener_t *l) {
@@ -1756,7 +1783,16 @@ static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
 static void listener_done(pn_listener_t *l) {
   pn_proactor_t *p = l->task.proactor;
   tslot_t *ts = l->task.runner;
+
   lock(&l->task.mutex);
+
+  if (l->close_dispatched && l->overflow_count) {
+    unlock(&l->task.mutex);
+    /* Remove all acceptors from the overflow list.  closing flag prevents re-insertion.*/
+    proactor_rearm_overflow(pn_listener_proactor(l));
+    lock(&l->task.mutex);
+    assert(l->overflow_count == 0);
+  }
 
   // Just in case the app didn't accept all the pending accepts
   // Shuffle the list back to start at 0
@@ -1781,42 +1817,27 @@ static void listener_done(pn_listener_t *l) {
   bool notify = false;
   l->task.working = false;
 
-  lock(&p->sched_mutex);
-  int n_events = 0;
-  for (size_t i = 0; i < l->acceptors_size; i++) {
-    psocket_t *ps = &l->acceptors[i].psocket;
-    if (ps->sched_io_events) {
-      ps->working_io_events = ps->sched_io_events;
-      ps->sched_io_events = 0;
-    }
-    if (ps->working_io_events)
-      n_events++;
-  }
-
-  if (l->task.sched_ready) {
-    l->task.sched_ready = false;
-    schedule_done(&l->task);
-  }
-  unlock(&p->sched_mutex);
-
-  if (!n_events && listener_can_free(l)) {
+  if (listener_can_free(l)) {
     unlock(&l->task.mutex);
     pn_listener_free(l);
     lock(&p->sched_mutex);
-    notify = unassign_thread(ts, UNUSED);
+    tslot_t *resume_thread;
+    notify = unassign_thread(p, ts, UNUSED, &resume_thread);
     unlock(&p->sched_mutex);
-    if (notify)
-      notify_poller(p);
+    if (notify) notify_poller(p);
+    if (resume_thread) resume(p, resume_thread);
     return;
-  } else if (n_events || listener_has_event(l))
+  } else if (listener_has_event(l))
     notify = schedule(&l->task);
   unlock(&l->task.mutex);
 
   lock(&p->sched_mutex);
-  if (unassign_thread(ts, UNUSED))
+  tslot_t *resume_thread;
+  if (unassign_thread(p, ts, UNUSED, &resume_thread))
     notify = true;
   unlock(&p->sched_mutex);
   if (notify) notify_poller(p);
+  if (resume_thread) resume(p, resume_thread);
 }
 
 pn_proactor_t *pn_listener_proactor(pn_listener_t* l) {
@@ -1841,8 +1862,9 @@ pn_record_t *pn_listener_attachments(pn_listener_t *l) {
 
 void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t) {
   pconnection_t *pc = (pconnection_t*) malloc(sizeof(pconnection_t));
-  assert(pc); // TODO: memory safety
-  const char *err = pconnection_setup(pc, pn_listener_proactor(l), c, t, true, "", 0);
+  pn_proactor_t *p = pn_listener_proactor(l);
+  assert(pc && p); // TODO: memory safety
+  const char *err = pconnection_setup(pc, p, c, t, true, "", 0);
   if (err) {
     PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_listener_accept failure: %s", err);
     return;
@@ -1877,7 +1899,7 @@ void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t
     notify = schedule(&l->task);
   unlock(&pc->task.mutex);
   unlock(&l->task.mutex);
-  if (notify) notify_poller(l->task.proactor);
+  if (notify) notify_poller(p);
 }
 
 
@@ -1929,7 +1951,7 @@ static void grow_poller_bufs(pn_proactor_t* p) {
     ee->wanted = EPOLLIN;      // for all subsequent rearms
 }
 
-pn_proactor_t *pn_proactor() {
+pn_proactor_t *pn_proactor(void) {
   if (getenv("PNI_EPOLL_NOWARM")) pni_warm_sched = false;
   if (getenv("PNI_EPOLL_IMMEDIATE")) pni_immediate = true;
   if (getenv("PNI_EPOLL_SPINS")) pni_spins = atoi(getenv("PNI_EPOLL_SPINS"));
@@ -1940,6 +1962,7 @@ pn_proactor_t *pn_proactor() {
   pmutex_init(&p->eventfd_mutex);
   pmutex_init(&p->sched_mutex);
   pmutex_init(&p->tslot_mutex);
+  pmutex_init(&p->timeout_mutex);
 
   if ((p->epollfd = epoll_create(1)) >= 0) {
     if ((p->eventfd = eventfd(0, EFD_NONBLOCK)) >= 0) {
@@ -1952,6 +1975,7 @@ pn_proactor_t *pn_proactor() {
             epoll_eventfd_init(&p->epoll_interrupt, p->interruptfd, p->epollfd, false);
             p->tslot_map = pn_hash(PN_VOID, 0, 0.75);
             grow_poller_bufs(p);
+            p->ready_list_generation = 1;
             return p;
           }
       }
@@ -1961,6 +1985,7 @@ pn_proactor_t *pn_proactor() {
   if (p->eventfd >= 0) close(p->eventfd);
   if (p->interruptfd >= 0) close(p->interruptfd);
   pni_timer_manager_finalize(&p->timer_manager);
+  pmutex_finalize(&p->timeout_mutex);
   pmutex_finalize(&p->tslot_mutex);
   pmutex_finalize(&p->sched_mutex);
   pmutex_finalize(&p->eventfd_mutex);
@@ -1989,6 +2014,9 @@ void pn_proactor_free(pn_proactor_t *p) {
      case LISTENER:
       listener_forced_shutdown(task_listener(tsk));
       break;
+     case RAW_CONNECTION:
+      pni_raw_connection_forced_shutdown(pni_task_raw_connection(tsk));
+      break;
      default:
       break;
     }
@@ -1996,6 +2024,7 @@ void pn_proactor_free(pn_proactor_t *p) {
 
   pni_timer_manager_finalize(&p->timer_manager);
   pn_collector_free(p->collector);
+  pmutex_finalize(&p->timeout_mutex);
   pmutex_finalize(&p->tslot_mutex);
   pmutex_finalize(&p->sched_mutex);
   pmutex_finalize(&p->eventfd_mutex);
@@ -2167,21 +2196,6 @@ static tslot_t *find_tslot(pn_proactor_t *p) {
   return ts;
 }
 
-// Call with shed_lock held
-// Caller must resume() return value if not null
-static tslot_t *resume_one_thread(pn_proactor_t *p) {
-  // If pn_proactor_get has an early return, we need to resume one suspended thread (if any)
-  // to be the new poller.
-
-  tslot_t *ts = p->suspend_list_head;
-  if (ts) {
-    LL_REMOVE(p, suspend_list, ts);
-    p->suspend_list_count--;
-    ts->state = PROCESSING;
-  }
-  return ts;
-}
-
 // Called with sched lock, returns with sched lock still held.
 static pn_event_batch_t *process(task_t *tsk) {
   bool tsk_ready = false;
@@ -2226,8 +2240,11 @@ static pn_event_batch_t *process(task_t *tsk) {
     break;
   }
   case RAW_CONNECTION: {
+    psocket_t *ps = pni_task_raw_psocket(tsk);
+    uint32_t events = ps->sched_io_events;
+    if (events) ps->sched_io_events = 0;
     unlock(&p->sched_mutex);
-    batch = pni_raw_connection_process(tsk, tsk_ready);
+    batch = pni_raw_connection_process(tsk, events, tsk_ready);
     break;
   }
   case TIMER_MANAGER: {
@@ -2248,37 +2265,36 @@ static pn_event_batch_t *process(task_t *tsk) {
 
 // Call with both sched_mutex and eventfd_mutex held
 static void schedule_ready_list(pn_proactor_t *p) {
-  // append ready_list_first..ready_list_last to end of sched_ready_last
+  // Append ready_list_first..ready_list_last to end of sched_ready_last
+  // May see several in single do_epoll() if EINTR.
   if (p->ready_list_first) {
     if (p->sched_ready_last)
       p->sched_ready_last->ready_next = p->ready_list_first;  // join them
     if (!p->sched_ready_first)
       p->sched_ready_first = p->ready_list_first;
     p->sched_ready_last = p->ready_list_last;
-    if (!p->sched_ready_current)
-      p->sched_ready_current = p->sched_ready_first;
     p->ready_list_first = p->ready_list_last = NULL;
+
+    // Track sched_ready_count to know how many threads may be needed.
+    p->sched_ready_count += p->ready_list_count;
+    p->ready_list_count = 0;
   }
 }
 
-// Call with schedule lock held.  Called only by poller thread.
+// Call with schedule lock and eventfd lock held.  Called only by poller thread.
+// Needs to be quick.
 static task_t *post_event(pn_proactor_t *p, struct epoll_event *evp) {
   epoll_extended_t *ee = (epoll_extended_t *) evp->data.ptr;
   task_t *tsk = NULL;
 
   switch (ee->type) {
   case EVENT_FD:
-    if  (ee->fd == p->interruptfd) {        /* Interrupts have their own dedicated eventfd */
+    if (ee->fd == p->interruptfd) {        /* Interrupts have their own dedicated eventfd */
       p->sched_interrupt = true;
       tsk = &p->task;
       tsk->sched_pending = true;
-    } else {
-      // main ready tasks eventfd
-      lock(&p->eventfd_mutex);
-      schedule_ready_list(p);
-      tsk = p->sched_ready_current;
-      unlock(&p->eventfd_mutex);
     }
+    // else if (ee->fd == p->eventfd)... schedule_ready_list already performed by poller task.
     break;
   case PCONNECTION_IO: {
     psocket_t *ps = containerof(ee, psocket_t, epoll_io);
@@ -2313,16 +2329,16 @@ static task_t *post_event(pn_proactor_t *p, struct epoll_event *evp) {
     break;
   }
   }
-  if (tsk && !tsk->runnable && !tsk->runner)
+  if (tsk && !tsk->runnables_idx && !tsk->runner && !on_sched_ready_list(tsk, p))
     return tsk;
   return NULL;
 }
 
 
-static task_t *post_ready(pn_proactor_t *p, task_t *tsk) {
+static inline task_t *post_ready(pn_proactor_t *p, task_t *tsk) {
   tsk->sched_ready = true;
   tsk->sched_pending = true;
-  if (!tsk->runnable && !tsk->runner)
+  if (!tsk->runnables_idx && !tsk->runner)
     return tsk;
   return NULL;
 }
@@ -2360,31 +2376,48 @@ static task_t *next_runnable(pn_proactor_t *p, tslot_t *ts) {
     return ts->task;
   }
 
-  // warm pairing ?
+  // Take any runnables task if it results in a warm pairing.
   task_t *tsk = ts->prev_task;
-  if (tsk && (tsk->runnable)) { // or tsk->sched_ready too?
+  if (tsk && (tsk->runnables_idx)) {
+    // A task can self delete, so don't allow it to run twice.
+    task_t **runnables_slot = &p->runnables[tsk->runnables_idx -1];
+    assert(*runnables_slot == tsk);
+    *runnables_slot = NULL;
     assign_thread(ts, tsk);
     return tsk;
   }
 
-  // check for an unassigned runnable task or ready list task
+  // check for remaining runnable tasks
   if (p->n_runnables) {
     // Any unclaimed runnable?
     while (p->n_runnables) {
       tsk = p->runnables[p->next_runnable++];
       if (p->n_runnables == p->next_runnable)
         p->n_runnables = 0;
-      if (tsk->runnable) {
+      if (tsk) {
         assign_thread(ts, tsk);
         return tsk;
       }
     }
   }
 
-  if (p->sched_ready_current) {
-    tsk = p->sched_ready_current;
-    pop_ready_task(tsk);  // updates sched_ready_current
-    assert(!tsk->runnable && !tsk->runner);
+  // sched_ready list tasks deferred in poller_do_epoll()
+  while (p->sched_ready_pending) {
+    tsk = sched_ready_pop_front(p);
+    assert(tsk->ready); // eventfd_mutex required post ready set and pre move to sched_ready_list
+    if (post_ready(p, tsk)) {
+      assert(!tsk->runnables_idx && !tsk->runner);
+      assign_thread(ts, tsk);
+      return tsk;
+    }
+  }
+
+  // the resched list
+  if (p->polled_resched_count) {
+    // Unprocessed resched tasks remain.
+    tsk = resched_pop_front(p);
+    assert(tsk->sched_pending && !tsk->runnables_idx && tsk->runner == RESCHEDULE_PLACEHOLDER);
+    tsk->runner = NULL;
     assign_thread(ts, tsk);
     return tsk;
   }
@@ -2421,10 +2454,12 @@ static pn_event_batch_t *next_event_batch(pn_proactor_t* p, bool can_block) {
         unlock(&p->sched_mutex);
         return batch;
       }
-      bool notify = unassign_thread(ts, PROCESSING);
-      if (notify) {
+      tslot_t *resume_thread;
+      bool notify = unassign_thread(p, ts, PROCESSING, &resume_thread);
+      if (notify || resume_thread) {
         unlock(&p->sched_mutex);
-        notify_poller(p);
+        if (notify) notify_poller(p);
+        if (resume_thread) resume(p, resume_thread);
         lock(&p->sched_mutex);
       }
       continue;  // Long time may have passed.  Back to beginning.
@@ -2460,8 +2495,11 @@ static pn_event_batch_t *next_event_batch(pn_proactor_t* p, bool can_block) {
 // Call with sched lock.  Return true if !can_block and no new events to process.
 static bool poller_do_epoll(struct pn_proactor_t* p, tslot_t *ts, bool can_block) {
   // As poller with lots to do, be mindful of hogging the sched lock.  Release when making kernel calls.
+  assert(!p->resched_cutoff);
+  assert(!p->sched_ready_first && !p->sched_ready_pending);
   int n_events;
   task_t *tsk;
+  bool unpolled_work = false;
 
   while (true) {
     assert(p->n_runnables == 0);
@@ -2472,19 +2510,23 @@ static bool poller_do_epoll(struct pn_proactor_t* p, tslot_t *ts, bool can_block
     p->last_earmark = NULL;
 
     bool unfinished_earmarks = p->earmark_count > 0;
-    bool new_ready_tasks = false;
-    bool epoll_immediate = unfinished_earmarks || !can_block;
-    assert(!p->sched_ready_first);
+    if (unfinished_earmarks || p->resched_first)
+      unpolled_work = true;
+    bool epoll_immediate = unpolled_work || !can_block;
+
+    // Determine if notify_poller() can be avoided.
     if (!epoll_immediate) {
       lock(&p->eventfd_mutex);
       if (p->ready_list_first) {
+        unpolled_work = true;
         epoll_immediate = true;
-        new_ready_tasks = true;
       } else {
+        // Poller may sleep.  Enable eventfd wakeup.
         p->ready_list_active = false;
       }
       unlock(&p->eventfd_mutex);
     }
+
     int timeout = (epoll_immediate) ? 0 : -1;
     p->poller_suspended = (timeout == -1);
     unlock(&p->sched_mutex);
@@ -2494,17 +2536,26 @@ static bool poller_do_epoll(struct pn_proactor_t* p, tslot_t *ts, bool can_block
     lock(&p->sched_mutex);
     p->poller_suspended = false;
 
-    bool unpolled_work = false;
+    if (p->resched_first) {
+      // Defer future resched tasks until next do_epoll()
+      p->resched_cutoff = p->resched_last;
+      assert(p->polled_resched_count == 0);
+      p->polled_resched_count = p->resched_count;
+      p->resched_count = 0;
+      unpolled_work = true;
+    }
     if (p->earmark_count > 0) {
       p->earmark_drain = true;
       unpolled_work = true;
     }
-    if (new_ready_tasks) {
-      lock(&p->eventfd_mutex);
-      schedule_ready_list(p);
-      unlock(&p->eventfd_mutex);
+    // Take stock of ready list before any post_event()
+    lock(&p->eventfd_mutex);
+    schedule_ready_list(p);
+    if (p->sched_ready_first)
       unpolled_work = true;
-    }
+    if (++p->ready_list_generation == 0) // wrapping OK, but 0 means unset
+      p->ready_list_generation = 1;
+    unlock(&p->eventfd_mutex);
 
     if (n_events < 0) {
       if (errno != EINTR)
@@ -2527,39 +2578,49 @@ static bool poller_do_epoll(struct pn_proactor_t* p, tslot_t *ts, bool can_block
     break;
   }
 
-  // We have unpolled work or at least one new epoll event
+  // We have unpolled work or at least one new epoll event.
+  // Remember tasks that together constitute new work.  See note at beginning about duplicates.
 
+  lock(&p->eventfd_mutex);
 
+  // Longest hold of eventfd_mutex.  The following must be quick with no external calls:
+  // post_event(), make_runnable(), assign_thread(), earmark_thread().
   for (int i = 0; i < n_events; i++) {
     tsk = post_event(p, &p->kevents[i]);
     if (tsk)
       make_runnable(tsk);
   }
+  unlock(&p->eventfd_mutex);
+
   if (n_events > 0)
     memset(p->kevents, 0, sizeof(struct epoll_event) * n_events);
 
-  // The list of ready tasks can be very long.  Traverse part of it looking for warm pairings.
-  task_t *ctsk = p->sched_ready_current;
+  // The list of ready tasks can be very long.  Tradeoff between slow walk through linked
+  // list looking for more warm pairings (while holding the sched lock), or letting
+  // threads looking for work grab from the front.  Search less when busy.  TODO:
+  // instrument an optimal value or heuristic.
+  int warm_tries = p->suspend_list_count - p->n_warm_runnables;
+  if (warm_tries < 0)
+    warm_tries = 0;
+
   int max_runnables = p->runnables_capacity;
-  while (ctsk && p->n_runnables < max_runnables) {
-    if (ctsk->runner == RESCHEDULE_PLACEHOLDER)
-      ctsk->runner = NULL;  // Allow task to run again.
+  while (p->sched_ready_count && p->n_runnables < max_runnables && warm_tries) {
+    task_t *ctsk = sched_ready_pop_front(p);
     tsk = post_ready(p, ctsk);
+    warm_tries--;
     if (tsk)
       make_runnable(tsk);
-    pop_ready_task(ctsk);
-    ctsk = ctsk->ready_next;
   }
-  p->sched_ready_current = ctsk;
-  // More ready tasks than places on the runnables list
-  while (ctsk) {
-    if (ctsk->runner == RESCHEDULE_PLACEHOLDER)
-      ctsk->runner = NULL;  // Allow task to run again.
-    ctsk->sched_ready = true;
-    ctsk->sched_pending = true;
-    if (ctsk->runnable || ctsk->runner)
-      pop_ready_task(ctsk);
-    ctsk = ctsk->ready_next;
+  // sched_ready list is now either consumed or partially deferred.
+  // Allow next_runnable() to see any remaining sched_ready tasks.
+  p->sched_ready_pending = p->sched_ready_count > 0;
+
+  while (p->resched_cutoff && p->n_runnables < max_runnables && warm_tries) {
+    task_t *ctsk = resched_pop_front(p);
+    assert(ctsk->runner == RESCHEDULE_PLACEHOLDER && !ctsk->runnables_idx);
+    ctsk->runner = NULL;  // Allow task to run again.
+    warm_tries--;
+    make_runnable(ctsk);
   }
 
   if (pni_immediate && !ts->task) {
@@ -2571,6 +2632,7 @@ static bool poller_do_epoll(struct pn_proactor_t* p, tslot_t *ts, bool can_block
       if (++p->next_runnable == p->n_runnables)
         p->n_runnables = 0;
     } else if (p->n_warm_runnables) {
+      // Immediate doesn't contemplate some other (warm) thread running instead
       ptsk = p->warm_runnables[--p->n_warm_runnables];
       tslot_t *ts2 = ptsk->runner;
       ts2->prev_task = ts2->task = NULL;
@@ -2598,7 +2660,7 @@ static void poller_done(struct pn_proactor_t* p, tslot_t *ts) {
   tslot_t **resume_list2 = NULL;
 
   if (p->suspend_list_count) {
-    int max_resumes = p->n_warm_runnables + p->n_runnables;
+    int max_resumes = p->n_warm_runnables + p->n_runnables + p->sched_ready_count + p->polled_resched_count;
     max_resumes = pn_min(max_resumes, p->suspend_list_count);
     if (max_resumes) {
       resume_list2 = (tslot_t **) alloca(max_resumes * sizeof(tslot_t *));
@@ -2654,44 +2716,23 @@ pn_event_batch_t *pn_proactor_get(struct pn_proactor_t* p) {
   return next_event_batch(p, false);
 }
 
-// Call with no locks
-static inline void check_earmark_override(pn_proactor_t *p, tslot_t *ts) {
-  if (!ts || !ts->earmark_override)
-    return;
-  if (ts->earmark_override->generation == ts->earmark_override_gen) {
-    // Other (overridden) thread not seen since this thread started and finished the event batch.
-    // Thread is perhaps gone forever, which may leave us short of a poller thread
-    lock(&p->sched_mutex);
-    tslot_t *res_ts = resume_one_thread(p);
-    unlock(&p->sched_mutex);
-    if (res_ts) resume(p, res_ts);
-  }
-  ts->earmark_override = NULL;
-}
-
 void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
   pconnection_t *pc = batch_pconnection(batch);
   if (pc) {
-    tslot_t *ts = pc->task.runner;
     pconnection_done(pc);
     // pc possibly freed/invalid
-    check_earmark_override(p, ts);
     return;
   }
   pn_listener_t *l = batch_listener(batch);
   if (l) {
-    tslot_t *ts = l->task.runner;
     listener_done(l);
     // l possibly freed/invalid
-    check_earmark_override(p, ts);
     return;
   }
   praw_connection_t *rc = pni_batch_raw_connection(batch);
   if (rc) {
-    tslot_t *ts = pni_raw_connection_task(rc)->runner;
     pni_raw_connection_done(rc);
     // rc possibly freed/invalid
-    check_earmark_override(p, ts);
     return;
   }
   pn_proactor_t *bp = batch_proactor(batch);
@@ -2712,13 +2753,13 @@ void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
     unlock(&p->task.mutex);
     lock(&p->sched_mutex);
     tslot_t *ts = p->task.runner;
-    if (unassign_thread(ts, UNUSED))
+    tslot_t *resume_thread;
+    if (unassign_thread(p, ts, UNUSED, &resume_thread))
       notify = true;
     unlock(&p->sched_mutex);
 
-    if (notify)
-      notify_poller(p);
-    check_earmark_override(p, ts);
+    if (notify) notify_poller(p);
+    if (resume_thread) resume(p, resume_thread);
     return;
   }
 }
@@ -2733,26 +2774,42 @@ void pn_proactor_interrupt(pn_proactor_t *p) {
 
 void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
   bool notify = false;
+  lock(&p->timeout_mutex);
+
   lock(&p->task.mutex);
   p->timeout_set = true;
   if (t == 0) {
-    pni_timer_set(p->timer, 0);
     p->need_timeout = true;
-    notify = schedule(&p->task);
-  } else {
-    pni_timer_set(p->timer, t + pn_proactor_now_64());
+    if (schedule(&p->task))
+      notify = true;
   }
   unlock(&p->task.mutex);
+
+  if (t == 0) {
+    if (pni_timer_set(p->timer, 0))
+      notify = true;
+  } else {
+    if (pni_timer_set(p->timer, t + pn_proactor_now_64()))
+      notify = true;
+  }
+  unlock(&p->timeout_mutex);
   if (notify) notify_poller(p);
 }
 
 void pn_proactor_cancel_timeout(pn_proactor_t *p) {
+  bool notify = false;
+  lock(&p->timeout_mutex);
+
   lock(&p->task.mutex);
   p->timeout_set = false;
   p->need_timeout = false;
-  pni_timer_set(p->timer, 0);
-  bool notify = schedule_if_inactive(p);
+  if (schedule_if_inactive(p))
+    notify = true;
   unlock(&p->task.mutex);
+
+  if (pni_timer_set(p->timer, 0))
+    notify = true;
+  unlock(&p->timeout_mutex);
   if (notify) notify_poller(p);
 }
 
@@ -2887,5 +2944,15 @@ pn_millis_t pn_proactor_now(void) {
 int64_t pn_proactor_now_64(void) {
   struct timespec t;
   clock_gettime(CLOCK_MONOTONIC, &t);
-  return t.tv_sec * 1000 + t.tv_nsec / 1000000;
+  return ((int64_t)t.tv_sec) * 1000 + t.tv_nsec / 1000000;
+}
+
+void pn_connection_write_flush(pn_connection_t *c) {
+  pconnection_t *pc = get_pconnection(c);
+  if (pc) {
+    // Assume can write and have frames to write.  Booleans will be correctly re-evaluated in write_flush().
+    pc->write_blocked = false;
+    pc->output_drained = false;
+    write_flush(pc);  // May generate transport event.
+  }
 }

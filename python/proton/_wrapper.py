@@ -17,12 +17,10 @@
 # under the License.
 #
 
-from __future__ import absolute_import
+from typing import Any, Callable, Optional
 
-from cproton import pn_incref, pn_decref, \
-    pn_py2void, pn_void2py, \
-    pn_record_get, pn_record_def, pn_record_set, \
-    PN_PYREF
+from cproton import addressof, pn_incref, pn_decref, \
+    pn_record_get_py, pn_record_def_py, pn_record_set_py
 
 from ._exceptions import ProtonException
 
@@ -43,14 +41,12 @@ EMPTY_ATTRS = EmptyAttrs()
 
 
 class Wrapper(object):
-    """ Wrapper for python objects that need to be stored in event contexts and be retrived again from them
+    """ Wrapper for python objects that need to be stored in event contexts and be retrieved again from them
         Quick note on how this works:
         The actual *python* object has only 3 attributes which redirect into the wrapped C objects:
         _impl   The wrapped C object itself
         _attrs  This is a special pn_record_t holding a PYCTX which is a python dict
                 every attribute in the python object is actually looked up here
-        _record This is the C record itself (so actually identical to _attrs really but
-                a different python type
 
         Because the objects actual attributes are stored away they must be initialised *after* the wrapping
         is set up. This is the purpose of the _init method in the wrapped  object. Wrapper.__init__ will call
@@ -59,81 +55,78 @@ class Wrapper(object):
 
     """
 
-    def __init__(self, impl_or_constructor, get_context=None):
+    def __init__(
+            self,
+            impl: Any = None,
+            get_context: Optional[Callable[[Any], Any]] = None,
+            constructor: Optional[Callable[[], Any]] = None
+    ) -> None:
         init = False
-        if callable(impl_or_constructor):
+        if impl is None and constructor is not None:
             # we are constructing a new object
-            impl = impl_or_constructor()
+            impl = constructor()
             if impl is None:
                 self.__dict__["_impl"] = impl
                 self.__dict__["_attrs"] = EMPTY_ATTRS
-                self.__dict__["_record"] = None
                 raise ProtonException(
                     "Wrapper failed to create wrapped object. Check for file descriptor or memory exhaustion.")
             init = True
         else:
             # we are wrapping an existing object
-            impl = impl_or_constructor
             pn_incref(impl)
 
         if get_context:
             record = get_context(impl)
-            attrs = pn_void2py(pn_record_get(record, PYCTX))
+            attrs = pn_record_get_py(record)
             if attrs is None:
                 attrs = {}
-                pn_record_def(record, PYCTX, PN_PYREF)
-                pn_record_set(record, PYCTX, pn_py2void(attrs))
+                pn_record_def_py(record)
+                pn_record_set_py(record, attrs)
                 init = True
         else:
             attrs = EMPTY_ATTRS
             init = False
-            record = None
         self.__dict__["_impl"] = impl
         self.__dict__["_attrs"] = attrs
-        self.__dict__["_record"] = record
         if init:
             self._init()
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         attrs = self.__dict__["_attrs"]
         if name in attrs:
             return attrs[name]
         else:
             raise AttributeError(name + " not in _attrs")
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
         if hasattr(self.__class__, name):
             object.__setattr__(self, name, value)
         else:
             attrs = self.__dict__["_attrs"]
             attrs[name] = value
 
-    def __delattr__(self, name):
+    def __delattr__(self, name: str) -> None:
         attrs = self.__dict__["_attrs"]
         if attrs:
             del attrs[name]
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(addressof(self._impl))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if isinstance(other, Wrapper):
             return addressof(self._impl) == addressof(other._impl)
         return False
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         if isinstance(other, Wrapper):
             return addressof(self._impl) != addressof(other._impl)
         return True
 
-    def __del__(self):
+    def __del__(self) -> None:
         pn_decref(self._impl)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<%s.%s 0x%x ~ 0x%x>' % (self.__class__.__module__,
                                         self.__class__.__name__,
                                         id(self), addressof(self._impl))
-
-
-PYCTX = int(pn_py2void(Wrapper))
-addressof = int

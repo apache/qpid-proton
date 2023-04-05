@@ -19,8 +19,10 @@
  *
  */
 
-#include <proton/object.h>
 #include <proton/reactor.h>
+
+#include "core/object_private.h"
+
 #include <assert.h>
 
 struct pn_task_t {
@@ -30,16 +32,18 @@ struct pn_task_t {
   bool cancelled;
 };
 
-void pn_task_initialize(pn_task_t *task) {
+void pn_task_initialize(void *object) {
+  pn_task_t *task = (pn_task_t *)object;
   task->pool = NULL;
   task->attachments = pn_record();
   task->deadline = 0;
   task->cancelled = false;
 }
 
-void pn_task_finalize(pn_task_t *task) {
+void pn_task_finalize(void *object) {
   // if we are the last reference to the pool then don't put ourselves
   // into it
+  pn_task_t *task = (pn_task_t *)object;
   if (task->pool && pn_refcount(task->pool) > 1) {
     pn_record_clear(task->attachments);
     pn_list_add(task->pool, task);
@@ -51,17 +55,18 @@ void pn_task_finalize(pn_task_t *task) {
   }
 }
 
-intptr_t pn_task_compare(pn_task_t *a, pn_task_t *b) {
-  return a->deadline - b->deadline;
+intptr_t pn_task_compare(void *a, void *b) {
+  pn_task_t *ta = (pn_task_t *)a;
+  pn_task_t *tb = (pn_task_t *)b;
+  return ta->deadline - tb->deadline;
 }
 
 #define pn_task_inspect NULL
 #define pn_task_hashcode NULL
 
-PN_CLASSDEF(pn_task)
-
+static const pn_class_t PN_CLASSCLASS(pn_task) = PN_CLASS(pn_task);
 pn_task_t *pn_task(void) {
-  pn_task_t *task = pn_task_new();
+  pn_task_t *task = pn_class_new(&PN_CLASSCLASS(pn_task), sizeof(pn_task_t));
   return task;
 }
 
@@ -85,12 +90,14 @@ struct pn_timer_t {
   pn_collector_t *collector;
 };
 
-static void pn_timer_initialize(pn_timer_t *timer) {
-  timer->pool = pn_list(PN_OBJECT, 0);
-  timer->tasks = pn_list(PN_OBJECT, 0);
+static void pn_timer_initialize(void *object) {
+  pn_timer_t *timer = (pn_timer_t *)object;
+  timer->pool = pn_list(&PN_CLASSCLASS(pn_task), 0);
+  timer->tasks = pn_list(&PN_CLASSCLASS(pn_task), 0);
 }
 
-static void pn_timer_finalize(pn_timer_t *timer) {
+static void pn_timer_finalize(void *object) {
+  pn_timer_t *timer = (pn_timer_t *)object;
   pn_decref(timer->pool);
   pn_free(timer->tasks);
 }
@@ -99,10 +106,10 @@ static void pn_timer_finalize(pn_timer_t *timer) {
 #define pn_timer_compare NULL
 #define pn_timer_hashcode NULL
 
-PN_CLASSDEF(pn_timer)
 
 pn_timer_t *pn_timer(pn_collector_t *collector) {
-  pn_timer_t *timer = pn_timer_new();
+  static const pn_class_t clazz = PN_CLASS(pn_timer);
+  pn_timer_t *timer = pn_class_new(&clazz, sizeof(pn_timer_t));
   timer->collector = collector;
   return timer;
 }
@@ -153,7 +160,7 @@ void pn_timer_tick(pn_timer_t *timer, pn_timestamp_t now) {
       pn_task_t *min = (pn_task_t *) pn_list_minpop(timer->tasks);
       assert(min == task);
       if (!min->cancelled)
-          pn_collector_put(timer->collector, PN_OBJECT, min, PN_TIMER_TASK);
+          pn_collector_put_object(timer->collector, min, PN_TIMER_TASK);
       pn_decref(min);
     } else {
       break;

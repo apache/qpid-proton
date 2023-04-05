@@ -37,7 +37,7 @@ namespace proton {
 /// @see @ref types_page
 class null : private internal::comparable<null> {
   public:
-    null() {}
+    null() = default;
     /// Constructed from nullptr literal
     null(decltype(nullptr)) {}
 

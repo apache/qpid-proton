@@ -21,26 +21,27 @@
 
 #include "dispatcher.h"
 
+#include "consumers.h"
+#include "dispatch_actions.h"
 #include "engine-internal.h"
 #include "framing.h"
 #include "logger_private.h"
 #include "protocol.h"
 
-#include "dispatch_actions.h"
 
-int pni_bad_frame(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload) {
+int pni_bad_frame(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload) {
   PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame: type: %d: Unknown performative", frame_type);
   return PN_ERR;
 }
 
-int pni_bad_frame_type(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload) {
+int pni_bad_frame_type(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload) {
   PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame: Unknown frame type: %d", frame_type);
   return PN_ERR;
 }
 
 // We could use a table based approach here if we needed to dynamically
 // add new performatives
-static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode, uint8_t frame_type, uint16_t channel, pn_bytes_t frame_payload)
 {
   pn_action_t *action;
   switch (frame_type) {
@@ -72,50 +73,31 @@ static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode,
     break;
   default:              action = pni_bad_frame_type; break;
   };
-  return action(transport, frame_type, channel, args, payload);
+  return action(transport, frame_type, channel, frame_payload);
 }
 
-static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_frame_t frame)
+static int pni_dispatch_frame(pn_frame_t frame, pn_logger_t *logger, pn_transport_t * transport)
 {
-  if (frame.size == 0) { // ignore null frames
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME, "%u <- (EMPTY FRAME)", frame.channel);
+  pn_bytes_t frame_payload = frame.frame_payload0;
+
+  if (frame_payload.size == 0) { // ignore null frames
     return 0;
   }
 
-  ssize_t dsize = pn_data_decode(args, frame.payload, frame.size);
-  if (dsize < 0) {
-    pn_string_format(transport->scratch,
-                     "Error decoding frame: %s %s\n", pn_code(dsize),
-                     pn_error_text(pn_data_error(args)));
-    pn_quote(transport->scratch, frame.payload, frame.size);
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, pn_string_get(transport->scratch));
-    return dsize;
+  uint64_t lcode;
+  pni_consumer_t consumer = make_consumer_from_bytes(frame_payload);
+  pni_consumer_t subconsumer;
+  if (!consume_described_ulong_descriptor(&consumer, &subconsumer, &lcode)
+      || !pni_islist(&subconsumer)
+  ) {
+    PN_LOG(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame");
+    return PN_ERR;
   }
 
   uint8_t frame_type = frame.type;
   uint16_t channel = frame.channel;
-  // XXX: assuming numeric -
-  // if we get a symbol we should map it to the numeric value and dispatch on that
-  uint64_t lcode;
-  bool scanned;
-  int e = pn_data_scan(args, "D?L.", &scanned, &lcode);
-  if (e) {
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Scan error");
-    return e;
-  }
-  if (!scanned) {
-    PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame");
-    return PN_ERR;
-  }
-  size_t payload_size = frame.size - dsize;
-  const char *payload_mem = payload_size ? frame.payload + dsize : NULL;
-  pn_bytes_t payload = {payload_size, payload_mem};
 
-  pn_do_trace(transport, channel, IN, args, payload_mem, payload_size);
-
-  int err = pni_dispatch_action(transport, lcode, frame_type, channel, args, &payload);
-
-  pn_data_clear(args);
+  int err = pni_dispatch_action(transport, lcode, frame_type, channel, frame_payload);
 
   return err;
 }
@@ -127,12 +109,12 @@ ssize_t pn_dispatcher_input(pn_transport_t *transport, const char *bytes, size_t
   while (available && !*halt) {
     pn_frame_t frame;
 
-    ssize_t n = pn_read_frame(&frame, bytes + read, available, transport->local_max_frame);
+    ssize_t n = pn_read_frame(&frame, bytes + read, available, transport->local_max_frame, &transport->logger);
     if (n > 0) {
       read += n;
       available -= n;
       transport->input_frames_ct += 1;
-      int e = pni_dispatch_frame(transport, transport->args, frame);
+      int e = pni_dispatch_frame(frame, &transport->logger, transport);
       if (e) return e;
     } else if (n < 0) {
       pn_do_error(transport, "amqp:connection:framing-error", "malformed frame");

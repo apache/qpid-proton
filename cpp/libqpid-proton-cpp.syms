@@ -475,6 +475,7 @@ proton::ssl_certificate::ssl_certificate(std::string const&, std::string const&)
 proton::ssl_certificate::ssl_certificate(std::string const&, std::string const&, std::string const&)
 
 proton::ssl_client_options::ssl_client_options()
+proton::ssl_client_options::ssl_client_options(proton::ssl_certificate&, proton::ssl::verify_mode)
 proton::ssl_client_options::ssl_client_options(proton::ssl_certificate&, std::string const&, proton::ssl::verify_mode)
 proton::ssl_client_options::ssl_client_options(std::string const&, proton::ssl::verify_mode)
 

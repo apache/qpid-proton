@@ -54,10 +54,8 @@ class reconnect_client : public proton::messaging_handler {
   private:
     void on_container_start(proton::container &c) override {
         proton::connection_options co;
-        proton::reconnect_options ro;
 
-        ro.failover_urls(failovers);
-        co.reconnect(ro);
+        co.failover_urls(failovers);
         c.connect(url, co);
     }
 

@@ -30,10 +30,10 @@
 
 namespace proton {
 
-work_queue::work_queue() {}
+work_queue::work_queue() = default;
 work_queue::work_queue(container& c) { *this = container::impl::make_work_queue(c); }
 
-work_queue::~work_queue() {}
+work_queue::~work_queue() = default;
 
 work_queue& work_queue::operator=(impl* i) { impl_.reset(i); return *this; }
 

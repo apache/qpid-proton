@@ -17,10 +17,10 @@
  * under the License.
  */
 
-prefix=@PREFIX@
-exec_prefix=@EXEC_PREFIX@
-libdir=@LIBDIR@
-includedir=@INCLUDEDIR@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${prefix}/@LIBDIR@
+includedir=${prefix}/@INCLUDEDIR@
 
 Name: Proton
 Description: Qpid Proton C library

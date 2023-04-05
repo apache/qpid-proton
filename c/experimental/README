@@ -1,0 +1,6 @@
+raw_plus_tls2.c : new API based example that bolts TLS processing on
+top of an application that uses pn_raw_connection_t IO and frugal use
+of buffers.
+
+raw_plus_tls.c : same program, but generous with staged buffers.
+

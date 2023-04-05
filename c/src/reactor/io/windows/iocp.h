@@ -26,6 +26,8 @@
 #include <proton/selectable.h>
 #include <proton/type_compat.h>
 
+#include "core/object_private.h"
+
 typedef struct pni_acceptor_t pni_acceptor_t;
 typedef struct write_result_t write_result_t;
 typedef struct read_result_t read_result_t;
@@ -100,6 +102,8 @@ struct write_result_t {
   bool in_use;
   pn_bytes_t buffer;
 };
+
+extern pn_class_t PN_CLASSCLASS(pni_iocpdesc);
 
 iocpdesc_t *pni_iocpdesc_create(iocp_t *, pn_socket_t s, bool external);
 iocpdesc_t *pni_iocpdesc_map_get(iocp_t *, pn_socket_t s);

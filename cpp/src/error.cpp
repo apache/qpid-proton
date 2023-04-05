@@ -22,12 +22,12 @@
 namespace proton {
 
 error::error(const std::string& msg) : std::runtime_error(msg) {}
-error::~error() throw() {}
+error::~error() throw() = default;
 
 timeout_error::timeout_error(const std::string& msg) : error(msg) {}
-timeout_error::~timeout_error() throw() {}
+timeout_error::~timeout_error() throw() = default;
 
 conversion_error::conversion_error(const std::string& msg) : error(msg) {}
-conversion_error::~conversion_error() throw() {}
+conversion_error::~conversion_error() throw() = default;
 
 }

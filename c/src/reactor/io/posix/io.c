@@ -19,11 +19,10 @@
  *
  */
 
+#include "core/object_private.h"
+#include "platform/platform.h" // pn_i_error_from_errno
 #include "reactor/io.h"
 #include "reactor/selector.h"
-#include "platform/platform.h" // pn_i_error_from_errno
-
-#include <proton/object.h>
 
 #include <ctype.h>
 #include <errno.h>

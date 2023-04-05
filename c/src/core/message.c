@@ -21,10 +21,15 @@
 
 #include "platform/platform_fmt.h"
 
+#include "data.h"
 #include "max_align.h"
 #include "message-internal.h"
 #include "protocol.h"
 #include "util.h"
+
+#include "core/fixed_string.h"
+#include "core/frame_generators.h"
+#include "core/frame_consumers.h"
 
 #include <proton/link.h>
 #include <proton/object.h>
@@ -38,25 +43,25 @@
 // message
 
 struct pn_message_t {
+  pn_atom_t id;
+  pn_atom_t correlation_id;
   pn_timestamp_t expiry_time;
   pn_timestamp_t creation_time;
-  pn_data_t *id;
   pn_string_t *user_id;
   pn_string_t *address;
   pn_string_t *subject;
   pn_string_t *reply_to;
-  pn_data_t *correlation_id;
   pn_string_t *content_type;
   pn_string_t *content_encoding;
   pn_string_t *group_id;
   pn_string_t *reply_to_group_id;
 
-  pn_data_t *data;
+  pn_data_t *id_deprecated;
+  pn_data_t *correlation_id_deprecated;
   pn_data_t *instructions;
   pn_data_t *annotations;
   pn_data_t *properties;
   pn_data_t *body;
-
   pn_error_t *error;
 
   pn_sequence_t group_sequence;
@@ -70,6 +75,67 @@ struct pn_message_t {
   bool inferred;
 };
 
+void pni_msgid_clear(pn_atom_t* msgid) {
+  switch (msgid->type) {
+    case PN_BINARY:
+    case PN_STRING:
+      free((void*)msgid->u.as_bytes.start);
+    case PN_ULONG:
+    case PN_UUID:
+      msgid->type = PN_NULL;
+    case PN_NULL:
+      return;
+    default:
+      break;
+  }
+  assert(false);
+}
+
+void pni_msgid_validate_intern(pn_atom_t* msgid) {
+  switch (msgid->type) {
+    case PN_BINARY:
+    case PN_STRING: {
+      char* new = malloc(msgid->u.as_bytes.size);
+      assert(new);
+      memcpy(new, msgid->u.as_bytes.start, msgid->u.as_bytes.size);
+      msgid->u.as_bytes.start = new;
+      return;
+    }
+    case PN_ULONG:
+    case PN_UUID:
+    case PN_NULL:
+      return;
+    default:
+      // Not a legal msgid type
+      msgid->type = PN_NULL;
+      return;
+  }
+}
+
+/* This exists purely to fix bad incoming ids created by the broken ruby binding */
+void pni_msgid_fix_interop(pn_atom_t* msgid) {
+  switch (msgid->type) {
+    case PN_INT: {
+      int32_t v = msgid->u.as_int;
+      // Only fix if the value actually is positive
+      if (v < 0) return;
+      msgid->type = PN_ULONG;
+      msgid->u.as_ulong = v;
+      return;
+    }
+    case PN_LONG: {
+      int64_t v = msgid->u.as_long;
+      // Only fix if the value actually is positive
+      if (v < 0) return;
+      msgid->type = PN_ULONG;
+      msgid->u.as_ulong = v;
+      return;
+    }
+    default:
+      return;
+  }
+}
+
 void pn_message_finalize(void *obj)
 {
   pn_message_t *msg = (pn_message_t *) obj;
@@ -81,9 +147,10 @@ void pn_message_finalize(void *obj)
   pn_free(msg->content_encoding);
   pn_free(msg->group_id);
   pn_free(msg->reply_to_group_id);
-  pn_data_free(msg->id);
-  pn_data_free(msg->correlation_id);
-  pn_data_free(msg->data);
+  pni_msgid_clear(&msg->id);
+  pni_msgid_clear(&msg->correlation_id);
+  if (msg->id_deprecated) pn_data_free(msg->id_deprecated);
+  if (msg->correlation_id_deprecated) pn_data_free(msg->correlation_id_deprecated);
   pn_data_free(msg->instructions);
   pn_data_free(msg->annotations);
   pn_data_free(msg->properties);
@@ -91,214 +158,164 @@ void pn_message_finalize(void *obj)
   pn_error_free(msg->error);
 }
 
-int pn_message_inspect(void *obj, pn_string_t *dst)
+void pn_message_inspect(void *obj, pn_fixed_string_t *dst)
 {
   pn_message_t *msg = (pn_message_t *) obj;
-  int err = pn_string_addf(dst, "Message{");
-  if (err) return err;
+  pn_fixed_string_addf(dst, "Message{");
 
   bool comma = false;
 
   if (pn_string_get(msg->address)) {
-    err = pn_string_addf(dst, "address=");
-    if (err) return err;
-    err = pn_inspect(msg->address, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "address=");
+    pn_finspect(msg->address, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (msg->durable) {
-    err = pn_string_addf(dst, "durable=%i, ", msg->durable);
-    if (err) return err;
+    pn_fixed_string_addf(dst, "durable=%i, ", msg->durable);
     comma = true;
   }
 
   if (msg->priority != HEADER_PRIORITY_DEFAULT) {
-    err = pn_string_addf(dst, "priority=%i, ", msg->priority);
-    if (err) return err;
+    pn_fixed_string_addf(dst, "priority=%i, ", msg->priority);
     comma = true;
   }
 
   if (msg->ttl) {
-    err = pn_string_addf(dst, "ttl=%" PRIu32 ", ", msg->ttl);
-    if (err) return err;
+    pn_fixed_string_addf(dst, "ttl=%" PRIu32 ", ", msg->ttl);
     comma = true;
   }
 
   if (msg->first_acquirer) {
-    err = pn_string_addf(dst, "first_acquirer=%i, ", msg->first_acquirer);
-    if (err) return err;
+    pn_fixed_string_addf(dst, "first_acquirer=%i, ", msg->first_acquirer);
     comma = true;
   }
 
   if (msg->delivery_count) {
-    err = pn_string_addf(dst, "delivery_count=%" PRIu32 ", ", msg->delivery_count);
-    if (err) return err;
+    pn_fixed_string_addf(dst, "delivery_count=%" PRIu32 ", ", msg->delivery_count);
     comma = true;
   }
 
-  if (pn_data_size(msg->id)) {
-    err = pn_string_addf(dst, "id=");
-    if (err) return err;
-    err = pn_inspect(msg->id, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+  pn_atom_t id = pn_message_get_id(msg);
+  if (id.type!=PN_NULL) {
+    pn_fixed_string_addf(dst, "id=");
+    pni_inspect_atom(&id, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (pn_string_get(msg->user_id)) {
-    err = pn_string_addf(dst, "user_id=");
-    if (err) return err;
-    err = pn_inspect(msg->user_id, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "user_id=");
+    pn_finspect(msg->user_id, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (pn_string_get(msg->subject)) {
-    err = pn_string_addf(dst, "subject=");
-    if (err) return err;
-    err = pn_inspect(msg->subject, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "subject=");
+    pn_finspect(msg->subject, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (pn_string_get(msg->reply_to)) {
-    err = pn_string_addf(dst, "reply_to=");
-    if (err) return err;
-    err = pn_inspect(msg->reply_to, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "reply_to=");
+    pn_finspect(msg->reply_to, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
-  if (pn_data_size(msg->correlation_id)) {
-    err = pn_string_addf(dst, "correlation_id=");
-    if (err) return err;
-    err = pn_inspect(msg->correlation_id, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+  pn_atom_t correlation_id = pn_message_get_correlation_id(msg);
+  if (correlation_id.type!=PN_NULL) {
+    pn_fixed_string_addf(dst, "correlation_id=");
+    pni_inspect_atom(&correlation_id, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (pn_string_get(msg->content_type)) {
-    err = pn_string_addf(dst, "content_type=");
-    if (err) return err;
-    err = pn_inspect(msg->content_type, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "content_type=");
+    pn_finspect(msg->content_type, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (pn_string_get(msg->content_encoding)) {
-    err = pn_string_addf(dst, "content_encoding=");
-    if (err) return err;
-    err = pn_inspect(msg->content_encoding, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "content_encoding=");
+    pn_finspect(msg->content_encoding, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (msg->expiry_time) {
-    err = pn_string_addf(dst, "expiry_time=%" PRIi64 ", ", msg->expiry_time);
-    if (err) return err;
+    pn_fixed_string_addf(dst, "expiry_time=%" PRIi64 ", ", msg->expiry_time);
     comma = true;
   }
 
   if (msg->creation_time) {
-    err = pn_string_addf(dst, "creation_time=%" PRIi64 ", ", msg->creation_time);
-    if (err) return err;
+    pn_fixed_string_addf(dst, "creation_time=%" PRIi64 ", ", msg->creation_time);
     comma = true;
   }
 
   if (pn_string_get(msg->group_id)) {
-    err = pn_string_addf(dst, "group_id=");
-    if (err) return err;
-    err = pn_inspect(msg->group_id, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "group_id=");
+    pn_finspect(msg->group_id, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (msg->group_sequence) {
-    err = pn_string_addf(dst, "group_sequence=%" PRIi32 ", ", msg->group_sequence);
-    if (err) return err;
+    pn_fixed_string_addf(dst, "group_sequence=%" PRIi32 ", ", msg->group_sequence);
     comma = true;
   }
 
   if (pn_string_get(msg->reply_to_group_id)) {
-    err = pn_string_addf(dst, "reply_to_group_id=");
-    if (err) return err;
-    err = pn_inspect(msg->reply_to_group_id, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "reply_to_group_id=");
+    pn_finspect(msg->reply_to_group_id, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (msg->inferred) {
-    err = pn_string_addf(dst, "inferred=%i, ", msg->inferred);
-    if (err) return err;
+    pn_fixed_string_addf(dst, "inferred=%i, ", msg->inferred);
     comma = true;
   }
 
   if (pn_data_size(msg->instructions)) {
-    err = pn_string_addf(dst, "instructions=");
-    if (err) return err;
-    err = pn_inspect(msg->instructions, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "instructions=");
+    pn_finspect(msg->instructions, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (pn_data_size(msg->annotations)) {
-    err = pn_string_addf(dst, "annotations=");
-    if (err) return err;
-    err = pn_inspect(msg->annotations, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "annotations=");
+    pn_finspect(msg->annotations, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (pn_data_size(msg->properties)) {
-    err = pn_string_addf(dst, "properties=");
-    if (err) return err;
-    err = pn_inspect(msg->properties, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "properties=");
+    pn_finspect(msg->properties, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (pn_data_size(msg->body)) {
-    err = pn_string_addf(dst, "body=");
-    if (err) return err;
-    err = pn_inspect(msg->body, dst);
-    if (err) return err;
-    err = pn_string_addf(dst, ", ");
-    if (err) return err;
+    pn_fixed_string_addf(dst, "body=");
+    pn_finspect(msg->body, dst);
+    pn_fixed_string_addf(dst, ", ");
     comma = true;
   }
 
   if (comma) {
-    int err = pn_string_resize(dst, pn_string_size(dst) - 2);
-    if (err) return err;
-  }
+    dst->position = dst->position - 2;
+ }
 
-  return pn_string_addf(dst, "}");
+  pn_fixed_string_addf(dst, "}");
+  return;
 }
 
 #define pn_message_initialize NULL
@@ -314,12 +331,12 @@ static pn_message_t *pni_message_new(size_t size)
   msg->ttl = 0;
   msg->first_acquirer = false;
   msg->delivery_count = 0;
-  msg->id = pn_data(1);
+  msg->id = (pn_atom_t){.type=PN_NULL};
   msg->user_id = pn_string(NULL);
   msg->address = pn_string(NULL);
   msg->subject = pn_string(NULL);
   msg->reply_to = pn_string(NULL);
-  msg->correlation_id = pn_data(1);
+  msg->correlation_id = (pn_atom_t){.type=PN_NULL};
   msg->content_type = pn_string(NULL);
   msg->content_encoding = pn_string(NULL);
   msg->expiry_time = 0;
@@ -329,7 +346,8 @@ static pn_message_t *pni_message_new(size_t size)
   msg->reply_to_group_id = pn_string(NULL);
 
   msg->inferred = false;
-  msg->data = pn_data(16);
+  msg->id_deprecated = NULL;
+  msg->correlation_id_deprecated = NULL;
   msg->instructions = pn_data(16);
   msg->annotations = pn_data(16);
   msg->properties = pn_data(16);
@@ -339,7 +357,7 @@ static pn_message_t *pni_message_new(size_t size)
   return msg;
 }
 
-pn_message_t *pn_message() {
+pn_message_t *pn_message(void) {
   return pni_message_new(sizeof(pn_message_t));
 }
 
@@ -369,12 +387,12 @@ void pn_message_clear(pn_message_t *msg)
   msg->ttl = 0;
   msg->first_acquirer = false;
   msg->delivery_count = 0;
-  pn_data_clear(msg->id);
+  pni_msgid_clear(&msg->id);
   pn_string_clear(msg->user_id);
   pn_string_clear(msg->address);
   pn_string_clear(msg->subject);
   pn_string_clear(msg->reply_to);
-  pn_data_clear(msg->correlation_id);
+  pni_msgid_clear(&msg->correlation_id);
   pn_string_clear(msg->content_type);
   pn_string_clear(msg->content_encoding);
   msg->expiry_time = 0;
@@ -383,7 +401,8 @@ void pn_message_clear(pn_message_t *msg)
   msg->group_sequence = 0;
   pn_string_clear(msg->reply_to_group_id);
   msg->inferred = false;
-  pn_data_clear(msg->data);
+  pn_data_clear(msg->id_deprecated);
+  pn_data_clear(msg->correlation_id_deprecated);
   pn_data_clear(msg->instructions);
   pn_data_clear(msg->annotations);
   pn_data_clear(msg->properties);
@@ -479,18 +498,38 @@ int pn_message_set_delivery_count(pn_message_t *msg, uint32_t count)
 pn_data_t *pn_message_id(pn_message_t *msg)
 {
   assert(msg);
-  return msg->id;
+  if (!msg->id_deprecated) {
+    msg->id_deprecated = pn_data(1);
+    if (msg->id.type!=PN_NULL) {
+      pn_data_put_atom(msg->id_deprecated, msg->id);
+      pni_msgid_clear(&msg->id);
+    }
+  }
+  return msg->id_deprecated;
 }
-pn_atom_t pn_message_get_id(pn_message_t *msg)
+
+pn_msgid_t pn_message_get_id(pn_message_t *msg)
 {
   assert(msg);
-  return pn_data_get_atom(msg->id);
+  if (msg->id_deprecated) {
+    return pn_data_get_atom(msg->id_deprecated);
+  } else {
+    return msg->id;
+  }
 }
-int pn_message_set_id(pn_message_t *msg, pn_atom_t id)
+
+int pn_message_set_id(pn_message_t *msg, pn_msgid_t id)
 {
   assert(msg);
-  pn_data_rewind(msg->id);
-  return pn_data_put_atom(msg->id, id);
+  if (msg->id_deprecated) {
+    pn_data_rewind(msg->id_deprecated);
+    pn_data_put_atom(msg->id_deprecated, id);
+  } else {
+    pni_msgid_clear(&msg->id);
+    msg->id = id;
+    pni_msgid_validate_intern(&msg->id);
+  }
+  return 0;
 }
 
 static pn_bytes_t pn_string_get_bytes(pn_string_t *string)
@@ -550,19 +589,40 @@ int pn_message_set_reply_to(pn_message_t *msg, const char *reply_to)
 pn_data_t *pn_message_correlation_id(pn_message_t *msg)
 {
   assert(msg);
-  return msg->correlation_id;
+  if (!msg->correlation_id_deprecated) {
+    msg->correlation_id_deprecated = pn_data(1);
+    if (msg->correlation_id.type!=PN_NULL) {
+      pn_data_put_atom(msg->correlation_id_deprecated, msg->correlation_id);
+      pni_msgid_clear(&msg->correlation_id);
+    }
+  }
+  return msg->correlation_id_deprecated;
 }
-pn_atom_t pn_message_get_correlation_id(pn_message_t *msg)
+
+pn_msgid_t pn_message_get_correlation_id(pn_message_t *msg)
 {
   assert(msg);
-  return pn_data_get_atom(msg->correlation_id);
+  if (msg->correlation_id_deprecated) {
+    return pn_data_get_atom(msg->correlation_id_deprecated);
+  } else {
+    return msg->correlation_id;
+  }
 }
-int pn_message_set_correlation_id(pn_message_t *msg, pn_atom_t atom)
+
+int pn_message_set_correlation_id(pn_message_t *msg, pn_msgid_t id)
 {
   assert(msg);
-  pn_data_rewind(msg->correlation_id);
-  return pn_data_put_atom(msg->correlation_id, atom);
+  if (msg->correlation_id_deprecated) {
+    pn_data_rewind(msg->correlation_id_deprecated);
+    pn_data_put_atom(msg->correlation_id_deprecated, id);
+  } else {
+    pni_msgid_clear(&msg->correlation_id);
+    msg->correlation_id = id;
+    pni_msgid_validate_intern(&msg->correlation_id);
+  }
+  return 0;
 }
+
 
 const char *pn_message_get_content_type(pn_message_t *msg)
 {
@@ -648,59 +708,41 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 {
   assert(msg && bytes && size);
 
-  pn_message_clear(msg);
-
-  while (size) {
-    pn_data_clear(msg->data);
-    ssize_t used = pn_data_decode(msg->data, bytes, size);
-    if (used < 0)
-        return pn_error_format(msg->error, used, "data error: %s",
-                               pn_error_text(pn_data_error(msg->data)));
-    size -= used;
-    bytes += used;
+  pn_bytes_t msg_bytes = {.size=size, .start=bytes};
+  while (msg_bytes.size) {
     bool scanned;
     uint64_t desc;
-    int err = pn_data_scan(msg->data, "D?L.", &scanned, &desc);
-    if (err) return pn_error_format(msg->error, err, "data error: %s",
-                                    pn_error_text(pn_data_error(msg->data)));
+    size_t section_size = pn_amqp_decode_DQLq(msg_bytes, &scanned, &desc);
     if (!scanned) {
       desc = 0;
     }
 
-    pn_data_rewind(msg->data);
-    pn_data_next(msg->data);
-    pn_data_enter(msg->data);
-    pn_data_next(msg->data);
-
     switch (desc) {
-    case HEADER: {
-      bool priority_q;
-      uint8_t priority;
-      err = pn_data_scan(msg->data, "D.[o?BIoI]",
-                         &msg->durable,
-                         &priority_q, &priority,
-                         &msg->ttl,
-                         &msg->first_acquirer,
-                         &msg->delivery_count);
-      if (err) return pn_error_format(msg->error, err, "data error: %s",
-                                      pn_error_text(pn_data_error(msg->data)));
-      msg->priority = priority_q ? priority : HEADER_PRIORITY_DEFAULT;
-      break;
-    }
-    case PROPERTIES:
-      {
+      case HEADER: {
+        bool priority_q;
+        uint8_t priority;
+        pn_amqp_decode_DqEoQBIoIe(msg_bytes,
+                                  &msg->durable,
+                                  &priority_q, &priority,
+                                  &msg->ttl,
+                                  &msg->first_acquirer,
+                                  &msg->delivery_count);
+        msg->priority = priority_q ? priority : HEADER_PRIORITY_DEFAULT;
+        break;
+      }
+      case PROPERTIES: {
         pn_bytes_t user_id, address, subject, reply_to, ctype, cencoding,
-          group_id, reply_to_group_id;
-        pn_data_clear(msg->id);
-        pn_data_clear(msg->correlation_id);
-        err = pn_data_scan(msg->data, "D.[CzSSSCssttSIS]", msg->id,
+                   group_id, reply_to_group_id;
+        pn_atom_t id;
+        pn_atom_t correlation_id;
+        pn_amqp_decode_DqEazSSSassttSISe(msg_bytes,  &id,
                            &user_id, &address, &subject, &reply_to,
-                           msg->correlation_id, &ctype, &cencoding,
+                           &correlation_id, &ctype, &cencoding,
                            &msg->expiry_time, &msg->creation_time, &group_id,
                            &msg->group_sequence, &reply_to_group_id);
-        if (err) return pn_error_format(msg->error, err, "data error: %s",
-                                        pn_error_text(pn_data_error(msg->data)));
-        err = pn_string_set_bytes(msg->user_id, user_id);
+        pni_msgid_fix_interop(&id);
+        pn_message_set_id(msg, id);
+        int err = pn_string_set_bytes(msg->user_id, user_id);
         if (err) return pn_error_format(msg->error, err, "error setting user_id");
         err = pn_string_setn(msg->address, address.start, address.size);
         if (err) return pn_error_format(msg->error, err, "error setting address");
@@ -708,6 +750,8 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
         if (err) return pn_error_format(msg->error, err, "error setting subject");
         err = pn_string_setn(msg->reply_to, reply_to.start, reply_to.size);
         if (err) return pn_error_format(msg->error, err, "error setting reply_to");
+        pni_msgid_fix_interop(&correlation_id);
+        pn_message_set_correlation_id(msg, correlation_id);
         err = pn_string_setn(msg->content_type, ctype.start, ctype.size);
         if (err) return pn_error_format(msg->error, err, "error setting content_type");
         err = pn_string_setn(msg->content_encoding, cencoding.start,
@@ -718,68 +762,159 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
         err = pn_string_setn(msg->reply_to_group_id, reply_to_group_id.start,
                              reply_to_group_id.size);
         if (err) return pn_error_format(msg->error, err, "error setting reply_to_group_id");
+        break;
       }
-      break;
-    case DELIVERY_ANNOTATIONS:
-      pn_data_narrow(msg->data);
-      err = pn_data_copy(msg->instructions, msg->data);
-      if (err) return err;
-      break;
-    case MESSAGE_ANNOTATIONS:
-      pn_data_narrow(msg->data);
-      err = pn_data_copy(msg->annotations, msg->data);
-      if (err) return err;
-      break;
-    case APPLICATION_PROPERTIES:
-      pn_data_narrow(msg->data);
-      err = pn_data_copy(msg->properties, msg->data);
-      if (err) return err;
-      break;
-    case DATA:
-    case AMQP_SEQUENCE:
-      msg->inferred = true;
-      pn_data_narrow(msg->data);
-      err = pn_data_copy(msg->body, msg->data);
-      if (err) return err;
-      break;
-    case AMQP_VALUE:
-      msg->inferred = false;
-      pn_data_narrow(msg->data);
-      err = pn_data_copy(msg->body, msg->data);
-      if (err) return err;
-      break;
-    case FOOTER:
-      break;
-    default:
-      err = pn_data_copy(msg->body, msg->data);
-      if (err) return err;
-      break;
+      case DELIVERY_ANNOTATIONS: {
+        pn_data_clear(msg->instructions);
+        pn_amqp_decode_DqC(msg_bytes, msg->instructions);
+        pn_data_rewind(msg->instructions);
+        break;
+      }
+      case MESSAGE_ANNOTATIONS: {
+        pn_data_clear(msg->annotations);
+        pn_amqp_decode_DqC(msg_bytes, msg->annotations);
+        pn_data_rewind(msg->annotations);
+        break;
+      }
+      case APPLICATION_PROPERTIES: {
+        pn_data_clear(msg->properties);
+        pn_amqp_decode_DqC(msg_bytes, msg->properties);
+        pn_data_rewind(msg->properties);
+        break;
+      }
+      case DATA:
+      case AMQP_SEQUENCE: {
+        msg->inferred = true;
+        pn_data_clear(msg->body);
+        pn_amqp_decode_DqC(msg_bytes, msg->body);
+        pn_data_rewind(msg->body);
+        break;
+      }
+      case AMQP_VALUE: {
+        msg->inferred = false;
+        pn_data_clear(msg->body);
+        pn_amqp_decode_DqC(msg_bytes, msg->body);
+        pn_data_rewind(msg->body);
+        break;
+      }
+      case FOOTER:
+        break;
+      default: {
+        pn_data_clear(msg->body);
+        pn_data_decode(msg->body, msg_bytes.start, msg_bytes.size);
+        pn_data_rewind(msg->body);
+        break;
+      }
     }
+    msg_bytes = (pn_bytes_t){.size=msg_bytes.size-section_size, .start=msg_bytes.start+section_size};
   }
-
-  pn_data_clear(msg->data);
   return 0;
 }
-
-int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
+int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
 {
-  if (!msg || !bytes || !size || !*size) return PN_ARG_ERR;
-  pn_data_clear(msg->data);
-  pn_message_data(msg, msg->data);
-  size_t remaining = *size;
-  ssize_t encoded = pn_data_encode(msg->data, bytes, remaining);
-  if (encoded < 0) {
-    if (encoded == PN_OVERFLOW) {
-      return encoded;
-    } else {
-      return pn_error_format(msg->error, encoded, "data error: %s",
-                             pn_error_text(pn_data_error(msg->data)));
-    }
+  size_t remaining = *isize;
+  size_t last_size = 0;
+  size_t total = 0;
+
+  /* "DL[?o?B?I?o?I]" */
+  last_size = pn_amqp_encode_bytes_DLEQoQBQIQoQIe(bytes, remaining, HEADER,
+                        msg->durable, msg->durable,
+                         msg->priority!=HEADER_PRIORITY_DEFAULT, msg->priority,
+                         (bool)msg->ttl, msg->ttl,
+                         msg->first_acquirer, msg->first_acquirer,
+                         (bool)msg->delivery_count, msg->delivery_count);
+  if (last_size > remaining) return PN_OVERFLOW;
+
+  remaining -= last_size;
+  bytes += last_size;
+  total += last_size;
+
+
+  if (pn_data_size(msg->instructions)) {
+    pn_data_rewind(msg->instructions);
+    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, DELIVERY_ANNOTATIONS, msg->instructions);
+    if (last_size > remaining) return PN_OVERFLOW;
+
+    remaining -= last_size;
+    bytes += last_size;
+    total += last_size;
   }
-  bytes += encoded;
-  remaining -= encoded;
-  *size -= remaining;
-  pn_data_clear(msg->data);
+
+  if (pn_data_size(msg->annotations)) {
+    pn_data_rewind(msg->annotations);
+    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, MESSAGE_ANNOTATIONS, msg->annotations);
+    if (last_size > remaining) return PN_OVERFLOW;
+
+    remaining -= last_size;
+    bytes += last_size;
+    total += last_size;
+  }
+
+  /* "DL[CzSSSCss?t?tS?IS]" */
+  pn_atom_t id = pn_message_get_id(msg);
+  pn_atom_t correlation_id = pn_message_get_correlation_id(msg);
+  last_size = pn_amqp_encode_bytes_DLEazSSSassQtQtSQISe(bytes, remaining, PROPERTIES,
+                     &id,
+                     pn_string_size(msg->user_id), pn_string_get(msg->user_id),
+                     pn_string_get(msg->address),
+                     pn_string_get(msg->subject),
+                     pn_string_get(msg->reply_to),
+                     &correlation_id,
+                     pn_string_get(msg->content_type),
+                     pn_string_get(msg->content_encoding),
+                     (bool)msg->expiry_time, msg->expiry_time,
+                     (bool)msg->creation_time, msg->creation_time,
+                     pn_string_get(msg->group_id),
+                     /*
+                      * As a heuristic, null out group_sequence if there is no group_id and
+                      * group_sequence is 0. In this case it is extremely unlikely we want
+                      * group semantics
+                      */
+                     (bool)pn_string_get(msg->group_id) || (bool)msg->group_sequence , msg->group_sequence,
+                     pn_string_get(msg->reply_to_group_id));
+  if (last_size > remaining) return PN_OVERFLOW;
+
+  remaining -= last_size;
+  bytes += last_size;
+  total += last_size;
+
+  if (pn_data_size(msg->properties)) {
+    pn_data_rewind(msg->properties);
+    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, APPLICATION_PROPERTIES, msg->properties);
+    if (last_size > remaining) return PN_OVERFLOW;
+
+    remaining -= last_size;
+    bytes += last_size;
+    total += last_size;
+  }
+
+  if (pn_data_size(msg->body)) {
+    pn_data_rewind(msg->body);
+    pn_data_next(msg->body);
+    pn_type_t body_type = pn_data_type(msg->body);
+    pn_data_rewind(msg->body);
+
+    uint64_t descriptor = AMQP_VALUE;
+    if (msg->inferred) {
+      switch (body_type) {
+        case PN_BINARY:
+          descriptor = DATA;
+          break;
+        case PN_LIST:
+          descriptor = AMQP_SEQUENCE;
+          break;
+        default:
+          break;
+      }
+    }
+    last_size = pn_amqp_encode_bytes_DLC(bytes, remaining, descriptor, msg->body);
+    if (last_size > remaining) return PN_OVERFLOW;
+
+    remaining -= last_size;
+    bytes += last_size;
+    total += last_size;
+  }
+  *isize = total;
   return 0;
 }
 
@@ -797,36 +932,30 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
                            pn_error_text(pn_data_error(data)));
 
   if (pn_data_size(msg->instructions)) {
-    pn_data_put_described(data);
-    pn_data_enter(data);
-    pn_data_put_ulong(data, DELIVERY_ANNOTATIONS);
     pn_data_rewind(msg->instructions);
-    err = pn_data_append(data, msg->instructions);
+    err = pn_data_fill(data, "DLC", DELIVERY_ANNOTATIONS, msg->instructions);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
-    pn_data_exit(data);
   }
 
   if (pn_data_size(msg->annotations)) {
-    pn_data_put_described(data);
-    pn_data_enter(data);
-    pn_data_put_ulong(data, MESSAGE_ANNOTATIONS);
     pn_data_rewind(msg->annotations);
-    err = pn_data_append(data, msg->annotations);
+    err = pn_data_fill(data, "DLC", MESSAGE_ANNOTATIONS, msg->annotations);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
-    pn_data_exit(data);
   }
 
-  err = pn_data_fill(data, "DL[CzSSSCss?t?tS?IS]", PROPERTIES,
-                     msg->id,
+  pn_atom_t id = pn_message_get_id(msg);
+  pn_atom_t correlation_id = pn_message_get_correlation_id(msg);
+  err = pn_data_fill(data, "DL[azSSSass?t?tS?IS]", PROPERTIES,
+                     &id,
                      pn_string_size(msg->user_id), pn_string_get(msg->user_id),
                      pn_string_get(msg->address),
                      pn_string_get(msg->subject),
                      pn_string_get(msg->reply_to),
-                     msg->correlation_id,
+                     &correlation_id,
                      pn_string_get(msg->content_type),
                      pn_string_get(msg->content_encoding),
                      (bool)msg->expiry_time, msg->expiry_time,
@@ -844,41 +973,37 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
                            pn_error_text(pn_data_error(data)));
 
   if (pn_data_size(msg->properties)) {
-    pn_data_put_described(data);
-    pn_data_enter(data);
-    pn_data_put_ulong(data, APPLICATION_PROPERTIES);
     pn_data_rewind(msg->properties);
-    err = pn_data_append(data, msg->properties);
+    err = pn_data_fill(data, "DLC", APPLICATION_PROPERTIES, msg->properties);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
                              pn_error_text(pn_data_error(data)));
-    pn_data_exit(data);
   }
 
   if (pn_data_size(msg->body)) {
     pn_data_rewind(msg->body);
     pn_data_next(msg->body);
     pn_type_t body_type = pn_data_type(msg->body);
-    pn_data_rewind(msg->body);
 
-    pn_data_put_described(data);
-    pn_data_enter(data);
+    uint64_t descriptor = AMQP_VALUE;
     if (msg->inferred) {
       switch (body_type) {
-      case PN_BINARY:
-        pn_data_put_ulong(data, DATA);
-        break;
-      case PN_LIST:
-        pn_data_put_ulong(data, AMQP_SEQUENCE);
-        break;
-      default:
-        pn_data_put_ulong(data, AMQP_VALUE);
-        break;
+        case PN_BINARY:
+          descriptor = DATA;
+          break;
+        case PN_LIST:
+          descriptor = AMQP_SEQUENCE;
+          break;
+        default:
+          break;
       }
-    } else {
-      pn_data_put_ulong(data, AMQP_VALUE);
     }
-    pn_data_append(data, msg->body);
+
+    pn_data_rewind(msg->body);
+    err = pn_data_fill(data, "DLC", descriptor, msg->body);
+    if (err)
+      return pn_error_format(msg->error, err, "data error: %s",
+                             pn_error_text(pn_data_error(data)));
   }
   return 0;
 }

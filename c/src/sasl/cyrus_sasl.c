@@ -180,7 +180,7 @@ static int pni_authorize(sasl_conn_t *conn,
     const char *def_realm, unsigned urlen,
     struct propctx *propctx)
 {
-  PN_LOG_DEFAULT(PN_SUBSYSTEM_SASL, PN_LEVEL_TRACE, "Authorized: userid=%*s by authuser=%*s @ %*s",
+  PN_LOG_DEFAULT(PN_SUBSYSTEM_SASL, PN_LEVEL_TRACE, "Authorized: userid=%.*s by authuser=%.*s @ %.*s",
     rlen, requested_user,
     alen, auth_identity,
     urlen, def_realm);
@@ -468,21 +468,37 @@ static int pni_wrap_server_start(pn_transport_t *transport, const char *mech_sel
     sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
     const char *in_bytes = in->start;
     size_t in_size = in->size;
+    char buffer[128]; // scratch  buffer for zero termination
+    char *to_free = NULL;
     // Interop hack for ANONYMOUS - some of the earlier versions of proton will send and no data
     // with an anonymous init because it is optional. It seems that Cyrus wants an empty string here
     // or it will challenge, which the earlier implementation is not prepared for.
     // However we can't just always use an empty string as the CRAM-MD5 mech won't allow any data in the server start
+    // Also the EXTERNAL mech has a bug that ignores the size of the initial response string and expects it to be zero
+    // terminated, so make sure it is!
     if (!in_bytes && strcmp(mech_selected, "ANONYMOUS")==0) {
         in_bytes = "";
         in_size = 0;
     } else if (in_bytes && strcmp(mech_selected, "CRAM-MD5")==0) {
         in_bytes = 0;
         in_size = 0;
+    } else if (in_size && strcmp(mech_selected, "EXTERNAL")==0) {
+      char *b = buffer;
+      if (in_size>=128) {
+        to_free = malloc(in_size+1);
+        b = to_free;
+      }
+      if (b) {
+        memcpy(b, in_bytes, in_size);
+        b[in_size] = 0;
+        in_bytes = b;
+      }
     }
     result = sasl_server_start(cyrus_conn,
                                mech_selected,
                                in_bytes, in_size,
                                &out, &outlen);
+    free(to_free);
 
     pnx_sasl_set_bytes_out(transport, pn_bytes(outlen, out));
     return result;

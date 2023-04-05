@@ -46,7 +46,7 @@
 
 namespace proton {
 
-connection::~connection() {}
+connection::~connection() = default;
 
 transport connection::transport() const {
     return make_wrapper(pn_connection_transport(pn_object()));
@@ -91,6 +91,12 @@ work_queue& connection::work_queue() const {
 
 session_range connection::sessions() const {
     return session_range(session_iterator(make_wrapper(pn_session_head(pn_object(), 0))));
+}
+
+std::string connection::url() const {
+    connection_context& cc = connection_context::get(pn_object());
+    if (!active()) throw proton::error("No active connection");
+    return cc.active_url_;
 }
 
 receiver_range connection::receivers() const {
@@ -215,6 +221,16 @@ bool connection::reconnected() const {
 void connection::update_options(const connection_options& options) {
     connection_context& cc = connection_context::get(pn_object());
     cc.connection_options_->update(options);
+}
+
+void connection::user_data(void* user_data) const {
+    connection_context& cc = connection_context::get(pn_object());
+    cc.user_data_ = user_data;
+}
+
+void* connection::user_data() const {
+    connection_context& cc = connection_context::get(pn_object());
+    return cc.user_data_;
 }
 
 } // namespace proton

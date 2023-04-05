@@ -47,7 +47,7 @@ namespace proton {
 class message_id : public scalar_base {
   public:
     /// An empty message_id.
-    message_id() {}
+    message_id() = default;
 
     /// Construct from any type that can be assigned.
     template <class T> message_id(const T& x) { *this = x; }

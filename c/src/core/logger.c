@@ -17,12 +17,15 @@
  * under the License.
  */
 
+#include "logger_private.h"
+
 #include <proton/logger.h>
 #include <proton/error.h>
 
-#include "logger_private.h"
+#include "fixed_string.h"
 #include "memory.h"
 #include "util.h"
+#include "value_dump.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -35,24 +38,20 @@ static void pni_default_log_sink(intptr_t logger, pn_log_subsystem_t subsystem, 
 }
 
 static pn_logger_t the_default_logger = {
-  pni_default_log_sink,
-  (intptr_t) &the_default_logger,
-  NULL,
-  PN_SUBSYSTEM_ALL,
-  PN_LEVEL_CRITICAL
+  .sink = pni_default_log_sink,
+  .sink_context = (intptr_t) &the_default_logger,
+  .sub_mask = PN_SUBSYSTEM_ALL,
+  .sev_mask = PN_LEVEL_CRITICAL
 };
 
 void pni_logger_init(pn_logger_t *logger)
 {
   *logger = the_default_logger;
   logger->sink_context = (intptr_t) logger;
-  logger->scratch = pn_string(NULL);
 }
 
 void pni_logger_fini(pn_logger_t *logger)
 {
-  pn_free(logger->scratch);
-  logger->scratch = NULL;
 }
 
 #define LOGLEVEL(x)   {sizeof(#x)-1, #x, PN_LEVEL_ ## x, PN_LEVEL_ ## x-1}
@@ -116,7 +115,6 @@ void pni_init_default_logger(void)
 
   the_default_logger.sev_mask = (pn_log_level_t) (the_default_logger.sev_mask | sev_mask);
   the_default_logger.sub_mask = (pn_log_subsystem_t) (the_default_logger.sub_mask | sub_mask);
-  the_default_logger.scratch = pn_string(NULL);
 }
 
 void pni_fini_default_logger(void)
@@ -189,12 +187,79 @@ void pni_logger_log_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_l
   char buf[256];
   ssize_t n = pn_quote_data(buf, 256, bytes, size);
   if (n >= 0) {
-    pn_logger_logf(logger, subsystem, severity, "%s: %s", msg, buf);
+    pn_logger_logf(logger, subsystem, severity, "%s: \"%s\"", msg, buf);
   } else if (n == PN_OVERFLOW) {
-    pn_logger_logf(logger, subsystem, severity, "%s: %s (truncated)", msg, buf);
-  } else {
-    pn_logger_logf(logger, subsystem, severity, "%s: cannot log data: %s", msg, pn_code(n));
+    pn_logger_logf(logger, subsystem, severity, "%s: \"%s\"... (truncated)", msg, buf);
   }
+}
+
+void pni_logger_log_raw(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_buffer_t *output, size_t size)
+{
+  char buf[256];
+
+  pn_bytes_t bytes = pn_buffer_bytes(output);
+  const char *start = &bytes.start[bytes.size-size];
+  for (unsigned i = 0; i < size; i+=16) {
+    pn_fixed_string_t out = pn_fixed_string(buf, sizeof(buf));
+    pn_fixed_string_addf(&out, "%04x/%04x: ", i, size);
+    for (unsigned j = 0; j<16; j++) {
+      if (i+j<size) {
+        pn_fixed_string_addf(&out, "%02hhx ", start[i+j]);
+      } else {
+        pn_fixed_string_append(&out, pn_string_const("   ", 3));
+      }
+    }
+    for (unsigned j = 0; j<16; j++) {
+      if (i+j>size) break;
+      char c = start[i+j];
+      if (c>32) { // c is signed so the high bit set is negative
+        pn_fixed_string_append(&out, pn_string_const(&c, 1));
+      } else {
+        pn_fixed_string_append(&out, STR_CONST(.));
+      }
+    }
+    pn_fixed_string_terminate(&out);
+    pni_logger_log(logger, subsystem, severity, buf);
+  }
+}
+
+void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, void* object, const char *fmt, ...) {
+  va_list ap;
+  char buf[1024];
+  pn_fixed_string_t out = pn_fixed_string(buf, sizeof(buf));
+
+  va_start(ap, fmt);
+  pn_fixed_string_vaddf(&out, fmt, ap);
+  va_end(ap);
+
+  pn_finspect(object, &out);
+  pn_fixed_string_terminate(&out);
+  pni_logger_log(logger, subsystem, severity, buf);
+}
+
+void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t frame, const char *fmt, ...) {
+  va_list ap;
+  char buf[1024];
+  pn_fixed_string_t output = pn_fixed_string(buf, sizeof(buf));
+
+  va_start(ap, fmt);
+  pn_fixed_string_vaddf(&output, fmt, ap);
+  va_end(ap);
+
+  size_t psize = pni_value_dump(frame, &output);
+  pn_bytes_t payload = {.size=frame.size-psize, .start=frame.start+psize};
+  if (payload.size>0) {
+    pn_fixed_string_addf(&output, " (%zu) ", payload.size);
+    pn_fixed_string_quote(&output, payload.start, payload.size);
+  }
+  if (output.position==output.size) {
+    // Message overflow
+    const char truncated[] = " ... (truncated)";
+    output.position -= sizeof(truncated);
+    pn_fixed_string_append(&output, pn_string_const(truncated, sizeof(truncated)));
+  }
+  pn_fixed_string_terminate(&output);
+  pni_logger_log(logger, subsystem, severity, buf);
 }
 
 void pni_logger_log(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *message)
@@ -206,8 +271,17 @@ void pni_logger_log(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_le
 void pni_logger_vlogf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *fmt, va_list ap)
 {
   assert(logger);
-  pn_string_vformat(logger->scratch, fmt, ap);
-  pni_logger_log(logger, subsystem, severity, pn_string_get(logger->scratch));
+  char buf[1024];
+  pn_fixed_string_t output = pn_fixed_string(buf, sizeof(buf));
+  pn_fixed_string_vaddf(&output, fmt, ap);
+  if (output.position==output.size) {
+    // Message overflow
+    const char truncated[] = " ... (truncated)";
+    output.position -= sizeof(truncated);
+    pn_fixed_string_append(&output, pn_string_const(truncated, sizeof(truncated)));
+  }
+  pn_fixed_string_terminate(&output);
+  pni_logger_log(logger, subsystem, severity, buf);
 }
 
 void pn_logger_logf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *fmt, ...)

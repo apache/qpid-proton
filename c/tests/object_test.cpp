@@ -19,9 +19,10 @@
  *
  */
 
-#include "./pn_test.hpp"
+#include "pn_test.hpp"
 
-#include <proton/object.h>
+#include "core/object_private.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,18 +34,26 @@ static char mem;
 static void *END = &mem;
 
 static pn_list_t *build_list(size_t capacity, ...) {
-  pn_list_t *result = pn_list(PN_OBJECT, capacity);
   va_list ap;
-
   va_start(ap, capacity);
+
+  pn_list_t *result;
+  void *arg = va_arg(ap, void *);
+  bool last = arg == END;
+  // No information about list types assume everything is PN_OBJECT
+  if (last) {
+    result = pn_list(PN_OBJECT, capacity);
+    return result;
+  }
+  result = pn_list(pn_class(arg), capacity);
   while (true) {
-    void *arg = va_arg(ap, void *);
     if (arg == END) {
       break;
     }
 
     pn_list_add(result, arg);
-    pn_class_decref(PN_OBJECT, arg);
+    pn_decref(arg);
+    arg = va_arg(ap, void *);
   }
   va_end(ap);
 
@@ -52,33 +61,47 @@ static pn_list_t *build_list(size_t capacity, ...) {
 }
 
 static pn_map_t *build_map(float load_factor, size_t capacity, ...) {
-  pn_map_t *result = pn_map(PN_OBJECT, PN_OBJECT, capacity, load_factor);
   va_list ap;
-
-  void *prev = NULL;
-
   va_start(ap, capacity);
-  int count = 0;
+
+  pn_map_t *result;
+  void *prev = va_arg(ap, void *);
+  bool last = prev == END;
+  // No information about map types assume everything is PN_OBJECT
+  if (last) {
+    result = pn_map(PN_OBJECT, PN_OBJECT, capacity, load_factor);
+    return result;
+  }
+  void *arg = va_arg(ap, void *);
+  last = arg == END;
+  // Only know type of key assume value is PN_OBJECT
+  if (last) {
+    result = pn_map(pn_class(prev), PN_OBJECT, capacity, load_factor);
+    pn_map_put(result, prev, NULL);
+    pn_decref(prev);
+    return result;
+  }
+  result = pn_map(pn_class(prev), pn_class(arg), capacity, load_factor);
+
   while (true) {
-    void *arg = va_arg(ap, void *);
-    bool last = arg == END;
-    if (arg == END) {
-      arg = NULL;
-    }
+    pn_map_put(result, prev, arg);
+    pn_decref(prev);
+    pn_decref(arg);
 
-    if (count % 2) {
-      pn_map_put(result, prev, arg);
-      pn_class_decref(PN_OBJECT, prev);
-      pn_class_decref(PN_OBJECT, arg);
-    } else {
-      prev = arg;
-    }
-
+    prev = va_arg(ap, void *);
+    last = prev == END;
     if (last) {
       break;
     }
 
-    count++;
+    arg = va_arg(ap, void *);
+    last = arg == END;
+
+    if (last) {
+      pn_map_put(result, prev, NULL);
+      pn_decref(prev);
+      break;
+    }
   }
   va_end(ap);
 
@@ -130,7 +153,7 @@ static void test_class(const pn_class_t *clazz, size_t size) {
 }
 
 TEST_CASE("object_class") {
-  test_class(PN_OBJECT, 0);
+  test_class(PN_DEFAULT, 0);
   test_class(PN_VOID, 5);
   test_class(&noop_class, 128);
 }
@@ -139,7 +162,7 @@ static void test_new(size_t size, const pn_class_t *clazz) {
   INFO("class=" << pn_class_name(clazz) << " size=" << size);
   void *obj = pn_class_new(clazz, size);
   REQUIRE(obj);
-  CHECK(pn_class_refcount(PN_OBJECT, obj) == 1);
+  CHECK(pn_refcount(obj) == 1);
   CHECK(pn_class(obj) == clazz);
   char *bytes = (char *)obj;
   for (size_t i = 0; i < size; i++) {
@@ -150,8 +173,8 @@ static void test_new(size_t size, const pn_class_t *clazz) {
 }
 
 TEST_CASE("object_class new") {
-  test_new(0, PN_OBJECT);
-  test_new(5, PN_OBJECT);
+  test_new(0, PN_DEFAULT);
+  test_new(5, PN_DEFAULT);
   test_new(128, &noop_class);
 }
 
@@ -241,7 +264,7 @@ TEST_CASE("object_compare") {
 
 TEST_CASE("object_refcounting") {
   int refs = 3;
-  void *obj = pn_class_new(PN_OBJECT, 0);
+  void *obj = pn_class_new(PN_DEFAULT, 0);
 
   CHECK(pn_refcount(obj) == 1);
 
@@ -282,10 +305,10 @@ TEST_CASE("list") {
 }
 
 TEST_CASE("list_refcount") {
-  void *one = pn_class_new(PN_OBJECT, 0);
-  void *two = pn_class_new(PN_OBJECT, 0);
-  void *three = pn_class_new(PN_OBJECT, 0);
-  void *four = pn_class_new(PN_OBJECT, 0);
+  void *one = pn_class_new(PN_DEFAULT, 0);
+  void *two = pn_class_new(PN_DEFAULT, 0);
+  void *three = pn_class_new(PN_DEFAULT, 0);
+  void *four = pn_class_new(PN_DEFAULT, 0);
 
   pn_list_t *list = pn_list(PN_OBJECT, 0);
   CHECK(!pn_list_add(list, one));
@@ -424,17 +447,17 @@ TEST_CASE("map_build_odd") {
 }
 
 TEST_CASE("map") {
-  void *one = pn_class_new(PN_OBJECT, 0);
-  void *two = pn_class_new(PN_OBJECT, 0);
-  void *three = pn_class_new(PN_OBJECT, 0);
-
-  pn_map_t *map = pn_map(PN_OBJECT, PN_OBJECT, 4, 0.75);
-  CHECK(pn_map_size(map) == 0);
+  void *one = pn_class_new(PN_DEFAULT, 0);
+  void *two = pn_class_new(PN_DEFAULT, 0);
+  void *three = pn_class_new(PN_DEFAULT, 0);
 
   pn_string_t *key = pn_string("key");
   pn_string_t *dup = pn_string("key");
   pn_string_t *key1 = pn_string("key1");
   pn_string_t *key2 = pn_string("key2");
+
+  pn_map_t *map = pn_map(PN_OBJECT, PN_OBJECT, 4, 0.75);
+  CHECK(pn_map_size(map) == 0);
 
   CHECK(!pn_map_put(map, key, one));
   CHECK(pn_map_size(map) == 1);
@@ -486,9 +509,9 @@ TEST_CASE("map") {
 }
 
 TEST_CASE("hash") {
-  void *one = pn_class_new(PN_OBJECT, 0);
-  void *two = pn_class_new(PN_OBJECT, 0);
-  void *three = pn_class_new(PN_OBJECT, 0);
+  void *one = pn_class_new(PN_DEFAULT, 0);
+  void *two = pn_class_new(PN_DEFAULT, 0);
+  void *three = pn_class_new(PN_DEFAULT, 0);
 
   pn_hash_t *hash = pn_hash(PN_OBJECT, 4, 0.75);
   pn_hash_put(hash, 0, NULL);
@@ -657,8 +680,8 @@ TEST_CASE("map_iteration") {
   int n = 5;
   pn_list_t *pairs = pn_list(PN_OBJECT, 2 * n);
   for (int i = 0; i < n; i++) {
-    void *key = pn_class_new(PN_OBJECT, 0);
-    void *value = pn_class_new(PN_OBJECT, 0);
+    void *key = pn_class_new(PN_DEFAULT, 0);
+    void *value = pn_class_new(PN_DEFAULT, 0);
     pn_list_add(pairs, key);
     pn_list_add(pairs, value);
     pn_decref(key);
@@ -692,12 +715,11 @@ TEST_CASE("map_iteration") {
   pn_decref(pairs);
 }
 
-#define test_inspect(o, expected)                                              \
-  do {                                                                         \
-    pn_string_t *dst = pn_string(NULL);                                        \
-    pn_inspect(o, dst);                                                        \
-    CHECK_THAT(expected, Equals(pn_string_get(dst)));                          \
-    pn_free(dst);                                                              \
+#define test_inspect(o, expected)                               \
+  do {                                                          \
+    char  *dst = pn_tostring(o);                                \
+    CHECK_THAT(expected, Equals(dst));                          \
+    free(dst);                                                  \
   } while (0)
 
 TEST_CASE("list_inspect") {
@@ -723,6 +745,7 @@ TEST_CASE("map_inspect") {
   // note that when there is more than one entry in a map, the order
   // of the entries is dependent on the hashes involved, it will be
   // deterministic though
+  // Fake key to tell build_map that the map type is string.
   pn_map_t *m = build_map(0.75, 0, END);
   test_inspect(m, "{}");
   pn_free(m);
@@ -743,10 +766,12 @@ TEST_CASE("map_inspect") {
 }
 
 TEST_CASE("map_coalesced_chain") {
-  pn_hash_t *map = pn_hash(PN_OBJECT, 16, 0.75);
   pn_string_t *values[9] = {pn_string("a"), pn_string("b"), pn_string("c"),
                             pn_string("d"), pn_string("e"), pn_string("f"),
                             pn_string("g"), pn_string("h"), pn_string("i")};
+
+  pn_hash_t *map = pn_hash(pn_class(values[0]), 16, 0.75);
+
   // add some items:
   pn_hash_put(map, 1, values[0]);
   pn_hash_put(map, 2, values[1]);
@@ -798,11 +823,13 @@ TEST_CASE("map_coalesced_chain") {
 }
 
 TEST_CASE("map_coalesced_chain2") {
-  pn_hash_t *map = pn_hash(PN_OBJECT, 16, 0.75);
   pn_string_t *values[10] = {pn_string("a"), pn_string("b"), pn_string("c"),
                              pn_string("d"), pn_string("e"), pn_string("f"),
                              pn_string("g"), pn_string("h"), pn_string("i"),
                              pn_string("j")};
+
+  pn_hash_t *map = pn_hash(pn_class(values[0]), 16, 0.75);
+
   // add some items:
   pn_hash_put(map, 1, values[0]); // a
   pn_hash_put(map, 2, values[1]); // b
@@ -866,9 +893,9 @@ TEST_CASE("list_compare") {
 
   CHECK(pn_equals(a, b));
 
-  void *one = pn_class_new(PN_OBJECT, 0);
-  void *two = pn_class_new(PN_OBJECT, 0);
-  void *three = pn_class_new(PN_OBJECT, 0);
+  void *one = pn_class_new(PN_DEFAULT, 0);
+  void *two = pn_class_new(PN_DEFAULT, 0);
+  void *three = pn_class_new(PN_DEFAULT, 0);
 
   pn_list_add(a, one);
   CHECK(!pn_equals(a, b));

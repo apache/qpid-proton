@@ -95,4 +95,17 @@ std::map<symbol, value> link::properties() const {
 error_condition link::error() const {
     return make_wrapper(pn_link_remote_condition(pn_object()));
 }
+
+void link::user_data(void* user_data) const {
+    pn_link_t* lnk = pn_object();
+    link_context& lctx = link_context::get(lnk);
+    lctx.user_data_ = user_data;
+}
+
+void* link::user_data() const {
+    pn_link_t* lnk = pn_object();
+    link_context& lctx = link_context::get(lnk);
+    return lctx.user_data_;
+}
+
 }

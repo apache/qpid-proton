@@ -22,6 +22,7 @@
  *
  */
 
+#include "./binary.hpp"
 #include "./internal/export.hpp"
 #include "./transfer.hpp"
 
@@ -44,10 +45,13 @@ class tracker : public transfer {
 
   public:
     /// Create an empty tracker.
-    tracker() {}
+    tracker() = default;
 
     /// Get the sender for this tracker.
     PN_CPP_EXTERN class sender sender() const;
+
+    /// Get the tag for this tracker.
+    PN_CPP_EXTERN binary tag() const;
 
     /// @cond INTERNAL
   friend class internal::factory<tracker>;

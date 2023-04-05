@@ -64,6 +64,12 @@ class PN_CPP_CLASS_EXTERN listener {
     /// @throw proton::error if this listener is not managed by a container.
     PN_CPP_EXTERN class container& container() const;
 
+    /// Set user data on this listener.
+    PN_CPP_EXTERN void user_data(void* user_data) const;
+
+    /// Get user data from this listener.
+    PN_CPP_EXTERN void* user_data() const;
+
   private:
     pn_listener_t* listener_;
 

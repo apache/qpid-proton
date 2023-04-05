@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 import os
 import gc
 from time import time, sleep
@@ -846,28 +844,6 @@ class TransferTest(Test):
         gc.collect()
         assert not gc.garbage
 
-    def test_work_queue(self):
-        assert self.c1.work_head is None
-        self.snd.delivery("tag")
-        assert self.c1.work_head is None
-        self.rcv.flow(1)
-        self.pump()
-        d = self.c1.work_head
-        assert d is not None
-        tag = d.tag
-        assert tag == "tag", tag
-        assert d.writable
-
-        n = self.snd.send(b"this is a test")
-        assert self.snd.advance()
-        assert self.c1.work_head is None
-
-        self.pump()
-
-        d = self.c2.work_head
-        assert d.tag == "tag"
-        assert d.readable
-
     def test_multiframe(self):
         self.rcv.flow(1)
         self.snd.delivery("tag")
@@ -922,10 +898,15 @@ class TransferTest(Test):
         # Confirm abort discards the sender's buffered content, i.e. no data in generated transfer frame.
         # We want:
         # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag", message-format=0, settled=true, aborted=true]
-        wanted = b"\x00\x00\x00%\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x15\x00\x00\x00\nR\x00R\x00\xa0\x03tagR\x00A@@@@A"
+        # wanted = b"\x00\x00\x00%\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x15\x00\x00\x00\nR\x00R\x00\xa0\x03tagR\x00A@@@@A"
+        # wanted = b"\x00\x00\x00\x26\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x16\x00\x00\x00\x0bR\x00R\x00\xa0\x03tagR\x00A@@@@A@"
+        # wanted = b'\x00\x00\x00\x20\x02\x00\x00\x00\x00S\x14\xc0\x13\x0bR\x00R\x00\xa0\x03tagR\x00A@@@@A@'
+        # wanted = b'\x00\x00\x00"\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x12\x00\x00\x00\nCC\xa0\x03tagCA@@@@A'
+        # wanted = b'\x00\x00\x00\x1d\x02\x00\x00\x00\x00S\x14\xc0\x10\x0bCC\xa0\x03tagCA@@@@A@'
+        wanted = b'\x00\x00\x00\x1c\x02\x00\x00\x00\x00S\x14\xc0\x0f\x0aCC\xa0\x03tagCA@@@@A'
         t = self.snd.transport
         wire_bytes = t.peek(1024)
-        assert wanted == wire_bytes
+        assert wanted == wire_bytes, wire_bytes
 
         self.pump()
         assert self.rcv.current.aborted
@@ -1027,15 +1008,6 @@ class TransferTest(Test):
             n = self.snd.send(msg)
             assert n == len(msg)
             assert self.snd.advance()
-
-        # handle all disposition changes to sent messages
-        d = self.c1.work_head
-        while d:
-            next_d = d.work_next
-            if d.updated:
-                d.update(Delivery.ACCEPTED)
-                d.settle()
-            d = next_d
 
         # submit some more deliveries
         for m in range(1450, 1500):
@@ -1318,10 +1290,15 @@ class MaxFrameTransferTest(Test):
         assert sd.aborted
         # Expect a single abort transfer frame with no content.  One credit is consumed.
         # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag_1", message-format=0, settled=true, aborted=true]
-        wanted = b"\x00\x00\x00\x27\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x17\x00\x00\x00\nR\x00R\x00\xa0\x05tag_1R\x00A@@@@A"
+        # wanted = b"\x00\x00\x00\x27\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x17\x00\x00\x00\nR\x00R\x00\xa0\x05tag_1R\x00A@@@@A"
+        # wanted = b"\x00\x00\x00\x28\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x18\x00\x00\x00\x0bR\x00R\x00\xa0\x05tag_1R\x00A@@@@A@"
+        # wanted = b'\x00\x00\x00\x22\x02\x00\x00\x00\x00S\x14\xc0\x15\x0bR\x00R\x00\xa0\x05tag_1R\x00A@@@@A@'
+        # wanted = b'\x00\x00\x00\x24\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x14\x00\x00\x00\nCC\xa0\x05tag_1CA@@@@A'
+        # wanted = b'\x00\x00\x00\x1f\x02\x00\x00\x00\x00S\x14\xc0\x12\x0bCC\xa0\x05tag_1CA@@@@A@'
+        wanted = b'\x00\x00\x00\x1e\x02\x00\x00\x00\x00S\x14\xc0\x11\x0aCC\xa0\x05tag_1CA@@@@A'
         t = self.snd.transport
         wire_bytes = t.peek(2048)
-        assert wanted == wire_bytes
+        assert wanted == wire_bytes, wire_bytes
         assert self.snd.credit == 0
         self.pump()
         assert self.rcv.current.aborted
@@ -1329,9 +1306,14 @@ class MaxFrameTransferTest(Test):
         self.snd.close()
         # Expect just the detach frame.
         # @detach(22) [handle=0, closed=true]
-        wanted = b"\x00\x00\x00\x17\x02\x00\x00\x00\x00S\x16\xd0\x00\x00\x00\x07\x00\x00\x00\x02R\x00A"
+        # wanted = b"\x00\x00\x00\x17\x02\x00\x00\x00\x00S\x16\xd0\x00\x00\x00\x07\x00\x00\x00\x02R\x00A"
+        # wanted = b"\x00\x00\x00\x18\x02\x00\x00\x00\x00S\x16\xd0\x00\x00\x00\x08\x00\x00\x00\x03R\x00A@"
+        # wanted = b'\x00\x00\x00\x12\x02\x00\x00\x00\x00S\x16\xc0\x05\x03R\x00A@'
+        # wanted = b"\x00\x00\x00\x16\x02\x00\x00\x00\x00S\x16\xd0\x00\x00\x00\x06\x00\x00\x00\x02CA"
+        # wanted = b'\x00\x00\x00\x11\x02\x00\x00\x00\x00S\x16\xc0\x04\x03CA@'
+        wanted = b'\x00\x00\x00\x10\x02\x00\x00\x00\x00S\x16\xc0\x03\x02CA'
         wire_bytes = t.peek(2048)
-        assert wanted == wire_bytes
+        assert wanted == wire_bytes, wire_bytes
 
 
 class IdleTimeoutTest(Test):

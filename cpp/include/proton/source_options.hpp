@@ -23,11 +23,13 @@
  */
 
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 #include "./duration.hpp"
 #include "./source.hpp"
 
+#include <map>
+#include <memory>
 #include <string>
+#include <vector>
 
 /// @file
 /// @copybrief proton::source_options
@@ -89,14 +91,17 @@ class source_options {
     /// messages.
     PN_CPP_EXTERN source_options& filters(const source::filter_map&);
 
-    /// Extension capabilities that are supported/requested
+    /// **Unsettled API** Extension capabilities that are supported/requested
     PN_CPP_EXTERN source_options& capabilities(const std::vector<symbol>&);
+
+    /// **Unsettled API** Set the dynamic node properties.
+    PN_CPP_EXTERN source_options& dynamic_properties(const source::dynamic_property_map&);
 
   private:
     void apply(source&) const;
 
     class impl;
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
   friend class source;

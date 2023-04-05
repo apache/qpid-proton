@@ -30,6 +30,8 @@
 #include <proton/event.h>
 #include <proton/message.h>
 
+#include <proton/object.h>
+
 #include <iosfwd>
 #include <string>
 #include <vector>
@@ -55,10 +57,6 @@ public:
   T *get() const { return ptr_; }
   operator T *() const { return ptr_; } // not marking explicit for convenience
 };
-
-// pn_free() works for some, but not all pn_xxx_t* types.
-// Add typed pn_string_free() so we can be consistent and safe.
-inline void pn_string_free(pn_string_t *s) { pn_free(s); }
 
 // Call pn_inspect(), return std::string
 std::string inspect(void *);

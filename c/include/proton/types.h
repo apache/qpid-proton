@@ -462,6 +462,21 @@ typedef struct pn_raw_connection_t pn_raw_connection_t;
 typedef struct pn_event_batch_t pn_event_batch_t;
 
 /**
+ * A type to represent the internal navigational state of a proton object
+ */
+typedef const void* pn_handle_t;
+
+/**
+ * A type representing the type of a proton internal object
+ */
+typedef struct pn_class_t pn_class_t;
+
+/**
+ * A type representing attached context information
+ */
+typedef struct pn_record_t pn_record_t;
+
+/**
  * @cond INTERNAL
  *
  * An event handler

@@ -17,19 +17,20 @@
 # under the License.
 #
 
-# This is a wrapper hack purely so that we can use imported targets
-# with cmake 2.8.12 and its supplied older modules
+# This Makefile demonstrates the use of pkgconfig to compile
+# programs that make use of Qpid Proton Cpp
 
-include(${CMAKE_ROOT}/Modules/FindOpenSSL.cmake)
+CFLAGS=-g -Wall -Wextra $(shell pkg-config --cflags libqpid-proton-cpp)
+LDFLAGS=$(shell pkg-config --libs libqpid-proton-cpp)
 
-if (OPENSSL_FOUND AND NOT TARGET OpenSSL::SSL)
-  add_library(OpenSSL::SSL UNKNOWN IMPORTED)
-  set_target_properties(OpenSSL::SSL
-    PROPERTIES
-      IMPORTED_LOCATION "${OPENSSL_SSL_LIBRARY}"
-      INTERFACE_LINK_LIBRARIES "${OPENSSL_CRYPTO_LIBRARY}"
-      INTERFACE_INCLUDE_DIRECTORIES "${OPENSSL_INCLUDE_DIR}"
-  )
-endif ()
+SOURCES=$(wildcard *.cpp)
+EXECUTABLES=$(patsubst %.cpp,%,$(SOURCES))
 
+all: $(EXECUTABLES)
 
+% : %.cpp
+	$(CXX) -o $@ $(CFLAGS) $(LDFLAGS) -lpthread $<
+
+.PHONY: clean
+clean:
+	rm -f $(EXECUTABLES)

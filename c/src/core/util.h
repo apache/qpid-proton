@@ -32,14 +32,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <proton/types.h>
-#include <proton/object.h>
+
+#include "object_private.h"
 
 #if __cplusplus
 extern "C" {
 #endif
 
 ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size);
-int pn_quote(pn_string_t *dst, const char *src, size_t size);
+struct pn_string_t;
+int pn_quote(struct pn_string_t *dst, const char *src, size_t size);
 bool pn_env_bool(const char *name);
 pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
 
@@ -54,8 +56,46 @@ static inline bool pn_bytes_equal(const pn_bytes_t a, const pn_bytes_t b) {
   return (a.size == b.size && !memcmp(a.start, b.start, a.size));
 }
 
-static inline pn_bytes_t pn_string_bytes(pn_string_t *s) {
+static inline pn_bytes_t pn_string_bytes(struct pn_string_t *s) {
   return pn_bytes(pn_string_size(s), pn_string_get(s));
+}
+
+static inline void pni_write16(char *bytes, uint16_t value)
+{
+  bytes[0] = 0xFF & (value >> 8);
+  bytes[1] = 0xFF & (value     );
+}
+
+static inline void pni_write32(char *bytes, uint32_t value)
+{
+  bytes[0] = 0xFF & (value >> 24);
+  bytes[1] = 0xFF & (value >> 16);
+  bytes[2] = 0xFF & (value >>  8);
+  bytes[3] = 0xFF & (value      );
+}
+
+static inline uint16_t pni_read16(const char *bytes)
+{
+  uint16_t a = (uint8_t) bytes[0];
+  uint16_t b = (uint8_t) bytes[1];
+  uint16_t r = a << 8 | b;
+  return r;
+}
+
+static inline uint32_t pni_read32(const char *bytes)
+{
+  uint32_t a = pni_read16(bytes);
+  uint32_t b = pni_read16(&bytes[2]);
+  uint32_t r = a << 16 | b;
+  return r;
+}
+
+static inline uint64_t pni_read64(const char *bytes)
+{
+  uint64_t a = pni_read32(bytes);
+  uint64_t b = pni_read32(&bytes[4]);
+  uint64_t r = a << 32 | b;
+  return r;
 }
 
 /* Create a literal bytes value, e.g. PN_BYTES_LITERAL(foo) == pn_bytes(3, "foo") */

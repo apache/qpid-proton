@@ -27,14 +27,15 @@
 #include "./types_fwd.hpp"
 
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 
+#include <memory>
 #include <string>
 
 /// @file
 /// @copybrief proton::container
 
 namespace proton {
+typedef uint64_t work_handle;
 
 /// A top-level container of connections, sessions, and links.
 ///
@@ -303,17 +304,21 @@ class PN_CPP_CLASS_EXTERN container {
     ///
     /// **C++ versions** - With C++11 and later, use a
     /// `std::function<void()>` type for the `fn` parameter.
-    PN_CPP_EXTERN void schedule(duration dur, work fn);
+    PN_CPP_EXTERN work_handle schedule(duration dur, work fn);
 
     /// **Deprecated** - Use `container::schedule(duration, work)`.
-    PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'container::schedule(duration, work)'") void schedule(duration dur, void_function0& fn);
+    PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'container::schedule(duration, work)'") work_handle schedule(duration dur, void_function0& fn);
+
+    /// Cancel task for the given work_handle.
+    PN_CPP_EXTERN void cancel(work_handle);
 
   private:
     /// Declare both v03 and v11 if compiling with c++11 as the library contains both.
     /// A C++11 user should never call the v03 overload so it is private in this case
-    PN_CPP_EXTERN void schedule(duration dur, internal::v03::work fn);
+    PN_CPP_EXTERN work_handle schedule(duration dur, internal::v03::work fn);
+
     class impl;
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
   friend class connection_options;

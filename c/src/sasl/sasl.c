@@ -22,8 +22,11 @@
 #include "sasl-internal.h"
 
 #include "core/autodetect.h"
-#include "core/dispatch_actions.h"
+#include "core/consumers.h"
 #include "core/engine-internal.h"
+#include "core/framing.h"
+#include "core/frame_generators.h"
+#include "core/frame_consumers.h"
 #include "core/util.h"
 #include "platform/platform_fmt.h"
 #include "protocol.h"
@@ -372,7 +375,7 @@ static void pni_emit(pn_transport_t *transport)
 {
   if (transport->connection && transport->connection->collector) {
     pn_collector_t *collector = transport->connection->collector;
-    pn_collector_put(collector, PN_OBJECT, transport, PN_TRANSPORT);
+    pn_collector_put_object(collector, transport, PN_TRANSPORT);
   }
 }
 
@@ -484,11 +487,13 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
   enum pnx_sasl_state desired_state = sasl->desired_state;
   while (sasl->desired_state > sasl->last_state) {
     switch (desired_state) {
-    case SASL_POSTED_INIT:
-      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[szS]", SASL_INIT, sasl->selected_mechanism,
-                    out.size, out.start, sasl->local_fqdn);
+    case SASL_POSTED_INIT: {
+      /* GENERATE_CODEC_CODE: "DL[szS]" */
+      pn_bytes_t buf = pn_amqp_encode_DLEszSe(transport->frame, SASL_INIT, sasl->selected_mechanism, out.size, out.start, sasl->local_fqdn);
+      pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       break;
+    }
     case SASL_POSTED_MECHANISMS: {
       // TODO(PROTON-2122) Replace magic number 32 with dynamically sized memory
       char *mechs[32];
@@ -498,15 +503,18 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       if (mechlist) {
         pni_split_mechs(mechlist, sasl->included_mechanisms, mechs, &count);
       }
-
-      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[@T[*s]]", SASL_MECHANISMS, PN_SYMBOL, count, mechs);
+      /* GENERATE_CODEC_CODE: "DL[@T[*s]]" */
+      pn_bytes_t buf = pn_amqp_encode_DLEATEjsee(transport->frame, SASL_MECHANISMS, PN_SYMBOL, count, mechs);
       free(mechlist);
+      pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       break;
     }
     case SASL_POSTED_RESPONSE:
       if (sasl->last_state != SASL_POSTED_RESPONSE) {
-        pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[Z]", SASL_RESPONSE, out.size, out.start);
+        /* "DL[Z]" */
+        pn_bytes_t buf = pn_amqp_encode_DLEZe(transport->frame, SASL_RESPONSE, out.size, out.start);
+        pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
       break;
@@ -515,16 +523,20 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         desired_state = SASL_POSTED_MECHANISMS;
         continue;
       } else if (sasl->last_state != SASL_POSTED_CHALLENGE) {
-        pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[Z]", SASL_CHALLENGE, out.size, out.start);
+        /* "DL[Z]" */
+        pn_bytes_t buf = pn_amqp_encode_DLEZe(transport->frame, SASL_CHALLENGE, out.size, out.start);
+        pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
       break;
-    case SASL_POSTED_OUTCOME:
+    case SASL_POSTED_OUTCOME: {
       if (sasl->last_state < SASL_POSTED_MECHANISMS) {
         desired_state = SASL_POSTED_MECHANISMS;
         continue;
       }
-      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[Bz]", SASL_OUTCOME, sasl->outcome, out.size, out.start);
+      /* "DL[Bz]" */
+      pn_bytes_t buf = pn_amqp_encode_DLEBze(transport->frame, SASL_OUTCOME, sasl->outcome, out.size, out.start);
+      pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       if (sasl->outcome!=PN_SASL_OK) {
         pn_do_error(transport, "amqp:unauthorized-access", "Failed to authenticate client [mech=%s]",
@@ -532,6 +544,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         desired_state = SASL_ERROR;
       }
       break;
+    }
     case SASL_RECVED_SUCCESS:
       if (sasl->last_state < SASL_POSTED_INIT) {
         desired_state = SASL_POSTED_INIT;
@@ -875,7 +888,7 @@ pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl0)
 }
 
 // Received Server side
-int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pni_sasl_t *sasl = transport->sasl;
 
@@ -888,8 +901,8 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   pn_bytes_t mech;
   pn_bytes_t recv;
-  int err = pn_data_scan(args, "D.[sz]", &mech, &recv);
-  if (err) return err;
+
+  pn_amqp_decode_DqEsze(payload, &mech, &recv);
   sasl->selected_mechanism = pn_strndup(mech.start, mech.size);
 
   // We need to filter out a supplied mech in in the inclusion list
@@ -907,7 +920,7 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 }
 
 // Received client side
-int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pni_sasl_t *sasl = transport->sasl;
 
@@ -918,33 +931,45 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
   // We should only receive this if we are a sasl client
   if (!sasl->client) return PN_ERR;
 
-  // This scanning relies on pn_data_scan leaving the pn_data_t cursors
-  // where they are after finishing the scan
   pn_string_t *mechs = pn_string("");
 
-  // Try array of symbols for mechanism list
-  bool array = false;
-  int err = pn_data_scan(args, "D.[?@[", &array);
-  if (err) return err;
+  pn_bytes_t subpayload;
+  pn_amqp_decode_DqERe(payload, &subpayload);
+  pni_consumer_t consumer = make_consumer_from_bytes(subpayload);
 
-  if (array) {
-    // Now keep checking for end of array and pull a symbol
-    while(pn_data_next(args)) {
-      pn_bytes_t s = pn_data_get_symbol(args);
-      if (pni_sasl_client_included_mech(sasl->included_mechanisms, s)) {
-        pn_string_addf(mechs, "%*s ", (int)s.size, s.start);
-      }
+  uint8_t element_type;
+  uint32_t element_count;
+  pni_consumer_t subconsumer;
+  if (consume_array(&consumer, &subconsumer, &element_count, &element_type) && (element_type==PNE_SYM32 || element_type==PNE_SYM8)) {
+    // If this is an array of symbols decode each symbol
+    pn_bytes_t symbol;
+    switch (element_type) {
+      case PNE_SYM8:
+        while (element_count) {
+          if (!pni_consumer_readv8(&subconsumer, &symbol)) break;
+          if (pni_sasl_client_included_mech(sasl->included_mechanisms, symbol)) {
+            pn_string_addf(mechs, "%.*s ", (int)symbol.size, symbol.start);
+          }
+          --element_count;
+        }
+        break;
+      case PNE_SYM32:
+        while (element_count) {
+          if (!pni_consumer_readv32(&subconsumer, &symbol)) break;
+          if (pni_sasl_client_included_mech(sasl->included_mechanisms, symbol)) {
+            pn_string_addf(mechs, "%.*s ", (int)symbol.size, symbol.start);
+          }
+          --element_count;
+        }
+        break;
     }
-
     if (pn_string_size(mechs)) {
-        pn_string_buffer(mechs)[pn_string_size(mechs)-1] = 0;
+      pn_string_buffer(mechs)[pn_string_size(mechs)-1] = 0;
     }
   } else {
-    // No array of symbols; try single symbol
-    pn_data_rewind(args);
+    // If not then see if it is a single symbol
     pn_bytes_t symbol;
-    int err = pn_data_scan(args, "D.[s]", &symbol);
-    if (err) return err;
+    pn_amqp_decode_DqEse(payload, &symbol);
 
     if (pni_sasl_client_included_mech(sasl->included_mechanisms, symbol)) {
       pn_string_setn(mechs, symbol.start, symbol.size);
@@ -963,7 +988,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
 }
 
 // Received client side
-int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pni_sasl_t *sasl = transport->sasl;
 
@@ -975,8 +1000,8 @@ int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t chan
   if (!sasl->client) return PN_ERR;
 
   pn_bytes_t recv;
-  int err = pn_data_scan(args, "D.[z]", &recv);
-  if (err) return err;
+
+  pn_amqp_decode_DqEze(payload, &recv);
 
   pni_sasl_impl_process_challenge(transport, &recv);
 
@@ -984,7 +1009,7 @@ int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t chan
 }
 
 // Received server side
-int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pni_sasl_t *sasl = transport->sasl;
 
@@ -996,8 +1021,8 @@ int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   if (sasl->client) return PN_ERR;
 
   pn_bytes_t recv;
-  int err = pn_data_scan(args, "D.[z]", &recv);
-  if (err) return err;
+
+  pn_amqp_decode_DqEze(payload, &recv);
 
   pni_sasl_impl_process_response(transport, &recv);
 
@@ -1005,7 +1030,7 @@ int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 }
 
 // Received client side
-int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
+int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   pni_sasl_t *sasl = transport->sasl;
 
@@ -1018,8 +1043,8 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
 
   uint8_t outcome;
   pn_bytes_t recv;
-  int err = pn_data_scan(args, "D.[Bz]", &outcome, &recv);
-  if (err) return err;
+
+  pn_amqp_decode_DqEBze(payload, &outcome, &recv);
 
   // Preset the outcome to what the server sent us - the plugin can alter this.
   // In practise the plugin processing here should only fail because it fails

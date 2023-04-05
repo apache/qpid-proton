@@ -32,7 +32,9 @@ module Qpid::Proton
     # @overload open_sender(address)
     #   @param address [String] address of the target to send to
     # @overload open_sender(opts)
-    #   @option opts [Boolean] :auto_settle (true) if true, automatically settle transfers
+    #   @option opts [Boolean] :auto_settle (true) If true (default), automatically settle
+    #   messages upon receiving a settled disposition for that delivery. Otherwise messages
+    #   must be explicitly settled.
     #   @option opts [Boolean] :dynamic (false) dynamic property for source {Terminus#dynamic}
     #   @option opts [String,Hash] :source source address or source options, see {Terminus#apply}
     #   @option opts [String,Hash] :target target address or target options, see {Terminus#apply}
@@ -95,5 +97,3 @@ module Qpid::Proton
     can_raise_error :stream, :error_class => Qpid::Proton::LinkError
   end
 end
-
-

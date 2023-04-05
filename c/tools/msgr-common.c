@@ -44,7 +44,7 @@ char *msgr_strdup( const char *src )
 }
 
 
-pn_timestamp_t msgr_now()
+pn_timestamp_t msgr_now(void)
 {
   // from "pncompat/misc_funcs.inc"
   return time_now();
@@ -159,7 +159,7 @@ void parse_password( const char *input, char **password )
 }
 
 static int dolog = 0;
-void enable_logging()
+void enable_logging(void)
 {
     dolog = 1;
 }

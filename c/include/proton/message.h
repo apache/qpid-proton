@@ -286,7 +286,7 @@ PN_EXTERN pn_data_t *    pn_message_id                    (pn_message_t *msg);
  * @param[in] msg a message object
  * @return the message id
  */
-PN_EXTERN pn_atom_t      pn_message_get_id                (pn_message_t *msg);
+PN_EXTERN pn_msgid_t     pn_message_get_id                (pn_message_t *msg);
 
 /**
  * Set the id for a message.
@@ -299,7 +299,7 @@ PN_EXTERN pn_atom_t      pn_message_get_id                (pn_message_t *msg);
  * @param[in] id the new value of the message id
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_id                (pn_message_t *msg, pn_atom_t id);
+PN_EXTERN int            pn_message_set_id                (pn_message_t *msg, pn_msgid_t id);
 
 /**
  * Get the user id for a message.
@@ -443,7 +443,7 @@ PN_EXTERN pn_data_t *    pn_message_correlation_id        (pn_message_t *msg);
  * @param[in] msg a message object
  * @return the message id
  */
-PN_EXTERN pn_atom_t      pn_message_get_correlation_id    (pn_message_t *msg);
+PN_EXTERN pn_msgid_t     pn_message_get_correlation_id    (pn_message_t *msg);
 
 /**
  * Set the correlation id for a message.
@@ -456,7 +456,7 @@ PN_EXTERN pn_atom_t      pn_message_get_correlation_id    (pn_message_t *msg);
  * @param[in] id the new value of the message id
  * @return zero on success or an error code on failure
  */
-PN_EXTERN int            pn_message_set_correlation_id    (pn_message_t *msg, pn_atom_t id);
+PN_EXTERN int            pn_message_set_correlation_id    (pn_message_t *msg, pn_msgid_t id);
 
 /**
  * Get the content_type for a message.

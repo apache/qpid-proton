@@ -4,25 +4,27 @@ environment:
   matrix:
     # https://www.appveyor.com/docs/build-environment/
     # https://www.appveyor.com/docs/windows-images-software
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+      CMAKE_GENERATOR: Visual Studio 17 2022
+      PYTHON: "C:\\Python310-x64"
+      QPID_PROTON_CMAKE_ARGS: "-A x64"
+      QPID_PROTON_CTEST_ARGS: "-E tox"
+      VCPKG_INTEGRATION: '-DCMAKE_TOOLCHAIN_FILE=C:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake'
+      VCPKG_DEFAULT_TRIPLET: x64-windows
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
       CMAKE_GENERATOR: Visual Studio 16 2019
-      # TODO (jdanek) upgrade to Python 38 when it can be made to work; or whichever is latest at the time
-      PYTHON: "C:\\Python37-x64"
+      PYTHON: "C:\\Python39-x64"
       QPID_PROTON_CMAKE_ARGS: "-A x64"
       VCPKG_INTEGRATION: '-DCMAKE_TOOLCHAIN_FILE=C:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake'
       VCPKG_DEFAULT_TRIPLET: x64-windows
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       CMAKE_GENERATOR: Visual Studio 15 2017
-      PYTHON: "C:\\Python37-x64"
+      CONFIGURATION: MinSizeRel
+      PYTHON: "C:\\Python38-x64"
       QPID_PROTON_CMAKE_ARGS: "-A x64"
+      QPID_PROTON_CTEST_ARGS: "-E tox"
       VCPKG_INTEGRATION: '-DCMAKE_TOOLCHAIN_FILE=C:/Tools/vcpkg/scripts/buildsystems/vcpkg.cmake'
       VCPKG_DEFAULT_TRIPLET: x64-windows
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CMAKE_GENERATOR: Visual Studio 14 2015
-      PYTHON: "C:\\Python36-x64"
-      QPID_PROTON_CMAKE_ARGS: "-A x64"
-      # vcpkg is supported on VS2015, we are just not enabling the CMake integration
-      # https://docs.microsoft.com/en-us/cpp/build/vcpkg?view=vs-2015
 
 install:
 - cinst -y swig
@@ -35,7 +37,7 @@ install:
 - vcpkg integrate install
 # https://pythonhosted.org/CodeChat/appveyor.yml.html
 - "%PYTHON%\\python.exe -m pip install --user --upgrade pip"
-- "%PYTHON%\\python.exe -m pip install --user --upgrade setuptools wheel tox"
+- "%PYTHON%\\python.exe -m pip install --user --upgrade setuptools wheel tox flake8"
 cache:
 - C:\ProgramData\chocolatey\bin -> .appveyor.yml
 - C:\ProgramData\chocolatey\lib -> .appveyor.yml

@@ -46,6 +46,8 @@
 #include <proton/session.h>
 #include <proton/transport.h>
 
+#include "tracing_private.hpp"
+
 #include <assert.h>
 
 namespace proton {
@@ -112,10 +114,16 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
     pn_link_t *lnk = pn_event_link(event);
     pn_delivery_t *dlv = pn_event_delivery(event);
     link_context& lctx = link_context::get(lnk);
+    Tracing& ot = Tracing::getTracing();
 
     if (pn_link_is_receiver(lnk)) {
         delivery d(make_wrapper<delivery>(dlv));
-        if (!pn_delivery_partial(dlv) && pn_delivery_readable(dlv)) {
+        if (pn_delivery_aborted(dlv)) {
+            pn_delivery_settle(dlv);
+            pn_link_flow(lnk, 1);
+            pn_link_advance(lnk);
+        }
+        else if (!pn_delivery_partial(dlv) && pn_delivery_readable(dlv)) {
             // generate on_message
             pn_connection_t *pnc = pn_session_connection(pn_link_session(lnk));
             connection_context& ctx = connection_context::get(pnc);
@@ -128,7 +136,7 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
                 if (lctx.auto_accept)
                     d.release();
             } else {
-                handler.on_message(d, msg);
+                ot.on_message_handler(handler, d, msg);
                 if (lctx.auto_accept && pn_delivery_local_state(dlv) == 0) // Not set by handler
                     d.accept();
                 if (lctx.draining && !pn_link_credit(lnk)) {
@@ -157,6 +165,7 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
         // sender
         if (pn_delivery_updated(dlv)) {
             tracker t(make_wrapper<tracker>(dlv));
+            ot.on_settled_span(t);
             switch(pn_delivery_remote_state(dlv)) {
             case PN_ACCEPTED:
                 handler.on_tracker_accept(t);

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,11 +18,13 @@
 # under the License.
 #
 
-from __future__ import print_function
 import optparse
-from proton import Message, Url
+import sys
+from proton import Condition, Message, Url
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
+exit_status = 0
 
 
 class Server(MessagingHandler):
@@ -34,9 +36,19 @@ class Server(MessagingHandler):
     def on_start(self, event):
         print("Listening on", self.url)
         self.container = event.container
-        self.conn = event.container.connect(self.url)
-        self.receiver = event.container.create_receiver(self.conn, self.address)
-        self.server = self.container.create_sender(self.conn, None)
+        self.conn = event.container.connect(self.url, desired_capabilities="ANONYMOUS-RELAY")
+
+    def on_connection_opened(self, event):
+        if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
+            self.receiver = event.container.create_receiver(self.conn, self.address)
+            self.server = self.container.create_sender(self.conn, None)
+        else:
+            global exit_status
+            print("Server needs a broker which supports ANONYMOUS-RELAY", file=sys.stderr)
+            exit_status = 1
+            c = event.connection
+            c.condition = Condition('amqp:not-implemented', description="ANONYMOUS-RELAY required")
+            c.close()
 
     def on_message(self, event):
         print("Received", event.message)
@@ -55,3 +67,5 @@ try:
     Container(Server(url, url.path)).run()
 except KeyboardInterrupt:
     pass
+
+sys.exit(exit_status)

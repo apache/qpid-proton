@@ -29,7 +29,6 @@
  */
 
 #include <proton/import_export.h>
-#include <proton/object.h>
 
 #include <stdarg.h>
 #include <stdint.h>

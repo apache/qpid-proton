@@ -20,8 +20,6 @@
 """
 Parsers for XML to dom.
 """
-from __future__ import absolute_import
-
 import xml.sax.handler
 from .dom import *
 

@@ -176,7 +176,7 @@ std::string message::reply_to() const {
 }
 
 void message::correlation_id(const message_id& id) {
-    value(pn_message_correlation_id(pn_msg())) = id;
+    pn_message_set_correlation_id(pn_msg(), id.atom_);
 }
 
 message_id message::correlation_id() const {

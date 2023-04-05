@@ -43,7 +43,7 @@ class error_condition {
 
   public:
     /// Create an empty error condition.
-    error_condition() {}
+    error_condition() = default;
 
     /// Create an error condition with only a description. A default
     /// name will be used ("proton:io:error").

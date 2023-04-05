@@ -293,6 +293,22 @@ PNP_EXTERN void pn_proactor_release_connection(pn_connection_t *connection);
 PNP_EXTERN void pn_connection_wake(pn_connection_t *connection);
 
 /**
+ * **Unsettled API** Send available AMQP protocol frames to the remote peer.
+ *
+ * Generate as many currently availabe AMQP frames for @p connection that can be sent on
+ * the network to the remote peer without blocking.  May help reduce latency, at the expense of
+ * extra processing overhead, for event handlers that spend a long time processing a
+ * single event batch.  Has little effect if called soon before a call to
+ * pn_proactor_done().
+ *
+ * @note **Not thread-safe**.  Call this function from a connection
+ * event handler.
+ *
+ * @note If @p connection does not belong to a proactor, this call does nothing.
+ */
+PNP_EXTERN void pn_connection_write_flush(pn_connection_t *connection);
+
+/**
  * Return the proactor associated with a connection.
  *
  * @note **Not thread-safe**

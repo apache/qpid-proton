@@ -23,7 +23,6 @@
  */
 
 #include <proton/import_export.h>
-#include <proton/object.h>
 #include <proton/types.h>
 #include <proton/error.h>
 #include <proton/type_compat.h>
@@ -299,6 +298,17 @@ typedef struct {
     pn_bytes_t as_bytes;
   } u;
 } pn_atom_t;
+
+/**
+ * A type that holds scalar AMQP values that are valid for
+ * message id and correlation id fields.
+ *
+ * This is actually another name for ::pn_atom_t as it is just a
+ * restricted version of that type.
+ *
+ * @ingroup api_types
+ */
+typedef pn_atom_t pn_msgid_t;
 
 /**
  * @addtogroup data

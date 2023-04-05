@@ -21,6 +21,7 @@
 
 #define PN_USE_DEPRECATED_API 1
 
+#include "core/fixed_string.h"
 #include "core/util.h"
 #include "proton/url.h"
 #include "proton/object.h"
@@ -176,19 +177,19 @@ static intptr_t pn_url_compare(void *oa, void *ob)
 }
 
 
-static int pn_url_inspect(void *obj, pn_string_t *dst)
+static void pn_url_inspect(void *obj, pn_fixed_string_t *dst)
 {
     pn_url_t *url = (pn_url_t *) obj;
-    int err = 0;
-    err = pn_string_addf(dst, "Url("); if (err) return err;
-    err = pn_inspect(pn_url_string(url), dst); if (err) return err;
-    return pn_string_addf(dst, ")");
+    pn_fixed_string_addf(dst, "Url(");
+    pn_finspect(pn_url_string(url), dst);
+    pn_fixed_string_addf(dst, ")");
+    return;
 }
 
 #define pn_url_initialize NULL
 
 
-pn_url_t *pn_url() {
+pn_url_t *pn_url(void) {
     static const pn_class_t clazz = PN_CLASS(pn_url);
     pn_url_t *url = (pn_url_t*) pn_class_new(&clazz, sizeof(pn_url_t));
     if (!url) return NULL;

@@ -23,8 +23,8 @@
  */
 
 #include <proton/import_export.h>
+#include <proton/types.h>
 #include <proton/type_compat.h>
-#include <proton/object.h>
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -526,7 +526,7 @@ PN_EXTERN void pn_collector_drain(pn_collector_t *collector);
  * this happens, this operation will return a NULL pointer.
  *
  * @param[in] collector a collector object
- * @param[in] clazz class of the context
+ * @param[in] clazz memory management class of the context
  * @param[in] context the event context
  * @param[in] type the event type
  *
@@ -537,6 +537,27 @@ PN_EXTERN void pn_collector_drain(pn_collector_t *collector);
 PN_EXTERN pn_event_t *pn_collector_put(pn_collector_t *collector,
                                        const pn_class_t *clazz, void *context,
                                        pn_event_type_t type);
+
+/**
+ * Place a new event on a collector.
+ *
+ * This operation will create a new event of the given type with a
+ * context that is managed as a pn_object and return a pointer to the
+ * newly created event. In some cases an event of the given type and
+ * context can be elided. When this happens, this operation will return
+ * a NULL pointer.
+ *
+ * @param[in] collector a collector object
+ * @param[in] object the event context object
+ * @param[in] type the event type
+ *
+ * @return a pointer to the newly created event or NULL if the event
+ *         was elided
+ */
+
+PN_EXTERN pn_event_t *pn_collector_put_object(pn_collector_t *collector,
+                                              void *object,
+                                              pn_event_type_t type);
 
 /**
  * Access the head event contained by a collector.

@@ -465,7 +465,7 @@ static inline void pni_raw_disconnect(pn_raw_connection_t *conn) {
 
 void pni_raw_connected(pn_raw_connection_t *conn) {
   pn_condition_clear(conn->condition);
-  pni_raw_put_event(conn, PN_RAW_CONNECTION_CONNECTED);
+  conn->connectpending = true;
   conn->state = pni_raw_new_state(conn, conn_connected);
 }
 
@@ -475,7 +475,17 @@ void pni_raw_connect_failed(pn_raw_connection_t *conn) {
 }
 
 void pni_raw_wake(pn_raw_connection_t *conn) {
-  conn->wakepending = true;
+  if (conn->disconnect_state != disc_fini)
+    conn->wakepending = true;
+}
+
+bool pni_raw_wake_is_pending(pn_raw_connection_t *conn) {
+  return conn->wakepending;
+}
+
+bool pni_raw_can_wake(pn_raw_connection_t *conn) {
+  // True if DISCONNECTED event has not yet been extracted from the batch.
+  return (conn->disconnect_state != disc_fini);
 }
 
 void pni_raw_read(pn_raw_connection_t *conn, int sock, long (*recv)(int, void*, size_t), void(*set_error)(pn_raw_connection_t *, const char *, int)) {
@@ -665,6 +675,9 @@ pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn) {
     pn_event_t *event = pn_collector_next(conn->collector);
     if (event) {
       return pni_log_event(conn, event);
+    } else if (conn->connectpending) {
+      pni_raw_put_event(conn, PN_RAW_CONNECTION_CONNECTED);
+      conn->connectpending = false;
     } else if (conn->wakepending) {
       pni_raw_put_event(conn, PN_RAW_CONNECTION_WAKE);
       conn->wakepending = false;
@@ -688,21 +701,7 @@ pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn) {
         }
         conn->disconnect_state = disc_drain_msg;
         break;
-      // TODO: We'll leave the read/written events in here for the moment for backward compatibility
-      // remove them soon (after dispatch uses DRAIN_BUFFER)
       case disc_drain_msg:
-        if (conn->rbuffer_first_read) {
-          pni_raw_put_event(conn, PN_RAW_CONNECTION_READ);
-        }
-        conn->disconnect_state = disc_read_msg;
-        break;
-      case disc_read_msg:
-        if (conn->wbuffer_first_written) {
-          pni_raw_put_event(conn, PN_RAW_CONNECTION_WRITTEN);
-        }
-        conn->disconnect_state = disc_written_msg;
-        break;
-      case disc_written_msg:
         pni_raw_put_event(conn, PN_RAW_CONNECTION_DISCONNECTED);
         conn->disconnectpending = false;
         conn->disconnect_state = disc_fini;

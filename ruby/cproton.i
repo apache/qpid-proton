@@ -22,6 +22,7 @@
 #define PN_USE_DEPRECATED_API 1
 
 #include <proton/connection_driver.h>
+#include <proton/cid.h>
 #include <proton/engine.h>
 #include <proton/handlers.h>
 #include <proton/message.h>
@@ -510,19 +511,14 @@ void Pn_rbkey_finalize(void *vp_rbkey) {
   }
 }
 
-/* NOTE: no macro or preprocessor definitions in %inline sections */
-#define CID_Pn_rbkey CID_pn_void
-#define Pn_rbkey_inspect NULL
-#define Pn_rbkey_compare NULL
-#define Pn_rbkey_hashcode NULL
+static pn_class_t *Pn_rbkey_class;
 
 pn_class_t* Pn_rbkey__class(void) {
-    static pn_class_t clazz = PN_CLASS(Pn_rbkey);
-    return &clazz;
+    return Pn_rbkey_class;
 }
 
 Pn_rbkey_t *Pn_rbkey_new(void) {
-    return (Pn_rbkey_t *) pn_class_new(Pn_rbkey__class(), sizeof(Pn_rbkey_t));
+    return (Pn_rbkey_t *) pn_class_new(Pn_rbkey_class, sizeof(Pn_rbkey_t));
 }
 %}
 
@@ -672,6 +668,12 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
     return d;
   }
 
+%}
+
+%init
+%{
+Pn_rbkey_class =
+  pn_class_create("Pn_rbkey", Pn_rbkey_initialize, Pn_rbkey_finalize, NULL, NULL, NULL);
 %}
 
 %include "proton/cproton.i"

@@ -60,9 +60,10 @@ std::ostream &operator<<(std::ostream &o, const pn_error_t &const_err) {
 namespace pn_test {
 
 std::string inspect(void *obj) {
-  auto_free<pn_string_t, pn_string_free> s(pn_string(NULL));
-  pn_inspect(obj, s);
-  return pn_string_get(s);
+  char* s = pn_tostring(obj);
+  std::string r(s);
+  free(s);
+  return r;
 }
 
 etypes make_etypes_(int first, ...) {

@@ -22,17 +22,19 @@
 #define PN_USE_DEPRECATED_API 1
 
 #include <proton/connection.h>
-#include <proton/object.h>
 #include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/transport.h>
 #include <proton/url.h>
-#include <assert.h>
-#include <stdio.h>
-#include <string.h>
+
+#include "core/object_private.h"
 #include "io.h"
 #include "selectable.h"
 #include "reactor.h"
+
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
 
 // XXX: overloaded for both directions
 PN_HANDLE(PN_TRANCTX)
@@ -47,7 +49,7 @@ void pni_reactor_set_connection_peer_address(pn_connection_t *connection,
     pn_url_set_port(url, port);
     pn_record_t *record = pn_connection_attachments(connection);
     if (!pn_record_has(record, PNI_CONN_PEER_ADDRESS)) {
-      pn_record_def(record, PNI_CONN_PEER_ADDRESS, PN_OBJECT);
+      pn_record_def(record, PNI_CONN_PEER_ADDRESS, pn_class(url));
     }
     pn_record_set(record, PNI_CONN_PEER_ADDRESS, url);
     pn_decref(url);
@@ -311,7 +313,7 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
   pn_selectable_on_expired(sel, pni_connection_expired);
   pn_selectable_on_finalize(sel, pni_connection_finalize);
   pn_record_t *record = pn_selectable_attachments(sel);
-  pn_record_def(record, PN_TRANCTX, PN_OBJECT);
+  pn_record_def(record, PN_TRANCTX, pn_class(transport));
   pn_record_set(record, PN_TRANCTX, transport);
   pn_record_t *tr = pn_transport_attachments(transport);
   pn_record_def(tr, PN_TRANCTX, PN_WEAKREF);

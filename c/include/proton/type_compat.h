@@ -82,7 +82,7 @@ the ARM compiler. In that case ssize_t needs to be defined in this file. */
 /* all versions of Visual Studio */
 # ifndef PNI_DEFINE_SSIZE_T
 /* ssize_t def is needed, unless third party definition interferes, e.g. python/swig */
-#  ifndef Py_CONFIG_H
+#  if !defined(Py_CONFIG_H) || defined(Py_CONFIG_H) && !defined(HAVE_SSIZE_T)
 #   define PNI_DEFINE_SSIZE_T
 #  endif
 # endif

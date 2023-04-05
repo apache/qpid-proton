@@ -94,6 +94,8 @@ typedef struct {
   pn_sequence_t disp_first;
   pn_sequence_t disp_last;
   // XXX: stop using negative numbers
+  #define PN_IMPL_HANDLE_MAX 0x7fffffff
+  uint32_t remote_handle_max;
   uint16_t local_channel;
   uint16_t remote_channel;
   bool incoming_init;
@@ -138,9 +140,8 @@ struct pn_transport_t {
   pn_data_t *remote_desired_capabilities;
   pn_data_t *remote_properties;
   pn_data_t *disp_data;
-  //#define PN_DEFAULT_MAX_FRAME_SIZE (16*1024)
-/* This is wrong and bad  we should really use a sensible starting size not unlimited */
-#define PN_DEFAULT_MAX_FRAME_SIZE (0)  /* for now, allow unlimited size */
+  // DEFAULT_MAX_FRAME_SIZE see PROTON-2640
+#define PN_DEFAULT_MAX_FRAME_SIZE (32*1024)
   uint32_t   local_max_frame;
   uint32_t   remote_max_frame;
   pn_condition_t remote_condition;
@@ -165,9 +166,6 @@ struct pn_transport_t {
 
 
   /* scratch area */
-  pn_string_t *scratch;
-  pn_data_t *args;
-  pn_data_t *output_args;
   pn_buffer_t *frame;  // frame under construction
 
   // Temporary - ??
@@ -262,6 +260,7 @@ struct pn_session_t {
   pn_list_t *freed;
   pn_record_t *context;
   size_t incoming_capacity;
+  uint32_t local_handle_max;
   pn_sequence_t incoming_bytes;
   pn_sequence_t outgoing_bytes;
   pn_sequence_t incoming_deliveries;
@@ -379,12 +378,7 @@ void pn_link_unbound(pn_link_t* link);
 void pn_ep_incref(pn_endpoint_t *endpoint);
 void pn_ep_decref(pn_endpoint_t *endpoint);
 
-int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const char *fmt, ...);
-
-typedef enum {IN, OUT} pn_dir_t;
-
-void pn_do_trace(pn_transport_t *transport, uint16_t ch, pn_dir_t dir,
-                 pn_data_t *args, const char *payload, size_t size);
+ssize_t pni_transport_grow_capacity(pn_transport_t *transport, size_t n);
 
 #if __cplusplus
 }

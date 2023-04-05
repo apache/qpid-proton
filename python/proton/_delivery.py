@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 from cproton import PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEASED, pn_delivery_abort, \
     pn_delivery_aborted, pn_delivery_attachments, pn_delivery_link, pn_delivery_local, pn_delivery_local_state, \
     pn_delivery_partial, pn_delivery_pending, pn_delivery_readable, pn_delivery_remote, pn_delivery_remote_state, \
@@ -26,32 +24,41 @@ from cproton import PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEA
     pn_delivery_writable, pn_disposition_annotations, pn_disposition_condition, pn_disposition_data, \
     pn_disposition_get_section_number, pn_disposition_get_section_offset, pn_disposition_is_failed, \
     pn_disposition_is_undeliverable, pn_disposition_set_failed, pn_disposition_set_section_number, \
-    pn_disposition_set_section_offset, pn_disposition_set_undeliverable, pn_disposition_type, pn_work_next
+    pn_disposition_set_section_offset, pn_disposition_set_undeliverable, pn_disposition_type, \
+    isnull
 
 from ._condition import cond2obj, obj2cond
 from ._data import dat2obj, obj2dat
 from ._wrapper import Wrapper
 
+from typing import Dict, List, Optional, Type, Union, TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ._condition import Condition
+    from ._data import PythonAMQPData, symbol
+    from ._endpoints import Receiver, Sender  # circular import
+    from ._reactor import Connection, Session, Transport
+
 
 class NamedInt(int):
-    values = {}  # type: Dict[int, str]  # noqa  # TODO(PROTON-2323) typing.Dict is not available on Python 2.7
+    values: Dict[int, 'DispositionType'] = {}
 
-    def __new__(cls, i, name):
+    def __new__(cls: Type['DispositionType'], i: int, name: str) -> 'DispositionType':
         ni = super(NamedInt, cls).__new__(cls, i)
         cls.values[i] = ni
         return ni
 
-    def __init__(self, i, name):
+    def __init__(self, i: int, name: str) -> None:
         self.name = name
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.name
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     @classmethod
-    def get(cls, i):
+    def get(cls, i: int) -> Union[int, 'DispositionType']:
         return cls.values.get(i, i)
 
 
@@ -115,7 +122,7 @@ class Disposition(object):
         self._annotations = None
 
     @property
-    def type(self):
+    def type(self) -> Union[int, DispositionType]:
         """
         Get the type of this disposition object.
 
@@ -126,73 +133,48 @@ class Disposition(object):
         * :const:`REJECTED`
         * :const:`RELEASED`
         * :const:`MODIFIED`
-
-        :type: ``str``
         """
         return DispositionType.get(pn_disposition_type(self._impl))
 
-    def _get_section_number(self):
+    @property
+    def section_number(self) -> int:
+        """The section number associated with a disposition."""
         return pn_disposition_get_section_number(self._impl)
 
-    def _set_section_number(self, n):
+    @section_number.setter
+    def section_number(self, n: int) -> None:
         pn_disposition_set_section_number(self._impl, n)
 
-    section_number = property(_get_section_number, _set_section_number, doc="""
-        The section number associated with a disposition.
-
-        :type: ``int``
-        """)
-
-    def _get_section_offset(self):
+    @property
+    def section_offset(self) -> int:
+        """The section offset associated with a disposition."""
         return pn_disposition_get_section_offset(self._impl)
 
-    def _set_section_offset(self, n):
+    @section_offset.setter
+    def section_offset(self, n: int) -> None:
         pn_disposition_set_section_offset(self._impl, n)
 
-    section_offset = property(_get_section_offset, _set_section_offset, doc="""
-        The section offset associated with a disposition.
-
-        :type: ``int``
-        """)
-
-    def _get_failed(self):
+    @property
+    def failed(self) -> bool:
+        """The failed flag for this disposition."""
         return pn_disposition_is_failed(self._impl)
 
-    def _set_failed(self, b):
+    @failed.setter
+    def failed(self, b: bool) -> None:
         pn_disposition_set_failed(self._impl, b)
 
-    failed = property(_get_failed, _set_failed, doc="""
-        The failed flag for this disposition.
-
-        :type: ``bool``
-        """)
-
-    def _get_undeliverable(self):
+    @property
+    def undeliverable(self) -> bool:
+        """The undeliverable flag for this disposition."""
         return pn_disposition_is_undeliverable(self._impl)
 
-    def _set_undeliverable(self, b):
+    @undeliverable.setter
+    def undeliverable(self, b: bool) -> None:
         pn_disposition_set_undeliverable(self._impl, b)
 
-    undeliverable = property(_get_undeliverable, _set_undeliverable, doc="""
-        The undeliverable flag for this disposition.
-
-        :type: ``bool``
-        """)
-
-    def _get_data(self):
-        if self.local:
-            return self._data
-        else:
-            return dat2obj(pn_disposition_data(self._impl))
-
-    def _set_data(self, obj):
-        if self.local:
-            self._data = obj
-        else:
-            raise AttributeError("data attribute is read-only")
-
-    data = property(_get_data, _set_data, doc="""
-        Access the disposition as a :class:`Data` object.
+    @property
+    def data(self) -> Optional[List[int]]:
+        """Access the disposition as a :class:`Data` object.
 
         Dispositions are an extension point in the AMQP protocol. The
         disposition interface provides setters/getters for those
@@ -202,24 +184,22 @@ class Disposition(object):
 
         The :class:`Data` object returned by this operation is valid until
         the parent delivery is settled.
-
-        :type: :class:`Data`
-        """)
-
-    def _get_annotations(self):
+        """
         if self.local:
-            return self._annotations
+            return self._data
         else:
-            return dat2obj(pn_disposition_annotations(self._impl))
+            return dat2obj(pn_disposition_data(self._impl))
 
-    def _set_annotations(self, obj):
+    @data.setter
+    def data(self, obj: List[int]) -> None:
         if self.local:
-            self._annotations = obj
+            self._data = obj
         else:
-            raise AttributeError("annotations attribute is read-only")
+            raise AttributeError("data attribute is read-only")
 
-    annotations = property(_get_annotations, _set_annotations, doc="""
-        The annotations associated with a disposition.
+    @property
+    def annotations(self) -> Optional[Dict['symbol', 'PythonAMQPData']]:
+        """The annotations associated with a disposition.
 
         The :class:`Data` object retrieved by this operation may be modified
         prior to updating a delivery. When a delivery is updated, the
@@ -230,33 +210,40 @@ class Disposition(object):
 
         The :class:`Data` object returned by this operation is valid until
         the parent delivery is settled.
-
-        :type: :class:`Data`
-        """)
-
-    def _get_condition(self):
+        """
         if self.local:
-            return self._condition
+            return self._annotations
         else:
-            return cond2obj(pn_disposition_condition(self._impl))
+            return dat2obj(pn_disposition_annotations(self._impl))
 
-    def _set_condition(self, obj):
+    @annotations.setter
+    def annotations(self, obj: Dict[str, 'PythonAMQPData']) -> None:
         if self.local:
-            self._condition = obj
+            self._annotations = obj
         else:
-            raise AttributeError("condition attribute is read-only")
+            raise AttributeError("annotations attribute is read-only")
 
-    condition = property(_get_condition, _set_condition, doc="""
-        The condition object associated with a disposition.
+    @property
+    def condition(self) -> Optional['Condition']:
+        """The condition object associated with a disposition.
 
         The :class:`Condition` object retrieved by this operation may be
         modified prior to updating a delivery. When a delivery is updated,
         the condition described by the disposition is reported to the peer
         if applicable to the current delivery state, e.g. states such as
         :const:`REJECTED`.
+        """
+        if self.local:
+            return self._condition
+        else:
+            return cond2obj(pn_disposition_condition(self._impl))
 
-        :type: :class:`Condition`
-        """)
+    @condition.setter
+    def condition(self, obj: 'Condition') -> None:
+        if self.local:
+            self._condition = obj
+        else:
+            raise AttributeError("condition attribute is read-only")
 
 
 class Delivery(Wrapper):
@@ -303,7 +290,7 @@ class Delivery(Wrapper):
 
     @staticmethod
     def wrap(impl):
-        if impl is None:
+        if isnull(impl):
             return None
         else:
             return Delivery(impl)
@@ -311,57 +298,48 @@ class Delivery(Wrapper):
     def __init__(self, impl):
         Wrapper.__init__(self, impl, pn_delivery_attachments)
 
-    def _init(self):
+    def _init(self) -> None:
         self.local = Disposition(pn_delivery_local(self._impl), True)
         self.remote = Disposition(pn_delivery_remote(self._impl), False)
 
     @property
-    def tag(self):
+    def tag(self) -> str:
         """
         The identifier for the delivery.
-
-        :type: ``bytes``
         """
         return pn_delivery_tag(self._impl)
 
     @property
-    def writable(self):
+    def writable(self) -> bool:
         """
         ``True`` for an outgoing delivery to which data can now be written,
         ``False`` otherwise..
-
-        :type: ``bool``
         """
         return pn_delivery_writable(self._impl)
 
     @property
-    def readable(self):
+    def readable(self) -> bool:
         """
         ``True`` for an incoming delivery that has data to read,
         ``False`` otherwise..
-
-        :type: ``bool``
         """
         return pn_delivery_readable(self._impl)
 
     @property
-    def updated(self):
+    def updated(self) -> bool:
         """
         ``True`` if the state of the delivery has been updated
         (e.g. it has been settled and/or accepted, rejected etc),
         ``False`` otherwise.
-
-        :type: ``bool``
         """
         return pn_delivery_updated(self._impl)
 
-    def update(self, state):
+    def update(self, state: Union[int, DispositionType]) -> None:
         """
         Set the local state of the delivery e.g. :const:`ACCEPTED`,
         :const:`REJECTED`, :const:`RELEASED`.
 
         :param state: State of delivery
-        :type state: ``int``
         """
         obj2dat(self.local._data, pn_disposition_data(self.local._impl))
         obj2dat(self.local._annotations, pn_disposition_annotations(self.local._impl))
@@ -369,54 +347,39 @@ class Delivery(Wrapper):
         pn_delivery_update(self._impl, state)
 
     @property
-    def pending(self):
+    def pending(self) -> int:
         """
         The amount of pending message data for a delivery.
-
-        :type: ``int``
         """
         return pn_delivery_pending(self._impl)
 
     @property
-    def partial(self):
+    def partial(self) -> bool:
         """
         ``True`` for an incoming delivery if not all the data is
         yet available, ``False`` otherwise.
-
-        :type: ``bool``
         """
         return pn_delivery_partial(self._impl)
 
     @property
-    def local_state(self):
-        """
-        A string representation of the local state of the delivery.
-
-        :type: ``str``
-        """
+    def local_state(self) -> DispositionType:
+        """A local state of the delivery."""
         return DispositionType.get(pn_delivery_local_state(self._impl))
 
     @property
-    def remote_state(self):
-        """
-        A string representation of the state of the delivery as
-        indicated by the remote peer.
-
-        :type: ``str``
-        """
+    def remote_state(self) -> Union[int, DispositionType]:
+        """A remote state of the delivery as indicated by the remote peer."""
         return DispositionType.get(pn_delivery_remote_state(self._impl))
 
     @property
-    def settled(self):
+    def settled(self) -> bool:
         """
         ``True`` if the delivery has been settled by the remote peer,
         ``False`` otherwise.
-
-        :type: ``bool``
         """
         return pn_delivery_settled(self._impl)
 
-    def settle(self):
+    def settle(self) -> None:
         """
         Settles the delivery locally. This indicates the application
         considers the delivery complete and does not wish to receive any
@@ -425,15 +388,13 @@ class Delivery(Wrapper):
         pn_delivery_settle(self._impl)
 
     @property
-    def aborted(self):
+    def aborted(self) -> bool:
         """
         ``True`` if the delivery has been aborted, ``False`` otherwise.
-
-        :type: ``bool``
         """
         return pn_delivery_aborted(self._impl)
 
-    def abort(self):
+    def abort(self) -> None:
         """
         Aborts the delivery.  This indicates the application wishes to
         invalidate any data that may have already been sent on this delivery.
@@ -442,51 +403,31 @@ class Delivery(Wrapper):
         pn_delivery_abort(self._impl)
 
     @property
-    def work_next(self):
-        """Deprecated: use on_message(), on_accepted(), on_rejected(),
-        on_released(), and on_settled() instead.
-
-        The next :class:`Delivery` on the connection that has pending
-        operations.
-
-        :type: :class:`Delivery`
-        """
-        return Delivery.wrap(pn_work_next(self._impl))
-
-    @property
-    def link(self):
+    def link(self) -> Union['Receiver', 'Sender']:
         """
         The :class:`Link` on which the delivery was sent or received.
-
-        :type: :class:`Link`
         """
         from . import _endpoints
         return _endpoints.Link.wrap(pn_delivery_link(self._impl))
 
     @property
-    def session(self):
+    def session(self) -> 'Session':
         """
         The :class:`Session` over which the delivery was sent or received.
-
-        :type: :class:`Session`
         """
         return self.link.session
 
     @property
-    def connection(self):
+    def connection(self) -> 'Connection':
         """
         The :class:`Connection` over which the delivery was sent or received.
-
-        :type: :class:`Connection`
         """
         return self.session.connection
 
     @property
-    def transport(self):
+    def transport(self) -> 'Transport':
         """
         The :class:`Transport` bound to the :class:`Connection` over which
         the delivery was sent or received.
-
-        :type: :class:`Transport`
         """
         return self.connection.transport

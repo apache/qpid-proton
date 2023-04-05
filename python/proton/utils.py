@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 from ._utils import BlockingConnection, BlockingSender, BlockingReceiver, SyncRequestResponse, SendException, LinkDetached, ConnectionClosed
 
 __all__ = [

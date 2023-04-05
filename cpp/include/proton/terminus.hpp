@@ -22,11 +22,13 @@
  *
  */
 
+#include "./map.hpp"
 #include "./types_fwd.hpp"
 #include "./internal/export.hpp"
 
 #include <proton/terminus.h>
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -54,6 +56,8 @@ class terminus {
     /// @endcond
 
   public:
+    typedef map<symbol, value> dynamic_property_map;
+
     terminus() : object_(0), parent_(0) {}
 
     /// The persistence mode of the source or target.
@@ -96,12 +100,17 @@ class terminus {
     /// True if the remote node is an anonymous-relay
     PN_CPP_EXTERN bool anonymous() const;
 
-    /// Obtain a reference to the AMQP dynamic node properties for the
-    /// terminus.  See also lifetime_policy.
+    /// Obtain the AMQP dynamic node properties for the terminus as a single value.
+    /// See also lifetime_policy.
+    /// @deprecated in favor of dynamic_properties()
     PN_CPP_EXTERN value node_properties() const;
 
-    /// Extension capabilities that are supported/requested
+    /// **Unsettled API** Extension capabilities that are supported/requested
     PN_CPP_EXTERN std::vector<symbol> capabilities() const;
+
+    /// **Unsettled API** Obtain the AMQP dynamic node properties for the
+    /// terminus as a map.
+    PN_CPP_EXTERN dynamic_property_map dynamic_properties() const;
 
   protected:
     pn_terminus_t *pn_object() const { return object_; }

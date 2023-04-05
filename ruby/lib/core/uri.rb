@@ -20,6 +20,13 @@ require 'uri'
 
 # Extend the standard ruby {URI} with AMQP and AMQPS schemes
 module URI
+  # monkey patch register_scheme for earlier versions of ruby
+  if !self.respond_to? :register_scheme
+    def self.register_scheme (scheme, klass)
+      @@schemes[scheme] = klass
+    end
+  end
+
   # AMQP URI scheme for the AMQP protocol
   class AMQP < Generic
     DEFAULT_PORT = 5672
@@ -27,13 +34,13 @@ module URI
     # @return [String] The AMQP address is the {#path} stripped of any leading "/"
     def amqp_address() path[0] == "/" ? path[1..-1] : path; end
   end
-  @@schemes['AMQP'] = AMQP
+  register_scheme 'AMQP', AMQP
 
   # AMQPS URI scheme for the AMQP protocol over TLS
   class AMQPS < AMQP
     DEFAULT_PORT = 5671
   end
-  @@schemes['AMQPS'] = AMQPS
+  register_scheme 'AMQPS', AMQPS
 end
 
 module Qpid::Proton

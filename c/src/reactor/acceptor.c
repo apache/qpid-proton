@@ -28,6 +28,8 @@
 #include "selectable.h"
 #include "selector.h"
 
+#include "core/object_private.h"
+
 #include <string.h>
 
 pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socket_t sock, pn_transport_t *transport);
@@ -60,7 +62,7 @@ void pni_acceptor_readable(pn_selectable_t *sel) {
   pn_decref(trans);
   pn_reactor_selectable_transport(reactor, sock, trans);
   record = pn_connection_attachments(conn);
-  pn_record_def(record, PNI_ACCEPTOR_CONNECTION, PN_OBJECT);
+  pn_record_def(record, PNI_ACCEPTOR_CONNECTION, pn_class(sel));
   pn_record_set(record, PNI_ACCEPTOR_CONNECTION, sel);
 
 }
@@ -83,7 +85,7 @@ pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, cons
   pn_selectable_on_finalize(sel, pni_acceptor_finalize);
   pni_record_init_reactor(pn_selectable_attachments(sel), reactor);
   pn_record_t *record = pn_selectable_attachments(sel);
-  pn_record_def(record, PNI_ACCEPTOR_HANDLER, PN_OBJECT);
+  pn_record_def(record, PNI_ACCEPTOR_HANDLER, pn_class(handler));
   pn_record_set(record, PNI_ACCEPTOR_HANDLER, handler);
   pn_selectable_set_reading(sel, true);
   pn_reactor_update(reactor, sel);

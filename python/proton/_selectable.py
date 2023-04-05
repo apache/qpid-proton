@@ -17,16 +17,24 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
+from typing import Optional, Union, TYPE_CHECKING, Any
 
 from ._events import Event
 from ._io import PN_INVALID_SOCKET
 
+if TYPE_CHECKING:
+    from ._events import EventType
+    from ._reactor import Container, EventInjector
+    from socket import socket
+
 
 class Selectable(object):
 
-    def __init__(self, delegate, reactor):
+    def __init__(
+            self,
+            delegate: Optional[Union['EventInjector', 'socket']],
+            reactor: 'Container',
+    ) -> None:
         self._delegate = delegate
         self.reading = False
         self.writing = False
@@ -37,38 +45,42 @@ class Selectable(object):
         self._reactor = reactor
         self.push_event(self, Event.SELECTABLE_INIT)
 
-    def close(self):
+    def close(self) -> None:
         if self._delegate and not self._released:
             self._delegate.close()
 
-    def fileno(self):
+    def fileno(self) -> int:
         if self._delegate:
             return self._delegate.fileno()
         else:
             return PN_INVALID_SOCKET
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         return getattr(self._delegate, name)
 
-    def _get_deadline(self):
+    @property
+    def deadline(self) -> Optional[float]:
         tstamp = self._deadline
         if tstamp:
             return tstamp
         else:
             return None
 
-    def _set_deadline(self, deadline):
+    @deadline.setter
+    def deadline(self, deadline: Optional[float]) -> None:
         if not deadline:
             self._deadline = 0
         else:
             self._deadline = deadline
 
-    deadline = property(_get_deadline, _set_deadline)
-
-    def push_event(self, context, etype):
+    def push_event(
+            self,
+            context: 'Selectable',
+            etype: 'EventType',
+    ) -> None:
         self._reactor.push_event(context, etype)
 
-    def update(self):
+    def update(self) -> None:
         if not self._terminated:
             if self._terminal:
                 self._terminated = True
@@ -76,21 +88,21 @@ class Selectable(object):
             else:
                 self.push_event(self, Event.SELECTABLE_UPDATED)
 
-    def readable(self):
+    def readable(self) -> None:
         self.push_event(self, Event.SELECTABLE_READABLE)
 
-    def writable(self):
+    def writable(self) -> None:
         self.push_event(self, Event.SELECTABLE_WRITABLE)
 
-    def expired(self):
+    def expired(self) -> None:
         self.push_event(self, Event.SELECTABLE_EXPIRED)
 
     @property
-    def is_terminal(self):
+    def is_terminal(self) -> bool:
         return self._terminal
 
-    def terminate(self):
+    def terminate(self) -> None:
         self._terminal = True
 
-    def release(self):
+    def release(self) -> None:
         self._released = True

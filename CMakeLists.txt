@@ -17,7 +17,7 @@
 # under the License.
 #
 
-cmake_minimum_required (VERSION 2.8.12)
+cmake_minimum_required (VERSION 3.16)
 
 project (Proton C)
 
@@ -42,7 +42,7 @@ endif ()
 if (NOT DEFINED Python_FIND_FRAMEWORK)
   set(Python_FIND_FRAMEWORK "LAST")
 endif ()
-find_package(Python 3.6
+find_package(Python 3.8
         REQUIRED COMPONENTS Interpreter
         OPTIONAL_COMPONENTS Development)
 
@@ -63,16 +63,9 @@ set (PN_C_LIBRARY_DIR "${CMAKE_BINARY_DIR}/c")
 set (PN_C_SOURCE_DIR "${CMAKE_BINARY_DIR}/c/src")
 
 ## C
-if (DEFINED CMAKE_C_COMPILE_FEATURES)
-  set(CMAKE_C_STANDARD 99)
-  set(CMAKE_C_EXTENSIONS OFF)
-  set(CMAKE_C_STANDARD_REQUIRED ON)
-else()
-  set (C_STANDARD_GNU -std=c99)
-  set (C_EXTENDED_GNU -std=gnu99)
-  set (C_STANDARD_Clang -std=c99)
-  set (C_EXTENDED_Clang -std=gnu99)
-endif()
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set (C_STANDARD_FLAGS ${C_STANDARD_${CMAKE_C_COMPILER_ID}})
 set (C_EXTENDED_FLAGS ${C_EXTENDED_${CMAKE_C_COMPILER_ID}})
@@ -83,13 +76,8 @@ if (CMAKE_CXX_COMPILER)
   enable_language(CXX)
 
   # This effectively checks for cmake version 3.1 or later
-  if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
-    set(CMAKE_CXX_STANDARD 11)
-    set(CMAKE_CXX_EXTENSIONS OFF)
-  else ()
-    # This can only be a fairly old version of Linux in practice
-    set(CXX_STANDARD "-std=c++11")
-  endif ()
+  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
 # Build static C and C++ libraries in addition to shared libraries.
@@ -140,9 +128,6 @@ endif()
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set (NOENABLE_WARNING_ERROR ON)
   set (LIB_SUFFIX "")
-  if (POLICY CMP0042)
-    cmake_policy (SET CMP0042 NEW)
-  endif ()
 endif ()
 
 # Benchmarks should be disabled by default
@@ -167,15 +152,9 @@ option(ENABLE_FUZZ_TESTING "Enable building fuzzers and regression testing with 
 option(ENABLE_BENCHMARKS "Enable building and running benchmarks with Google Benchmark" ${DEFAULT_BENCHMARKS})
 
 option(BUILD_EXAMPLES "Enable building example programs" ON)
+option(BUILD_TLS "Enable building separate TLS library for Proton raw connections" OFF)
 
 # Set any additional compiler specific flags
-set (LTO_GNU "-flto -fno-fat-lto-objects")
-set (LTO_Clang "-flto=thin")
-set (LTO_MSVC "/GL")
-set (LINK_LTO_GNU "-flto -fno-fat-lto-objects")
-set (LINK_LTO_Clang "-flto=thin")
-set (LINK_LTO_MSVC "/LTCG")
-
 set (WERROR_GNU "-Werror")
 set (WERROR_Clang "-Werror")
 set (WERROR_MSVC "")
@@ -202,8 +181,7 @@ set (HIDE_SYMBOLS_Clang "-fvisibility=hidden")
 set (HIDE_SYMBOLS_SunPro "-xldscope=hidden")
 
 if (ENABLE_LINKTIME_OPTIMIZATION)
-  set (LTO ${LTO_${CMAKE_C_COMPILER_ID}})
-  set (LINK_LTO ${LINK_LTO_${CMAKE_C_COMPILER_ID}})
+  set (CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 endif (ENABLE_LINKTIME_OPTIMIZATION)
 
 if (ENABLE_WARNING_ERROR)
@@ -276,40 +254,20 @@ set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
 mark_as_advanced (INCLUDE_INSTALL_DIR LIB_INSTALL_DIR SYSCONF_INSTALL_DIR SHARE_INSTALL_DIR MAN_INSTALL_DIR)
 
-macro (pn_absolute_install_dir NAME VALUE PREFIX)
+# Sets variable NAME to contain relative path from ROOT to VALUE
+# if VALUE is already relative, it does nothing
+macro (pn_relative_install_dir NAME ROOT VALUE)
   if (IS_ABSOLUTE ${VALUE})
-    set (${NAME} "${VALUE}")
-  elseif (IS_ABSOLUTE ${PREFIX})
-    set (${NAME} "${PREFIX}/${VALUE}")
+    file(RELATIVE_PATH "${NAME}" "${ROOT}" "${VALUE}")
   else ()
-    set (${NAME} "${CMAKE_BINARY_DIR}/${PREFIX}/${VALUE}")
+    set (${NAME} "${VALUE}")
   endif ()
-  get_filename_component (${NAME} ${${NAME}} ABSOLUTE)
 endmacro ()
 
-pn_absolute_install_dir (PREFIX "." ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir (EXEC_PREFIX "." ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir (LIBDIR ${LIB_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir (INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
+pn_relative_install_dir (INCLUDEDIR "${CMAKE_INSTALL_PREFIX}" "${INCLUDE_INSTALL_DIR}")
+pn_relative_install_dir (LIBDIR "${CMAKE_INSTALL_PREFIX}" "${LIB_INSTALL_DIR}")
 
 ## LANGUAGE BINDINGS
-
-# Default directory for language bindings not being installed into
-# system specified locations.
-set (BINDINGS_DIR ${LIB_INSTALL_DIR}/proton/bindings)
-
-set (SYSINSTALL_BINDINGS OFF CACHE BOOL "If SYSINSTALL_BINDINGS is OFF then proton bindings will be installed underneath ${BINDINGS_DIR} and each user will need to modify their interpreter configuration to load the appropriate binding. If SYSINSTALL_BINDINGS is ON, then each language interpreter will be queried for the appropriate directory and proton bindings will be installed and available system wide with no additional per user configuration.")
-
-set (BINDING_LANGS PYTHON RUBY)
-
-foreach (LANG ${BINDING_LANGS})
-  set (SYSINSTALL_${LANG} OFF CACHE BOOL "Install ${LANG} bindings into interpreter specified location.")
-  if (SYSINSTALL_BINDINGS OR SYSINSTALL_${LANG})
-    set (CHECK_SYSINSTALL_${LANG} ON)
-  else ()
-    set (CHECK_SYSINSTALL_${LANG} OFF)
-  endif ()
-endforeach()
 
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton)
 # End of variables used during install
@@ -350,7 +308,7 @@ add_subdirectory(c)
 
 # Add bindings that do not require swig here - the directory name must be the same as the binding name
 # See below for swig bindings
-set(BINDINGS cpp go)
+set(BINDINGS cpp go python)
 
 if (CMAKE_CXX_COMPILER)
   set (DEFAULT_CPP ON)
@@ -368,16 +326,15 @@ if (GO_EXE)
   endif()
 endif (GO_EXE)
 
+# Prerequisites for Python wrapper:
+if (Python_Development_FOUND)
+  set (DEFAULT_PYTHON ON)
+endif ()
+
 if(SWIG_FOUND)
   # Add any new swig bindings here - the directory name must be the same as the binding name
-  list(APPEND BINDINGS python ruby)
+  list(APPEND BINDINGS ruby)
 
-  if (POLICY CMP0078)
-    cmake_policy(SET CMP0078 OLD)
-  endif()
-  if (POLICY CMP0086)
-    cmake_policy(SET CMP0086 OLD)
-  endif()
   include(UseSWIG)
 
   # All swig modules should include ${PROTON_HEADERS} in SWIG_MODULE_<name>_EXTRA_DEPS
@@ -390,11 +347,6 @@ if(SWIG_FOUND)
   #
   # If the prerequisites for the binding are present set a variable called
   # DEFAULT_{uppercase name of binding} to ON
-
-  # Prerequisites for Python wrapper:
-  if (Python_Development_FOUND)
-    set (DEFAULT_PYTHON ON)
-  endif ()
 
   # Prerequisites for Ruby:
   find_package(Ruby)
@@ -411,7 +363,7 @@ endif()
 # BUILD_XXX variables to enable/disable bindings.
 #
 if (NOT DEFINED BUILD_BINDINGS)
-    set(BUILD_BINDINGS "${BINDINGS}")
+  set(BUILD_BINDINGS "${BINDINGS}")
 endif()
 
 foreach(BINDING ${BINDINGS})
@@ -422,7 +374,7 @@ foreach(BINDING ${BINDINGS})
   endif()
   option(BUILD_${UBINDING} "Build ${BINDING} language binding" ${DEFAULT_${UBINDING}})
   if (BUILD_${UBINDING})
-      add_subdirectory(${BINDING})
+    add_subdirectory(${BINDING})
   endif ()
 endforeach(BINDING)
 

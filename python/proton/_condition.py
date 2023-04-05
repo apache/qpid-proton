@@ -17,12 +17,15 @@
 # under the License.
 #
 
-from __future__ import absolute_import
+from typing import Optional, TYPE_CHECKING
 
 from cproton import pn_condition_clear, pn_condition_set_name, pn_condition_set_description, pn_condition_info, \
     pn_condition_is_set, pn_condition_get_name, pn_condition_get_description
 
 from ._data import Data, dat2obj
+
+if TYPE_CHECKING:
+    from ._data import PythonAMQPData
 
 
 class Condition:
@@ -48,26 +51,28 @@ class Condition:
     information relevant to the identified condition.
 
     :ivar ~.name: The name of the condition.
-    :vartype ~.name: ``str``
     :ivar ~.description: A description of the condition.
-    :vartype ~.description: ``str``
     :ivar ~.info: A data object that holds the additional information associated
         with the condition. The data object may be used both to access and to
         modify the additional information associated with the condition.
-    :vartype ~.info: :class:`Data`
     """
 
-    def __init__(self, name, description=None, info=None):
+    def __init__(
+            self,
+            name: str,
+            description: Optional[str] = None,
+            info: Optional['PythonAMQPData'] = None
+    ) -> None:
         self.name = name
         self.description = description
         self.info = info
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "Condition(%s)" % ", ".join([repr(x) for x in
                                             (self.name, self.description, self.info)
                                             if x])
 
-    def __eq__(self, o):
+    def __eq__(self, o: 'Condition') -> bool:
         if not isinstance(o, Condition):
             return False
         return self.name == o.name and \
@@ -75,17 +80,17 @@ class Condition:
             self.info == o.info
 
 
-def obj2cond(obj, cond):
+def obj2cond(obj, cond: Condition) -> None:
     pn_condition_clear(cond)
     if obj:
-        pn_condition_set_name(cond, str(obj.name))
+        pn_condition_set_name(cond, obj.name)
         pn_condition_set_description(cond, obj.description)
         info = Data(pn_condition_info(cond))
         if obj.info:
             info.put_object(obj.info)
 
 
-def cond2obj(cond):
+def cond2obj(cond) -> Optional[Condition]:
     if pn_condition_is_set(cond):
         return Condition(pn_condition_get_name(cond),
                          pn_condition_get_description(cond),

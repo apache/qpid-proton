@@ -44,7 +44,7 @@ PN_CPP_CLASS_EXTERN sender : public link {
 
   public:
     /// Create an empty sender.
-    sender() {}
+    sender() = default;
 
     PN_CPP_EXTERN ~sender();
 

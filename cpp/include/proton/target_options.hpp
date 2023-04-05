@@ -23,11 +23,13 @@
  */
 
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 #include "./duration.hpp"
 #include "./target.hpp"
 
+#include <map>
+#include <memory>
 #include <string>
+#include <vector>
 
 /// @file
 /// @copybrief proton::target_options
@@ -80,14 +82,17 @@ class target_options {
     /// target::LINK_CLOSE.
     PN_CPP_EXTERN target_options& expiry_policy(enum target::expiry_policy);
 
-    /// Extension capabilities that are supported/requested
+    /// **Unsettled API** Extension capabilities that are supported/requested
     PN_CPP_EXTERN target_options& capabilities(const std::vector<symbol>&);
+
+    /// **Unsettled API** Set the dynamic node properties.
+    PN_CPP_EXTERN target_options& dynamic_properties(const target::dynamic_property_map&);
 
   private:
     void apply(target&) const;
 
     class impl;
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
   friend class target;

@@ -62,7 +62,7 @@ void pn_selector_initialize(void *obj)
   pn_selector_t *selector = (pn_selector_t *) obj;
   selector->iocp = NULL;
   selector->selectables = pn_list(PN_WEAKREF, 0);
-  selector->iocp_descriptors = pn_list(PN_OBJECT, 0);
+  selector->iocp_descriptors = pn_list(&PN_CLASSCLASS(pni_iocpdesc), 0);
   selector->current = 0;
   selector->current_triggered = NULL;
   selector->awoken = 0;
@@ -86,7 +86,7 @@ void pn_selector_finalize(void *obj)
 #define pn_selector_compare NULL
 #define pn_selector_inspect NULL
 
-pn_selector_t *pni_selector()
+pn_selector_t *pni_selector(void)
 {
   static const pn_class_t clazz = PN_CLASS(pn_selector);
   pn_selector_t *selector = (pn_selector_t *) pn_class_new(&clazz, sizeof(pn_selector_t));

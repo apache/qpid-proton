@@ -17,7 +17,7 @@
 # under the License.
 #
 
-import re
+import os
 import subprocess
 import time
 import unittest
@@ -27,39 +27,34 @@ class Popen(subprocess.Popen):
 
     # We always use these options
     def __init__(self, args, **kwargs):
+        # Add the module directory to the path to be able to find the examples
+        path = f"{os.path.dirname(__file__)}{os.pathsep}{os.environ['PATH']}"
         super(Popen, self).\
             __init__(args,
+                     shell=False,
                      stderr=subprocess.STDOUT,
                      stdout=subprocess.PIPE,
-                     universal_newlines=True, **kwargs)
-
-    # For Python 2 compatibility add context manager support to Popen if it's not there
-    if not hasattr(subprocess.Popen, '__enter__'):
-        def __enter__(self):
-            return self
-
-    # For Python 2 compatibility add context manager support to Popen if it's not there
-    if not hasattr(subprocess.Popen, '__exit__'):
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            try:
-                if self.stdin:
-                    self.stdin.close()
-                if self.stdout:
-                    self.stdout.close()
-                if self.stderr:
-                    self.stderr.close()
-            finally:
-                self.wait()
+                     universal_newlines=True,
+                     env={'PATH': path},
+                     **kwargs)
 
 
-def remove_unicode_prefix(line):
-    return re.sub(r"u(['\"])", r"\1", line)
+# Like subprocess.run with our defaults but returning the Popen object
+def run(args, **kwargs):
+    p = Popen(args, **kwargs)
+    p.wait()
+    return p
+
+
+def check_call(args, **kwargs):
+    # Add the module directory to the path to be able to find the examples
+    path = f"{os.path.dirname(__file__)}{os.pathsep}{os.environ['PATH']}"
+    return subprocess.check_call(args, env={'PATH': path}, **kwargs)
 
 
 class ExamplesTest(unittest.TestCase):
     def test_helloworld(self, example="helloworld.py"):
-        with Popen([example]) as p:
-            p.wait()
+        with run([example]) as p:
             output = [l.strip() for l in p.stdout]
             self.assertEqual(output, ['Hello World!'])
 
@@ -77,19 +72,18 @@ class ExamplesTest(unittest.TestCase):
 
     def test_simple_send_recv(self, recv='simple_recv.py', send='simple_send.py'):
         with Popen([recv]) as r:
-            with Popen([send]):
+            with run([send]):
                 pass
-            actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
-            expected_py2 = ["{'sequence': int32(%i)}" % (i + 1,) for i in range(100)]
-            expected_py3 = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
-            self.assertIn(actual, [expected_py2, expected_py3])
+            actual = [l.strip() for l in r.stdout]
+            expected = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
+            self.assertEqual(actual, expected)
 
     def test_client_server(self, client=['client.py'], server=['server.py'], sleep=0):
         with Popen(server) as s:
             if sleep:
                 time.sleep(sleep)
-            with Popen(client) as c:
-                c.wait()
+            with run(client) as c:
+                s.terminate()
                 actual = [l.strip() for l in c.stdout]
                 inputs = ["Twas brillig, and the slithy toves",
                           "Did gire and gymble in the wabe.",
@@ -97,7 +91,6 @@ class ExamplesTest(unittest.TestCase):
                           "And the mome raths outgrabe."]
                 expected = ["%s => %s" % (l, l.upper()) for l in inputs]
                 self.assertEqual(actual, expected)
-            s.terminate()
 
     def test_sync_client_server(self):
         self.test_client_server(client=['sync_client.py'])
@@ -119,8 +112,8 @@ class ExamplesTest(unittest.TestCase):
     def test_db_send_recv(self):
         self.maxDiff = None
         # setup databases
-        subprocess.check_call(['db_ctrl.py', 'init', './src_db'])
-        subprocess.check_call(['db_ctrl.py', 'init', './dst_db'])
+        check_call(['db_ctrl.py', 'init', './src_db'])
+        check_call(['db_ctrl.py', 'init', './dst_db'])
         with Popen(['db_ctrl.py', 'insert', './src_db'], stdin=subprocess.PIPE) as fill:
             for i in range(100):
                 fill.stdin.write("Message-%i\n" % (i + 1))
@@ -128,7 +121,7 @@ class ExamplesTest(unittest.TestCase):
 
         # run send and recv
         with Popen(['db_recv.py', '-m', '100']) as r:
-            with Popen(['db_send.py', '-m', '100']):
+            with run(['db_send.py', '-m', '100']):
                 pass
             r.wait()
             # verify output of receive
@@ -137,10 +130,9 @@ class ExamplesTest(unittest.TestCase):
             self.assertEqual(actual, expected)
 
         # verify state of databases
-        with Popen(['db_ctrl.py', 'list', './dst_db']) as v:
-            v.wait()
+        with run(['db_ctrl.py', 'list', './dst_db']) as v:
             expected = ["(%i, 'Message-%i')" % (i + 1, i + 1) for i in range(100)]
-            actual = [remove_unicode_prefix(l.strip()) for l in v.stdout]
+            actual = [l.strip() for l in v.stdout]
             self.assertEqual(actual, expected)
 
     def test_tx_send_tx_recv(self):
@@ -150,36 +142,31 @@ class ExamplesTest(unittest.TestCase):
         self.maxDiff = None
         with Popen(['direct_recv.py', '-a', 'localhost:8888']) as r:
             time.sleep(0.5)
-            with Popen(['simple_send.py', '-a', 'localhost:8888']):
+            with run(['simple_send.py', '-a', 'localhost:8888']):
                 pass
             r.wait()
-            actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
-            expected_py2 = ["{'sequence': int32(%i)}" % (i + 1,) for i in range(100)]
-            expected_py3 = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
-            self.assertIn(actual, [expected_py2, expected_py3])
+            actual = [l.strip() for l in r.stdout]
+            expected = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
+            self.assertEqual(actual, expected)
 
     def test_direct_send_simple_recv(self):
         with Popen(['direct_send.py', '-a', 'localhost:8888']):
             time.sleep(0.5)
-            with Popen(['simple_recv.py', '-a', 'localhost:8888']) as r:
-                r.wait()
-                actual = [remove_unicode_prefix(l.strip()) for l in r.stdout]
-                expected_py2 = ["{'sequence': int32(%i)}" % (i + 1,) for i in range(100)]
-                expected_py3 = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
-                self.assertIn(actual, [expected_py2, expected_py3])
+            with run(['simple_recv.py', '-a', 'localhost:8888']) as r:
+                actual = [l.strip() for l in r.stdout]
+                expected = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
+                self.assertEqual(actual, expected)
 
     def test_selected_recv(self):
-        with Popen(['colour_send.py']):
+        with run(['colour_send.py']):
             pass
 
-        with Popen(['selected_recv.py', '-m', '50']) as r:
-            r.wait()
+        with run(['selected_recv.py', '-m', '50']) as r:
             actual = [l.strip() for l in r.stdout]
             expected = ["green %i" % (i + 1) for i in range(100) if i % 2 == 0]
             self.assertEqual(actual, expected)
 
-        with Popen(['simple_recv.py', '-m', '50']) as r:
-            r.wait()
+        with run(['simple_recv.py', '-m', '50']) as r:
             actual = [l.strip() for l in r.stdout]
             expected = ["red %i" % (i + 1) for i in range(100) if i % 2 == 1]
             self.assertEqual(actual, expected)

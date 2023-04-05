@@ -33,10 +33,9 @@ void pn_ptr_base::decref(void *p) {
 
 std::string pn_ptr_base::inspect(void* p) {
     if (!p) return std::string();
-    ::pn_string_t* s = ::pn_string(NULL);
-    (void) ::pn_inspect(p, s);
-    std::string tmp = std::string(pn_string_get(s));
-    pn_free(s);
+    char* s =  ::pn_tostring(p);
+    std::string tmp(s);
+    free(s);
     return tmp;
 }
 }}

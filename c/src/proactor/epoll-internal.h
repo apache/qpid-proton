@@ -88,8 +88,9 @@ typedef struct task_t {
   bool working;
   bool ready;                // ready to run and on ready list.  Poller notified by eventfd.
   bool waking;
-  bool on_ready_list;        // todo: protected by eventfd_mutex or sched mutex?  needed?
+  unsigned int ready_generation;
   struct task_t *ready_next; // ready list, guarded by proactor eventfd_mutex
+  struct task_t *resched_next; // resched list, guarded by sched mutex
   bool closing;
   // Next 4 are protected by the proactor mutex
   struct task_t* next;  /* Protected by proactor.mutex */
@@ -101,7 +102,7 @@ typedef struct task_t {
   tslot_t *prev_runner;
   bool sched_ready;
   bool sched_pending;           /* If true, one or more unseen epoll or other events to process() */
-  bool runnable ;               /* on one of the runnable lists */
+  int runnables_idx;            /* 0 means unset, idx-1 is array position */
 } task_t;
 
 typedef enum {
@@ -156,6 +157,7 @@ struct pn_proactor_t {
   bool need_timeout;
   bool timeout_set; /* timeout has been set by user and not yet cancelled or generated event */
   bool timeout_processed;  /* timeout event dispatched in the most recent event batch */
+  pmutex timeout_mutex;
   int task_count;
 
   // ready list subsystem
@@ -164,6 +166,8 @@ struct pn_proactor_t {
   bool ready_list_active;
   task_t *ready_list_first;
   task_t *ready_list_last;
+  unsigned int ready_list_count;
+  unsigned int ready_list_generation; // protected by both eventfd_mutex and a single p->poller instance
   // Interrupts have a dedicated eventfd because they must be async-signal safe.
   int interruptfd;
   // If the process runs out of file descriptors, disarm listening sockets temporarily and save them here.
@@ -188,7 +192,14 @@ struct pn_proactor_t {
   tslot_t *last_earmark;
   task_t *sched_ready_first;
   task_t *sched_ready_last;
-  task_t *sched_ready_current;
+  bool sched_ready_pending;
+  unsigned int sched_ready_count;
+  task_t *resched_first;
+  task_t *resched_last;
+  task_t *resched_cutoff; // last resched task of current poller work snapshot.  TODO: superseded by polled_resched_count?
+  task_t *resched_next;
+  unsigned int resched_count;
+  unsigned int polled_resched_count;
   pmutex tslot_mutex;
   int earmark_count;
   bool earmark_drain;
@@ -292,6 +303,7 @@ struct pn_listener_t {
   size_t pending_count;              /* number of pending accepted connections */
   size_t backlog;                 /* size of pending accepted array */
   bool close_dispatched;
+  int overflow_count;
   uint32_t sched_io_events;
 };
 
@@ -348,7 +360,7 @@ int pclosefd(pn_proactor_t *p, int fd);
 void proactor_add(task_t *tsk);
 bool proactor_remove(task_t *tsk);
 
-bool unassign_thread(tslot_t *ts, tslot_state new_state);
+bool unassign_thread(pn_proactor_t *p, tslot_t *ts, tslot_state new_state, tslot_t **resume_thread);
 
 void task_init(task_t *tsk, task_type_t t, pn_proactor_t *p);
 static void task_finalize(task_t* tsk) {
@@ -370,21 +382,25 @@ void configure_socket(int sock);
 accepted_t *listener_accepted_next(pn_listener_t *listener);
 
 task_t *pni_psocket_raw_task(psocket_t *ps);
-pn_event_batch_t *pni_raw_connection_process(task_t *t, bool sched_ready);
+psocket_t *pni_task_raw_psocket(task_t *t);
+pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool sched_ready);
 
 typedef struct praw_connection_t praw_connection_t;
+praw_connection_t *pni_task_raw_connection(task_t *t);
 task_t *pni_raw_connection_task(praw_connection_t *rc);
 praw_connection_t *pni_batch_raw_connection(pn_event_batch_t* batch);
 void pni_raw_connection_done(praw_connection_t *rc);
+void pni_raw_connection_forced_shutdown(praw_connection_t *rc);
 
 pni_timer_t *pni_timer(pni_timer_manager_t *tm, pconnection_t *c);
 void pni_timer_free(pni_timer_t *timer);
-void pni_timer_set(pni_timer_t *timer, uint64_t deadline);
+bool pni_timer_set(pni_timer_t *timer, uint64_t deadline);
 bool pni_timer_manager_init(pni_timer_manager_t *tm);
 void pni_timer_manager_finalize(pni_timer_manager_t *tm);
 pn_event_batch_t *pni_timer_manager_process(pni_timer_manager_t *tm, bool timeout, bool sched_ready);
 void pni_pconnection_timeout(pconnection_t *pc);
 void pni_proactor_timeout(pn_proactor_t *p);
+void pni_resume(pn_proactor_t *p, tslot_t *ts);
 
 // Generic wake primitives for a task.
 

@@ -28,6 +28,7 @@
 #include "proton/engine.h"
 #include "proton/logger.h"
 #include "proton/message.h"
+#include "proton/object.h"
 
 #include "libFuzzingEngine.h"
 
@@ -181,11 +182,10 @@ static void decode_message(pn_delivery_t *dlv) {
       // decode it into a proton message
       pn_message_t *m = pn_message();
       if (PN_OK == pn_message_decode(m, buffer, len)) {
-        pn_string_t *s = pn_string(NULL);
-        pn_inspect(pn_message_body(m), s);
+        char *s = pn_tostring(pn_message_body(m));
         if (ERRORS)
-          printf("%s\n", pn_string_get(s));
-        pn_free(s);
+          printf("%s\n", s);
+        free(s);
       }
       pn_message_free(m);
     }

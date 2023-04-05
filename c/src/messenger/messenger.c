@@ -389,7 +389,7 @@ static pn_listener_ctx_t *pn_listener_ctx(pn_messenger_t *messenger,
     return NULL;
   }
 
-  pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_class_new(PN_OBJECT, sizeof(pn_listener_ctx_t));
+  pn_listener_ctx_t *ctx = (pn_listener_ctx_t *) pn_class_new(PN_DEFAULT, sizeof(pn_listener_ctx_t));
   ctx->messenger = messenger;
   ctx->domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
   if (messenger->certificate) {
@@ -655,7 +655,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->next_tag = 0;
     m->outgoing = pni_store();
     m->incoming = pni_store();
-    m->subscriptions = pn_list(PN_OBJECT, 0);
+    m->subscriptions = pn_list(&PN_CLASSCLASS(pn_subscription), 0);
     m->incoming_subscription = NULL;
     m->error = pn_error();
     m->routes = pn_transform();

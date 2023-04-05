@@ -23,10 +23,10 @@
  */
 
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 #include "./duration.hpp"
 #include "./source.hpp"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -83,7 +83,7 @@ class reconnect_options {
 
   private:
     class impl;
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
   friend class connection_options;

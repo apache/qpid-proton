@@ -18,7 +18,6 @@
 # under the License.
 #
 
-from __future__ import print_function
 from protocol import *
 
 print("/* generated */")

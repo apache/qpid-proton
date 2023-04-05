@@ -43,9 +43,7 @@ static pn_event_t *batch_next(pn_connection_driver_t *d) {
   /* Log the next event that will be processed */
   pn_event_t *next = pn_collector_next(d->collector);
   if (next && PN_SHOULD_LOG(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG)) {
-    pn_string_clear(d->transport->scratch);
-    pn_inspect(next, d->transport->scratch);
-    pni_logger_log(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, pn_string_get(d->transport->scratch));
+    pni_logger_log_msg_inspect(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, next, "");
   }
   return next;
 }
@@ -87,6 +85,11 @@ void pn_connection_driver_destroy(pn_connection_driver_t *d) {
   if (d->transport) pn_transport_free(d->transport);
   if (d->collector) pn_collector_free(d->collector);
   memset(d, 0, sizeof(*d));
+}
+
+pn_rwbytes_t pn_connection_driver_read_buffer_sized(pn_connection_driver_t *d, size_t n) {
+  ssize_t cap = pni_transport_grow_capacity(d->transport, n);
+  return (cap > 0) ?  pn_rwbytes(cap, pn_transport_tail(d->transport)) : pn_rwbytes(0, 0);
 }
 
 pn_rwbytes_t pn_connection_driver_read_buffer(pn_connection_driver_t *d) {
@@ -151,9 +154,7 @@ bool pn_connection_driver_finished(pn_connection_driver_t *d) {
 void pn_connection_driver_verrorf(pn_connection_driver_t *d, const char *name, const char *fmt, va_list ap) {
   pn_transport_t *t = d->transport;
   pn_condition_t *cond = pn_transport_condition(t);
-  pn_string_vformat(t->scratch, fmt, ap);
-  pn_condition_set_name(cond, name);
-  pn_condition_set_description(cond, pn_string_get(t->scratch));
+  pn_condition_vformat(cond, name, fmt, ap);
 }
 
 void pn_connection_driver_errorf(pn_connection_driver_t *d, const char *name, const char *fmt, ...) {

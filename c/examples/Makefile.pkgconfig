@@ -17,26 +17,20 @@
 # under the License.
 #
 
-# This is a wrapper hack purely so that we can use imported targets
-# with cmake 2.8.12 and its supplied older modules
+# This Makefile demonstrates the use of pkgconfig to compile
+# programs that make use of Qpid Proton C
 
-include(${CMAKE_ROOT}/Modules/FindThreads.cmake)
+CFLAGS=-g -Wall -Wextra $(shell pkg-config --cflags libqpid-proton-core --cflags libqpid-proton-proactor)
+LDFLAGS=$(shell pkg-config --libs libqpid-proton-core --libs libqpid-proton-proactor)
 
-if(Threads_FOUND AND NOT TARGET Threads::Threads)
-  add_library(Threads::Threads UNKNOWN IMPORTED)
+SOURCES=$(wildcard *.c)
+EXECUTABLES=$(patsubst %.c,%,$(SOURCES))
 
-  if(THREADS_HAVE_PTHREAD_ARG)
-    set_target_properties(Threads::Threads
-      PROPERTIES
-        INTERFACE_COMPILE_OPTIONS "-pthread"
-    )
-  endif()
+all: $(EXECUTABLES)
 
-  if(CMAKE_THREAD_LIBS_INIT)
-    set_target_properties(Threads::Threads
-      PROPERTIES
-        IMPORTED_LOCATION "${CMAKE_THREAD_LIBS_INIT}"
-    )
-  endif()
-endif()
+% : %.c
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) -lpthread $<
 
+.PHONY: clean
+clean:
+	rm -f $(EXECUTABLES)

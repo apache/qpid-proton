@@ -176,9 +176,11 @@ int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
   size_t tail_space = pni_buffer_tail_space(buf);
   size_t n = pn_min(tail_space, size);
 
-  memmove(buf->bytes + tail, bytes, n);
-  memmove(buf->bytes, bytes + n, size - n);
-
+  // Heuristic check for a strange usage in messenger
+  if (bytes!=buf->bytes+tail) {
+    memcpy(buf->bytes + tail, bytes, n);
+    memcpy(buf->bytes, bytes + n, size - n);
+  }
   buf->size += size;
 
   return 0;
@@ -193,8 +195,8 @@ int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size)
   size_t head_space = pni_buffer_head_space(buf);
   size_t n = pn_min(head_space, size);
 
-  memmove(buf->bytes + head - n, bytes + size - n, n);
-  memmove(buf->bytes + buf->capacity - (size - n), bytes, size - n);
+  memcpy(buf->bytes + head - n, bytes + size - n, n);
+  memcpy(buf->bytes + buf->capacity - (size - n), bytes, size - n);
 
   if (buf->start >= size) {
     buf->start -= size;
@@ -233,8 +235,8 @@ size_t pn_buffer_get(pn_buffer_t *buf, size_t offset, size_t size, char *dst)
     sz2 = 0;
   }
 
-  memmove(dst, buf->bytes + start, sz1);
-  memmove(dst + sz1, buf->bytes, sz2);
+  memcpy(dst, buf->bytes + start, sz1);
+  memcpy(dst + sz1, buf->bytes, sz2);
 
   return sz1 + sz2;
 }
@@ -291,24 +293,37 @@ int pn_buffer_defrag(pn_buffer_t *buf)
 
 pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
 {
-  if (buf) {
-    pn_buffer_defrag(buf);
-    return pn_bytes(buf->size, buf->bytes);
-  } else {
-    return pn_bytes(0, NULL);
+  if (!buf) {
+    return (pn_bytes_t){0, NULL};
   }
+  pn_buffer_defrag(buf);
+  return (pn_bytes_t){.size=buf->size, .start=buf->bytes};
 }
 
 pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
 {
-  if (buf) {
-    pn_buffer_defrag(buf);
-    pn_rwbytes_t r = {buf->size, buf->bytes};
-    return r;
-  } else {
-    pn_rwbytes_t r = {0, NULL};
-    return r;
+  if (!buf) {
+    return (pn_rwbytes_t){0, NULL};
   }
+  pn_buffer_defrag(buf);
+  return (pn_rwbytes_t){.size=buf->size, .start=buf->bytes};
+}
+
+pn_rwbytes_t pn_buffer_free_memory(pn_buffer_t *buf)
+{
+  if (!buf) {
+    return (pn_rwbytes_t){0, NULL};
+  }
+  size_t free_size = buf->capacity-buf->size;
+  if (buf->start == 0) {
+    return (pn_rwbytes_t){.size=free_size, .start=buf->bytes};
+  }
+  // If free memory in one single blob don't need to defragment
+  if (buf->start+buf->size > buf->capacity) {
+    return (pn_rwbytes_t){.size=free_size, .start=buf->bytes+buf->start-free_size};
+  }
+  pn_buffer_defrag(buf);
+  return (pn_rwbytes_t){.size=free_size, .start=buf->bytes+buf->start+buf->size};
 }
 
 int pn_buffer_quote(pn_buffer_t *buf, pn_string_t *str, size_t n)

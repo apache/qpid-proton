@@ -104,7 +104,7 @@ sender_options::sender_options() : impl_(new impl()) {}
 sender_options::sender_options(const sender_options& x) : impl_(new impl()) {
     *this = x;
 }
-sender_options::~sender_options() {}
+sender_options::~sender_options() = default;
 
 sender_options& sender_options::operator=(const sender_options& x) {
     *impl_ = *x.impl_;

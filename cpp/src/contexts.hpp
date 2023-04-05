@@ -26,7 +26,10 @@
 
 #include "proton/work_queue.hpp"
 #include "proton/message.hpp"
-#include "proton/internal/pn_unique_ptr.hpp"
+
+#include "proton/object.h"
+
+#include <memory>
 
 struct pn_record_t;
 struct pn_link_t;
@@ -95,10 +98,12 @@ class connection_context : public context {
     messaging_handler* handler;
     std::string reconnect_url_;
     std::vector<std::string> failover_urls_;
-    internal::pn_unique_ptr<connection_options> connection_options_;
-    internal::pn_unique_ptr<reconnect_context> reconnect_context_;
+    std::unique_ptr<connection_options> connection_options_;
+    std::unique_ptr<reconnect_context> reconnect_context_;
     listener_context* listener_context_;
     work_queue work_queue_;
+    std::string active_url_;
+    void* user_data_;
 };
 
 class reconnect_options_base;
@@ -122,12 +127,15 @@ class listener_context : public context {
     static listener_context& get(pn_listener_t* c);
 
     listen_handler* listen_handler_;
-    internal::pn_unique_ptr<const connection_options> connection_options_;
+    std::unique_ptr<const connection_options> connection_options_;
+    void* user_data_;
 };
 
 class link_context : public context {
   public:
-    link_context() : handler(0), credit_window(10), pending_credit(0), auto_accept(true), auto_settle(true), draining(false) {}
+    link_context() :
+      handler(nullptr), credit_window(10), pending_credit(0), auto_accept(true), auto_settle(true), draining(false), user_data_(nullptr)
+    {}
     static link_context& get(pn_link_t* l);
 
     messaging_handler* handler;
@@ -136,14 +144,24 @@ class link_context : public context {
     bool auto_accept;
     bool auto_settle;
     bool draining;
+    void* user_data_;
 };
 
 class session_context : public context {
   public:
-    session_context() : handler(0) {}
+    session_context() : handler(0), user_data_(nullptr) {}
     static session_context& get(pn_session_t* s);
 
     messaging_handler* handler;
+    void* user_data_;
+};
+
+class transfer_context : public context {
+  public:
+    transfer_context() : user_data_(nullptr) {}
+    static transfer_context& get(pn_delivery_t* s);
+
+    void* user_data_;
 };
 
 }

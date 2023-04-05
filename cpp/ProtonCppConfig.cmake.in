@@ -22,19 +22,30 @@
 # Version: @PN_VERSION@
 # URL: http://qpid.apache.org/proton/
 
-set (ProtonCpp_VERSION       @PN_VERSION@)
-
-set (ProtonCpp_INCLUDE_DIRS  @INCLUDEDIR@)
-set (ProtonCpp_LIBRARIES     optimized @LIBDIR@/@PROTONCPPLIB@ debug @LIBDIR@/@PROTONCPPLIBDEBUG@)
-
-if (NOT TARGET Proton::cpp)
-  # Sigh.. have to make this compat with cmake 2.8.12
-  add_library(Proton::cpp UNKNOWN IMPORTED)
-  set_target_properties(Proton::cpp
-    PROPERTIES
-      IMPORTED_LOCATION "@LIBDIR@/@PROTONCPPLIB@"
-      IMPORTED_LOCATION_DEBUG "@LIBDIR@/@PROTONCPPLIBDEBUG@"
-      INTERFACE_INCLUDE_DIRECTORIES "${ProtonCpp_INCLUDE_DIRS}")
+@PACKAGE_INIT@
+if (NOT ProtonCpp_USE_STATIC_LIBS)
+  include("${CMAKE_CURRENT_LIST_DIR}/ProtonCppTargets.cmake")
+else()
+  include("${CMAKE_CURRENT_LIST_DIR}/ProtonCppTargetsStatic.cmake")
 endif()
 
+set (ProtonCpp_VERSION @PN_VERSION@)
+
+set_and_check (ProtonCpp_INCLUDE_DIRS @PACKAGE_INCLUDE_INSTALL_DIR@)
+set (ProtonCpp_LIBRARIES Proton::cpp)
 set (ProtonCpp_FOUND True)
+
+function(warn_components_not_found _NAME)
+  if (${_NAME}_FIND_QUIETLY)
+    return()
+  endif()
+
+  foreach(comp ${${_NAME}_FIND_COMPONENTS})
+    if(NOT ${_NAME}_${comp}_FOUND)
+      MESSAGE(STATUS "Requested ${_NAME} component ${comp} is NOT FOUND")
+    endif()
+  endforeach()
+endfunction()
+
+check_required_components(ProtonCpp)
+warn_components_not_found(ProtonCpp)

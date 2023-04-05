@@ -33,6 +33,7 @@
 #include <proton/type_compat.h>
 
 #include <limits>
+#include <type_traits>
 
 namespace proton {
 namespace internal {
@@ -40,56 +41,19 @@ namespace internal {
 class decoder;
 class encoder;
 
-template <bool, class T=void> struct enable_if {};
-template <class T> struct enable_if<true, T> { typedef T type; };
-
-struct true_type { static const bool value = true; };
-struct false_type { static const bool value = false; };
-
-template <class T> struct is_integral : public false_type {};
-template <class T> struct is_signed : public false_type {};
-
-template <> struct is_integral<char> : public true_type {};
-template <> struct is_signed<char> { static const bool value = std::numeric_limits<char>::is_signed; };
-
-template <> struct is_integral<unsigned char> : public true_type {};
-template <> struct is_integral<unsigned short> : public true_type {};
-template <> struct is_integral<unsigned int> : public true_type {};
-template <> struct is_integral<unsigned long> : public true_type {};
-
-template <> struct is_integral<signed char> : public true_type {};
-template <> struct is_integral<signed short> : public true_type {};
-template <> struct is_integral<signed int> : public true_type {};
-template <> struct is_integral<signed long> : public true_type {};
-
-template <> struct is_signed<unsigned short> : public false_type {};
-template <> struct is_signed<unsigned int> : public false_type {};
-template <> struct is_signed<unsigned long> : public false_type {};
-
-template <> struct is_signed<signed char> : public true_type {};
-template <> struct is_signed<signed short> : public true_type {};
-template <> struct is_signed<signed int> : public true_type {};
-template <> struct is_signed<signed long> : public true_type {};
-
-template <> struct is_integral<unsigned long long> : public true_type {};
-template <> struct is_integral<signed long long> : public true_type {};
-template <> struct is_signed<unsigned long long> : public false_type {};
-template <> struct is_signed<signed long long> : public true_type {};
-
-template <class T, class U> struct is_same { static const bool value=false; };
-template <class T> struct is_same<T,T> { static const bool value=true; };
-
-template< class T > struct remove_const          { typedef T type; };
-template< class T > struct remove_const<const T> { typedef T type; };
+struct type_id_unknown {
+  static constexpr bool has_id = false;
+};
 
 template <type_id ID, class T> struct type_id_constant {
     typedef T type;
-    static const type_id value = ID;
+    static constexpr type_id value = ID;
+    static constexpr bool has_id = true;
 };
 
 /// @name Metafunction returning AMQP type for scalar C++ types.
 /// @{
-template <class T> struct type_id_of;
+template <class T> struct type_id_of : public type_id_unknown {};
 template<> struct type_id_of<null> : public type_id_constant<NULL_TYPE, null> {};
 template<> struct type_id_of<decltype(nullptr)> : public type_id_constant<NULL_TYPE, null> {};
 template<> struct type_id_of<bool> : public type_id_constant<BOOLEAN, bool> {};
@@ -115,8 +79,9 @@ template<> struct type_id_of<binary> : public type_id_constant<BINARY, binary> {
 /// @}
 
 /// Metafunction to test if a class has a type_id.
-template <class T, class Enable=void> struct has_type_id : public false_type {};
-template <class T> struct has_type_id<T, typename type_id_of<T>::type>  : public true_type {};
+template <class T> struct has_type_id {
+  static constexpr bool value = type_id_of<T>::has_id;
+};
 
 // The known/unknown integer type magic is required because the C++ standard is
 // vague a about the equivalence of integral types for overloading. E.g. char is
@@ -144,11 +109,11 @@ template<> struct integer_type<8, false> { typedef uint64_t type; };
 
 // True if T is an integer type that does not have an explicit type_id.
 template <class T> struct is_unknown_integer {
-    static const bool value = !has_type_id<T>::value && is_integral<T>::value;
+    static constexpr bool value = !has_type_id<T>::value && std::is_integral<T>::value;
 };
 
-template<class T, class = typename enable_if<is_unknown_integer<T>::value>::type>
-struct known_integer : public integer_type<sizeof(T), is_signed<T>::value> {};
+template<class T, class = typename std::enable_if<is_unknown_integer<T>::value>::type>
+struct known_integer : public integer_type<sizeof(T), std::is_signed<T>::value> {};
 
 // Helper base for SFINAE templates.
 struct sfinae {
@@ -157,23 +122,6 @@ struct sfinae {
     struct any_t {
         template < typename T > any_t(T const&);
     };
-};
-
-template <class From, class To> struct is_convertible : public sfinae {
-    static yes test(const To&);
-    static no test(...);
-    static const From& from;
-    // Windows compilers warn about data-loss caused by legal conversions.  We
-    // can't use static_cast because that will cause a hard error instead of
-    // letting SFINAE overload resolution select the test(...) overload.
-#ifdef _WIN32
-#pragma warning( push )
-#pragma warning( disable : 4244 )
-#endif
-    static bool const value = sizeof(test(from)) == sizeof(yes);
-#ifdef _WIN32
-#pragma warning( pop )
-#endif
 };
 
 } // internal

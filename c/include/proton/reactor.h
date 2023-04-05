@@ -26,6 +26,7 @@
 #include <proton/type_compat.h>
 #include <proton/error.h>
 #include <proton/event.h>
+#include <proton/object.h>
 #include <proton/selectable.h>
 #include <proton/ssl.h>
 
@@ -41,6 +42,7 @@ typedef struct pn_reactor_t pn_reactor_t;
 typedef struct pn_acceptor_t pn_acceptor_t;
 typedef struct pn_timer_t pn_timer_t;
 typedef struct pn_task_t pn_task_t;
+struct pn_list_t;
 
 PNX_EXTERN pn_handler_t *pn_handler(void (*dispatch)(pn_handler_t *, pn_event_t *, pn_event_type_t));
 PNX_EXTERN pn_handler_t *pn_handler_new(void (*dispatch)(pn_handler_t *, pn_event_t *, pn_event_type_t), size_t size,
@@ -64,7 +66,7 @@ PNX_EXTERN pn_handler_t *pn_reactor_get_global_handler(pn_reactor_t *reactor);
 PNX_EXTERN void pn_reactor_set_global_handler(pn_reactor_t *reactor, pn_handler_t *handler);
 PNX_EXTERN pn_handler_t *pn_reactor_get_handler(pn_reactor_t *reactor);
 PNX_EXTERN void pn_reactor_set_handler(pn_reactor_t *reactor, pn_handler_t *handler);
-PNX_EXTERN pn_list_t *pn_reactor_children(pn_reactor_t *reactor);
+PNX_EXTERN struct pn_list_t *pn_reactor_children(pn_reactor_t *reactor);
 PNX_EXTERN pn_selectable_t *pn_reactor_selectable(pn_reactor_t *reactor);
 PNX_EXTERN void pn_reactor_update(pn_reactor_t *reactor, pn_selectable_t *selectable);
 PNX_EXTERN pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, const char *port,

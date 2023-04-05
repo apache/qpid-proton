@@ -19,24 +19,15 @@
  *
  */
 
+#include <proton/handlers.h>
+
 #include <proton/connection.h>
 #include <proton/session.h>
 #include <proton/link.h>
-#include <proton/handlers.h>
+
+#include "core/object_private.h"
+
 #include <assert.h>
-
-typedef struct {
-  pn_map_t *handlers;
-} pni_handshaker_t;
-
-pni_handshaker_t *pni_handshaker(pn_handler_t *handler) {
-  return (pni_handshaker_t *) pn_handler_mem(handler);
-}
-
-static void pn_handshaker_finalize(pn_handler_t *handler) {
-  pni_handshaker_t *handshaker = pni_handshaker(handler);
-  pn_free(handshaker->handlers);
-}
 
 static void pn_handshaker_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
   switch (type) {
@@ -96,8 +87,6 @@ static void pn_handshaker_dispatch(pn_handler_t *handler, pn_event_t *event, pn_
 }
 
 pn_handshaker_t *pn_handshaker(void) {
-  pn_handler_t *handler = pn_handler_new(pn_handshaker_dispatch, sizeof(pni_handshaker_t), pn_handshaker_finalize);
-  pni_handshaker_t *handshaker = pni_handshaker(handler);
-  handshaker->handlers = NULL;
+  pn_handler_t *handler = pn_handler_new(pn_handshaker_dispatch, 0, NULL);
   return handler;
 }

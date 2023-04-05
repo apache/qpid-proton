@@ -124,7 +124,7 @@ class connection_options::impl {
             cc.reconnect_url_ = reconnect_url.value;
             cc.reconnect_context_->current_url_ = -1;
         }
-        if (failover_urls.set) {
+        if (failover_urls.set && !failover_urls.value.empty()) {
             failover_urls.set = false;
             cc.failover_urls_ = failover_urls.value;
             cc.reconnect_context_->current_url_ = 0;
@@ -221,7 +221,7 @@ connection_options::connection_options(const connection_options& x) : impl_(new 
     *this = x;
 }
 
-connection_options::~connection_options() {}
+connection_options::~connection_options() = default;
 
 connection_options& connection_options::operator=(const connection_options& x) {
     *impl_ = *x.impl_;
@@ -252,7 +252,13 @@ connection_options& connection_options::reconnect(const reconnect_options &r) {
     return *this;
 }
 connection_options& connection_options::reconnect_url(const std::string& u) { impl_->reconnect_url = u; return *this; }
-connection_options& connection_options::failover_urls(const std::vector<std::string>& us) { impl_->failover_urls = us; return *this; }
+connection_options &
+connection_options::failover_urls(const std::vector<std::string> &us) {
+    if (!us.empty()) {
+        impl_->failover_urls = us;
+    }
+    return *this;
+}
 connection_options& connection_options::ssl_client_options(const class ssl_client_options &c) { impl_->ssl_client_options = c; return *this; }
 connection_options& connection_options::ssl_server_options(const class ssl_server_options &c) { impl_->ssl_server_options = c; return *this; }
 connection_options& connection_options::sasl_enabled(bool b) { impl_->sasl_enabled = b; return *this; }

@@ -36,7 +36,6 @@
 #include "platform/platform.h"
 #include "core/util.h"
 
-#include <proton/object.h>
 #include <proton/error.h>
 #include <proton/transport.h>
 
@@ -751,11 +750,12 @@ static uintptr_t pni_iocpdesc_hashcode(void *object)
 #define pni_iocpdesc_compare NULL
 #define pni_iocpdesc_inspect NULL
 
+pn_class_t PN_CLASSCLASS(pni_iocpdesc) = PN_CLASS(pni_iocpdesc);
+
 // Reference counted in the iocpdesc map, zombie_list, selector.
 static iocpdesc_t *pni_iocpdesc(pn_socket_t s)
 {
-  static pn_class_t clazz = PN_CLASS(pni_iocpdesc);
-  iocpdesc_t *iocpd = (iocpdesc_t *) pn_class_new(&clazz, sizeof(iocpdesc_t));
+  iocpdesc_t *iocpd = (iocpdesc_t *) pn_class_new(&PN_CLASSCLASS(pni_iocpdesc), sizeof(iocpdesc_t));
   assert(iocpd);
   iocpd->socket = s;
   return iocpd;
@@ -1023,7 +1023,7 @@ static void drain_zombie_completions(iocp_t *iocp)
 static pn_list_t *iocp_map_close_all(iocp_t *iocp)
 {
   // Zombify stragglers, i.e. no pn_close() from the application.
-  pn_list_t *externals = pn_list(PN_OBJECT, 0);
+  pn_list_t *externals = pn_list(&PN_CLASSCLASS(pni_iocpdesc), 0);
   for (pn_handle_t entry = pn_hash_head(iocp->iocpdesc_map); entry;
        entry = pn_hash_next(iocp->iocpdesc_map, entry)) {
     iocpdesc_t *iocpd = (iocpdesc_t *) pn_hash_value(iocp->iocpdesc_map, entry);
@@ -1142,8 +1142,8 @@ void pni_iocp_initialize(void *obj)
   pni_shared_pool_create(iocp);
   iocp->completion_port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
   assert(iocp->completion_port != NULL);
-  iocp->iocpdesc_map = pn_hash(PN_OBJECT, 0, 0.75);
-  iocp->zombie_list = pn_list(PN_OBJECT, 0);
+  iocp->iocpdesc_map = pn_hash(&PN_CLASSCLASS(pni_iocpdesc), 0, 0.75);
+  iocp->zombie_list = pn_list(&PN_CLASSCLASS(pni_iocpdesc), 0);
   iocp->iocp_trace = pn_env_bool("PN_TRACE_DRV");
   iocp->selector = NULL;
 }
@@ -1171,7 +1171,7 @@ void pni_iocp_finalize(void *obj)
   pni_shared_pool_free(iocp);
 }
 
-iocp_t *pni_iocp()
+iocp_t *pni_iocp(void)
 {
   static const pn_class_t clazz = PN_CLASS(pni_iocp);
   iocp_t *iocp = (iocp_t *) pn_class_new(&clazz, sizeof(iocp_t));

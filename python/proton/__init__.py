@@ -26,7 +26,6 @@ The proton APIs consist of the following classes:
  - :class:`Message`    -- A class for creating and/or accessing AMQP message content.
  - :class:`Data`       -- A class for creating and/or accessing arbitrary AMQP encoded data.
 """
-from __future__ import absolute_import
 
 import logging
 import logging.config
@@ -39,9 +38,10 @@ from ._data import UNDESCRIBED, Array, Data, Described, char, symbol, timestamp,
     byte, short, int32, float32, decimal32, decimal64, decimal128, AnnotationDict, PropertyDict, SymbolList
 from ._delivery import Delivery, Disposition
 from ._endpoints import Endpoint, Connection, Session, Link, Receiver, Sender, Terminus
-from ._events import Collector, Event, EventType, Handler
+from ._events import Collector, Event, EventType
 from ._exceptions import ProtonException, MessageException, DataException, TransportException, \
     SSLException, SSLUnavailable, ConnectionException, SessionException, LinkException, Timeout, Interrupt
+from ._handler import Handler
 from ._message import Message
 from ._transport import Transport, SASL, SSL, SSLDomain, SSLSessionDetails
 from ._url import Url

@@ -38,7 +38,7 @@ namespace proton {
 class annotation_key : public scalar_base {
   public:
     /// An empty annotation key.
-    annotation_key() {}
+    annotation_key() = default;
 
     /// Construct from any type that can be assigned.
     template <class T> annotation_key(const T& x) { *this = x; }

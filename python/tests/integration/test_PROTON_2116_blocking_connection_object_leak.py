@@ -22,10 +22,6 @@ PROTON-2116 Memory leak in python client
 PROTON-2192 Memory leak in Python client on Windows
 """
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import gc
 import logging
 import os

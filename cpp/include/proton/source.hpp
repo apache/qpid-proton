@@ -48,7 +48,7 @@ class source : public terminus {
     typedef map<symbol, value> filter_map;
 
     /// Create an empty source.
-    source() : terminus() {}
+    source() = default;
 
     /// The policy for distributing messages.
     enum distribution_mode {

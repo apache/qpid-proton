@@ -23,9 +23,11 @@
  */
 
 #include "./value.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 
 #include <cstddef>
+#include <initializer_list>
+#include <map>
+#include <memory>
 
 /// @file
 /// @copybrief proton::map
@@ -67,7 +69,7 @@ template <class K, class T>
 class PN_CPP_CLASS_EXTERN map {
     template <class M, class U=void>
         struct assignable_map :
-            public internal::enable_if<codec::is_encodable_map<M,K,T>::value, U> {};
+            public std::enable_if<codec::is_encodable_map<M,K,T>::value, U> {};
 
  public:
     /// Construct an empty map.
@@ -78,6 +80,15 @@ class PN_CPP_CLASS_EXTERN map {
 
     /// Copy a map.
     PN_CPP_EXTERN map& operator=(const map&);
+
+    /// Copy a std::map.
+    PN_CPP_EXTERN map(const std::map<K, T>&);
+
+    /// Copy a std::map.
+    PN_CPP_EXTERN map& operator=(const std::map<K, T>&);
+
+    /// Initializer_list constructor.
+    PN_CPP_EXTERN map(const std::initializer_list<std::pair<const K, T>>&);
 
     /// Move a map.
     PN_CPP_EXTERN map(map&&);
@@ -132,7 +143,7 @@ class PN_CPP_CLASS_EXTERN map {
 
   private:
     typedef map_type_impl<K,T> map_type;
-    mutable internal::pn_unique_ptr<map_type> map_;
+    mutable std::unique_ptr<map_type> map_;
     mutable proton::value value_;
 
     map_type& cache() const;

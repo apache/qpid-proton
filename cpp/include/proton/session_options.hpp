@@ -24,7 +24,8 @@
 
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
+
+#include <memory>
 
 /// @file
 /// @copybrief proton::session_options
@@ -60,7 +61,7 @@ class session_options {
     void apply(session&) const;
 
     class impl;
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     friend class session;
     /// @endcond

@@ -22,12 +22,12 @@
  *
  */
 
-#include "./internal/pn_unique_ptr.hpp"
 #include "./error.hpp"
 
 #include <proton/type_compat.h>
 
 #include <iosfwd>
+#include <memory>
 #include <string>
 
 /// @file
@@ -135,7 +135,7 @@ class PN_CPP_DEPRECATED("Use a third-party URL library") url {
 
   private:
     struct impl;
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
 

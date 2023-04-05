@@ -36,6 +36,17 @@ else()
   set(CONNECT_CONFIG_SRC src/connect_config_dummy.cpp)
 endif()
 
+# Check for OPENTELEMETRY-CPP for distributed tracing
+find_package(opentelemetry-cpp)
+option(ENABLE_OPENTELEMETRYCPP "Use opentelemetry for distributed tracing" ${OPENTELEMETRY-CPP_FOUND})
+if (ENABLE_OPENTELEMETRYCPP)
+  include_directories(${OPENTELEMETRY_CPP_INCLUDE_DIRS})
+  set(TRACING_SRC src/tracing_opentelemetry.cpp src/tracing_stub.cpp)
+  set(TRACING_LIBS opentelemetry-cpp::trace)
+else()
+  set(TRACING_SRC src/tracing_stub.cpp src/init_tracer_stub.cpp)
+endif()
+
 list(APPEND PLATFORM_LIBS Threads::Threads)
 
 set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CXX_STANDARD}")
@@ -105,18 +116,25 @@ set(qpid-proton-cpp-source
   src/value.cpp
   src/work_queue.cpp
   ${CONNECT_CONFIG_SRC}
+  ${TRACING_SRC}
   )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
+target_compile_definitions(qpid-proton-cpp
+  PRIVATE "PN_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}")
+
 if(BUILD_STATIC_LIBS)
   add_library(qpid-proton-cpp-static STATIC ${qpid-proton-cpp-source})
   target_compile_definitions(qpid-proton-cpp-static
-    PRIVATE PROTON_DECLARE_STATIC
+    PRIVATE PROTON_DECLARE_STATIC "PN_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}"
     PUBLIC PN_CPP_DECLARE_STATIC)
-  set(STATIC_LIBS qpid-proton-cpp-static)
+  set_target_properties (
+    qpid-proton-cpp-static
+    PROPERTIES
+    EXPORT_NAME cpp)
 endif(BUILD_STATIC_LIBS)
 
-target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS})
+target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS} ${TRACING_LIBS})
 
 set_target_properties (
   qpid-proton-cpp
@@ -124,17 +142,26 @@ set_target_properties (
   LINKER_LANGUAGE CXX
   VERSION   "${PN_LIB_CPP_VERSION}"
   SOVERSION "${PN_LIB_CPP_MAJOR_VERSION}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}"
-  COMPILE_FLAGS "${LTO}"
+  LINK_FLAGS "${CATCH_UNDEFINED}"
+  EXPORT_NAME cpp
   )
 
 ## Install
 
-install(TARGETS qpid-proton-cpp ${STATIC_LIBS}
-  EXPORT  proton-cpp
+install(TARGETS qpid-proton-cpp
+  EXPORT  ProtonCppTargets
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-  LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+  LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+  INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+if (BUILD_STATIC_LIBS)
+  install(TARGETS qpid-proton-cpp-static
+    EXPORT  ProtonCppStaticTargets
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
+    INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+endif ()
 
 # Install windows qpid-proton-cpp pdb files
 if (MSVC)
@@ -172,11 +199,25 @@ install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc
   DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
+install(EXPORT ProtonCppTargets
+  FILE ProtonCppTargets.cmake
+  NAMESPACE Proton::
+  DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
+if (BUILD_STATIC_LIBS)
+  install(EXPORT ProtonCppStaticTargets
+    FILE ProtonCppTargetsStatic.cmake
+    NAMESPACE Proton::
+    DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
+endif ()
+
+include(CMakePackageConfigHelpers)
 include(WriteBasicConfigVersionFile)
 
-configure_file(
+configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfig.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake @ONLY)
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake
+  PATH_VARS INCLUDE_INSTALL_DIR
+  INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
 write_basic_config_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
   VERSION ${PN_VERSION}

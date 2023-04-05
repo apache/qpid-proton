@@ -24,11 +24,11 @@
 
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 #include "./delivery_mode.hpp"
 #include "./types_fwd.hpp"
 
 #include <map>
+#include <memory>
 #include <string>
 
 /// @file
@@ -82,7 +82,10 @@ class sender_options {
     /// Set the delivery mode on the sender.
     PN_CPP_EXTERN sender_options& delivery_mode(delivery_mode);
 
-    /// Automatically settle messages (default is true).
+    /**
+     * If ``True`` (default), automatically settle messages upon receiving a settled
+     * disposition for that delivery. Otherwise messages must be explicitly settled.
+     */
     PN_CPP_EXTERN sender_options& auto_settle(bool);
 
     /// Options for the source node of the sender.
@@ -102,7 +105,7 @@ class sender_options {
     const std::string* get_name() const; // Pointer to name if set, else 0
 
     class impl;
-    internal::pn_unique_ptr<impl> impl_;
+    std::unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
   friend class sender;

@@ -19,12 +19,16 @@
  *
  */
 
+#include "subscription.h"
+
 #include <proton/messenger.h>
-#include <proton/object.h>
+
+#include "core/object_private.h"
+#include "messenger.h"
+
 #include <assert.h>
 #include <string.h>
 
-#include "messenger.h"
 
 struct pn_subscription_t {
   pn_messenger_t *messenger;
@@ -60,19 +64,20 @@ void pn_subscription_finalize(void *obj)
 #define pn_subscription_compare NULL
 #define pn_subscription_inspect NULL
 
+const pn_class_t PN_CLASSCLASS(pn_subscription) = PN_CLASS(pn_subscription);
+
 pn_subscription_t *pn_subscription(pn_messenger_t *messenger,
                                    const char *scheme,
                                    const char *host,
                                    const char *port)
 {
-  static const pn_class_t clazz = PN_CLASS(pn_subscription);
-  pn_subscription_t *sub = (pn_subscription_t *) pn_class_new(&clazz, sizeof(pn_subscription_t));
+  pn_subscription_t *sub = (pn_subscription_t *) pn_class_new(&PN_CLASSCLASS(pn_subscription), sizeof(pn_subscription_t));
   sub->messenger = messenger;
   pn_string_set(sub->scheme, scheme);
   pn_string_set(sub->host, host);
   pn_string_set(sub->port, port);
   pni_messenger_add_subscription(messenger, sub);
-  pn_class_decref(PN_OBJECT, sub);
+  pn_decref(sub);
   return sub;
 }
 

@@ -177,6 +177,7 @@ typedef struct pconnection_t {
   uv_timer_t timer;
   uv_write_t write;
   size_t writing;               /* size of pending write request, 0 if none pending */
+  bool read_started;
   uv_shutdown_t shutdown;
 
   /* Locked for thread-safe access */
@@ -885,7 +886,7 @@ static void check_wake(pconnection_t *pc) {
   uv_mutex_lock(&pc->lock);
   if (pc->wake == W_PENDING) {
     pn_connection_t *c = pc->driver.connection;
-    pn_collector_put(pn_connection_collector(c), PN_OBJECT, c, PN_CONNECTION_WAKE);
+    pn_collector_put_object(pn_connection_collector(c), c, PN_CONNECTION_WAKE);
     pc->wake = W_NONE;
   }
   uv_mutex_unlock(&pc->lock);
@@ -936,9 +937,12 @@ static bool leader_process_pconnection(pconnection_t *pc) {
           uv_shutdown(&pc->shutdown, (uv_stream_t*)&pc->tcp, NULL);
         }
       }
-      if (!err && rbuf.size > 0) {
+      if (!err && !pc->read_started && rbuf.size > 0) {
         what = "read";
         err = uv_read_start((uv_stream_t*)&pc->tcp, alloc_read_buffer, on_read);
+        if (!err) {
+          pc->read_started = true;
+        }
       }
       if (err) {
         /* Some IO requests failed, generate the error events */
@@ -952,7 +956,10 @@ static bool leader_process_pconnection(pconnection_t *pc) {
 /* Detach a connection from the UV loop so it can be used safely by a worker */
 void pconnection_detach(pconnection_t *pc) {
   if (pc->connected && !pc->writing) {           /* Can't detach while a write is pending */
-    uv_read_stop((uv_stream_t*)&pc->tcp);
+    if (pc->read_started) {
+      uv_read_stop((uv_stream_t*)&pc->tcp);
+      pc->read_started = false;
+    }
     uv_timer_stop(&pc->timer);
   }
 }
@@ -1208,7 +1215,7 @@ static void work_free(work_t *w) {
   }
 }
 
-pn_proactor_t *pn_proactor() {
+pn_proactor_t *pn_proactor(void) {
   uv_once(&global_init_once, global_init_fn);
   pn_proactor_t *p = (pn_proactor_t*)calloc(1, sizeof(pn_proactor_t));
   p->collector = pn_collector();
@@ -1360,6 +1367,9 @@ pn_millis_t pn_proactor_now(void) {
 int64_t pn_proactor_now_64(void) {
   return uv_hrtime() / 1000000; // uv_hrtime returns time in nanoseconds
 }
+
+// Empty stub for pending write flush functionality.
+void pn_connection_write_flush(pn_connection_t *connection) {}
 
 // Empty stubs for raw connection code
 pn_raw_connection_t *pn_raw_connection(void) { return NULL; }

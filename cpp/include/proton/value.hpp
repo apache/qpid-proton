@@ -58,7 +58,7 @@ class value : public internal::value_base, private internal::comparable<value> {
   private:
     // Enabler for encodable types excluding proton::value.
     template<class T, class U=void> struct assignable :
-        public internal::enable_if<codec::is_encodable<T>::value, U> {};
+        public std::enable_if<codec::is_encodable<T>::value, U> {};
     template<class U> struct assignable<value, U> {};
 
   public:

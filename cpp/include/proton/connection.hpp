@@ -83,6 +83,9 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Note: The value returned is not stable until the on_transport_open event is received
     PN_CPP_EXTERN std::string user() const;
 
+    /// Return the url for the connection.
+    PN_CPP_EXTERN std::string url() const;
+
     /// Open the connection.
     /// @see messaging_handler
     PN_CPP_EXTERN void open();
@@ -198,6 +201,12 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// @note Connection options supplied in the parameter will be merged with the
     /// existing parameters as if `connection_options::update()` was used.
     PN_CPP_EXTERN void update_options(const connection_options&);
+
+    /// Set user data on this connection.
+    PN_CPP_EXTERN void user_data(void* user_data) const;
+
+    /// Get user data from this connection.
+    PN_CPP_EXTERN void* user_data() const;
 
     /// @cond INTERNAL
   friend class internal::factory<connection>;

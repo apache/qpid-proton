@@ -19,9 +19,11 @@
  *
  */
 
-#include <proton/object.h>
 #include <proton/reactor.h>
 #include <proton/event.h>
+
+#include "core/object_private.h"
+
 #include <string.h>
 #include <assert.h>
 
@@ -49,14 +51,15 @@ void pn_handler_finalize(void *object) {
 #define pn_handler_compare NULL
 #define pn_handler_inspect NULL
 
+static const pn_class_t PN_CLASSCLASS(pn_handler) = PN_CLASS(pn_handler);
+
 pn_handler_t *pn_handler(void (*dispatch)(pn_handler_t *, pn_event_t *, pn_event_type_t)) {
   return pn_handler_new(dispatch, 0, NULL);
 }
 
 pn_handler_t *pn_handler_new(void (*dispatch)(pn_handler_t *, pn_event_t *, pn_event_type_t), size_t size,
                              void (*finalize)(pn_handler_t *)) {
-  static const pn_class_t clazz = PN_CLASS(pn_handler);
-  pn_handler_t *handler = (pn_handler_t *) pn_class_new(&clazz, sizeof(pn_handler_t) + size);
+  pn_handler_t *handler = (pn_handler_t *) pn_class_new(&PN_CLASSCLASS(pn_handler), sizeof(pn_handler_t) + size);
   handler->dispatch = dispatch;
   handler->finalize = finalize;
   memset(pn_handler_mem(handler), 0, size);
@@ -84,7 +87,7 @@ void *pn_handler_mem(pn_handler_t *handler) {
 void pn_handler_add(pn_handler_t *handler, pn_handler_t *child) {
   assert(handler);
   if (!handler->children) {
-    handler->children = pn_list(PN_OBJECT, 0);
+    handler->children = pn_list(&PN_CLASSCLASS(pn_handler), 0);
   }
   pn_list_add(handler->children, child);
 }

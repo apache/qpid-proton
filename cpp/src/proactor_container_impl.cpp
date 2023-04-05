@@ -194,6 +194,7 @@ pn_connection_t* container::impl::make_connection_lh(
     cc.handler = mh;
     cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, pnc);
     cc.reconnect_url_ = url;
+    cc.active_url_ = url;
     cc.connection_options_.reset(new connection_options(opts));
 
     make_wrapper(pnc).open(*cc.connection_options_);
@@ -258,6 +259,7 @@ void container::impl::reconnect(pn_connection_t* pnc) {
     opts.update(co);
     messaging_handler* mh = opts.handler();
     cc.handler = mh;
+    cc.active_url_ = url;
 
     make_wrapper(pnc).open(co);
     start_connection(url, pnc);
@@ -450,12 +452,13 @@ proton::listener container::impl::listen(const std::string& addr, proton::listen
     return proton::listener(listener);
 }
 
-void container::impl::schedule(duration delay, work f) {
+work_handle container::impl::schedule(duration delay, work f) {
     GUARD(deferred_lock_);
     timestamp now = timestamp::now();
 
     // Record timeout; Add callback to timeout sorted list
-    scheduled s = {now+delay, f};
+    scheduled s = {now+delay, f, current_work_handle_};
+    ++current_work_handle_;
     deferred_.push_back(s);
     std::push_heap(deferred_.begin(), deferred_.end());
 
@@ -463,6 +466,13 @@ void container::impl::schedule(duration delay, work f) {
     scheduled* next = &deferred_.front();
     pn_millis_t timeout_ms = (now < next->time) ? (next->time-now).milliseconds() : 0;
     pn_proactor_set_timeout(proactor_, timeout_ms);
+    is_active_.insert(s.w_handle);
+    return s.w_handle;
+}
+
+void container::impl::cancel(work_handle work_handle) {
+    GUARD(deferred_lock_);
+    is_active_.erase(work_handle);
 }
 
 void container::impl::client_connection_options(const connection_options &opts) {
@@ -530,7 +540,13 @@ void container::impl::run_timer_jobs() {
     // We've now taken the tasks to run from the deferred tasks
     // so we can run them unlocked
     // NB. We copied the due tasks in reverse order so execute from end
-    for (int i = tasks.size()-1; i>=0; --i) tasks[i].task();
+
+    for (int i = tasks.size()-1; i>=0; --i) {
+        if(is_active_.count(tasks[i].w_handle)) {
+            tasks[i].task();
+            is_active_.erase(tasks[i].w_handle);
+        }
+    }
 }
 
 // Return true if this thread is finished

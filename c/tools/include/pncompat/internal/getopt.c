@@ -57,7 +57,7 @@ static int opt_offset = 0;             /* Index into compounded "-option" */
 static int dashdash = 0;               /* True if "--" option reached */
 static int nonopt = 0;                 /* How many nonopts we've found */
 
-static void increment_index()
+static void increment_index(void)
 {
 	/* Move onto the next option */
 	if(argv_index < argv_index2)
@@ -74,7 +74,7 @@ static void increment_index()
 * Permutes argv[] so that the argument currently being processed is moved
 * to the end.
 */
-static int permute_argv_once()
+static int permute_argv_once(void)
 {
 	/* Movability check */
 	if(argv_index + nonopt >= prev_argc) return 1;

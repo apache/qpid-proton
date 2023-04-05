@@ -26,6 +26,7 @@
 #include <proton/listener.h>
 #include <proton/netaddr.h>
 #include <proton/message.h>
+#include <proton/object.h>
 #include <proton/proactor.h>
 #include <proton/sasl.h>
 #include <proton/session.h>
@@ -80,7 +81,7 @@ static void send_message(app_data_t *app, pn_link_t *sender) {
   /* Construct a message with the map { "sequence": app.sent } */
   pn_message_t* message = pn_message();
   pn_data_t* body = pn_message_body(message);
-  pn_data_put_int(pn_message_id(message), app->sent); /* Set the message_id also */
+  pn_message_set_id(message, (pn_atom_t){.type=PN_ULONG, .u.as_ulong=app->sent});
   pn_data_put_map(body);
   pn_data_enter(body);
   pn_data_put_string(body, pn_bytes(sizeof("sequence")-1, "sequence"));
@@ -98,11 +99,10 @@ static void decode_message(pn_rwbytes_t data) {
   int err = pn_message_decode(m, data.start, data.size);
   if (!err) {
     /* Print the decoded message */
-    pn_string_t *s = pn_string(NULL);
-    pn_inspect(pn_message_body(m), s);
-    printf("%s\n", pn_string_get(s));
+    char *s = pn_tostring(pn_message_body(m));
+    printf("%s\n", s);
     fflush(stdout);
-    pn_free(s);
+    free(s);
     pn_message_free(m);
     free(data.start);
   } else {

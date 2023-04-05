@@ -23,6 +23,7 @@
 
 #include <proton/error.h>
 
+#include "core/object_private.h"
 #include "io.h"
 
 #include <assert.h>
@@ -66,8 +67,9 @@ struct pn_selectable_t {
   bool terminal;
 };
 
-void pn_selectable_initialize(pn_selectable_t *sel)
+void pn_selectable_initialize(void *object)
 {
+  pn_selectable_t *sel = (pn_selectable_t *)object;
   sel->fd = PN_INVALID_SOCKET;
   sel->index = -1;
   sel->attachments = pn_record();
@@ -85,8 +87,9 @@ void pn_selectable_initialize(pn_selectable_t *sel)
   sel->terminal = false;
 }
 
-void pn_selectable_finalize(pn_selectable_t *sel)
+void pn_selectable_finalize(void *object)
 {
+  pn_selectable_t *sel = (pn_selectable_t *)object;
   if (sel->finalize) {
     sel->finalize(sel);
   }
@@ -97,12 +100,11 @@ void pn_selectable_finalize(pn_selectable_t *sel)
 #define pn_selectable_hashcode NULL
 #define pn_selectable_inspect NULL
 #define pn_selectable_compare NULL
-
-PN_CLASSDEF(pn_selectable)
+const pn_class_t PN_CLASSCLASS(pn_selectable) = PN_CLASS(pn_selectable);
 
 pn_selectable_t *pn_selectable(void)
 {
-  return pn_selectable_new();
+  return pn_class_new(&PN_CLASSCLASS(pn_selectable), sizeof(pn_selectable_t));
 }
 
 bool pn_selectable_is_reading(pn_selectable_t *sel) {
@@ -275,19 +277,19 @@ void pn_selectable_free(pn_selectable_t *selectable)
 }
 
 static void pni_readable(pn_selectable_t *selectable) {
-  pn_collector_put(selectable->collector, PN_OBJECT, selectable, PN_SELECTABLE_READABLE);
+  pn_collector_put_object(selectable->collector, selectable, PN_SELECTABLE_READABLE);
 }
 
 static void pni_writable(pn_selectable_t *selectable) {
-  pn_collector_put(selectable->collector, PN_OBJECT, selectable, PN_SELECTABLE_WRITABLE);
+  pn_collector_put_object(selectable->collector, selectable, PN_SELECTABLE_WRITABLE);
 }
 
 static void pni_error(pn_selectable_t *selectable) {
-  pn_collector_put(selectable->collector, PN_OBJECT, selectable, PN_SELECTABLE_ERROR);
+  pn_collector_put_object(selectable->collector, selectable, PN_SELECTABLE_ERROR);
 }
 
 static void pni_expired(pn_selectable_t *selectable) {
-  pn_collector_put(selectable->collector, PN_OBJECT, selectable, PN_SELECTABLE_EXPIRED);
+  pn_collector_put_object(selectable->collector, selectable, PN_SELECTABLE_EXPIRED);
 }
 
 void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collector) {

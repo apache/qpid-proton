@@ -6,7 +6,7 @@ steps:
     architecture: $(PythonArch)
 - script: |
     python -m pip install --user --upgrade pip
-    python -m pip install --user setuptools wheel tox
+    python -m pip install --user --upgrade setuptools wheel tox flake8
   name: InstallPythonModules
 - task: CMake@1
   name: CMakeConfigure
@@ -18,7 +18,7 @@ steps:
   inputs:
     workingDirectory: 'BLD'
     cmakeArgs: --build . --config $(Config)
-- script: ctest -C $(Config) -V -T Test --no-compress-output
+- script: ctest -C $(Config) -V -T Test --no-compress-output $(CtestExtraArgs)
   displayName: CMakeTest
   workingDirectory: 'BLD'
   continueOnError: true

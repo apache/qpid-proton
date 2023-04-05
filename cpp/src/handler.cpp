@@ -37,9 +37,9 @@
 
 namespace proton {
 
-messaging_handler::messaging_handler(){}
+messaging_handler::messaging_handler() = default;
 
-messaging_handler::~messaging_handler(){}
+messaging_handler::~messaging_handler() = default;
 
 void messaging_handler::on_container_start(container &) {}
 void messaging_handler::on_container_stop(container &) {}

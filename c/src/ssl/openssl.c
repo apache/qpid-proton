@@ -114,6 +114,8 @@ struct pni_ssl_t {
   bool ssl_closed;      // shutdown complete, or SSL error
   bool read_blocked;    // SSL blocked until more network data is read
   bool write_blocked;   // SSL blocked until data is written to network
+  bool handshake_ok;
+  int err_reason;
 
   char *subject;
   X509 *peer_certificate;
@@ -193,14 +195,30 @@ static void ssl_log_clear_data(pn_transport_t *transport, const char *data, size
 }
 
 // unrecoverable SSL failure occurred, notify transport and generate error code.
-static int ssl_failed(pn_transport_t *transport)
+static int ssl_failed(pn_transport_t *transport, int reason)
 {
   pni_ssl_t *ssl = transport->ssl;
-  SSL_set_shutdown(ssl->ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
-  ssl->ssl_closed = true;
+  bool first_fail = true;
+  if (ssl->err_reason != 0)
+    first_fail = false;  // No need for second transport error event.
+  else
+    ssl->err_reason = reason;
+
   ssl->app_input_closed = ssl->app_output_closed = PN_EOS;
   // fake a shutdown so the i/o processing code will close properly
   SSL_set_shutdown(ssl->ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
+
+  if (first_fail && reason == SSL_ERROR_SSL) {
+    // Protocol error. Toss input and pending app output but best efforts for SSL generated output (i.e. error alerts)
+    ssl->out_count = 0;  // Discard.  No more writing into SSL engine allowed.
+  } else {
+    // SSL_ERROR_SYS or unknown error.  SSL engine state unknown.  Stop IO in all directions immediately.
+    ssl->ssl_closed = true;
+  }
+  // transport->io_layers[layer] is updated in handle_error_ssl
+  if (!first_fail)
+    return PN_EOS;
+
   // try to grab the first SSL error to add to the failure log
   char buf[256] = "Unknown error";
   unsigned long ssl_err = ERR_get_error();
@@ -208,6 +226,7 @@ static int ssl_failed(pn_transport_t *transport)
     ERR_error_string_n( ssl_err, buf, sizeof(buf) );
   }
   ssl_log_flush(transport, PN_LEVEL_ERROR);    // spit out any remaining errors to the log file
+  // Following call invokes hanlde_error_ssl which sets transport->io_layers[layer]
   pn_do_error(transport, "amqp:connection:framing-error", "SSL Failure: %s", buf);
   return PN_EOS;
 }
@@ -352,6 +371,10 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
   }
   return preverify_ok;
 }
+
+// Temporary: PROTON-2544 for build.  Next release: replace or remove DH_xxx() functions.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 // This was introduced in v1.1
 #if OPENSSL_VERSION_NUMBER < 0x10100000
@@ -551,6 +574,9 @@ static bool pni_init_ssl_domain( pn_ssl_domain_t * domain, pn_ssl_mode_t mode )
 
   return true;
 }
+
+// PROTON-2544: see earlier related push.  Temporary only.
+#pragma GCC diagnostic pop
 
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
@@ -1059,7 +1085,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer,
             break;
            default:
             // unexpected error
-            return (ssize_t)ssl_failed(transport);
+            return (ssize_t)ssl_failed(transport, reason);
           }
         } else {
           if (BIO_should_write( ssl->bio_ssl )) {
@@ -1152,7 +1178,12 @@ static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer,
 
 static void handle_error_ssl(pn_transport_t *transport, unsigned int layer)
 {
-  transport->io_layers[layer] = &ssl_closed_layer;
+  // External errors do not affect SSL operation and graceful shutdown.
+  if (transport->ssl->err_reason == SSL_ERROR_SSL) {
+    transport->io_layers[layer] = &ssl_input_closed_layer;
+  } else {
+    transport->io_layers[layer] = &ssl_closed_layer;
+  }
 }
 
 static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer, char *buffer, size_t max_len)
@@ -1209,7 +1240,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
               break;
              default:
               // unexpected error
-              return (ssize_t)ssl_failed(transport);
+              return (ssize_t)ssl_failed(transport, reason);
             }
           } else {
             if (BIO_should_read( ssl->bio_ssl )) {
@@ -1245,6 +1276,10 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
         ssl->write_blocked = false;
         work_pending = work_pending || max_len > 0;
         ssl_log(transport, PN_LEVEL_TRACE, "Read %d bytes from BIO Layer", available );
+      } else if ( !ssl->handshake_ok && !ssl->ssl_closed ) {
+        // OpenSSL bug workaround 1.0.x -> unknown.  Harmless in all versions.
+        // See PROTON-2643. SSL_do_handshake() prevents forgetting to refill the BIO.
+        ssl->handshake_ok = (SSL_do_handshake(ssl->ssl) == 1);
       }
     }
 

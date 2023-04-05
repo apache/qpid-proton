@@ -40,13 +40,13 @@ if (CMAKE_CXX_COMPILER)
 
   add_library(test_main OBJECT test_main.cpp)
   set_target_properties(test_main PROPERTIES
-    COMPILE_FLAGS "${CXX_STANDARD} ${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS} ${LTO}")
+    COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
 
   macro(add_c_test exe)
     add_executable(${exe} $<TARGET_OBJECTS:test_main> pn_test.cpp ${ARGN})
     set_target_properties(${exe} PROPERTIES
-      COMPILE_FLAGS "${CXX_STANDARD} ${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS} ${LTO}"
-      LINK_FLAGS "${CATCH_UNDEFINED} ${LINK_LTO}")
+      COMPILE_FLAGS "${CXX_WARNING_FLAGS}"
+      LINK_FLAGS "${CATCH_UNDEFINED}")
     pn_add_test(
       EXECUTABLE
       NAME ${exe}
@@ -82,6 +82,11 @@ if (CMAKE_CXX_COMPILER)
     add_c_test(c-raw-connection-test raw_connection_test.cpp $<TARGET_OBJECTS:qpid-proton-proactor-objects>)
     target_link_libraries(c-raw-connection-test qpid-proton-core ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 
+    if (PROACTOR_OK STREQUAL "epoll")
+      add_c_test(c-raw-wake-test raw_wake_test.cpp pn_test_proactor.cpp $<TARGET_OBJECTS:qpid-proton-proactor-objects>)
+      target_link_libraries(c-raw-wake-test qpid-proton-core ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+    endif()
+
     add_c_test(c-ssl-proactor-test pn_test_proactor.cpp ssl_proactor_test.cpp)
     target_link_libraries(c-ssl-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
 
@@ -92,7 +97,7 @@ if (CMAKE_CXX_COMPILER)
     if (THREADERCISER)
       add_executable(c-threaderciser threaderciser.c)
       set_target_properties(c-threaderciser
-        PROPERTIES COMPILE_FLAGS "${C_STANDARD_FLAGS} ${COMPILE_WARNING_FLAGS}")
+        PROPERTIES COMPILE_FLAGS "${COMPILE_WARNING_FLAGS}")
       target_link_libraries (c-threaderciser qpid-proton-proactor Threads::Threads)
       pn_add_test(
         EXECUTABLE
@@ -110,15 +115,29 @@ if (CMAKE_CXX_COMPILER)
 
     set(pypath "${CMAKE_SOURCE_DIR}/tests/py")
 
-    # unset TEST_EXE_PREFIX as valgrind does not run successfully when fds are limited
-    pn_add_test(
-      UNWRAPPED
-      NAME c-fdlimit-tests
-      PREPEND_ENVIRONMENT "PATH=${path}" "PYTHONPATH=${pypath}" "${test_env}"
-      APPEND_ENVIRONMENT "TEST_EXE_PREFIX="
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
+    # Disable fdlimit test by default. Flaky throughout its history and implemntations.
+    # Very useful for proactor development, so keep around.
+    set(DEFAULT_FDLIMIT OFF)
+    option(FDLIMIT "Run the fdlimit recovery test" ${DEFAULT_FDLIMIT})
+    if (FDLIMIT)
+      # unset TEST_EXE_PREFIX as valgrind does not run successfully when fds are limited
+      pn_add_test(
+        UNWRAPPED
+        NAME c-fdlimit-tests
+        PREPEND_ENVIRONMENT "PATH=${path}" "PYTHONPATH=${pypath}" "${test_env}"
+        APPEND_ENVIRONMENT "TEST_EXE_PREFIX="
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
+    endif()
+
   endif(HAS_PROACTOR)
+
+  if(HAS_TLS)
+    # Tests for qpid-proton-tls raw TLS library
+    add_c_test(c-tls-test tls_test.cpp $<TARGET_OBJECTS:qpid-proton-tls-objects>)
+    target_link_libraries(c-tls-test qpid-proton-core qpid-proton-proactor ${SSL_LIB} ${PLATFORM_LIBS})
+  endif(HAS_TLS)
+
 else (CMAKE_CXX_COMPILER)
   message(WARNING "No C++ compiler, some C library tests were not built")
 endif (CMAKE_CXX_COMPILER)

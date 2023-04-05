@@ -36,7 +36,7 @@
 
 namespace proton {
 
-session::~session() {}
+session::~session() = default;
 
 void session::open() {
     pn_session_open(pn_object());
@@ -134,6 +134,18 @@ receiver_range session::receivers() const {
 session_iterator session_iterator::operator++() {
     obj_ = pn_session_next(unwrap(obj_), 0);
     return *this;
+}
+
+void session::user_data(void* user_data) const {
+    pn_session_t* ssn = pn_object();
+    session_context& sctx = session_context::get(ssn);
+    sctx.user_data_ = user_data;
+}
+
+void* session::user_data() const {
+    pn_session_t* ssn = pn_object();
+    session_context& sctx = session_context::get(ssn);
+    return sctx.user_data_;
 }
 
 } // namespace proton

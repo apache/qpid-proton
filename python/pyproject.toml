@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools", "cffi>=1.0.0"]
+build-backend = "setuptools.build_meta"
+
+# Commented out for present because support is beta in setuptools so we should just use setup.cfg
+#[project]
+#name = "python-qpid-proton"
+#description = "An AMQP based messaging library."
+#readme = "README.rst"
+#license = {text = "Apache Software License"}
+#classifiers = [
+#  "License :: OSI Approved :: Apache Software License",
+#  "Intended Audience :: Developers",
+#  "Programming Language :: Python",
+#  "Programming Language :: Python :: 3",
+#  "Programming Language :: Python :: 3 :: Only",
+#  "Programming Language :: Python :: 3.6",
+#  "Programming Language :: Python :: 3.7",
+#  "Programming Language :: Python :: 3.8",
+#  "Programming Language :: Python :: 3.9",
+#  "Programming Language :: Python :: 3.10",
+#  "Programming Language :: Python :: 3.11"
+#]
+#dependencies = [
+#    "cffi>=1.0.0"
+#]
+#authors = [
+#    {name = "Apache Qpid", email = "users@qpid.apache.org"}
+#]
+#dynamic = ["version"]
+#
+#[project.urls]
+#homepage = "http://qpid.apache.org/proton/"
+#
+#[project.optional-dependencies]
+#opentracing = ["opentracing", "jaeger_client"]
+#
+#[tool.setuptools]
+#packages = ["proton"]
+#py-modules = ["cproton"]
+## cffi-modules = "ext_build.py:ffibuilder"
+#
+#[tool.setuptools.dynamic]
+#version = {file = "VERSION.txt"}

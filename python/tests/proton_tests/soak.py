@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,8 +16,6 @@ from __future__ import absolute_import
 # specific language governing permissions and limitations
 # under the License.
 #
-
-from __future__ import absolute_import
 
 import os
 

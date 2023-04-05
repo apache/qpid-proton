@@ -37,7 +37,7 @@ namespace proton {
 class scalar : public scalar_base {
   public:
     /// Create an empty scalar.
-    PN_CPP_EXTERN scalar() {}
+    PN_CPP_EXTERN scalar() = default;
 
     /// Construct from any scalar type.
     template <class T> scalar(const T& x) { *this = x; }

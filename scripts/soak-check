@@ -17,9 +17,10 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-from __future__ import print_function
-import sys, optparse
-from subprocess import Popen,PIPE
+
+import optparse
+import sys
+from subprocess import Popen
 
 def run_test(cmd):
     try:

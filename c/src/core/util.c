@@ -40,13 +40,13 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
   for (unsigned i = 0; i < size; i++)
   {
     uint8_t c = src[i];
-    // output printable ASCII, ensure '\' always introduces hex escape
-    if (c < 128 && c != '\\' && isprint(c)) {
+    // output printable ASCII, ensure '\' always introduces hex escape, escape quote marks
+    if (c < 128 && c != '\\' && c != '\"' && c != '\'' && isprint(c)) {
       if (idx < (int) (capacity - 1)) {
         dst[idx++] = c;
       } else {
         if (idx > 0) {
-          dst[idx - 1] = '\0';
+          dst[idx] = '\0';
         }
         return PN_OVERFLOW;
       }
@@ -55,7 +55,7 @@ ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
         idx += sprintf(dst + idx, "\\x%.2x", c);
       } else {
         if (idx > 0) {
-          dst[idx - 1] = '\0';
+          dst[idx] = '\0';
         }
         return PN_OVERFLOW;
       }
@@ -98,7 +98,7 @@ int pn_strcasecmp(const char *a, const char *b)
 int pn_strncasecmp(const char* a, const char* b, size_t len)
 {
   int diff = 0;
-  while (*b && len > 0) {
+  while (len > 0 && *b) {
     char aa = *a++, bb = *b++;
     diff = tolower(aa)-tolower(bb);
     if ( diff!=0 ) return diff;

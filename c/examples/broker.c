@@ -22,6 +22,7 @@
 #include <proton/engine.h>
 #include <proton/listener.h>
 #include <proton/netaddr.h>
+#include <proton/object.h>
 #include <proton/proactor.h>
 #include <proton/sasl.h>
 #include <proton/ssl.h>

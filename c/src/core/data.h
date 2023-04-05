@@ -32,7 +32,7 @@ typedef uint16_t pni_nid_t;
 #define PNI_INTERN_MINSIZE 64
 
 typedef struct {
-  char *start;
+  size_t start;
   size_t data_offset;
   size_t data_size;
   pn_atom_t atom;
@@ -69,5 +69,8 @@ int pni_data_traverse(pn_data_t *data,
                       int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),
                       void *ctx);
+
+struct pn_fixed_string_t;
+void pni_inspect_atom(pn_atom_t *atom, struct pn_fixed_string_t *str);
 
 #endif /* data.h */

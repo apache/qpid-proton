@@ -2,8 +2,22 @@ Most (though not all) of the current examples require a broker or
 similar intermediary that supports the AMQP 1.0 protocol, allows
 anonymous connections and accepts links to and from a node named
 'examples'. A very simple broker emulating script - broker.py - is
-provided against which the examples can also be run (transactions are
-not yet supported in this script).
+provided against which some of the examples can also be run.
+
+Transactions and selectors are not yet supported in this script, so the
+examples that require these features (tx_recy.py, tx_send.py,
+tx_recv_interactive.py, server_tx.py & selected_recv.py) need to be run
+with a broker that supports these features (for instance the qpidd broker)
+
+There is a test script that will run most of the examples. This script needs
+a broker to be running already as a prerequisite. As this script runs the
+transactional and selector requiring examples this broker must support these
+features.
+
+For example:
+    qpidd --queue-patterns '.*' &
+    PATH=.:$PATH python -m unittest -v
+run from within the examples directory
 
 Note: For builds that include SASL support via the cyrus sasl library,
 those examples that accept incoming connections may require some SASL

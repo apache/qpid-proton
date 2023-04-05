@@ -61,7 +61,7 @@ class PN_CPP_CLASS_EXTERN returned {
   private:
     typename T::pn_type* ptr_;
     returned(typename T::pn_type*);
-    returned& operator=(const returned&); // Not defined
+    returned& operator=(const returned&) = delete;
   friend class internal::returned_factory;
 };
 

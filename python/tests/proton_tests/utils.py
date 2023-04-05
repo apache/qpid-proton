@@ -17,8 +17,6 @@
 # under the License.
 #
 
-from __future__ import absolute_import
-
 from threading import Thread, Event
 from uuid import uuid4
 

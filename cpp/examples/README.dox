@@ -137,3 +137,19 @@ A multithreaded sender and receiver enhanced for flow control.
 __Requires C++11__
 
 */
+
+/** @example tracing_client.cpp
+
+A client part of a request-response example demonstrating the use of tracing. Send requests
+and receive responses from the tracing_server. Traces and spans are displayed on Jaeger UI.
+For detailed information, tracing documentation(tracing.dox) can be found in docs folder.
+
+*/
+
+/** @example tracing_server.cpp
+
+A server part of a request-response example demonstrating the use of tracing. Receive requests
+and send responses back to the tracing_client. Traces and spans are displayed on Jaeger UI.
+For detailed information, tracing documentation(tracing.dox) can be found in docs folder.
+
+*/
