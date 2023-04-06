@@ -107,6 +107,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      /* We received acknowledgement from the peer that a message was delivered. */
      pn_delivery_t* d = pn_event_delivery(event);
      if (pn_delivery_remote_state(d) == PN_ACCEPTED) {
+       pn_delivery_settle(d);
        if (++app->acknowledged == app->message_count) {
          printf("%d messages sent and acknowledged\n", app->acknowledged);
          pn_connection_close(pn_event_connection(event));
