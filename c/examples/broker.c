@@ -283,9 +283,7 @@ static void check_condition(pn_event_t *e, pn_condition_t *cond) {
 
 const int WINDOW=5; /* Very small incoming credit window, to show flow control in action */
 
-static bool handle(broker_t* b, pn_event_t* e) {
-  pn_connection_t *c = pn_event_connection(e);
-
+static bool handle(broker_t* b, pn_event_t* e, pn_connection_t *c) {
   switch (pn_event_type(e)) {
 
    case PN_LISTENER_OPEN: {
@@ -433,9 +431,10 @@ static void* broker_thread(void *void_broker) {
   bool finished = false;
   do {
     pn_event_batch_t *events = pn_proactor_wait(b->proactor);
+    pn_connection_t *connection = pn_event_batch_connection(events);
     pn_event_t *e;
     while ((e = pn_event_batch_next(events))) {
-        if (!handle(b, e)) finished = true;
+        if (!handle(b, e, connection)) finished = true;
     }
     pn_proactor_done(b->proactor, events);
   } while(!finished);

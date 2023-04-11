@@ -218,6 +218,36 @@ PNP_EXTERN pn_event_batch_t *pn_proactor_get(pn_proactor_t *proactor);
 PNP_EXTERN pn_event_t *pn_event_batch_next(pn_event_batch_t *batch);
 
 /**
+ * Query the batch for the subject of the batch. If it is a proactor then it is
+ * returned. NULL means the subject of the batch is not a proactor. The returned
+ * proactor is valid until pn_proactor_done() is called again on the same
+ * batch.
+ *
+ * @return the proactor that is subject of the batch or NULL if none.
+ */
+PNP_EXTERN pn_proactor_t *pn_event_batch_proactor(pn_event_batch_t *batch);
+
+/**
+ * Query the batch for the subject of the batch. If it is a listener then it is
+ * returned. NULL means the subject of the batch is not a listener. The returned
+ * listener is valid until pn_proactor_done() is called again on the same
+ * batch.
+ *
+ * @return the listener that is subject of the batch or NULL if none.
+ */
+PNP_EXTERN pn_listener_t *pn_event_batch_listener(pn_event_batch_t *batch);
+
+/**
+ * Query the batch for the subject of the batch. If it is a connection then it is
+ * returned. NULL means the subject of the batch is not a connection. The returned
+ * connection is valid until pn_proactor_done() is called again on the same
+ * batch.
+ *
+ * @return the connection that is subject of the batch or NULL if none.
+ */
+PNP_EXTERN pn_connection_t *pn_event_batch_connection(pn_event_batch_t *batch);
+
+/**
  * Call when finished handling a batch of events.
  *
  * Must be called exactly once to match each call to pn_proactor_wait().

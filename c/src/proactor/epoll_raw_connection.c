@@ -341,6 +341,11 @@ praw_connection_t *pni_batch_raw_connection(pn_event_batch_t *batch) {
     containerof(batch, praw_connection_t, batch) : NULL;
 }
 
+pn_raw_connection_t *pn_event_batch_raw_connection(pn_event_batch_t *batch) {
+    praw_connection_t *rc = pni_batch_raw_connection(batch);
+    return rc ? &rc->raw_connection : NULL;
+}
+
 task_t *pni_raw_connection_task(praw_connection_t *rc) {
   return &rc->task;
 }

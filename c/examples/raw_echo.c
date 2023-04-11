@@ -135,11 +135,10 @@ static void free_buffers(pn_raw_buffer_t buffs[], size_t n) {
 }
 
 /* This function handles events when we are acting as the receiver */
-static void handle_receive(app_data_t *app, pn_event_t* event) {
+static bool handle_receive(app_data_t *app, pn_event_t* event, pn_raw_connection_t *c) {
   switch (pn_event_type(event)) {
 
     case PN_RAW_CONNECTION_CONNECTED: {
-      pn_raw_connection_t *c = pn_event_raw_connection(event);
       conn_data_t *cd = (conn_data_t *) pn_raw_connection_get_context(c);
       pn_raw_buffer_t buffers[READ_BUFFERS] = {{0}};
       if (cd) {
@@ -163,13 +162,11 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
     } break;
 
     case PN_RAW_CONNECTION_WAKE: {
-      pn_raw_connection_t *c = pn_event_raw_connection(event);
       conn_data_t *cd = (conn_data_t *) pn_raw_connection_get_context(c);
       printf("**raw connection %tu woken\n", cd-conn_data);
     } break;
 
     case PN_RAW_CONNECTION_DISCONNECTED: {
-      pn_raw_connection_t *c = pn_event_raw_connection(event);
       conn_data_t *cd = (conn_data_t *) pn_raw_connection_get_context(c);
       if (cd) {
         pthread_mutex_lock(&app->lock);
@@ -185,7 +182,6 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
     } break;
 
     case PN_RAW_CONNECTION_DRAIN_BUFFERS: {
-      pn_raw_connection_t *c = pn_event_raw_connection(event);
       pn_raw_buffer_t buffs[READ_BUFFERS];
       size_t n;
       while ( (n = pn_raw_connection_take_read_buffers(c, buffs, READ_BUFFERS)) ) {
@@ -200,7 +196,6 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
     } break;
 
     case PN_RAW_CONNECTION_READ: {
-      pn_raw_connection_t *c = pn_event_raw_connection(event);
       conn_data_t *cd = (conn_data_t *) pn_raw_connection_get_context(c);
       pn_raw_buffer_t buffs[READ_BUFFERS];
       size_t n;
@@ -225,17 +220,14 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
     } break;
 
     case PN_RAW_CONNECTION_CLOSED_READ: {
-      pn_raw_connection_t *c = pn_event_raw_connection(event);
       if (!pn_raw_connection_is_write_closed(c)) {
         send_message(c, "** Goodbye **");
       }
     }
     case PN_RAW_CONNECTION_CLOSED_WRITE:{
-      pn_raw_connection_t *c = pn_event_raw_connection(event);
       pn_raw_connection_close(c);
     } break;
     case PN_RAW_CONNECTION_WRITTEN: {
-      pn_raw_connection_t *c = pn_event_raw_connection(event);
       pn_raw_buffer_t buffs[READ_BUFFERS];
       size_t n;
       while ( (n = pn_raw_connection_take_written_buffers(c, buffs, READ_BUFFERS)) ) {
@@ -249,6 +241,7 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
     default:
       break;
   }
+  return exit_code == 0;
 }
 
 #define WRITE_BUFFERS 4
@@ -333,12 +326,8 @@ static bool handle(app_data_t* app, pn_event_t* event) {
       return false;
     } break;
 
-    default: {
-      pn_raw_connection_t *c = pn_event_raw_connection(event);
-      if (c) {
-          handle_receive(app, event);
-      }
-    }
+    default:
+      break;
   }
   return exit_code == 0;
 }
@@ -350,11 +339,20 @@ void* run(void *arg) {
   bool again = true;
   do {
     pn_event_batch_t *events = pn_proactor_wait(app->proactor);
-    pn_event_t *e;
-    for (e = pn_event_batch_next(events); e && again; e = pn_event_batch_next(events)) {
-      again = handle(app, e);
+    pn_raw_connection_t *c = pn_event_batch_raw_connection(events);
+    if (c) {
+      pn_event_t *e;
+      for (e = pn_event_batch_next(events); e && again; e = pn_event_batch_next(events)) {
+        again = handle_receive(app, e, c);
+      }
+      pn_proactor_done(app->proactor, events);
+    } else {
+      pn_event_t *e;
+      for (e = pn_event_batch_next(events); e && again; e = pn_event_batch_next(events)) {
+        again = handle(app, e);
+      }
+      pn_proactor_done(app->proactor, events);
     }
-    pn_proactor_done(app->proactor, events);
   } while(again);
   return NULL;
 }

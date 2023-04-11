@@ -305,6 +305,15 @@ PNP_EXTERN pn_record_t *pn_raw_connection_attachments(pn_raw_connection_t *conne
  */
 PNP_EXTERN pn_raw_connection_t *pn_event_raw_connection(pn_event_t *event);
 
+/**
+ * Query the batch for the subject of the batch. If it is a raw connection then it is
+ * returned. NULL means the subject of the batch is not a raw connection. The returned
+ * raw connection is valid until pn_proactor_done() is called again on the same
+ * batch.
+ *
+ * @return the raw connection that is subject of the batch or NULL if none.
+ */
+PNP_EXTERN pn_raw_connection_t *pn_event_batch_raw_connection(pn_event_batch_t *batch);
 
 /**
  * @}

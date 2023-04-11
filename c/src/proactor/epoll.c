@@ -650,6 +650,19 @@ static inline pconnection_t *batch_pconnection(pn_event_batch_t *batch) {
     containerof(batch, pconnection_t, batch) : NULL;
 }
 
+pn_proactor_t *pn_event_batch_proactor(pn_event_batch_t *batch) {
+  return batch_proactor(batch);
+}
+
+pn_listener_t *pn_event_batch_listener(pn_event_batch_t *batch) {
+  return batch_listener(batch);
+}
+
+pn_connection_t *pn_event_batch_connection(pn_event_batch_t *batch) {
+  pconnection_t *r = batch_pconnection(batch);
+  return r ? r->driver.connection : NULL;
+}
+
 static void psocket_error_str(psocket_t *ps, const char *msg, const char* what) {
   pconnection_t *pc = psocket_pconnection(ps);
   if (pc) {

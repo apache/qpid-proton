@@ -2007,6 +2007,19 @@ static inline pconnection_t *batch_pconnection(pn_event_batch_t *batch) {
     containerof(batch, pconnection_t, batch) : NULL;
 }
 
+pn_proactor_t *pn_event_batch_proactor(pn_event_batch_t *batch) {
+  return batch_proactor(batch);
+}
+
+pn_listener_t *pn_event_batch_listener(pn_event_batch_t *batch) {
+  return batch_listener(batch);
+}
+
+pn_connection_t *pn_event_batch_connection(pn_event_batch_t *batch) {
+  pconnection_t *r = batch_pconnection(batch);
+  return r ? r->driver.connection : NULL;
+}
+
 static inline bool pconnection_has_event(pconnection_t *pc) {
   return pn_connection_driver_has_event(&pc->driver);
 }
@@ -3434,3 +3447,4 @@ void pn_raw_connection_read_close(pn_raw_connection_t *conn) {}
 void pn_raw_connection_write_close(pn_raw_connection_t *conn) {}
 const struct pn_netaddr_t *pn_raw_connection_local_addr(pn_raw_connection_t *connection) { return NULL; }
 const struct pn_netaddr_t *pn_raw_connection_remote_addr(pn_raw_connection_t *connection) { return NULL; }
+pn_raw_connection_t *pn_event_batch_raw_connection(pn_event_batch_t* batch) { return NULL; }
