@@ -1094,16 +1094,7 @@ class Data:
         :param mv: A Python memoryview object
         :raise: :exc:`DataException` if there is a Proton error.
         """
-        self.put_binary(mv.tobytes())
-
-    def put_buffer(self, buff: Iterable[int]) -> None:
-        """
-        Put a Python buffer object as an AMQP binary value.
-
-        :param buff: A Python buffer object (**CHECK THIS**)
-        :raise: :exc:`DataException` if there is a Proton error.
-        """
-        self.put_binary(bytes(buff))
+        self.put_binary(mv)
 
     def put_string(self, s: str) -> None:
         """
@@ -1589,6 +1580,7 @@ class Data:
         timestamp: put_timestamp,
         uuid.UUID: put_uuid,
         bytes: put_binary,
+        bytearray: put_binary,
         unicode: put_string,
         symbol: put_symbol,
         list: put_sequence,
@@ -1599,7 +1591,7 @@ class Data:
         AnnotationDict: put_dict,
         PropertyDict: put_dict,
         SymbolList: put_sequence,
-        memoryview: put_memoryview
+        memoryview: put_binary
     }
     get_mappings = {
         NULL: lambda s: None,

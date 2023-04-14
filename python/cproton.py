@@ -193,18 +193,20 @@ def bytes2py(b):
     return memoryview(ffi.buffer(b.start, b.size))
 
 
+def bytes2pybytes(b):
+    return bytes(ffi.buffer(b.start, b.size))
+
+
 def bytes2string(b, encoding='utf8'):
     return ffi.unpack(b.start, b.size).decode(encoding)
 
 
 def py2bytes(py):
-    if isinstance(py, memoryview):
-        return len(py), py
+    if isinstance(py, (bytes, bytearray,memoryview)):
+        s = ffi.from_buffer(py)
+        return len(s), s
     elif isinstance(py, str):
         s = ffi.from_buffer(py.encode('utf8'))
-        return len(s), s
-    elif isinstance(py, bytes):
-        s = ffi.from_buffer(py)
         return len(s), s
 
 
@@ -240,7 +242,7 @@ def msgid2py(msgid):
     elif t == PN_ULONG:
         return msgid.u.as_ulong
     elif t == PN_BINARY:
-        return ffi.buffer(msgid.u.as_bytes.start, msgid.u.as_bytes.size)
+        return bytes2py(msgid.u.as_bytes)
     elif t == PN_STRING:
         return bytes2string(msgid.u.as_bytes)
     elif t == PN_UUID:
@@ -265,7 +267,7 @@ def py2msgid(py):
     elif isinstance(py, int):
         return {'type': PN_ULONG, 'u': {'as_ulong': py}}
     elif isinstance(py, str):
-        return {'type': PN_STRING, 'u': {'as_bytes': py2bytes(py)}}
+        return {'type': PN_STRING, 'u': {'as_bytes': string2bytes(py)}}
     elif isinstance(py, bytes):
         return {'type': PN_BINARY, 'u': {'as_bytes': py2bytes(py)}}
     elif isinstance(py, UUID):
@@ -568,7 +570,7 @@ def pn_message_set_id(message, value):
 
 
 def pn_message_get_user_id(message):
-    return bytes2py(lib.pn_message_get_user_id(message))
+    return bytes2pybytes(lib.pn_message_get_user_id(message))
 
 
 def pn_message_set_user_id(message, value):
