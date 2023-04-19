@@ -150,11 +150,16 @@ int main(int argc, char **argv) {
         // 2. Set the global trace provider.
         // 3. Call proton::initOpenTelemetryTracer().
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wdeprecated-declarations"
+
         opentelemetry::exporter::jaeger::JaegerExporterOptions opts;
 
         // Initialize Jaeger Exporter
         std::unique_ptr<opentelemetry::sdk::trace::SpanExporter> exporter = std::unique_ptr<opentelemetry::sdk::trace::SpanExporter>(
             new opentelemetry::exporter::jaeger::JaegerExporter(opts));
+
+#pragma GCC diagnostic pop
 
         // Set service-name
         auto resource_attributes = opentelemetry::sdk::resource::ResourceAttributes
