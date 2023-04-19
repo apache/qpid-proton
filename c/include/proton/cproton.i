@@ -34,6 +34,7 @@ typedef unsigned long int uintptr_t;
 
 /* Parse these interface header files to generate APIs for script languages */
 
+%include "proton/annotations.h"
 %include "proton/import_export.h"
 
 %ignore _PROTON_VERSION_H;

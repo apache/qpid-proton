@@ -21,6 +21,8 @@
 
 #include "platform.h"
 
+#include <proton/annotations.h>
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,7 +45,8 @@ void pni_vfatal(const char *fmt, va_list ap)
   abort();
 }
 
-void pni_fatal(const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(1, 2)
+void pni_fatal(PN_PRINTF_FORMAT const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);

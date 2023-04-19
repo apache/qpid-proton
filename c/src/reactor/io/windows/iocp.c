@@ -36,6 +36,7 @@
 #include "platform/platform.h"
 #include "core/util.h"
 
+#include <proton/annotations.h>
 #include <proton/error.h>
 #include <proton/transport.h>
 
@@ -68,7 +69,8 @@
 #define IOCP_SOCKADDRMAXLEN (sizeof(struct sockaddr_in6) + 16)
 #define IOCP_SOCKADDRBUFLEN (2 * IOCP_SOCKADDRMAXLEN)
 
-static void iocp_log(const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(1, 2)
+static void iocp_log(PN_PRINTF_FORMAT const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);

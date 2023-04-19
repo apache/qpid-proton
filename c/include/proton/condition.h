@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/annotations.h>
 #include <proton/import_export.h>
 #include <proton/codec.h>
 #include <proton/type_compat.h>
@@ -139,7 +140,8 @@ PN_EXTERN int pn_condition_vformat(pn_condition_t *, const char *name, const cha
 /**
  * Set the name and printf-style formatted description.
  */
-PN_EXTERN int pn_condition_format(pn_condition_t *, const char *name, const char *fmt, ...);
+PN_EXTERN int pn_condition_format(pn_condition_t *, const char *name, PN_PRINTF_FORMAT const char *fmt, ...)
+        PN_PRINTF_FORMAT_ATTR(3, 4);
 
 /**
  * Returns true if the condition is a redirect.

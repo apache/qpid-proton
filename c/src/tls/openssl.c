@@ -30,6 +30,7 @@
 #include "platform/platform.h"
 #include "platform/platform_fmt.h"
 #include "core/util.h"
+#include <proton/annotations.h>
 #include <proton/error.h>
 #include <proton/tls.h>
 
@@ -500,7 +501,8 @@ static X509 *get_peer_certificate(pn_tls_t *ssl);
 #define     PN_LEVEL_RAW       128
 #define     PN_LEVEL_ALL       65535
 
-static void ssl_log(void *v, int sev, const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(3, 4)
+static void ssl_log(void *v, int sev, PN_PRINTF_FORMAT const char *fmt, ...)
 {
 #ifdef at_least_some_logging
   va_list ap;
@@ -521,7 +523,8 @@ static void ssl_log_flush(void *v, int sev)
   }
 }
 // log an error and dump the SSL error stack
-static void ssl_log_error(const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(1, 2)
+static void ssl_log_error(PN_PRINTF_FORMAT const char *fmt, ...)
 {
 }
 

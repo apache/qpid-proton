@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/annotations.h>
 #include <proton/object.h>
 #include <proton/engine.h>
 #include <proton/types.h>
@@ -370,7 +371,8 @@ void pn_work_update(pn_connection_t *connection, pn_delivery_t *delivery);
 void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint);
 void pn_connection_bound(pn_connection_t *conn);
 void pn_connection_unbound(pn_connection_t *conn);
-int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...);
+int pn_do_error(pn_transport_t *transport, const char *condition, PN_PRINTF_FORMAT const char *fmt, ...)
+        PN_PRINTF_FORMAT_ATTR(3, 4);
 void pn_set_error_layer(pn_transport_t *transport);
 void pn_session_unbound(pn_session_t* ssn);
 void pn_link_unbound(pn_link_t* link);

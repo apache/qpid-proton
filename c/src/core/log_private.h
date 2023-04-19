@@ -24,6 +24,7 @@
  * Log messages that are not associated with a transport.
  */
 
+#include <proton/annotations.h>
 #include <proton/log.h>
 #include <stdarg.h>
 
@@ -45,7 +46,8 @@
 PN_EXTERN bool pni_log_enabled(void);
 
 /**@internal*/
-PN_EXTERN void pni_logf_impl(const char* fmt, ...);
+PN_EXTERN void pni_logf_impl(PN_PRINTF_FORMAT const char* fmt, ...)
+        PN_PRINTF_FORMAT_ATTR(1, 2);
 /**@internal*/
 PN_EXTERN void pni_vlogf_impl(const char *fmt, va_list ap);
 

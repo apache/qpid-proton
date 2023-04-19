@@ -19,6 +19,7 @@
  *
  */
 
+#include <proton/annotations.h>
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
 #include <proton/engine.h>
@@ -243,7 +244,8 @@ namespace pn_experimental {
 // Write buffer size
 #define IOCP_WBUFSIZE 16384
 
-static void pipeline_log(const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(1, 2)
+static void pipeline_log(PN_PRINTF_FORMAT const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
@@ -532,7 +534,8 @@ size_t pni_write_pipeline_size(write_pipeline_t *pl)
 
 namespace pn_experimental {
 
-static void iocp_log(const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(1, 2)
+static void iocp_log(PN_PRINTF_FORMAT const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);

@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/annotations.h>
 #include <proton/import_export.h>
 #include <proton/logger.h>
 #include <proton/type_compat.h>
@@ -108,7 +109,8 @@ enum pnx_sasl_state {
 };
 
 /* APIs used by sasl implementations */
-PN_EXTERN void  pnx_sasl_logf(pn_transport_t *transport, pn_log_level_t level, const char *format, ...);
+PN_EXTERN void  pnx_sasl_logf(pn_transport_t *transport, pn_log_level_t level, PN_PRINTF_FORMAT const char *format, ...)
+        PN_PRINTF_FORMAT_ATTR(3, 4);
 PN_EXTERN void  pnx_sasl_error(pn_transport_t *transport, const char* err, const char* condition_name);
 
 PN_EXTERN void *pnx_sasl_get_context(pn_transport_t *transport);

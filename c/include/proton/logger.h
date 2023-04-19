@@ -28,6 +28,7 @@
  * @ingroup core
  */
 
+#include <proton/annotations.h>
 #include <proton/import_export.h>
 
 #include <stdarg.h>
@@ -231,7 +232,8 @@ PN_EXTERN intptr_t pn_logger_get_log_sink_context(pn_logger_t *logger);
  * @param[in] level the log level of the log message
  * @param[in] fmt the printf formatted message to be logged
  */
-PN_EXTERN void pn_logger_logf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t level, const char *fmt, ...);
+PN_EXTERN void pn_logger_logf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t level, PN_PRINTF_FORMAT const char *fmt, ...)
+        PN_PRINTF_FORMAT_ATTR(4, 5);
 
 #ifdef __cplusplus
 }

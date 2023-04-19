@@ -74,6 +74,7 @@
  * different threads.
  */
 
+#include <proton/annotations.h>
 #include <proton/import_export.h>
 #include <proton/event.h>
 #include <proton/types.h>
@@ -238,7 +239,8 @@ PN_EXTERN bool pn_connection_driver_finished(pn_connection_driver_t *);
  * You must call this *before* pn_connection_driver_read_close() or
  * pn_connection_driver_write_close() to ensure the error is processed.
  */
-PN_EXTERN void pn_connection_driver_errorf(pn_connection_driver_t *d, const char *name, const char *fmt, ...);
+PN_EXTERN void pn_connection_driver_errorf(pn_connection_driver_t *d, const char *name, PN_PRINTF_FORMAT const char *fmt, ...)
+        PN_PRINTF_FORMAT_ATTR(3, 4);
 
 /**
  * Set transport error via a va_list, see pn_connection_driver_errorf()
@@ -265,7 +267,8 @@ PN_EXTERN void pn_connection_driver_log(pn_connection_driver_t *d, const char *m
 /**
  * **Deprecated** - Use pn_transport_logf().
  */
-PN_EXTERN void pn_connection_driver_logf(pn_connection_driver_t *d, const char *fmt, ...);
+PN_EXTERN void pn_connection_driver_logf(pn_connection_driver_t *d, PN_PRINTF_FORMAT const char *fmt, ...)
+        PN_PRINTF_FORMAT_ATTR(2, 3);
 
 /**
  * **Deprecated** - Use pn_transport_vlogf().

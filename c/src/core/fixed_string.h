@@ -24,6 +24,8 @@
 
 #include "util.h"
 
+#include <proton/annotations.h>
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -68,7 +70,8 @@ static inline void pn_fixed_string_vaddf(pn_fixed_string_t *str, const char *for
   str->position += pn_min((uint32_t)out_size, bytes_left);
 }
 
-static inline void pn_fixed_string_addf(pn_fixed_string_t *str, const char *format, ...) {
+PN_PRINTF_FORMAT_ATTR(2, 3)
+static inline void pn_fixed_string_addf(pn_fixed_string_t *str, PN_PRINTF_FORMAT const char *format, ...) {
   va_list ap;
   va_start(ap, format);
   pn_fixed_string_vaddf(str, format, ap);
