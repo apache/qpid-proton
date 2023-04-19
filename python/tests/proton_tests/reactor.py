@@ -511,6 +511,15 @@ class ContainerTest(Test):
         container.run()
         assert server_handler.peer_container_id == 'container456', server_handler.peer_container_id
 
+    def test_container_id_3(self):
+        server_handler = ContainerTest._ServerHandler("localhost")
+        container = Container(server_handler)
+        container.container_id = None
+        conn = container.connect(url="localhost:%s" % (server_handler.port),
+                                 handler=ContainerTest._ClientHandler())
+        container.run()
+        assert server_handler.peer_container_id != '', server_handler.peer_container_id
+
     def test_virtual_host(self):
         ensureCanTestExtendedSASL()
         server_handler = ContainerTest._ServerHandler("localhost")
