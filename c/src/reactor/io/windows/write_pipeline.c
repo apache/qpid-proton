@@ -43,6 +43,7 @@
 #include "iocp.h"
 #include "core/util.h"
 
+#include <proton/annotations.h>
 #include <proton/error.h>
 #include <proton/object.h>
 
@@ -53,7 +54,8 @@
 // Write buffer size
 #define IOCP_WBUFSIZE 16384
 
-static void pipeline_log(const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(1, 2)
+static void pipeline_log(PN_PRINTF_FORMAT const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);

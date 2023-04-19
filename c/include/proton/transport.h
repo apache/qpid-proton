@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/annotations.h>
 #include <proton/import_export.h>
 #include <proton/type_compat.h>
 #include <proton/condition.h>
@@ -370,7 +371,8 @@ PN_EXTERN void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, va
  *
  * @internal XXX Deprecate when logging is made independent
  */
-PN_EXTERN void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...);
+PN_EXTERN void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...)
+        PN_PRINTF_FORMAT_ATTR(2, 3);
 
 /**
  * Get the maximum allowed channel for a transport.

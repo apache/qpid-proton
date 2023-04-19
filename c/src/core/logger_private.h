@@ -21,6 +21,7 @@
 
 #include "buffer.h"
 
+#include <proton/annotations.h>
 #include "proton/logger.h"
 
 #if __cplusplus
@@ -44,8 +45,10 @@ void pni_logger_log(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_le
 void pni_logger_vlogf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *fmt, va_list ap);
 void pni_logger_log_data(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *msg, const char *bytes, size_t size);
 void pni_logger_log_raw(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t bytes, size_t size, const char* msg);
-void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, void *object, const char *fmt, ...);
-void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t frame, const char *fmt, ...);
+void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, void *object, PN_PRINTF_FORMAT const char *fmt, ...)
+        PN_PRINTF_FORMAT_ATTR(5, 6);
+void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t frame, PN_PRINTF_FORMAT const char *fmt, ...)
+        PN_PRINTF_FORMAT_ATTR(5, 6);
 
 #define PN_SHOULD_LOG(logger, subsys, sev) \
     (((sev) & PN_LEVEL_CRITICAL) || (((logger)->sub_mask & (subsys)) && ((logger)->sev_mask & (sev))))

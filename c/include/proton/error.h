@@ -22,6 +22,7 @@
  *
  */
 
+#include <proton/annotations.h>
 #include <proton/import_export.h>
 #include <stdarg.h>
 
@@ -92,7 +93,8 @@ PN_EXTERN int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_
  * Set the code and set the text using a printf-style formatted
  * string.
  */
-PN_EXTERN int pn_error_format(pn_error_t *error, int code, const char *fmt, ...);
+PN_EXTERN int pn_error_format(pn_error_t *error, int code, PN_PRINTF_FORMAT const char *fmt, ...)
+        PN_PRINTF_FORMAT_ATTR(3, 4);
 
 /**
  * Get the the error code.

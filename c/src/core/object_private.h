@@ -24,6 +24,7 @@
 
 #include "proton/object.h"
 
+#include <proton/annotations.h>
 #include <proton/types.h>
 #include <stdarg.h>
 #include <proton/type_compat.h>
@@ -184,17 +185,11 @@ PN_EXTERN int pn_string_set(pn_string_t *string, const char *bytes);
 PN_EXTERN int pn_string_setn(pn_string_t *string, const char *bytes, size_t n);
 ssize_t pn_string_put(pn_string_t *string, char *dst);
 void pn_string_clear(pn_string_t *string);
-PN_EXTERN int pn_string_format(pn_string_t *string, const char *format, ...)
-#ifdef __GNUC__
-  __attribute__ ((format (printf, 2, 3)))
-#endif
-    ;
+PN_EXTERN int pn_string_format(pn_string_t *string, PN_PRINTF_FORMAT const char *format, ...)
+        PN_PRINTF_FORMAT_ATTR(2, 3);
 int pn_string_vformat(pn_string_t *string, const char *format, va_list ap);
-PN_EXTERN int pn_string_addf(pn_string_t *string, const char *format, ...)
-#ifdef __GNUC__
-__attribute__ ((format (printf, 2, 3)))
-#endif
-;
+PN_EXTERN int pn_string_addf(pn_string_t *string, PN_PRINTF_FORMAT const char *format, ...)
+        PN_PRINTF_FORMAT_ATTR(2, 3);
 int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap);
 int pn_string_grow(pn_string_t *string, size_t capacity);
 char *pn_string_buffer(pn_string_t *string);
