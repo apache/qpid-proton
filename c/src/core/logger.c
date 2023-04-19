@@ -200,7 +200,7 @@ void pni_logger_log_raw(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_lo
   const char *start = &bytes.start[bytes.size-size];
   for (unsigned i = 0; i < size; i+=16) {
     pn_fixed_string_t out = pn_fixed_string(buf, sizeof(buf));
-    pn_fixed_string_addf(&out, "%s%04x/%04x: ", msg, i, size);
+    pn_fixed_string_addf(&out, "%s%04x/%04zx: ", msg, i, size);
     for (unsigned j = 0; j<16; j++) {
       if (i+j<size) {
         pn_fixed_string_addf(&out, "%02hhx ", start[i+j]);

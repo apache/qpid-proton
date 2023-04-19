@@ -43,7 +43,7 @@ static pn_event_t *batch_next(pn_connection_driver_t *d) {
   /* Log the next event that will be processed */
   pn_event_t *next = pn_collector_next(d->collector);
   if (next && PN_SHOULD_LOG(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG)) {
-    pni_logger_log_msg_inspect(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, next, "");
+    pni_logger_log_msg_inspect(&d->transport->logger, PN_SUBSYSTEM_EVENT, PN_LEVEL_DEBUG, next, "%s", "");
   }
   return next;
 }

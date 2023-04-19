@@ -1038,7 +1038,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer,
     transport->present_layers |= LAYER_SSL;
   }
 
-  ssl_log( transport, PN_LEVEL_TRACE, "process_input_ssl( data size=%d )",available );
+  ssl_log( transport, PN_LEVEL_TRACE, "process_input_ssl( data size=%zu )",available );
 
   ssize_t consumed = 0;
   bool work_pending;
