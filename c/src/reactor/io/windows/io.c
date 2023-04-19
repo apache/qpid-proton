@@ -37,6 +37,7 @@
 #include "iocp.h"
 #include "core/util.h"
 
+#include <proton/annotations.h>
 #include <proton/object.h>
 
 #include <ctype.h>
@@ -53,7 +54,8 @@ int pni_win32_error(pn_error_t *error, const char *msg, HRESULT code)
   return pn_error_format(error, PN_ERR, "%s: %s", msg, err);
 }
 
-static void io_log(const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(1, 2)
+static void io_log(PN_PRINTF_FORMAT const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);

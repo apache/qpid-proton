@@ -39,6 +39,7 @@
 
 #include "platform/platform.h"
 
+#include <proton/annotations.h>
 #include <proton/ssl.h>
 #include <proton/engine.h>
 
@@ -61,9 +62,9 @@ extern "C" {
  * This file contains an SChannel-based implemention of the SSL/TLS API for Windows platforms.
  */
 
-static void ssl_log(pn_transport_t *transport, pn_log_level_t sev, const char *fmt, ...);
-static void ssl_log_error(const char *fmt, ...);
-static void ssl_log_error_status(HRESULT status, const char *fmt, ...);
+static void ssl_log(pn_transport_t *transport, pn_log_level_t sev, PN_PRINTF_FORMAT const char *fmt, ...) PN_PRINTF_FORMAT_ATTR(3, 4);
+static void ssl_log_error(PN_PRINTF_FORMAT const char *fmt, ...) PN_PRINTF_FORMAT_ATTR(1, 2);
+static void ssl_log_error_status(HRESULT status, PN_PRINTF_FORMAT const char *fmt, ...) PN_PRINTF_FORMAT_ATTR(2, 3);
 static HCERTSTORE open_cert_db(const char *store_name, const char *passwd, int *error);
 
 // Thread support.  Some SChannel objects are shared or ref-counted.

@@ -26,6 +26,7 @@
 #include "core/util.h"
 #include "core/util_str.h"
 
+#include <proton/annotations.h>
 #include <proton/ssl.h>
 #include <proton/engine.h>
 
@@ -159,7 +160,8 @@ static void ssl_vlog(pn_transport_t *transport, pn_log_level_t sev, const char *
   }
 }
 
-static void ssl_log(pn_transport_t *transport, pn_log_level_t sev, const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(3, 4)
+static void ssl_log(pn_transport_t *transport, pn_log_level_t sev, PN_PRINTF_FORMAT const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
@@ -179,7 +181,8 @@ static void ssl_log_flush(pn_transport_t* transport, pn_log_level_t sev)
 }
 
 // log an error and dump the SSL error stack
-static void ssl_log_error(const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(1, 2)
+static void ssl_log_error(PN_PRINTF_FORMAT const char *fmt, ...)
 {
   if (fmt) {
     va_list ap;

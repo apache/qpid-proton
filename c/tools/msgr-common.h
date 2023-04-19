@@ -22,6 +22,7 @@
 
 #include <inttypes.h>
 
+#include "proton/annotations.h"
 #include "proton/types.h"
 #include "proton/message.h"
 
@@ -66,5 +67,5 @@ void statistics_msg_received( Statistics_t *s, pn_message_t *message );
 void statistics_report( Statistics_t *s, uint64_t sent, uint64_t received );
 
 void enable_logging(void);
-void LOG( const char *fmt, ... );
+void LOG( PN_PRINTF_FORMAT const char *fmt, ... ) PN_PRINTF_FORMAT_ATTR(1, 2);
 

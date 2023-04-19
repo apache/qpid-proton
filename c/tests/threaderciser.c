@@ -51,6 +51,7 @@
 
 #include "thread.h"
 
+#include <proton/annotations.h>
 #include <proton/connection.h>
 #include <proton/event.h>
 #include <proton/listener.h>
@@ -90,7 +91,8 @@ static bool debug_enable = false;
 */
 #define debug(...) if (debug_enable) debug_impl(__VA_ARGS__)
 
-static void debug_impl(const char *fmt, ...) {
+PN_PRINTF_FORMAT_ATTR(1, 2)
+static void debug_impl(PN_PRINTF_FORMAT const char *fmt, ...) {
   /* Collect thread-id and message in a single buffer to minimize mixed messages */
   char msg[256];
   char *i = msg;
