@@ -62,7 +62,7 @@ class flow_sender : public proton::messaging_handler {
     flow_sender() : available(0), sequence(0) {}
 
     void send_available_messages(proton::sender &s) {
-        for (int i = sequence; available && s.credit() > 0; i++) {
+        while(available && s.credit() > 0) {
             std::ostringstream mbody;
             mbody << "flow_sender message " << sequence++;
             proton::message m(mbody.str());
