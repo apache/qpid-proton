@@ -513,10 +513,18 @@ class ContainerTest(Test):
 
     def test_container_id_3(self):
         server_handler = ContainerTest._ServerHandler("localhost")
-        container = Container(server_handler)
-        container.container_id = None
+        container = Container(server_handler, container_id = None)
         conn = container.connect(url="localhost:%s" % (server_handler.port),
                                  handler=ContainerTest._ClientHandler())
+        container.run()
+        assert server_handler.peer_container_id != '', server_handler.peer_container_id
+
+    def test_container_id_4(self):
+        server_handler = ContainerTest._ServerHandler("localhost")
+        container = Container(server_handler)
+        conn = container.connect(url="localhost:%s" % (server_handler.port),
+                                 handler=ContainerTest._ClientHandler(),
+                                 container_id=None)
         container.run()
         assert server_handler.peer_container_id != '', server_handler.peer_container_id
 

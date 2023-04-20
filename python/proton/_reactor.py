@@ -1362,7 +1362,7 @@ class Container(Reactor):
             **kwargs
     ) -> Connection:
         conn = self.connection(handler)
-        conn.container = kwargs.get('container_id', self.container_id or str(_generate_uuid()))
+        conn.container = kwargs.get('container_id', self.container_id) or str(_generate_uuid())
         conn.offered_capabilities = kwargs.get('offered_capabilities')
         conn.desired_capabilities = kwargs.get('desired_capabilities')
         conn.properties = kwargs.get('properties')
