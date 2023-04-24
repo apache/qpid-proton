@@ -109,4 +109,36 @@
     #define PN_FALLTHROUGH (void)0
 #endif
 
+// Generalize warning push/pop.
+#if defined(__GNUC__) || defined(__clang__)
+    // Clang & GCC
+    #define PN_PUSH_WARNING _Pragma("GCC diagnostic push")
+    #define PN_POP_WARNING _Pragma("GCC diagnostic pop")
+    #define PN_GNU_DISABLE_WARNING_INTERNAL2(warningName) #warningName
+    #define PN_GNU_DISABLE_WARNING(warningName) _Pragma(PN_GNU_DISABLE_WARNING_INTERNAL2(GCC diagnostic ignored warningName))
+    #ifdef __clang__
+        #define PN_CLANG_DISABLE_WARNING(warningName) PN_GNU_DISABLE_WARNING(warningName)
+        #define PN_GCC_DISABLE_WARNING(warningName)
+    #else
+        #define PN_CLANG_DISABLE_WARNING(warningName)
+        #define PN_GCC_DISABLE_WARNING(warningName) PN_GNU_DISABLE_WARNING(warningName)
+    #endif
+    #define PN_MSVC_DISABLE_WARNING(warningNumber)
+#elif defined(_MSC_VER)
+    #define PN_PUSH_WARNING __pragma(warning(push))
+    #define PN_POP_WARNING __pragma(warning(pop))
+    // Disable the GCC warnings.
+    #define PN_GNU_DISABLE_WARNING(warningName)
+    #define PN_GCC_DISABLE_WARNING(warningName)
+    #define PN_CLANG_DISABLE_WARNING(warningName)
+    #define PN_MSVC_DISABLE_WARNING(warningNumber) __pragma(warning(disable : warningNumber))
+#else
+    #define PN_PUSH_WARNING
+    #define PN_POP_WARNING
+    #define PN_GNU_DISABLE_WARNING(warningName)
+    #define PN_GCC_DISABLE_WARNING(warningName)
+    #define PN_CLANG_DISABLE_WARNING(warningName)
+    #define PN_MSVC_DISABLE_WARNING(warningNumber)
+#endif
+
 #endif /* annotations.h */
