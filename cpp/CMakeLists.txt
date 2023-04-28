@@ -40,6 +40,9 @@ endif()
 find_package(opentelemetry-cpp)
 option(ENABLE_OPENTELEMETRYCPP "Use opentelemetry for distributed tracing" ${OPENTELEMETRY-CPP_FOUND})
 if (ENABLE_OPENTELEMETRYCPP)
+  # This is a workaround because the otlp exporter requires protobuf but most packaged versions
+  # of protobuf don't ship cmake config yet. We use this exporter in our examples
+  find_package(Protobuf REQUIRED)
   set(TRACING_SRC src/tracing_opentelemetry.cpp src/tracing_stub.cpp)
   set(TRACING_LIBS opentelemetry-cpp::trace)
 else()

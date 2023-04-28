@@ -58,11 +58,9 @@ endforeach()
 
 # Tracing examples
 if (ENABLE_OPENTELEMETRYCPP)
-foreach(example
-    tracing_client
-    tracing_server)
-  add_executable(${example} ${example}.cpp)
-  target_link_libraries(${example} Proton::cpp opentelemetry-cpp::trace opentelemetry-cpp::jaeger_trace_exporter opentelemetry-cpp::ostream_span_exporter)
+  foreach(example tracing_client tracing_server)
+    add_executable(${example} ${example}.cpp)
+    target_link_libraries(${example} Proton::cpp opentelemetry-cpp::trace opentelemetry-cpp::otlp_http_exporter)
   endforeach()
 endif()
 

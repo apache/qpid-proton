@@ -23,13 +23,13 @@ sudo apt-get update
 
 # OTel dependencies
 
-sudo apt-get install libcurl4-openssl-dev
-sudo apt-get install libboost-locale-dev
-sudo apt-get install libthrift-dev
+sudo apt-get install libgtest-dev libgmock-dev libbenchmark-dev \
+    libcurl4-openssl-dev \
+    libprotobuf-dev protobuf-compiler
 
 # Clone OpenTelemetry-cpp
 
-git clone -b v1.6.1 --recursive https://github.com/open-telemetry/opentelemetry-cpp
+git clone -b v1.9.1 --recurse-submodules https://github.com/open-telemetry/opentelemetry-cpp
 
 # Build/Install OpenTelemetry-cpp
 
@@ -37,7 +37,7 @@ cd opentelemetry-cpp
 mkdir build
 cd build
 
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWITH_JAEGER=ON
-cmake --build . --target all
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_TESTING=OFF -DWITH_OTLP=ON -DWITH_OTLP_HTTP=ON -DWITH_OTLP_GRPC=OFF
+cmake --build . --target all --config RelWithDebInfo
 sudo cmake --install . --config RelWithDebInfo
 cd ../..
