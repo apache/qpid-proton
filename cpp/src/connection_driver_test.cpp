@@ -440,15 +440,11 @@ void test_link_capability_filter() {
     driver_pair d(ha, hb);
 
     // Capabilities and filters
-    std::vector<proton::symbol> caps;
-    caps.push_back("foo");
-    caps.push_back("bar");
+    std::vector<proton::symbol> caps = {"foo", "bar"};
 
     d.a.connection().open_sender("x", sender_options().target(target_options().capabilities(caps)));
 
-    source::filter_map f;
-    f.put("1", "11");
-    f.put("2", "22");
+    source::filter_map f = {{"1", "11"}, {"2", "22"}};
     d.a.connection().open_receiver("y", receiver_options().source(source_options().filters(f).capabilities(caps)));
     while (ha.link_count()+hb.link_count() < 4) d.process();
 
