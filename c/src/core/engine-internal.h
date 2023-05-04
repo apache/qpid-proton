@@ -29,7 +29,6 @@
 #include "buffer.h"
 #include "dispatcher.h"
 #include "logger_private.h"
-#include "util.h"
 
 #if __cplusplus
 extern "C" {

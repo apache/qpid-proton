@@ -24,7 +24,7 @@
 
 #include "fixed_string.h"
 #include "memory.h"
-#include "util.h"
+#include "util_str.h"
 #include "value_dump.h"
 
 #include <assert.h>

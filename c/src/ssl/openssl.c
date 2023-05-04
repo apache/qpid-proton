@@ -24,6 +24,7 @@
 #include "core/engine-internal.h"
 #include "core/logger_private.h"
 #include "core/util.h"
+#include "core/util_str.h"
 
 #include <proton/ssl.h>
 #include <proton/engine.h>

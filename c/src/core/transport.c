@@ -28,6 +28,8 @@
 #include "platform/platform_fmt.h"
 #include "sasl/sasl-internal.h"
 #include "ssl/ssl-internal.h"
+#include "util.h"
+#include "util_str.h"
 
 #include "autodetect.h"
 #include "protocol.h"

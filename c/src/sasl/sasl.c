@@ -28,6 +28,7 @@
 #include "core/frame_generators.h"
 #include "core/frame_consumers.h"
 #include "core/util.h"
+#include "core/util_str.h"
 #include "platform/platform_fmt.h"
 #include "protocol.h"
 
@@ -35,6 +36,7 @@
 #include "proton/types.h"
 
 #include <assert.h>
+#include <stdlib.h>
 
 // Machinery to allow plugin SASL implementations
 // Change this to &default_sasl_impl when we change cyrus to opt in

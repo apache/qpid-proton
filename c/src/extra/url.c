@@ -22,7 +22,7 @@
 #define PN_USE_DEPRECATED_API 1
 
 #include "core/fixed_string.h"
-#include "core/util.h"
+#include "core/util_str.h"
 #include "proton/url.h"
 #include "proton/object.h"
 

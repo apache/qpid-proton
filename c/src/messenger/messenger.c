@@ -39,6 +39,7 @@
 
 #include "core/log_private.h"
 #include "core/util.h"
+#include "core/util_str.h"
 #include "platform/platform.h" // pn_i_getpid, pn_i_now
 #include "platform/platform_fmt.h"
 #include "store.h"

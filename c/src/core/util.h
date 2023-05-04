@@ -46,11 +46,6 @@ bool pn_env_bool(const char *name);
 pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
 
 extern const pn_class_t PN_CLASSCLASS(pn_strdup)[];
-char *pn_strdup(const char *src);
-char *pn_strndup(const char *src, size_t n);
-
-int pn_strcasecmp(const char* a, const char* b);
-int pn_strncasecmp(const char* a, const char* b, size_t len);
 
 static inline bool pn_bytes_equal(const pn_bytes_t a, const pn_bytes_t b) {
   return (a.size == b.size && !memcmp(a.start, b.start, a.size));

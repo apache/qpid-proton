@@ -35,7 +35,7 @@
 #include "core/autodetect.h"
 #include "core/engine-internal.h"
 #include "core/logger_private.h"
-#include "core/util.h"
+#include "core/util_str.h"
 
 #include "platform/platform.h"
 

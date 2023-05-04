@@ -23,7 +23,7 @@
 
 #include "memory.h"
 #include "platform/platform.h"
-#include "util.h"
+#include "util_str.h"
 
 #include <proton/connection.h>
 #include <proton/link.h>
