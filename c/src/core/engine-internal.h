@@ -165,7 +165,7 @@ struct pn_transport_t {
 
 
   /* scratch area */
-  pn_buffer_t *frame;  // frame under construction
+  pn_rwbytes_t scratch_space;
 
   // Temporary - ??
   pn_buffer_t *output_buffer;

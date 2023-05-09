@@ -414,7 +414,7 @@ def emit_function(name_prefix: str, fill_spec: str, prefix_args: List[Tuple[str,
             f'{function_spec}',
             '{',
             f'{p.mk_indent(1)}do {{',
-            f'{p.mk_indent(2)}pni_emitter_t emitter = make_emitter_from_buffer({", ".join(prefix_params)});',
+            f'{p.mk_indent(2)}pni_emitter_t emitter = make_emitter_from_rwbytes({", ".join(prefix_params)});',
             f'{p.mk_indent(2)}if ({p.mk_funcall(inner_function_name, ["&emitter", *args])}) {{',
             f'{p.mk_indent(3)}{p.mk_funcall("size_buffer_to_emitter", [*prefix_params, "&emitter"])};',
             f'{p.mk_indent(3)}continue;',
@@ -494,7 +494,7 @@ def emit(fill_specs, decl_filename, impl_filename):
     decls: Dict[str, str] = {}
     defns: Dict[str, List[str]] = {}
     for fill_spec in fill_specs:
-        decl, defn = emit_function('pn_amqp_encode', fill_spec, [('buffer', 'pn_buffer_t*')])
+        decl, defn = emit_function('pn_amqp_encode', fill_spec, [('buffer', 'pn_rwbytes_t*')])
         decls[fill_spec] = decl
         defns[fill_spec] = defn
     if decl_filename and impl_filename:

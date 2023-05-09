@@ -55,6 +55,24 @@ static inline pn_bytes_t pn_string_bytes(struct pn_string_t *s) {
   return pn_bytes(pn_string_size(s), pn_string_get(s));
 }
 
+static inline pn_rwbytes_t pn_rwbytes_alloc(size_t size) {
+  char* space = malloc(size);
+  size_t s = space ? size : 0;
+  return (pn_rwbytes_t){.size=s, .start=space};
+}
+
+
+static inline pn_rwbytes_t pn_rwbytes_realloc(pn_rwbytes_t *in, size_t size) {
+  char* space = realloc(in->start, size);
+  size_t s = space ? size : 0;
+  *in = (pn_rwbytes_t){.size=s, .start=space};
+  return *in;
+}
+
+static inline void pn_rwbytes_free(pn_rwbytes_t in) {
+  free((void*)in.start);
+}
+
 static inline void pni_write16(char *bytes, uint16_t value)
 {
   bytes[0] = 0xFF & (value >> 8);

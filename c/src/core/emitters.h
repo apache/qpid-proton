@@ -24,7 +24,9 @@
 
 /* Definitions of AMQP type codes */
 #include "encodings.h"
-#include "buffer.h"
+#include "engine-internal.h"
+#include "protocol.h"
+#include "util.h"
 
 #include <proton/codec.h>
 
@@ -56,11 +58,10 @@ typedef struct pni_emitter_t {
   size_t position;
 } pni_emitter_t;
 
-static inline pni_emitter_t make_emitter_from_buffer(pn_buffer_t* buffer) {
-  pn_rwbytes_t output_bytes = pn_buffer_free_memory(buffer);
+static inline pni_emitter_t make_emitter_from_rwbytes(pn_rwbytes_t* output_bytes) {
   return (pni_emitter_t){
-    .output_start = output_bytes.start,
-    .size = output_bytes.size,
+    .output_start = output_bytes->start,
+    .size = output_bytes->size,
     .position = 0
   };
 }
@@ -81,8 +82,8 @@ static inline bool resize_required(pni_emitter_t* emitter) {
   return emitter->position > emitter->size;
 }
 
-static inline void size_buffer_to_emitter(pn_buffer_t* buffer, pni_emitter_t* emitter) {
-  pn_buffer_ensure(buffer, pn_buffer_capacity(buffer)+(emitter->position-emitter->size));
+static inline void size_buffer_to_emitter(pn_rwbytes_t* buffer, pni_emitter_t* emitter) {
+  pn_rwbytes_realloc(buffer, buffer->size+emitter->position-emitter->size);
 }
 
 static inline bool encode_succeeded(pni_emitter_t* emitter, pni_compound_context* compound) {

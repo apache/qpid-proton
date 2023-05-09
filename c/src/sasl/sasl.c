@@ -491,7 +491,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     switch (desired_state) {
     case SASL_POSTED_INIT: {
       /* GENERATE_CODEC_CODE: "DL[szS]" */
-      pn_bytes_t buf = pn_amqp_encode_DLEszSe(transport->frame, SASL_INIT, sasl->selected_mechanism, out.size, out.start, sasl->local_fqdn);
+      pn_bytes_t buf = pn_amqp_encode_DLEszSe(&transport->scratch_space, SASL_INIT, sasl->selected_mechanism, out.size, out.start, sasl->local_fqdn);
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       break;
@@ -506,7 +506,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         pni_split_mechs(mechlist, sasl->included_mechanisms, mechs, &count);
       }
       /* GENERATE_CODEC_CODE: "DL[@T[*s]]" */
-      pn_bytes_t buf = pn_amqp_encode_DLEATEjsee(transport->frame, SASL_MECHANISMS, PN_SYMBOL, count, mechs);
+      pn_bytes_t buf = pn_amqp_encode_DLEATEjsee(&transport->scratch_space, SASL_MECHANISMS, PN_SYMBOL, count, mechs);
       free(mechlist);
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
@@ -515,7 +515,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     case SASL_POSTED_RESPONSE:
       if (sasl->last_state != SASL_POSTED_RESPONSE) {
         /* "DL[Z]" */
-        pn_bytes_t buf = pn_amqp_encode_DLEZe(transport->frame, SASL_RESPONSE, out.size, out.start);
+        pn_bytes_t buf = pn_amqp_encode_DLEZe(&transport->scratch_space, SASL_RESPONSE, out.size, out.start);
         pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
@@ -526,7 +526,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         continue;
       } else if (sasl->last_state != SASL_POSTED_CHALLENGE) {
         /* "DL[Z]" */
-        pn_bytes_t buf = pn_amqp_encode_DLEZe(transport->frame, SASL_CHALLENGE, out.size, out.start);
+        pn_bytes_t buf = pn_amqp_encode_DLEZe(&transport->scratch_space, SASL_CHALLENGE, out.size, out.start);
         pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
@@ -537,7 +537,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         continue;
       }
       /* "DL[Bz]" */
-      pn_bytes_t buf = pn_amqp_encode_DLEBze(transport->frame, SASL_OUTCOME, sasl->outcome, out.size, out.start);
+      pn_bytes_t buf = pn_amqp_encode_DLEBze(&transport->scratch_space, SASL_OUTCOME, sasl->outcome, out.size, out.start);
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       if (sasl->outcome!=PN_SASL_OK) {

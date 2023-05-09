@@ -410,7 +410,7 @@ static void pn_transport_initialize(void *object)
   transport->tracer = NULL;
   transport->sasl = NULL;
   transport->ssl = NULL;
-  transport->frame = pn_buffer(PN_TRANSPORT_INITIAL_FRAME_SIZE);
+  transport->scratch_space = pn_rwbytes_alloc(PN_TRANSPORT_INITIAL_FRAME_SIZE);
   transport->input_frames_ct = 0;
   transport->output_frames_ct = 0;
 
@@ -662,7 +662,7 @@ static void pn_transport_finalize(void *object)
   pn_free(transport->remote_channels);
   pni_mem_subdeallocate(pn_class(transport), transport, transport->input_buf);
   pni_mem_subdeallocate(pn_class(transport), transport, transport->output_buf);
-  pn_buffer_free(transport->frame);
+  pn_rwbytes_free(transport->scratch_space);
   pn_free(transport->context);
   pn_buffer_free(transport->output_buffer);
   pni_logger_fini(&transport->logger);
@@ -901,7 +901,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
  compute_performatives:;
   /* "DL[IIzI?o?on?DLC?o?o?o]" */
   pn_bytes_t performative =
-    pn_amqp_encode_DLEIIzIQoQonQDLCQoQoQoe(transport->frame, TRANSFER,
+    pn_amqp_encode_DLEIIzIQoQonQDLCQoQoQoe(&transport->scratch_space, TRANSFER,
                          handle,
                          id,
                          tag->size, tag->start,
@@ -960,7 +960,7 @@ static int pni_post_close(pn_transport_t *transport, pn_condition_t *cond)
     info = pn_condition_info(cond);
   }
   /* "DL[?DL[sSC]]" */
-  pn_bytes_t buf = pn_amqp_encode_DLEQDLEsSCee(transport->frame, CLOSE,
+  pn_bytes_t buf = pn_amqp_encode_DLEQDLEsSCee(&transport->scratch_space, CLOSE,
                        (bool) condition, ERROR, condition, description, info);
   return pn_framing_send_amqp(transport, 0, buf);
 }
@@ -1871,7 +1871,7 @@ static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endp
       const char *cid = pn_string_get(connection->container);
       pni_calculate_channel_max(transport);
       /*  "DL[SS?I?H?InnMMC]" */
-      pn_bytes_t buf = pn_amqp_encode_DLESSQIQHQInnMMCe(transport->frame, OPEN,
+      pn_bytes_t buf = pn_amqp_encode_DLESSQIQHQInnMMCe(&transport->scratch_space, OPEN,
                               cid ? cid : "",
                               pn_string_get(connection->hostname),
                               // TODO: This is messy, because we also have to allow local_max_frame_ to be 0 to mean unlimited
@@ -1960,7 +1960,7 @@ static int pni_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpo
       state->incoming_window = pni_session_incoming_window(ssn);
       state->outgoing_window = pni_session_outgoing_window(ssn);
       /* "DL[?HIIII]" */
-      pn_bytes_t buf = pn_amqp_encode_DLEQHIIIIe(transport->frame, BEGIN,
+      pn_bytes_t buf = pn_amqp_encode_DLEQHIIIIe(&transport->scratch_space, BEGIN,
                     ((int16_t) state->remote_channel >= 0), state->remote_channel,
                     state->outgoing_transfer_count,
                     state->incoming_window,
@@ -2021,7 +2021,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
       const pn_distribution_mode_t dist_mode = (pn_distribution_mode_t) link->source.distribution_mode;
       if (link->target.type == PN_COORDINATOR) {
         /* "DL[SIoBB?DL[SIsIoC?sCnCC]DL[C]nnI]" */
-        pn_bytes_t buf = pn_amqp_encode_DLESIoBBQDLESIsIoCQsCnCCeDLECennIe(transport->frame, ATTACH,
+        pn_bytes_t buf = pn_amqp_encode_DLESIoBBQDLESIsIoCQsCnCCeDLECennIe(&transport->scratch_space, ATTACH,
                                 pn_string_get(link->name),
                                 state->local_handle,
                                 endpoint->type == RECEIVER,
@@ -2044,7 +2044,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
         if (err) return err;
       } else {
         /* "DL[SIoBB?DL[SIsIoC?sCnMM]?DL[SIsIoCM]nnILnnC]" */
-        pn_bytes_t buf = pn_amqp_encode_DLESIoBBQDLESIsIoCQsCnMMeQDLESIsIoCMennILnnCe(transport->frame, ATTACH,
+        pn_bytes_t buf = pn_amqp_encode_DLESIoBBQDLESIsIoCQsCnMMeQDLESIsIoCMennILnnCe(&transport->scratch_space, ATTACH,
                                 pn_string_get(link->name),
                                 state->local_handle,
                                 endpoint->type == RECEIVER,
@@ -2091,7 +2091,7 @@ static int pni_post_flow(pn_transport_t *transport, pn_session_t *ssn, pn_link_t
   bool linkq = (bool) link;
   pn_link_state_t *state = &link->state;
   /* "DL[?IIII?I?I?In?o]" */
-  pn_bytes_t buf = pn_amqp_encode_DLEQIIIIQIQIQInQoe(transport->frame, FLOW,
+  pn_bytes_t buf = pn_amqp_encode_DLEQIIIIQIQIQInQoe(&transport->scratch_space, FLOW,
                        (int16_t) ssn->state.remote_channel >= 0, ssn->state.incoming_transfer_count,
                        ssn->state.incoming_window,
                        ssn->state.outgoing_transfer_count,
@@ -2127,7 +2127,7 @@ static int pni_flush_disp(pn_transport_t *transport, pn_session_t *ssn)
   bool settled = ssn->state.disp_settled;
   if (ssn->state.disp) {
     /* "DL[oI?I?o?DL[]]" */
-    pn_bytes_t buf = pn_amqp_encode_DLEoIQIQoQDLEee(transport->frame, DISPOSITION,
+    pn_bytes_t buf = pn_amqp_encode_DLEoIQIQoQDLEee(&transport->scratch_space, DISPOSITION,
                             ssn->state.disp_type,
                             ssn->state.disp_first,
                             ssn->state.disp_last!=ssn->state.disp_first, ssn->state.disp_last,
@@ -2164,7 +2164,7 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
     pn_data_clear(transport->disp_data);
     PN_RETURN_IF_ERROR(pni_disposition_encode(&delivery->local, transport->disp_data));
     /* "DL[oIn?o?DLC]" */
-    pn_bytes_t buf = pn_amqp_encode_DLEoInQoQDLCe(transport->frame,DISPOSITION,
+    pn_bytes_t buf = pn_amqp_encode_DLEoInQoQDLCe(&transport->scratch_space,DISPOSITION,
       role, state->id,
       delivery->local.settled, delivery->local.settled,
       (bool)code, code, transport->disp_data);
@@ -2402,7 +2402,7 @@ static int pni_process_link_teardown(pn_transport_t *transport, pn_endpoint_t *e
         info = pn_condition_info(&endpoint->condition);
       }
       /* "DL[I?o?DL[sSC]]" */
-      pn_bytes_t buf = pn_amqp_encode_DLEIQoQDLEsSCee(transport->frame, DETACH,
+      pn_bytes_t buf = pn_amqp_encode_DLEIQoQDLEsSCee(&transport->scratch_space, DETACH,
                                             state->local_handle,
                                             !link->detached, !link->detached,
                                             (bool)name, ERROR, name, description, info);
@@ -2478,7 +2478,7 @@ static int pni_process_ssn_teardown(pn_transport_t *transport, pn_endpoint_t *en
         info = pn_condition_info(&endpoint->condition);
       }
       /* "DL[?DL[sSC]]" */
-      pn_bytes_t buf = pn_amqp_encode_DLEQDLEsSCee(transport->frame, END,
+      pn_bytes_t buf = pn_amqp_encode_DLEQDLEsSCee(&transport->scratch_space, END,
                               (bool) name, ERROR, name, description, info);
       int err = pn_framing_send_amqp(transport, state->local_channel, buf);
       if (err) return err;
@@ -2555,7 +2555,7 @@ static void pn_error_amqp(pn_transport_t* transport, unsigned int layer)
   if (!transport->close_sent) {
     if (!transport->open_sent) {
       /* "DL[S]" */
-      pn_bytes_t buf = pn_amqp_encode_DLESe(transport->frame, OPEN, "");
+      pn_bytes_t buf = pn_amqp_encode_DLESe(&transport->scratch_space, OPEN, "");
       pn_framing_send_amqp(transport, 0, buf);
     }
 
