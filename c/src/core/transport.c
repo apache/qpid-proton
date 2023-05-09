@@ -883,7 +883,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
                                         uint32_t handle,
                                         pn_sequence_t id,
                                         pn_bytes_t *full_payload,
-                                        const pn_bytes_t *tag,
+                                        const pn_bytes_t tag,
                                         uint32_t message_format,
                                         bool settled,
                                         bool more,
@@ -904,7 +904,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
     pn_amqp_encode_DLEIIzIQoQonQDLCQoQoQoe(&transport->scratch_space, TRANSFER,
                          handle,
                          id,
-                         tag->size, tag->start,
+                         tag.size, tag.start,
                          message_format,
                          settled, settled,
                          more_flag, more_flag,
@@ -916,7 +916,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
     return PN_ERR;
   }
 
-  // At this point the side affect of the fill is to encode the performative into transport->frame
+  // At this point the side affect of the fill is to encode the performative into transport->scratch_space
 
   do { // send as many frames as possible without changing the 'more' flag...
 
@@ -2222,13 +2222,12 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
 
       pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
       size_t full_size = bytes.size;
-      pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
       pn_data_clear(transport->disp_data);
       PN_RETURN_IF_ERROR(pni_disposition_encode(&delivery->local, transport->disp_data));
       int count = pni_post_amqp_transfer_frame(transport,
                                                ssn_state->local_channel,
                                                link_state->local_handle,
-                                               state->id, &bytes, &tag,
+                                               state->id, &bytes, delivery->tag,
                                                0, // message-format
                                                delivery->local.settled,
                                                !delivery->done,

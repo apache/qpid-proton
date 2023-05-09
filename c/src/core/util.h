@@ -55,6 +55,20 @@ static inline pn_bytes_t pn_string_bytes(struct pn_string_t *s) {
   return pn_bytes(pn_string_size(s), pn_string_get(s));
 }
 
+static inline pn_bytes_t pn_bytes_dup(pn_bytes_t in) {
+  if (in.size) {
+    char* rbytes = malloc(in.size);
+    memcpy(rbytes, in.start, in.size);
+    return (pn_bytes_t){in.size, rbytes};
+  } else {
+    return (pn_bytes_t){0, NULL};
+  }
+}
+
+static inline void pn_bytes_free(pn_bytes_t in) {
+  free((void*)in.start);
+}
+
 static inline pn_rwbytes_t pn_rwbytes_alloc(size_t size) {
   char* space = malloc(size);
   size_t s = space ? size : 0;

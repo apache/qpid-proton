@@ -1471,7 +1471,8 @@ static void pn_delivery_finalize(void *object)
                         ? &link->session->state.outgoing
                         : &link->session->state.incoming,
                         delivery);
-    pn_buffer_clear(delivery->tag);
+    pn_bytes_free(delivery->tag);
+    delivery->tag = (pn_delivery_tag_t){0, NULL};
     pn_buffer_clear(delivery->bytes);
     pn_record_clear(delivery->context);
     delivery->settled = true;
@@ -1488,7 +1489,8 @@ static void pn_delivery_finalize(void *object)
 
   if (!pooled) {
     pn_free(delivery->context);
-    pn_buffer_free(delivery->tag);
+    pn_bytes_free(delivery->tag);
+    delivery->tag = (pn_delivery_tag_t){0, NULL};
     pn_buffer_free(delivery->bytes);
     pn_disposition_finalize(&delivery->local);
     pn_disposition_finalize(&delivery->remote);
@@ -1522,7 +1524,7 @@ static void pn_disposition_clear(pn_disposition_t *ds)
 void pn_delivery_inspect(void *obj, pn_fixed_string_t *dst) {
   pn_delivery_t *d = (pn_delivery_t*)obj;
   const char* dir = pn_link_is_sender(d->link) ? "sending" : "receiving";
-  pn_bytes_t bytes = pn_buffer_bytes(d->tag);
+  pn_bytes_t bytes = d->tag;
   pn_fixed_string_addf(dst, "pn_delivery<%p>{%s, tag=b\"", obj, dir);
   pn_fixed_string_quote(dst, bytes.start, bytes.size);
   pn_fixed_string_addf(dst, "\", local=%s, remote=%s}",
@@ -1544,7 +1546,6 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   if (!delivery) {
     delivery = (pn_delivery_t *) pn_class_new(&PN_CLASSCLASS(pn_delivery), sizeof(pn_delivery_t));
     if (!delivery) return NULL;
-    delivery->tag = pn_buffer(16);
     delivery->bytes = pn_buffer(64);
     pn_disposition_init(&delivery->local);
     pn_disposition_init(&delivery->remote);
@@ -1554,8 +1555,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   }
   delivery->link = link;
   pn_incref(delivery->link);  // keep link until finalized
-  pn_buffer_clear(delivery->tag);
-  pn_buffer_append(delivery->tag, tag.start, tag.size);
+  delivery->tag = pn_bytes_dup(tag);
   pn_disposition_clear(&delivery->local);
   pn_disposition_clear(&delivery->remote);
   delivery->updated = false;
@@ -1640,7 +1640,7 @@ bool pn_delivery_current(pn_delivery_t *delivery)
 void pn_delivery_dump(pn_delivery_t *d)
 {
   char tag[1024];
-  pn_bytes_t bytes = pn_buffer_bytes(d->tag);
+  pn_bytes_t bytes = d->tag;
   pn_quote_data(tag, 1024, bytes.start, bytes.size);
   printf("{tag=%s, local.type=%" PRIu64 ", remote.type=%" PRIu64 ", local.settled=%u, "
          "remote.settled=%u, updated=%u, current=%u, writable=%u, readable=%u, "
@@ -1743,10 +1743,9 @@ pn_condition_t *pn_disposition_condition(pn_disposition_t *disposition)
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
 {
   if (delivery) {
-    pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
-    return pn_dtag(tag.start, tag.size);
+    return delivery->tag;
   } else {
-    return pn_dtag(0, 0);
+    return (pn_delivery_tag_t){0, NULL};
   }
 }
 
