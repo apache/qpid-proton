@@ -109,19 +109,19 @@ TEST_CASE("driver_message_transfer") {
   pn_link_open(snd);
   d.run();
 
-  CHECK_THAT(ETYPES(PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_OPEN,
-                    PN_SESSION_INIT, PN_SESSION_LOCAL_OPEN, PN_LINK_INIT,
-                    PN_LINK_LOCAL_OPEN, PN_CONNECTION_BOUND,
-                    PN_CONNECTION_REMOTE_OPEN, PN_SESSION_REMOTE_OPEN,
-                    PN_LINK_REMOTE_OPEN),
+  CHECK_THAT((etypes{PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_OPEN,
+                     PN_SESSION_INIT, PN_SESSION_LOCAL_OPEN, PN_LINK_INIT,
+                     PN_LINK_LOCAL_OPEN, PN_CONNECTION_BOUND,
+                     PN_CONNECTION_REMOTE_OPEN, PN_SESSION_REMOTE_OPEN,
+                     PN_LINK_REMOTE_OPEN}),
              Equals(client.log_clear()));
 
-  CHECK_THAT(ETYPES(PN_CONNECTION_INIT, PN_CONNECTION_BOUND,
-                    PN_CONNECTION_REMOTE_OPEN, PN_SESSION_INIT,
-                    PN_SESSION_REMOTE_OPEN, PN_LINK_INIT, PN_LINK_REMOTE_OPEN,
-                    PN_CONNECTION_LOCAL_OPEN, PN_TRANSPORT,
-                    PN_SESSION_LOCAL_OPEN, PN_TRANSPORT, PN_LINK_LOCAL_OPEN,
-                    PN_TRANSPORT),
+  CHECK_THAT((etypes{PN_CONNECTION_INIT, PN_CONNECTION_BOUND,
+                     PN_CONNECTION_REMOTE_OPEN, PN_SESSION_INIT,
+                     PN_SESSION_REMOTE_OPEN, PN_LINK_INIT, PN_LINK_REMOTE_OPEN,
+                     PN_CONNECTION_LOCAL_OPEN, PN_TRANSPORT,
+                     PN_SESSION_LOCAL_OPEN, PN_TRANSPORT, PN_LINK_LOCAL_OPEN,
+                     PN_TRANSPORT}),
              Equals(server.log_clear()));
 
   pn_link_t *rcv = server.link;
@@ -129,7 +129,7 @@ TEST_CASE("driver_message_transfer") {
   REQUIRE(pn_link_is_receiver(rcv));
   pn_link_flow(rcv, 1);
   d.run();
-  CHECK_THAT(ETYPES(PN_LINK_FLOW), Equals(client.log_clear()));
+  CHECK_THAT((etypes{PN_LINK_FLOW}), Equals(client.log_clear()));
 
   /* Encode and send a message */
   auto_free<pn_message_t, pn_message_free> m(pn_message());
@@ -139,7 +139,7 @@ TEST_CASE("driver_message_transfer") {
   pn_message_send(m, snd, NULL);
 
   d.run();
-  CHECK_THAT(ETYPES(PN_TRANSPORT, PN_DELIVERY), Equals(server.log_clear()));
+  CHECK_THAT((etypes{PN_TRANSPORT, PN_DELIVERY}), Equals(server.log_clear()));
 
   /* Receive and decode the message */
   pn_delivery_t *dlv = server.delivery;
@@ -214,7 +214,7 @@ TEST_CASE("driver_message_stream") {
     ssize_t c = (i + CHUNK < size) ? CHUNK : size - i;
     CHECK(c == pn_link_send(snd, buf.start + i, c));
     d.run();
-    CHECK_THAT(ETYPES(PN_DELIVERY), Equals(server.log_clear()));
+    CHECK_THAT((etypes{PN_DELIVERY}), Equals(server.log_clear()));
     /* Receive a chunk */
     pn_delivery_t *dlv = server.delivery;
     pn_link_t *l = pn_delivery_link(dlv);
@@ -298,7 +298,7 @@ TEST_CASE("driver_message_abort") {
   CHECK_FALSE(d.run());
   CHECK_THAT(server.log_clear(), Equals(etypes()));
   /* Client gets transport/flow after abort to ensure other messages are sent */
-  CHECK_THAT(ETYPES(PN_TRANSPORT, PN_LINK_FLOW), Equals(client.log_clear()));
+  CHECK_THAT((etypes{PN_TRANSPORT, PN_LINK_FLOW}), Equals(client.log_clear()));
   /* Aborted delivery consumes no credit */
   CHECK(1 == pn_link_credit(rcv));
   CHECK(1 == pn_link_credit(snd));
@@ -383,7 +383,7 @@ TEST_CASE("driver_message_abort_mixed") {
   pn_delivery_abort(sd);
   CHECK(pn_link_current(snd) != sd); /* Advanced */
   d.run();
-  CHECK_THAT(ETYPES(PN_TRANSPORT), Equals(server.log_clear()));
+  CHECK_THAT((etypes{PN_TRANSPORT}), Equals(server.log_clear()));
   /* Aborting wit no frames sent should leave credit untouched */
   CHECK(2 == pn_link_credit(snd));
   CHECK(2 == pn_link_credit(rcv));
@@ -510,16 +510,16 @@ TEST_CASE("driver_duplicate_link_client", "[!hide][!shouldfail]") {
   pn_link_open(pn_sender(ssn, "x"));
   d.run();
 
-  CHECK_THAT(ETYPES(PN_LINK_REMOTE_CLOSE, PN_LINK_LOCAL_CLOSE, PN_TRANSPORT,
-                    PN_LINK_INIT, PN_LINK_REMOTE_OPEN, PN_LINK_LOCAL_OPEN,
-                    PN_TRANSPORT),
+  CHECK_THAT((etypes{PN_LINK_REMOTE_CLOSE, PN_LINK_LOCAL_CLOSE, PN_TRANSPORT,
+                     PN_LINK_INIT, PN_LINK_REMOTE_OPEN, PN_LINK_LOCAL_OPEN,
+                     PN_TRANSPORT}),
              Equals(server.log_clear()));
   CHECK_THAT(*pn_transport_condition(d.server.transport), cond_empty());
 
   d.run();
-  CHECK_THAT(ETYPES(PN_LINK_LOCAL_CLOSE, PN_TRANSPORT, PN_LINK_REMOTE_CLOSE,
-                    PN_LINK_INIT, PN_LINK_LOCAL_OPEN, PN_TRANSPORT,
-                    PN_LINK_REMOTE_OPEN),
+  CHECK_THAT((etypes{PN_LINK_LOCAL_CLOSE, PN_TRANSPORT, PN_LINK_REMOTE_CLOSE,
+                     PN_LINK_INIT, PN_LINK_LOCAL_OPEN, PN_TRANSPORT,
+                     PN_LINK_REMOTE_OPEN}),
              Equals(client.log_clear()));
   CHECK_THAT(*pn_connection_remote_condition(d.client.connection),
              cond_empty());
@@ -545,7 +545,7 @@ TEST_CASE("driver_settle_incomplete_receiver") {
   CHECK(sizeof(data) == pn_link_send(snd, data, sizeof(data)));
   server.log_clear();
   d.run();
-  CHECK_THAT(ETYPES(PN_DELIVERY), Equals(server.log_clear()));
+  CHECK_THAT((etypes{PN_DELIVERY}), Equals(server.log_clear()));
   CHECK(sizeof(data) == pn_link_recv(rcv, rbuf, sizeof(data)));
   d.run();
 
@@ -566,7 +566,7 @@ TEST_CASE("driver_settle_incomplete_receiver") {
   CHECK(sizeof(data) == pn_link_send(snd, data, sizeof(data)));
   server.log_clear();
   d.run();
-  CHECK_THAT(ETYPES(PN_DELIVERY), Equals(server.log_clear()));
+  CHECK_THAT((etypes{PN_DELIVERY}), Equals(server.log_clear()));
   CHECK(sizeof(data) == pn_link_recv(rcv, rbuf, sizeof(data)));
   pn_delivery_tag_t tag = pn_delivery_tag(pn_link_current(rcv));
   CHECK(tag.size == 1);
@@ -596,7 +596,7 @@ TEST_CASE("driver_empty_last_frame") {
   CHECK(sizeof(data) == pn_link_send(snd, data, sizeof(data)));
   server.log_clear();
   d.run();
-  CHECK_THAT(ETYPES(PN_DELIVERY), Equals(server.log_clear()));
+  CHECK_THAT((etypes{PN_DELIVERY}), Equals(server.log_clear()));
   CHECK(sizeof(data) == pn_link_recv(rcv, rbuf, sizeof(data)));
   CHECK(pn_delivery_partial(pn_link_current(rcv)));
   d.run();
@@ -605,7 +605,7 @@ TEST_CASE("driver_empty_last_frame") {
   CHECK(pn_link_advance(snd));
   server.log_clear();
   d.run();
-  CHECK_THAT(ETYPES(PN_DELIVERY), Equals(server.log_clear()));
+  CHECK_THAT((etypes{PN_DELIVERY}), Equals(server.log_clear()));
   CHECK(PN_EOS == pn_link_recv(rcv, rbuf, sizeof(data)));
   CHECK(!pn_delivery_partial(pn_link_current(rcv)));
 

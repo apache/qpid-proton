@@ -65,11 +65,6 @@ std::string inspect(void *);
 typedef std::vector<pn_event_type_t> etypes;
 std::ostream &operator<<(std::ostream &o, const etypes &et);
 
-// Workaround for lack of list initializers in C++03.
-// Use ETYPES macro, don't call make_etypes_ directly
-etypes make_etypes_(int first, ...);
-#define ETYPES(...) (make_etypes_(__VA_ARGS__, -1))
-
 /// Make a pn_bytes_t from a std::string
 pn_bytes_t pn_bytes(const std::string &s);
 

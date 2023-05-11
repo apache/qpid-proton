@@ -66,17 +66,6 @@ std::string inspect(void *obj) {
   return r;
 }
 
-etypes make_etypes_(int first, ...) {
-  etypes v;
-  va_list ap;
-  va_start(ap, first);
-  for (int i = first; i >= 0; i = va_arg(ap, int)) {
-    v.push_back(static_cast<pn_event_type_t>(i));
-  }
-  va_end(ap);
-  return v;
-}
-
 std::ostream &operator<<(std::ostream &o, const etypes &et) {
   return o << Catch::Detail::stringify(static_cast<std::vector<pn_event_type_t> >(et));
 }
