@@ -2166,9 +2166,6 @@ static void decrypt(pn_tls_t *tls) {
       }
     }
 
-    if (tls->pn_tls_err || tls->dec_closed)
-      return;
-
     // Done if not possible to move any more bytes from input to output bufs
     if ( (tls->dec_closed || !pending || tls->dec_wblocked) /* write side */ &&
          (!curr_result || tls->dec_rblocked) ) /* read side */ {
@@ -2181,8 +2178,6 @@ static void decrypt(pn_tls_t *tls) {
         tls->dec_rpending = (pcount == 1);
         if (pcount <= 0) {
           check_error_reason(tls, pcount);
-          if (tls->pn_tls_err || tls->dec_closed)
-            return;
         }
 
         // Peek may have made more room in buffer (i.e. handshake followed by large
