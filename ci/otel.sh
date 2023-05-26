@@ -38,6 +38,6 @@ mkdir build
 cd build
 
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_TESTING=OFF -DWITH_OTLP=ON -DWITH_OTLP_HTTP=ON -DWITH_OTLP_GRPC=OFF
-cmake --build . --target all --config RelWithDebInfo
-sudo cmake --install . --config RelWithDebInfo
+cmake --build . --target all
+sudo cmake --install .
 cd ../..
