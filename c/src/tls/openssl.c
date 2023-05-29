@@ -2112,7 +2112,8 @@ static void decrypt(pn_tls_t *tls) {
   pbuffer_t *pending = next_decrypt_pending(tls);
   bool peek_needed = false;
 
-  while (true) {
+  bool decrypt_done = false;
+  while (!decrypt_done) {
     if (tls->pn_tls_err)
       return;
 
@@ -2166,23 +2167,32 @@ static void decrypt(pn_tls_t *tls) {
     }
 
     // Done if not possible to move any more bytes from input to output bufs
-    if (tls->dec_closed) break;
-    if ((!pending || tls->dec_wblocked) // write side
-        && (!curr_result || tls->dec_rblocked)) // read side
-      break;
-  }
+    if ( (tls->dec_closed || !pending || tls->dec_wblocked) /* write side */ &&
+         (!curr_result || tls->dec_rblocked) ) /* read side */ {
+      decrypt_done = true;
+      if (peek_needed && !tls->pn_tls_err && !tls->dec_closed) {
+        // Set dec_rpending.
+        // Make OpenSSL process input to at least first decrypted byte (if any)
+        char unused;
+        int pcount = SSL_peek(tls->ssl, &unused, 1);
+        tls->dec_rpending = (pcount == 1);
+        if (pcount <= 0) {
+          check_error_reason(tls, pcount);
+        }
 
-  if (!tls->pn_tls_err && peek_needed) {
-    // Make OpenSSL examine the next buffered TLS record (if exists and complete)
-    char unused;
-    int pcount = SSL_peek(tls->ssl, &unused, 1);
-    tls->dec_rpending = (pcount == 1);
-    if (pcount <= 0) {
-      check_error_reason(tls, pcount);
+        // Peek may have made more room in buffer (i.e. handshake followed by large
+        // incomplete application record and dec_wblocked). If we did not process an
+        // application record, we must have processed at least one non-app record.
+        // No longer write blocked after peek.  PROTON-2736.
+        if (!tls->dec_rpending && tls->dec_wblocked) {
+          decrypt_done = false;
+          tls->dec_wblocked = false;
+        }
+      }
     }
   }
 
-  if (!tls->pn_tls_err && !tls->handshake_ok && SSL_do_handshake(tls->ssl) == 1) {
+  if (!tls->handshake_ok && SSL_do_handshake(tls->ssl) == 1) {
     tls->handshake_ok = true;
     tls->can_shutdown = true;
   }
