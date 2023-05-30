@@ -64,7 +64,7 @@ jobs:
     - name: OTel build/install
       if: runner.os == 'Linux'
       working-directory: ${{github.workspace}}
-      run: sudo sh ./ci/otel.sh || echo "Couldn't build Opentelemetry, continuing..."
+      run: sudo sh ./ci/otel.sh
       shell: bash
     - name: cmake configure
       working-directory: ${{env.BuildDir}}
