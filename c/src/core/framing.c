@@ -49,9 +49,18 @@ static inline void pn_do_rx_trace(pn_logger_t *logger, uint16_t ch, pn_bytes_t f
   }
 }
 
-static inline void pn_do_raw_trace(pn_logger_t *logger, pn_buffer_t *output, size_t size)
+static inline void pn_do_raw_tx_trace(pn_logger_t *logger, pn_bytes_t frame, size_t size)
 {
-  PN_LOG_RAW(logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW, output, size);
+  if (PN_SHOULD_LOG(logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW)) {
+    pni_logger_log_raw(logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW, frame, size, "->");
+  }
+}
+
+static inline void pn_do_raw_rx_trace(pn_logger_t *logger, pn_bytes_t frame, size_t size)
+{
+  if (PN_SHOULD_LOG(logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW)) {
+    pni_logger_log_raw(logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW, frame, size, "<-");
+  }
 }
 
 ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, uint32_t max, pn_logger_t *logger)
@@ -70,6 +79,7 @@ ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, ui
   frame->channel = pni_read16(&bytes[6]);
 
   pn_do_rx_trace(logger, frame->channel, frame->frame_payload0);
+  pn_do_raw_rx_trace(logger, (pn_bytes_t){.size=size, .start=bytes}, AMQP_HEADER_SIZE+frame->extended.size+frame->frame_payload0.size+frame->frame_payload1.size);
 
   return size;
 }
@@ -93,7 +103,10 @@ size_t pn_write_frame(pn_buffer_t* buffer, pn_frame_t frame, pn_logger_t *logger
 
     // Don't mess with the buffer unless we are logging frame traces to avoid
     // shuffling the buffer unnecessarily.
-    if (PN_SHOULD_LOG(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME) ) {
+    if (
+      PN_SHOULD_LOG(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_FRAME) ||
+      PN_SHOULD_LOG(logger, PN_SUBSYSTEM_IO, PN_LEVEL_RAW))
+    {
       // Get current buffer pointer so we can trace dump performative and payload together
       pn_bytes_t smem = pn_buffer_bytes(buffer);
       pn_buffer_append(buffer, frame.frame_payload0.start, frame.frame_payload0.size);
@@ -104,12 +117,11 @@ size_t pn_write_frame(pn_buffer_t* buffer, pn_frame_t frame, pn_logger_t *logger
       assert(smem.start==emem.start);
       pn_bytes_t frame_payload = {.size=emem.size-smem.size, .start=smem.start+smem.size};
       pn_do_tx_trace(logger, frame.channel, frame_payload);
+      pn_do_raw_tx_trace(logger, emem, AMQP_HEADER_SIZE+frame.extended.size+frame.frame_payload0.size+frame.frame_payload1.size);
     } else {
       pn_buffer_append(buffer, frame.frame_payload0.start, frame.frame_payload0.size);
       pn_buffer_append(buffer, frame.frame_payload1.start, frame.frame_payload1.size);
     }
-    pn_do_raw_trace(logger, buffer, AMQP_HEADER_SIZE+frame.extended.size+frame.frame_payload0.size+frame.frame_payload1.size);
-
     return size;
   } else {
     return 0;
