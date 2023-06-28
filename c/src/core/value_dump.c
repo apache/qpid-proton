@@ -284,7 +284,7 @@ void pn_value_dump_scalar(uint8_t type, pn_bytes_t value, pn_fixed_string_t *out
         break;
       case 3: {
         bool quote = false;
-        if (!isalpha(value.start[0])) {
+        if (value.size==0 || !isalpha(value.start[0])) {
           quote = true;
         } else {
           for (size_t i = 1; i < value.size; i++) {
