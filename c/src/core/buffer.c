@@ -34,10 +34,10 @@
 #include "util.h"
 
 struct pn_buffer_t {
-  size_t capacity;
-  size_t start;
-  size_t size;
   char *bytes;
+  uint32_t capacity;
+  uint32_t start;
+  uint32_t size;
 };
 
 PN_STRUCT_CLASSDEF(pn_buffer)
@@ -113,33 +113,6 @@ static size_t pni_buffer_tail_space(pn_buffer_t *buf)
   }
 }
 
-static size_t pni_buffer_head_space(pn_buffer_t *buf)
-{
-  if (pni_buffer_wrapped(buf)) {
-    return pn_buffer_available(buf);
-  } else {
-    return pni_buffer_head(buf);
-  }
-}
-
-static size_t pni_buffer_head_size(pn_buffer_t *buf)
-{
-  if (pni_buffer_wrapped(buf)) {
-    return buf->capacity - pni_buffer_head(buf);
-  } else {
-    return pni_buffer_tail(buf) - pni_buffer_head(buf);
-  }
-}
-
-static size_t pni_buffer_tail_size(pn_buffer_t *buf)
-{
-  if (pni_buffer_wrapped(buf)) {
-    return pni_buffer_tail(buf);
-  } else {
-    return 0;
-  }
-}
-
 int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
 {
   size_t old_capacity = buf->capacity;
@@ -181,29 +154,6 @@ int pn_buffer_append(pn_buffer_t *buf, const char *bytes, size_t size)
     memcpy(buf->bytes + tail, bytes, n);
     memcpy(buf->bytes, bytes + n, size - n);
   }
-  buf->size += size;
-
-  return 0;
-}
-
-int pn_buffer_prepend(pn_buffer_t *buf, const char *bytes, size_t size)
-{
-  int err = pn_buffer_ensure(buf, size);
-  if (err) return err;
-
-  size_t head = pni_buffer_head(buf);
-  size_t head_space = pni_buffer_head_space(buf);
-  size_t n = pn_min(head_space, size);
-
-  memcpy(buf->bytes + head - n, bytes + size - n, n);
-  memcpy(buf->bytes + buf->capacity - (size - n), bytes, size - n);
-
-  if (buf->start >= size) {
-    buf->start -= size;
-  } else {
-    buf->start = buf->capacity - (size - buf->start);
-  }
-
   buf->size += size;
 
   return 0;
@@ -284,7 +234,7 @@ static void pn_buffer_rotate (pn_buffer_t *buf, size_t sz) {
   }
 }
 
-int pn_buffer_defrag(pn_buffer_t *buf)
+static inline int pn_buffer_defrag(pn_buffer_t *buf)
 {
   pn_buffer_rotate(buf, buf->start);
   buf->start = 0;
@@ -307,34 +257,4 @@ pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
   }
   pn_buffer_defrag(buf);
   return (pn_rwbytes_t){.size=buf->size, .start=buf->bytes};
-}
-
-pn_rwbytes_t pn_buffer_free_memory(pn_buffer_t *buf)
-{
-  if (!buf) {
-    return (pn_rwbytes_t){0, NULL};
-  }
-  size_t free_size = buf->capacity-buf->size;
-  if (buf->start == 0) {
-    return (pn_rwbytes_t){.size=free_size, .start=buf->bytes};
-  }
-  // If free memory in one single blob don't need to defragment
-  if (buf->start+buf->size > buf->capacity) {
-    return (pn_rwbytes_t){.size=free_size, .start=buf->bytes+buf->start-free_size};
-  }
-  pn_buffer_defrag(buf);
-  return (pn_rwbytes_t){.size=free_size, .start=buf->bytes+buf->start+buf->size};
-}
-
-int pn_buffer_quote(pn_buffer_t *buf, pn_string_t *str, size_t n)
-{
-  size_t hsize = pni_buffer_head_size(buf);
-  size_t tsize = pni_buffer_tail_size(buf);
-  if (hsize >= n) {
-    pn_quote(str, buf->bytes + pni_buffer_head(buf), n);
-    return 0;
-  }
-  pn_quote(str, buf->bytes + pni_buffer_head(buf), hsize);
-  pn_quote(str, buf->bytes, pn_min(tsize, n-hsize));
-  return 0;
 }
