@@ -304,9 +304,9 @@ def parse_item(format: str) -> Tuple[ASTNode, str]:
     elif format.startswith('.'):
         return NullNode('anything'), format[1:]
     elif format.startswith('s'):
-        return ASTNode('symbol', ['const char*'], consume_types=['pn_bytes_t*']), format[1:]
+        return ASTNode('symbol', ['pn_bytes_t'], consume_types=['pn_bytes_t*']), format[1:]
     elif format.startswith('S'):
-        return ASTNode('string', ['const char*'], consume_types=['pn_bytes_t*']), format[1:]
+        return ASTNode('string', ['pn_bytes_t'], consume_types=['pn_bytes_t*']), format[1:]
     elif format.startswith('C'):
         return ASTNode('copy', ['pn_data_t*'], consume_types=['pn_data_t*']), format[1:]
     elif format.startswith('I'):

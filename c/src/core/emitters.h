@@ -414,23 +414,19 @@ static inline void emit_symbol_bytes(pni_emitter_t* emitter, pni_compound_contex
   compound->count++;
 }
 
-static inline void emit_symbol(pni_emitter_t* emitter, pni_compound_context* compound, const char* symbol) {
-  // FIXME: Yuck we need to use strlen to find the end of the string - would be better to take pn_bytes_t
-  if (symbol == NULL) {
+static inline void emit_symbol(pni_emitter_t* emitter, pni_compound_context* compound, pn_bytes_t bytes) {
+  if (bytes.start == NULL) {
     emit_null(emitter, compound);
   } else {
-    size_t size = strlen(symbol);
-    emit_symbol_bytes(emitter, compound, (pn_bytes_t){.size = size, .start = symbol});
+    emit_symbol_bytes(emitter, compound, bytes);
   }
 }
 
-static inline void emit_string(pni_emitter_t* emitter, pni_compound_context* compound, const char* string) {
-  // FIXME: Yuck we need to use strlen to find the end of the string - would be better to take pn_bytes_t
-  if (string == NULL) {
+static inline void emit_string(pni_emitter_t* emitter, pni_compound_context* compound,  pn_bytes_t bytes) {
+  if (bytes.start == NULL) {
     emit_null(emitter, compound);
   } else {
-    size_t size = strlen(string);
-    emit_string_bytes(emitter, compound, (pn_bytes_t){.size = size, .start = string});
+    emit_string_bytes(emitter, compound, bytes);
   }
 }
 

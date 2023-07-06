@@ -856,22 +856,22 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
   last_size = pn_amqp_encode_bytes_DLEazSSSassQtQtSQISe(bytes, remaining, PROPERTIES,
                      &id,
                      pn_string_size(msg->user_id), pn_string_get(msg->user_id),
-                     pn_string_get(msg->address),
-                     pn_string_get(msg->subject),
-                     pn_string_get(msg->reply_to),
+                     pn_string_bytes(msg->address),
+                     pn_string_bytes(msg->subject),
+                     pn_string_bytes(msg->reply_to),
                      &correlation_id,
-                     pn_string_get(msg->content_type),
-                     pn_string_get(msg->content_encoding),
+                     pn_string_bytes(msg->content_type),
+                     pn_string_bytes(msg->content_encoding),
                      (bool)msg->expiry_time, msg->expiry_time,
                      (bool)msg->creation_time, msg->creation_time,
-                     pn_string_get(msg->group_id),
+                     pn_string_bytes(msg->group_id),
                      /*
                       * As a heuristic, null out group_sequence if there is no group_id and
                       * group_sequence is 0. In this case it is extremely unlikely we want
                       * group semantics
                       */
                      (bool)pn_string_get(msg->group_id) || (bool)msg->group_sequence , msg->group_sequence,
-                     pn_string_get(msg->reply_to_group_id));
+                     pn_string_bytes(msg->reply_to_group_id));
   if (last_size > remaining) return PN_OVERFLOW;
 
   remaining -= last_size;

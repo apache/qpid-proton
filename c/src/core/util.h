@@ -51,10 +51,6 @@ static inline bool pn_bytes_equal(const pn_bytes_t a, const pn_bytes_t b) {
   return (a.size == b.size && !memcmp(a.start, b.start, a.size));
 }
 
-static inline pn_bytes_t pn_string_bytes(struct pn_string_t *s) {
-  return pn_bytes(pn_string_size(s), pn_string_get(s));
-}
-
 static inline pn_bytes_t pn_bytes_dup(pn_bytes_t in) {
   if (in.size) {
     char* rbytes = malloc(in.size);

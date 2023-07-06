@@ -41,13 +41,13 @@ void pni_sasl_set_external_security(pn_transport_t *transport, int ssf, const ch
 struct pni_sasl_t {
   void *impl_context;
   const pnx_sasl_implementation* impl;
-  char *selected_mechanism;
+  pn_string_t *selected_mechanism;
   char *included_mechanisms;
   const char *username;
   const char *authzid;
   char *password;
   const char *remote_fqdn;
-  char *local_fqdn;
+  pn_string_t *local_fqdn;
   char *external_auth;
   int external_ssf;
   size_t max_encrypt_size;

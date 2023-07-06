@@ -36,8 +36,8 @@
 
 struct pn_string_t {
   char *bytes;
-  ssize_t size;       // PNI_NULL_SIZE (-1) means null
-  size_t capacity;
+  int32_t size;       // PNI_NULL_SIZE (-1) means null
+  uint32_t capacity;
 };
 
 static void pn_string_finalize(void *object)
@@ -133,6 +133,15 @@ size_t pn_string_size(pn_string_t *string)
     return 0;
   } else {
     return string->size;
+  }
+}
+
+pn_bytes_t pn_string_bytes(pn_string_t *string)
+{
+  if (!string || string->size == PNI_NULL_SIZE) {
+    return (pn_bytes_t){0, NULL};
+  } else {
+    return (pn_bytes_t){string->size, string->bytes};
   }
 }
 
