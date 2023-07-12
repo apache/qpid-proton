@@ -118,8 +118,7 @@ pn_string_t *pn_stringn(const char *bytes, size_t n)
 
 const char *pn_string_get(pn_string_t *string)
 {
-  assert(string);
-  if (string->size == PNI_NULL_SIZE) {
+  if (!string || string->size == PNI_NULL_SIZE) {
     return NULL;
   } else {
     return string->bytes;
@@ -128,8 +127,7 @@ const char *pn_string_get(pn_string_t *string)
 
 size_t pn_string_size(pn_string_t *string)
 {
-  assert(string);
-  if (string->size == PNI_NULL_SIZE) {
+  if (!string || string->size == PNI_NULL_SIZE) {
     return 0;
   } else {
     return string->size;
@@ -152,6 +150,8 @@ int pn_string_set(pn_string_t *string, const char *bytes)
 
 int pn_string_grow(pn_string_t *string, size_t capacity)
 {
+  if (!string) return PN_ARG_ERR;
+
   bool grow = false;
   while (string->capacity < (capacity*sizeof(char) + 1)) {
     string->capacity *= 2;
@@ -188,7 +188,8 @@ int pn_string_setn(pn_string_t *string, const char *bytes, size_t n)
 
 ssize_t pn_string_put(pn_string_t *string, char *dst)
 {
-  assert(string);
+  if (!string) return PNI_NULL_SIZE;
+
   assert(dst);
 
   if (string->size != PNI_NULL_SIZE) {
@@ -254,19 +255,20 @@ int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
 
 char *pn_string_buffer(pn_string_t *string)
 {
-  assert(string);
+  if (!string) return NULL;
+
   return string->bytes;
 }
 
 size_t pn_string_capacity(pn_string_t *string)
 {
-  assert(string);
+  if (!string) return 0;
+
   return string->capacity - 1;
 }
 
 int pn_string_resize(pn_string_t *string, size_t size)
 {
-  assert(string);
   int err = pn_string_grow(string, size);
   if (err) return err;
   string->size = size;
@@ -276,6 +278,5 @@ int pn_string_resize(pn_string_t *string, size_t size)
 
 int pn_string_copy(pn_string_t *string, pn_string_t *src)
 {
-  assert(string);
   return pn_string_setn(string, pn_string_get(src), pn_string_size(src));
 }
