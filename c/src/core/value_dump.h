@@ -24,9 +24,17 @@
 
 #include "proton/types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct pn_fixed_string_t;
 size_t pni_value_dump(pn_bytes_t frame, struct pn_fixed_string_t *output);
 
 PN_EXTERN size_t pn_value_dump(pn_bytes_t frame, char *output, uint32_t size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PROTON_VALUE_DUMP_H
