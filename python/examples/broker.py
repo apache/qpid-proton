@@ -82,6 +82,9 @@ class Broker(MessagingHandler):
             self.queues[address] = Queue()
         return self.queues[address]
 
+    def on_connection_opening(self, event):
+        event.connection.offered_capabilities = 'ANONYMOUS-RELAY'
+
     def on_link_opening(self, event):
         if event.link.is_sender:
             if event.link.remote_source.dynamic:
