@@ -115,11 +115,10 @@ if (CMAKE_CXX_COMPILER)
 
     set(pypath "${CMAKE_SOURCE_DIR}/tests/py")
 
-    # Disable fdlimit test by default. Flaky throughout its history and implemntations.
+    # Disable fdlimit test by default. Flaky throughout its history and implementations.
     # Very useful for proactor development, so keep around.
-    set(DEFAULT_FDLIMIT OFF)
-    option(FDLIMIT "Run the fdlimit recovery test" ${DEFAULT_FDLIMIT})
-    if (FDLIMIT)
+    option(ENABLE_FDLIMIT_TEST "Run the fdlimit recovery test" OFF)
+    if (ENABLE_FDLIMIT_TEST)
       # unset TEST_EXE_PREFIX as valgrind does not run successfully when fds are limited
       pn_add_test(
         UNWRAPPED
