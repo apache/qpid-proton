@@ -148,9 +148,10 @@ add_custom_command(OUTPUT ./tox.ini
 # Make python source and binary packages if we have prerequisistes
 check_python_module("setuptools" SETUPTOOLS_MODULE_FOUND)
 check_python_module("wheel" WHEEL_MODULE_FOUND)
+check_python_module("cffi" CFFI_MODULE_FOUND)
 if (SETUPTOOLS_MODULE_FOUND)
   set (pydist_cmds sdist)
-  if (WHEEL_MODULE_FOUND)
+  if (WHEEL_MODULE_FOUND AND CFFI_MODULE_FOUND)
     set (pydist_cmds sdist bdist_wheel --py-limited-api=cp38)
   endif()
 endif()
@@ -184,24 +185,32 @@ if (BUILD_TESTING)
     set (python_coverage_options -m coverage run --parallel-mode)
   endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
-  # Create Python virtual environment to run tests
-  set(pytest_venv "${py_bin}/pytest_env")
-  # Have to use a conditional here as you can't use generator expressions in OUTPUT or BYPRODUCTS
-  if (WIN32)
-  set(py_venv_bin "Scripts")
-  else()
-  set(py_venv_bin "bin")
-  endif()
-  set(pytest_bin "${pytest_venv}/${py_venv_bin}")
-  set(pytest_executable "${pytest_bin}/python${CMAKE_EXECUTABLE_SUFFIX}")
+  option(ENABLE_PYTHON_TEST_VENV "Enable python testing within a separate virtual environment." ON)
+  if (ENABLE_PYTHON_TEST_VENV)
+    # Create Python virtual environment to run tests
+    set(pytest_venv "${py_bin}/pytest_env")
+    # Have to use a conditional here as you can't use generator expressions in OUTPUT or BYPRODUCTS
+    if (WIN32)
+    set(py_venv_bin "Scripts")
+    else()
+    set(py_venv_bin "bin")
+    endif()
+    set(pytest_bin "${pytest_venv}/${py_venv_bin}")
+    set(pytest_executable "${pytest_bin}/python${CMAKE_EXECUTABLE_SUFFIX}")
 
-  add_custom_command(
-    OUTPUT ${pytest_venv}/env.txt
-    COMMAND ${Python_EXECUTABLE} -m venv ${pytest_venv}
-    COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi setuptools
-    COMMAND ${pytest_executable} -m pip freeze > ${pytest_venv}/env.txt
-    BYPRODUCTS ${pytest_executable}
-  )
+    add_custom_command(
+      OUTPUT ${pytest_venv}/env.txt
+      COMMAND ${Python_EXECUTABLE} -m venv ${pytest_venv}
+      COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi setuptools
+      COMMAND ${pytest_executable} -m pip freeze > ${pytest_venv}/env.txt
+      BYPRODUCTS ${pytest_executable}
+    )
+
+  else()
+    set(pytest_executable "${Python_EXECUTABLE}")
+    set(pytest_venv "${py_bin}")
+    FILE(TOUCH "${pytest_venv}/env.txt")
+  endif()
 
   # Create c code for cffi extension
   add_custom_command(
