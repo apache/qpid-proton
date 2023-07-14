@@ -48,6 +48,7 @@ class EchoServer(MessagingHandler, Thread):
         self.timeout = timeout
         self.url = url
         self.senders = {}
+        self.acceptor = None
         self.container = None
         self.event = Event()
 
@@ -110,8 +111,8 @@ class SyncRequestResponseTest(Test):
             for i in range(5):
                 body = "%s%s" % (name, i)
                 response = client.call(Message(address=address, body=body))
-                self.assertEquals(response.address, client.reply_to)
-                self.assertEquals(response.body, body)
+                self.assertEqual(response.address, client.reply_to)
+                self.assertEqual(response.body, body)
 
         server = EchoServer(Url(host="127.0.0.1", port=free_tcp_port()), self.timeout)
         server.start()
@@ -134,9 +135,9 @@ class SyncRequestResponseTest(Test):
         client = SyncRequestResponse(connection)
         client.connection.close()
         server.join(timeout=self.timeout)
-        self.assertEquals(server.properties_received, True)
-        self.assertEquals(server.offered_capabilities_received, True)
-        self.assertEquals(server.desired_capabilities_received, True)
+        self.assertEqual(server.properties_received, True)
+        self.assertEqual(server.offered_capabilities_received, True)
+        self.assertEqual(server.desired_capabilities_received, True)
 
     def test_allowed_mechs_external(self):
         # All this test does it make sure that if we pass allowed_mechs to BlockingConnection, it is actually used.
@@ -166,6 +167,6 @@ class SyncRequestResponseTest(Test):
         client = SyncRequestResponse(connection)
         client.connection.close()
         server.join(timeout=self.timeout)
-        self.assertEquals(server.properties_received, True)
-        self.assertEquals(server.offered_capabilities_received, True)
-        self.assertEquals(server.desired_capabilities_received, True)
+        self.assertEqual(server.properties_received, True)
+        self.assertEqual(server.offered_capabilities_received, True)
+        self.assertEqual(server.desired_capabilities_received, True)

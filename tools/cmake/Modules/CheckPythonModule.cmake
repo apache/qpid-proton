@@ -39,7 +39,7 @@
 macro (CHECK_PYTHON_MODULE MODULE VARIABLE)
   if (NOT ${VARIABLE} AND Python_EXECUTABLE)
     execute_process(
-      COMMAND ${Python_EXECUTABLE} -c "import sys, pkgutil; sys.exit(0 if pkgutil.find_loader('${MODULE}') else 1)"
+      COMMAND ${Python_EXECUTABLE} -c "import sys, importlib.util; sys.exit(0 if importlib.util.find_spec('${MODULE}') else 1)"
       RESULT_VARIABLE RESULT)
     if (RESULT EQUAL 0)
       if(NOT CMAKE_REQUIRED_QUIET)

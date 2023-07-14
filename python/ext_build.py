@@ -21,7 +21,6 @@ import os
 
 import cffi.pkgconfig
 
-from distutils import ccompiler
 from cffi import FFI
 
 
@@ -46,13 +45,11 @@ for root, _, files in os.walk(proton_core_src):
         if file_.endswith(('.c', '.cpp')):
             sources.append(os.path.join(root, file_))
 
-compiler_type = ccompiler.get_default_compiler()
-
-if compiler_type == 'msvc':
+if os.name == 'nt':
     sources += [
         os.path.join(proton_c_src, 'compiler', 'msvc', 'start.c')
     ]
-elif compiler_type == 'unix':
+elif os.name == 'posix':
     sources += [
         os.path.join(proton_c_src, 'compiler', 'gcc', 'start.c')
     ]

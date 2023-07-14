@@ -198,7 +198,7 @@ if (BUILD_TESTING)
   add_custom_command(
     OUTPUT ${pytest_venv}/env.txt
     COMMAND ${Python_EXECUTABLE} -m venv ${pytest_venv}
-    COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi
+    COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi setuptools
     COMMAND ${pytest_executable} -m pip freeze > ${pytest_venv}/env.txt
     BYPRODUCTS ${pytest_executable}
   )
