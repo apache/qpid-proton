@@ -159,6 +159,13 @@ static inline void pni_emitter_writev32(pni_emitter_t* emitter, const pn_bytes_t
   emitter->position += value.size;
 }
 
+static inline void pni_emitter_raw(pni_emitter_t* emitter, const pn_bytes_t raw)
+{
+  if (pni_emitter_remaining(emitter, raw.size))
+    memcpy(emitter->output_start+emitter->position, raw.start, raw.size);
+  emitter->position += raw.size;
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 static inline void emit_null(pni_emitter_t* emitter, pni_compound_context* compound) {
@@ -537,6 +544,17 @@ static inline void emit_copy(pni_emitter_t* emitter, pni_compound_context* compo
   pn_data_rewind(data);
   pni_emitter_data(emitter, data);
   pn_data_restore(data, point);
+  compound->count++;
+}
+
+static inline void emit_raw(pni_emitter_t* emitter, pni_compound_context* compound, const pn_bytes_t bytes) {
+  if (bytes.size==0 || bytes.start == 0) {
+    emit_null(emitter, compound);
+    return;
+  }
+
+  emit_accumulated_nulls(emitter, compound);
+  pni_emitter_raw(emitter, bytes);
   compound->count++;
 }
 

@@ -265,9 +265,9 @@ static inline bool consume_single_value(pni_consumer_t* consumer, uint8_t* type)
 
 static inline bool consume_raw(pni_consumer_t* consumer, pn_bytes_t* raw) {
   size_t start = consumer->position;
-  uint8_t dummy;
-  bool succeed = consume_single_value(consumer, &dummy);
-  if (succeed) {
+  uint8_t type;
+  bool succeed = consume_single_value(consumer, &type);
+  if (succeed && type!=PNE_NULL) {
     *raw = (pn_bytes_t){.size=consumer->position-start, .start=(const char*)consumer->output_start+start};
   } else {
     *raw = (pn_bytes_t) {0, NULL};
