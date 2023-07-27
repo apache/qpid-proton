@@ -18,6 +18,12 @@ routers, bridges, proxies, and more. Proton is based on the AMQP 1.0 messaging
 standard.
 EOF
 
+  s.metadata = {
+    "homepage_uri"    => "http://qpid.apache.org/proton",
+    "source_code_uri" => "https://github.com/apache/qpid-proton/tree/main/ruby",
+    "bug_tracker_uri" => "https://issues.apache.org/jira/projects/PROTON/issues"
+  }
+
   s.extensions   = "ext/cproton/extconf.rb"
   s.files        = Dir[
                 "LICENSE.txt",
