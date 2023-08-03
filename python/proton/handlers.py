@@ -18,8 +18,8 @@
 #
 
 from ._handlers import MessagingHandler, IncomingMessageHandler, OutgoingMessageHandler, \
-    EndpointStateHandler, TransactionHandler, TransactionalClientHandler,\
-    Reject, Release,\
+    EndpointStateHandler, TransactionHandler, TransactionalClientHandler, \
+    Reject, Release, \
     Handshaker, FlowController, IOHandler, PythonIO
 
 __all__ = [

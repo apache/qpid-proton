@@ -17,8 +17,8 @@
 # under the License.
 #
 
-from ._reactor import Container, ApplicationEvent, EventInjector, Handler,\
-    LinkOption, ReceiverOption, SenderOption,\
+from ._reactor import Container, ApplicationEvent, EventInjector, Handler, \
+    LinkOption, ReceiverOption, SenderOption, \
     AtLeastOnce, AtMostOnce, DynamicNodeProperties, Filter, Selector, \
     DurableSubscription, Copy, Move, Backoff, Transaction
 
