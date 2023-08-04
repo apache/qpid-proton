@@ -29,15 +29,15 @@ describe "The extended hash type" do
   it "can be put into an instance of Data" do
     @data.map = @hash
     result = @data.map
-    result.keys.must_equal(@hash.keys)
-    result.values.must_equal(@hash.values)
+    _(result.keys).must_equal(@hash.keys)
+    _(result.values).must_equal(@hash.values)
   end
 
   it "raises an error when trying to get what is not a Hash" do
     @data.string = random_string(128)
     @data.rewind
 
-    proc {
+    _{
       @data.map
     }.must_raise(TypeError)
   end
