@@ -22,7 +22,7 @@ require 'test_tools'
 include Qpid::Proton
 
 # Test Delivery and Tracker
-class TestDelivery < MiniTest::Test
+class TestDelivery < Minitest::Test
 
   class NoAutoHandler < MessagingHandler
     def on_sender_open(l) l.open({:auto_settle=>false, :auto_accept=>false}); end

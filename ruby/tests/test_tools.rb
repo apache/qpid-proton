@@ -23,9 +23,9 @@ require 'qpid_proton'
 require 'socket'
 
 begin
-  MiniTest::Test
-rescue NameError                # For older versions of MiniTest
-  MiniTest::Test = MiniTest::Unit::TestCase
+  Minitest::Test
+rescue NameError                # For older versions of Minitest
+  Minitest::Test = Minitest::Unit::TestCase
 end
 
 class TestError < RuntimeError; end  # Normal error

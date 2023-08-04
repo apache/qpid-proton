@@ -22,7 +22,7 @@ include Qpid::Proton
 
 # Test delivery of raw proton events
 
-class RawDriverTest < MiniTest::Test
+class RawDriverTest < Minitest::Test
 
   # Raw handler to record all on_xxx calls
   class RecordingHandler

@@ -12,7 +12,7 @@ if ((RUBY_VERSION.split(".").map {|x| x.to_i}  <=> [1, 9]) < 0)
   end
 end
 
-class InteropTest < MiniTest::Test
+class InteropTest < Minitest::Test
   include  Qpid::Proton
 
   def setup

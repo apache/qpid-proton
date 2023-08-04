@@ -19,7 +19,7 @@
 require 'test_tools'
 require 'qpid_proton'
 
-class TestURI < MiniTest::Test
+class TestURI < Minitest::Test
 
   PARTS=[:scheme, :userinfo, :host, :port, :path] # Interesting URI components
   def uri(u) Qpid::Proton::uri(u); end

@@ -24,9 +24,9 @@ require 'socket'
 require 'rbconfig'
 
 begin
-  MiniTest::Test
-rescue NameError                # For older versions of MiniTest
-  MiniTest::Test = MiniTest::Unit::TestCase
+  Minitest::Test
+rescue NameError                # For older versions of Minitest
+  Minitest::Test = Minitest::Unit::TestCase
 end
 
 def listening_port(s)
@@ -37,7 +37,7 @@ def listening_url(s)
   ":#{listening_port s}"
 end
 
-class ExampleTest < MiniTest::Test
+class ExampleTest < Minitest::Test
 
   def run_script(*args)
     return IO.popen([ RbConfig.ruby ] + args.map { |a| a.to_s })
@@ -105,6 +105,6 @@ l = $broker.readline
 $url = listening_url(l)
 
 # Kill the broker after all tests
-MiniTest.after_run do
+Minitest.after_run do
   Process.kill(:TERM, $broker.pid) if $broker
 end

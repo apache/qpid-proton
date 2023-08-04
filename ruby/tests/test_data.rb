@@ -20,7 +20,7 @@ require 'test_tools'
 require "securerandom"
 require 'qpid_proton'
 
-class TestData < MiniTest::Test
+class TestData < Minitest::Test
   include Qpid::Proton
 
   def assert_from_to(*values)

@@ -29,7 +29,7 @@ class ExceptionMessagingHandler
   def on_error(e) raise e; end
 end
 
-class ContainerTest < MiniTest::Test
+class ContainerTest < Minitest::Test
   include Qpid::Proton
 
   def test_simple()

@@ -18,7 +18,7 @@
 require 'test_tools'
 require 'minitest/unit'
 
-class UtilsTest < MiniTest::Test
+class UtilsTest < Minitest::Test
   include Qpid::Proton
 
   # Make sure Schedule puts tasks in proper order.

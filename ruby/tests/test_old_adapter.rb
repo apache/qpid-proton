@@ -41,7 +41,7 @@ class AllHandler < OldMessagingHandler
 end
 
 # Tests with Mock handler that handles all methods, expect both old and new calls
-class TestOldHandler < MiniTest::Test
+class TestOldHandler < Minitest::Test
   def setup
     @h = [AllHandler.new, AllHandler.new]
     @ch, @sh = *@h
@@ -161,7 +161,7 @@ class TestOldHandler < MiniTest::Test
 end
 
 # Test with real handlers that implement a few methods
-class TestOldUnhandled < MiniTest::Test
+class TestOldUnhandled < Minitest::Test
 
   def test_message
     handler_class = Class.new(OldMessagingHandler) do

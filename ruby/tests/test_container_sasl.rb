@@ -30,7 +30,7 @@ class TestContainer < Qpid::Proton::Container
   attr_reader :listener
 end
 
-class ContainerSASLTest < MiniTest::Test
+class ContainerSASLTest < Minitest::Test
   include Qpid::Proton
 
   # Handler for test client/server that sets up server and client SASL options
