@@ -50,7 +50,8 @@ struct praw_connection_t {
   struct addrinfo *ai;               /* Current connect address */
   bool connected;
   bool disconnected;
-  bool batch_empty;
+  bool hup_detected;
+  bool read_check;
 };
 
 static void psocket_error(praw_connection_t *rc, int err, const char* msg) {
@@ -304,7 +305,7 @@ void pn_raw_connection_write_close(pn_raw_connection_t *rc) {
   pni_raw_write_close(rc);
 }
 
-static pn_event_t *pni_raw_batch_next(pn_event_batch_t *batch) {
+static pn_event_t *pni_epoll_raw_batch_next(pn_event_batch_t *batch, bool peek_only) {
   praw_connection_t *rc = containerof(batch, praw_connection_t, batch);
   pn_raw_connection_t *raw = &rc->raw_connection;
 
@@ -318,10 +319,16 @@ static pn_event_t *pni_raw_batch_next(pn_event_batch_t *batch) {
   unlock(&rc->task.mutex);
   if (waking) pni_raw_wake(raw);
 
-  pn_event_t *e = pni_raw_event_next(raw);
-  if (!e || pn_event_type(e) == PN_RAW_CONNECTION_DISCONNECTED)
-    rc->batch_empty = true;
+  pn_event_t *e = peek_only ? pni_raw_event_peek(raw) : pni_raw_event_next(raw);
   return e;
+}
+
+static pn_event_t *pni_raw_batch_next(pn_event_batch_t *batch) {
+  return pni_epoll_raw_batch_next(batch, false);
+}
+
+static pn_event_t *pni_raw_batch_peek(pn_event_batch_t *batch) {
+  return pni_epoll_raw_batch_next(batch, true);
 }
 
 task_t *pni_psocket_raw_task(psocket_t* ps) {
@@ -393,10 +400,10 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool
     if (rc->disconnected) {
       pni_raw_connect_failed(&rc->raw_connection);
       unlock(&rc->task.mutex);
-      rc->batch_empty = false;
       return &rc->batch;
     }
     if (events & (EPOLLHUP | EPOLLERR)) {
+      // Continuation of praw_connection_maybe_connect_lh() logic.
       // A wake can be the first event.  Otherwise, wait for connection to complete.
       bool event_pending = task_wake || pni_raw_wake_is_pending(&rc->raw_connection) || pn_collector_peek(rc->raw_connection.collector);
       t->working = event_pending;
@@ -408,32 +415,41 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool
   }
   unlock(&rc->task.mutex);
 
-  if (events & EPOLLIN) pni_raw_read(&rc->raw_connection, fd, rcv, set_error);
-  if (events & EPOLLOUT) pni_raw_write(&rc->raw_connection, fd, snd, set_error);
-  rc->batch_empty = false;
+  if (rc->connected) {
+    if (events & EPOLLERR) {
+      // Read and write sides closed via RST.  Tear down immediately.
+      int soerr;
+      socklen_t soerrlen = sizeof(soerr);
+      int ec = getsockopt(fd, SOL_SOCKET, SO_ERROR, &soerr, &soerrlen);
+      if (ec == 0 && soerr) {
+        psocket_error(rc, soerr, "async disconnect");
+      }
+      pni_raw_async_disconnect(&rc->raw_connection);
+    } else if (events & EPOLLHUP) {
+      rc->hup_detected = true;
+    }
+
+    if (events & (EPOLLIN || EPOLLRDHUP) || rc->read_check) {
+      pni_raw_read(&rc->raw_connection, fd, rcv, set_error);
+      rc->read_check = false;
+    }
+    if (events & EPOLLOUT) pni_raw_write(&rc->raw_connection, fd, snd, set_error);
+  }
   return &rc->batch;
 }
 
 void pni_raw_connection_done(praw_connection_t *rc) {
   bool notify = false;
   bool ready = false;
-  bool have_event = false;
+  pn_raw_connection_t *raw = &rc->raw_connection;
+  int fd = rc->psocket.epoll_io.fd;
 
-  // If !batch_empty, can't be sure state machine up to date, so reschedule task if necessary.
-  if (!rc->batch_empty) {
-    if (pn_collector_peek(rc->raw_connection.collector))
-      have_event = true;
-    else {
-      pn_event_t *e = pni_raw_batch_next(&rc->batch);
-      // State machine up to date.
-      if (e) {
-        have_event = true;
-        // Sole event.  Can put back without order issues.
-        // Edge case, performance not important.
-        pn_collector_put(rc->raw_connection.collector, pn_event_class(e), pn_event_context(e), pn_event_type(e));
-      }
-    }
-  }
+  // Try write
+  if (pni_raw_can_write(raw)) pni_raw_write(raw, fd, snd, set_error);
+  pni_raw_process_shutdown(raw, fd, shutr, shutw);
+
+  // Update state machine and check for possible pending event.
+  bool have_event = pni_raw_batch_peek(&rc->batch);
 
   lock(&rc->task.mutex);
   pn_proactor_t *p = rc->task.proactor;
@@ -442,24 +458,31 @@ void pni_raw_connection_done(praw_connection_t *rc) {
   // The task may be in the ready state even if we've got no raw connection
   // wakes outstanding because we dealt with it already in pni_raw_batch_next()
   notify = (pni_task_wake_pending(&rc->task) || have_event) && schedule(&rc->task);
-  ready = rc->task.ready;
+  ready = rc->task.ready;  // No need to poll.  Already scheduled.
   unlock(&rc->task.mutex);
 
-  pn_raw_connection_t *raw = &rc->raw_connection;
-  int fd = rc->psocket.epoll_io.fd;
-  pni_raw_process_shutdown(raw, fd, shutr, shutw);
-  int wanted =
-    (pni_raw_can_read(raw)  ? EPOLLIN : 0) |
-    (pni_raw_can_write(raw) ? EPOLLOUT : 0);
-  if (wanted) {
-    rc->psocket.epoll_io.wanted = wanted;
-    rearm_polling(&rc->psocket.epoll_io, p->epollfd);  // TODO: check for error
+  bool finished_disconnect = raw->state==conn_fini && !ready && !raw->disconnectpending;
+  if (finished_disconnect) {
+    // If we're closed and we've sent the disconnect then close
+    pni_raw_finalize(raw);
+    praw_connection_cleanup(rc);
+  } else if (ready) {
+    // Already scheduled to run.  Skip poll.  Remember if we want a read.
+    rc->read_check = pni_raw_can_read(raw);
+  } else if (!rc->connected) {
+    // Connect logic has already armed the socket.
   } else {
-    bool finished_disconnect = raw->state==conn_fini && !ready && !raw->disconnectpending;
-    if (finished_disconnect) {
-      // If we're closed and we've sent the disconnect then close
-      pni_raw_finalize(raw);
-      praw_connection_cleanup(rc);
+    // Must poll for iO.
+    int wanted =
+      (pni_raw_can_read(raw)  ? (EPOLLIN | EPOLLRDHUP) : 0) |
+      (pni_raw_can_write(raw) ? EPOLLOUT : 0);
+
+    // wanted == 0 implies we block until either application wake() or EPOLLHUP | EPOLLERR.
+    // If wanted == 0 and hup_detected, blocking not possible, so skip arming until
+    // application provides read buffers.
+    if (wanted || !rc->hup_detected) {
+      rc->psocket.epoll_io.wanted = wanted;
+      rearm_polling(&rc->psocket.epoll_io, p->epollfd);  // TODO: check for error
     }
   }
 

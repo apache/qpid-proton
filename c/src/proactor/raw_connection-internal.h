@@ -134,9 +134,11 @@ void pni_raw_write_close(pn_raw_connection_t *conn);
 void pni_raw_read(pn_raw_connection_t *conn, int sock, long (*recv)(int, void*, size_t), void (*set_error)(pn_raw_connection_t *, const char *, int));
 void pni_raw_write(pn_raw_connection_t *conn, int sock, long (*send)(int, const void*, size_t), void (*set_error)(pn_raw_connection_t *, const char *, int));
 void pni_raw_process_shutdown(pn_raw_connection_t *conn, int sock, int (*shutdown_rd)(int), int (*shutdown_wr)(int));
+void pni_raw_async_disconnect(pn_raw_connection_t *conn);
 bool pni_raw_can_read(pn_raw_connection_t *conn);
 bool pni_raw_can_write(pn_raw_connection_t *conn);
 pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn);
+pn_event_t *pni_raw_event_peek(pn_raw_connection_t *conn);
 void pni_raw_initialize(pn_raw_connection_t *conn);
 void pni_raw_finalize(pn_raw_connection_t *conn);
 
