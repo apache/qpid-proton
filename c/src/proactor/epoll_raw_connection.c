@@ -429,7 +429,7 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool
       rc->hup_detected = true;
     }
 
-    if (events & (EPOLLIN || EPOLLRDHUP) || rc->read_check) {
+    if (events & (EPOLLIN | EPOLLRDHUP) || rc->read_check) {
       pni_raw_read(&rc->raw_connection, fd, rcv, set_error);
       rc->read_check = false;
     }
