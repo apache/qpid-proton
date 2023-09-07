@@ -305,7 +305,7 @@ void pn_raw_connection_write_close(pn_raw_connection_t *rc) {
   pni_raw_write_close(rc);
 }
 
-static pn_event_t *pni_epoll_raw_batch_next(pn_event_batch_t *batch, bool peek_only) {
+static pn_event_t *pni_raw_batch_next(pn_event_batch_t *batch) {
   praw_connection_t *rc = containerof(batch, praw_connection_t, batch);
   pn_raw_connection_t *raw = &rc->raw_connection;
 
@@ -319,16 +319,7 @@ static pn_event_t *pni_epoll_raw_batch_next(pn_event_batch_t *batch, bool peek_o
   unlock(&rc->task.mutex);
   if (waking) pni_raw_wake(raw);
 
-  pn_event_t *e = peek_only ? pni_raw_event_peek(raw) : pni_raw_event_next(raw);
-  return e;
-}
-
-static pn_event_t *pni_raw_batch_next(pn_event_batch_t *batch) {
-  return pni_epoll_raw_batch_next(batch, false);
-}
-
-static pn_event_t *pni_raw_batch_peek(pn_event_batch_t *batch) {
-  return pni_epoll_raw_batch_next(batch, true);
+  return pni_raw_event_next(raw);
 }
 
 task_t *pni_psocket_raw_task(psocket_t* ps) {
@@ -449,7 +440,7 @@ void pni_raw_connection_done(praw_connection_t *rc) {
   pni_raw_process_shutdown(raw, fd, shutr, shutw);
 
   // Update state machine and check for possible pending event.
-  bool have_event = pni_raw_batch_peek(&rc->batch);
+  bool have_event = pni_raw_batch_has_events(raw);
 
   lock(&rc->task.mutex);
   pn_proactor_t *p = rc->task.proactor;
@@ -472,7 +463,7 @@ void pni_raw_connection_done(praw_connection_t *rc) {
   } else if (!rc->connected) {
     // Connect logic has already armed the socket.
   } else {
-    // Must poll for iO.
+    // Must poll for IO.
     int wanted =
       (pni_raw_can_read(raw)  ? (EPOLLIN | EPOLLRDHUP) : 0) |
       (pni_raw_can_write(raw) ? EPOLLOUT : 0);

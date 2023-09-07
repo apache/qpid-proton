@@ -127,7 +127,7 @@ void pni_raw_connected(pn_raw_connection_t *conn);
 void pni_raw_connect_failed(pn_raw_connection_t *conn);
 void pni_raw_wake(pn_raw_connection_t *conn);
 bool pni_raw_wake_is_pending(pn_raw_connection_t *conn);
-bool pni_raw_can_wake(pn_raw_connection_t *conn);
+bool pni_raw_can_wake(pn_raw_connection_t *conn); // ZZZ
 void pni_raw_close(pn_raw_connection_t *conn);
 void pni_raw_read_close(pn_raw_connection_t *conn);
 void pni_raw_write_close(pn_raw_connection_t *conn);
@@ -138,7 +138,7 @@ void pni_raw_async_disconnect(pn_raw_connection_t *conn);
 bool pni_raw_can_read(pn_raw_connection_t *conn);
 bool pni_raw_can_write(pn_raw_connection_t *conn);
 pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn);
-pn_event_t *pni_raw_event_peek(pn_raw_connection_t *conn);
+bool pni_raw_batch_has_events(pn_raw_connection_t *conn);
 void pni_raw_initialize(pn_raw_connection_t *conn);
 void pni_raw_finalize(pn_raw_connection_t *conn);
 

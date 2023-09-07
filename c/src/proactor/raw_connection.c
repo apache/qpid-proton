@@ -483,11 +483,6 @@ bool pni_raw_wake_is_pending(pn_raw_connection_t *conn) {
   return conn->wakepending;
 }
 
-bool pni_raw_can_wake(pn_raw_connection_t *conn) {
-  // True if DISCONNECTED event has not yet been extracted from the batch.
-  return (conn->disconnect_state != disc_fini);
-}
-
 void pni_raw_read(pn_raw_connection_t *conn, int sock, long (*recv)(int, void*, size_t), void(*set_error)(pn_raw_connection_t *, const char *, int)) {
   assert(conn);
 
@@ -669,14 +664,14 @@ bool pni_raw_can_write(pn_raw_connection_t *conn) {
   return !pni_raw_wdrained(conn) && conn->wbuffer_first_towrite;
 }
 
-static pn_event_t *pni_get_next_raw_event(pn_raw_connection_t *conn, bool peek_only) {
-  // Return event if available or advance state machine event stream.
-  // Note that pn_collector_next increments event refcount but peek does not.
+bool pni_raw_batch_has_events(pn_raw_connection_t *conn) {
+  // If collector empty, advance state machine as necessary and generate next event.
+  // Return true if at least one event is available.
   assert(conn);
   do {
-    pn_event_t *event = peek_only ? pn_collector_peek(conn->collector) : pn_collector_next(conn->collector);
+    pn_event_t *event = pn_collector_peek(conn->collector);
     if (event) {
-      return peek_only ? event : pni_log_event(conn, event);
+      return true;
     } else if (conn->connectpending) {
       pni_raw_put_event(conn, PN_RAW_CONNECTION_CONNECTED);
       conn->connectpending = false;
@@ -718,17 +713,18 @@ static pn_event_t *pni_get_next_raw_event(pn_raw_connection_t *conn, bool peek_o
       pni_raw_put_event(conn, PN_RAW_CONNECTION_NEED_READ_BUFFERS);
       conn->rrequestedbuffers = true;
     } else {
-      return NULL;
+      return false;
     }
   } while (true);
 }
 
 pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn) {
-  return pni_get_next_raw_event(conn, false);
-}
-
-pn_event_t *pni_raw_event_peek(pn_raw_connection_t *conn) {
-  return pni_get_next_raw_event(conn, true);
+  if (pni_raw_batch_has_events(conn)) {
+    pn_event_t* event = pn_collector_next(conn->collector);
+    assert(event);
+    return pni_log_event(conn, event);
+  }
+  return NULL;
 }
 
 void pni_raw_read_close(pn_raw_connection_t *conn) {
@@ -839,4 +835,10 @@ pn_record_t *pn_raw_connection_attachments(pn_raw_connection_t *conn) {
 
 pn_raw_connection_t *pn_event_raw_connection(pn_event_t *event) {
   return (pn_event_class(event) == PN_CLASSCLASS(pn_raw_connection)) ? (pn_raw_connection_t*)pn_event_context(event) : NULL;
+}
+
+//ZZZ still used?
+bool pni_raw_can_wake(pn_raw_connection_t *conn) {
+  // True if DISCONNECTED event has not yet been extracted from the batch.
+  return (conn->disconnect_state != disc_fini);
 }
