@@ -403,29 +403,31 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool
     }
     if (events & EPOLLOUT)
       praw_connection_connected_lh(rc);
+    unlock(&rc->task.mutex);
+    return &rc->batch;
   }
   unlock(&rc->task.mutex);
 
-  if (rc->connected) {
-    if (events & EPOLLERR) {
-      // Read and write sides closed via RST.  Tear down immediately.
-      int soerr;
-      socklen_t soerrlen = sizeof(soerr);
-      int ec = getsockopt(fd, SOL_SOCKET, SO_ERROR, &soerr, &soerrlen);
-      if (ec == 0 && soerr) {
-        psocket_error(rc, soerr, "async disconnect");
-      }
-      pni_raw_async_disconnect(&rc->raw_connection);
-    } else if (events & EPOLLHUP) {
-      rc->hup_detected = true;
+  if (events & EPOLLERR) {
+    // Read and write sides closed via RST.  Tear down immediately.
+    int soerr;
+    socklen_t soerrlen = sizeof(soerr);
+    int ec = getsockopt(fd, SOL_SOCKET, SO_ERROR, &soerr, &soerrlen);
+    if (ec == 0 && soerr) {
+      psocket_error(rc, soerr, "async disconnect");
     }
-
-    if (events & (EPOLLIN | EPOLLRDHUP) || rc->read_check) {
-      pni_raw_read(&rc->raw_connection, fd, rcv, set_error);
-      rc->read_check = false;
-    }
-    if (events & EPOLLOUT) pni_raw_write(&rc->raw_connection, fd, snd, set_error);
+    pni_raw_async_disconnect(&rc->raw_connection);
+    return &rc->batch;
   }
+  if (events & EPOLLHUP) {
+    rc->hup_detected = true;
+  }
+
+  if (events & (EPOLLIN | EPOLLRDHUP) || rc->read_check) {
+    pni_raw_read(&rc->raw_connection, fd, rcv, set_error);
+    rc->read_check = false;
+  }
+  if (events & EPOLLOUT) pni_raw_write(&rc->raw_connection, fd, snd, set_error);
   return &rc->batch;
 }
 

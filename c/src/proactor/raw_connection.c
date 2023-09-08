@@ -483,6 +483,11 @@ bool pni_raw_wake_is_pending(pn_raw_connection_t *conn) {
   return conn->wakepending;
 }
 
+bool pni_raw_can_wake(pn_raw_connection_t *conn) {
+  // True if DISCONNECTED event has not yet been extracted from the batch.
+  return (conn->disconnect_state != disc_fini);
+}
+
 void pni_raw_read(pn_raw_connection_t *conn, int sock, long (*recv)(int, void*, size_t), void(*set_error)(pn_raw_connection_t *, const char *, int)) {
   assert(conn);
 
@@ -835,10 +840,4 @@ pn_record_t *pn_raw_connection_attachments(pn_raw_connection_t *conn) {
 
 pn_raw_connection_t *pn_event_raw_connection(pn_event_t *event) {
   return (pn_event_class(event) == PN_CLASSCLASS(pn_raw_connection)) ? (pn_raw_connection_t*)pn_event_context(event) : NULL;
-}
-
-//ZZZ still used?
-bool pni_raw_can_wake(pn_raw_connection_t *conn) {
-  // True if DISCONNECTED event has not yet been extracted from the batch.
-  return (conn->disconnect_state != disc_fini);
 }

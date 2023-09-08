@@ -127,7 +127,7 @@ void pni_raw_connected(pn_raw_connection_t *conn);
 void pni_raw_connect_failed(pn_raw_connection_t *conn);
 void pni_raw_wake(pn_raw_connection_t *conn);
 bool pni_raw_wake_is_pending(pn_raw_connection_t *conn);
-bool pni_raw_can_wake(pn_raw_connection_t *conn); // ZZZ
+bool pni_raw_can_wake(pn_raw_connection_t *conn);
 void pni_raw_close(pn_raw_connection_t *conn);
 void pni_raw_read_close(pn_raw_connection_t *conn);
 void pni_raw_write_close(pn_raw_connection_t *conn);
