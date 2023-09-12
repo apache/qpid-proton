@@ -669,12 +669,14 @@ bool pni_raw_can_write(pn_raw_connection_t *conn) {
   return !pni_raw_wdrained(conn) && conn->wbuffer_first_towrite;
 }
 
-pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn) {
+bool pni_raw_batch_has_events(pn_raw_connection_t *conn) {
+  // If collector empty, advance state machine as necessary and generate next event.
+  // Return true if at least one event is available.
   assert(conn);
   do {
-    pn_event_t *event = pn_collector_next(conn->collector);
+    pn_event_t *event = pn_collector_peek(conn->collector);
     if (event) {
-      return pni_log_event(conn, event);
+      return true;
     } else if (conn->connectpending) {
       pni_raw_put_event(conn, PN_RAW_CONNECTION_CONNECTED);
       conn->connectpending = false;
@@ -716,9 +718,18 @@ pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn) {
       pni_raw_put_event(conn, PN_RAW_CONNECTION_NEED_READ_BUFFERS);
       conn->rrequestedbuffers = true;
     } else {
-      return NULL;
+      return false;
     }
   } while (true);
+}
+
+pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn) {
+  if (pni_raw_batch_has_events(conn)) {
+    pn_event_t* event = pn_collector_next(conn->collector);
+    assert(event);
+    return pni_log_event(conn, event);
+  }
+  return NULL;
 }
 
 void pni_raw_read_close(pn_raw_connection_t *conn) {
@@ -779,6 +790,22 @@ void pni_raw_close(pn_raw_connection_t *conn) {
   if (pni_raw_rwclosed(conn)) {
     pni_raw_disconnect(conn);
   }
+}
+
+void pni_raw_async_disconnect(pn_raw_connection_t *conn) {
+  if (pni_raw_rwclosed(conn))
+    return;
+
+  if (!pni_raw_rclosed(conn)) {
+    conn->state = pni_raw_new_state(conn, conn_read_closed);
+    conn->rclosedpending = true;
+  }
+  if (!pni_raw_wclosed(conn)) {
+    pni_raw_release_buffers(conn);
+    conn->state = pni_raw_new_state(conn, conn_write_closed);
+    conn->wclosedpending = true;
+  }
+  pni_raw_disconnect(conn);
 }
 
 bool pn_raw_connection_is_read_closed(pn_raw_connection_t *conn) {
