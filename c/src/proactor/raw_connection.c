@@ -484,8 +484,13 @@ bool pni_raw_wake_is_pending(pn_raw_connection_t *conn) {
 }
 
 bool pni_raw_can_wake(pn_raw_connection_t *conn) {
-  // True if DISCONNECTED event has not yet been extracted from the batch.
+  // True if DISCONNECTED event has not yet been generated.
   return (conn->disconnect_state != disc_fini);
+}
+
+bool pni_raw_finished(pn_raw_connection_t *conn) {
+  // True if state machine is in final state and application has consumed final DISCONNECTED event.
+  return (conn->disconnect_state == disc_fini && pn_collector_peek(conn->collector) == NULL);
 }
 
 void pni_raw_read(pn_raw_connection_t *conn, int sock, long (*recv)(int, void*, size_t), void(*set_error)(pn_raw_connection_t *, const char *, int)) {

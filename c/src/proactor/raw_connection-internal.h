@@ -141,6 +141,7 @@ pn_event_t *pni_raw_event_next(pn_raw_connection_t *conn);
 bool pni_raw_batch_has_events(pn_raw_connection_t *conn);
 void pni_raw_initialize(pn_raw_connection_t *conn);
 void pni_raw_finalize(pn_raw_connection_t *conn);
+bool pni_raw_finished(pn_raw_connection_t *conn);
 
 #ifdef __cplusplus
 }

@@ -382,6 +382,12 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool
     else
       pni_task_wake_done(&rc->task);  // Complete task wake without event.
   }
+  if (pni_raw_finished(&rc->raw_connection)) {
+    unlock(&rc->task.mutex);
+    pni_raw_finalize(&rc->raw_connection);
+    praw_connection_cleanup(rc);
+    return NULL;
+  }
   int events = io_events;
   int fd = rc->psocket.epoll_io.fd;
   if (!rc->connected) {
@@ -445,18 +451,18 @@ void pni_raw_connection_done(praw_connection_t *rc) {
   bool have_event = pni_raw_batch_has_events(raw);
 
   lock(&rc->task.mutex);
+  bool wake_pending = pni_task_wake_pending(&rc->task) && pni_raw_can_wake(raw);
   pn_proactor_t *p = rc->task.proactor;
   tslot_t *ts = rc->task.runner;
   rc->task.working = false;
   // The task may be in the ready state even if we've got no raw connection
   // wakes outstanding because we dealt with it already in pni_raw_batch_next()
-  notify = (pni_task_wake_pending(&rc->task) || have_event) && schedule(&rc->task);
+  notify = (wake_pending || have_event) && schedule(&rc->task);
   ready = rc->task.ready;  // No need to poll.  Already scheduled.
   unlock(&rc->task.mutex);
 
-  bool finished_disconnect = raw->state==conn_fini && !ready && !raw->disconnectpending;
-  if (finished_disconnect) {
-    // If we're closed and we've sent the disconnect then close
+  if (pni_raw_finished(raw) && !ready) {
+    // If raw connection has no more work to do and safe to free resources, do so.
     pni_raw_finalize(raw);
     praw_connection_cleanup(rc);
   } else if (ready) {
@@ -478,6 +484,8 @@ void pni_raw_connection_done(praw_connection_t *rc) {
       rearm_polling(&rc->psocket.epoll_io, p->epollfd);  // TODO: check for error
     }
   }
+
+  // praw_connection_cleanup() may have been called above. Can no longer touch rc or raw.
 
   lock(&p->sched_mutex);
   tslot_t *resume_thread;
