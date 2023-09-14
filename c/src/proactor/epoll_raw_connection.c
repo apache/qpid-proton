@@ -244,10 +244,12 @@ void pn_listener_raw_accept(pn_listener_t *l, pn_raw_connection_t *rc) {
     praw_connection_connected_lh(prc);
   } else {
     psocket_error(prc, err, "pn_listener_accept");
+    pni_raw_connect_failed(&prc->raw_connection);
+    notify = schedule(&prc->task);
   }
 
   if (!l->task.working && listener_has_event(l)) {
-    notify = schedule(&l->task);
+    notify |= schedule(&l->task);
   }
   unlock(&prc->task.mutex);
   unlock(&l->task.mutex);
