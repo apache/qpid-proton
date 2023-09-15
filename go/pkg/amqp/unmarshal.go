@@ -52,7 +52,7 @@ var badData = &UnmarshalError{s: "Unexpected error in data"}
 
 func newUnmarshalError(pnType C.pn_type_t, v interface{}) *UnmarshalError {
 	e := &UnmarshalError{
-		AMQPType: C.pn_type_t(pnType).String(),
+		AMQPType: String(pnType),
 		GoType:   reflect.TypeOf(v),
 	}
 	if e.GoType == nil || e.GoType.Kind() != reflect.Ptr {
@@ -505,12 +505,12 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 			*v = make(AnyMap, n)
 		}
 		*v = (*v)[:n]
-		data.enter(*v)
-		defer data.exit(*v)
+		enter(data, *v)
+		defer exit(data, *v)
 		for i := 0; i < n; i++ {
-			data.next(*v)
+			next(data, *v)
 			unmarshal(&(*v)[i].Key, data)
-			data.next(*v)
+			next(data, *v)
 			unmarshal(&(*v)[i].Value, data)
 		}
 
@@ -654,19 +654,19 @@ func getMap(data *C.pn_data_t, v interface{}) {
 	n := int(C.pn_data_get_map(data)) / 2
 	mapValue := reflect.ValueOf(v).Elem()
 	mapValue.Set(reflect.MakeMap(mapValue.Type())) // Clear the map
-	data.enter(v)
-	defer data.exit(v)
+	enter(data, v)
+	defer exit(data, v)
 	// Allocate re-usable key/val values
 	keyType := mapValue.Type().Key()
 	keyPtr := reflect.New(keyType)
 	valPtr := reflect.New(mapValue.Type().Elem())
 	for i := 0; i < n; i++ {
-		data.next(v)
+		next(data, v)
 		unmarshal(keyPtr.Interface(), data)
 		if keyType.Kind() == reflect.Interface && !keyPtr.Elem().Elem().Type().Comparable() {
 			doPanicMsg(data, v, fmt.Sprintf("key %#v is not comparable", keyPtr.Elem().Interface()))
 		}
-		data.next(v)
+		next(data, v)
 		unmarshal(valPtr.Interface(), data)
 		mapValue.SetMapIndex(keyPtr.Elem(), valPtr.Elem())
 	}
@@ -684,10 +684,10 @@ func getSequence(data *C.pn_data_t, vp interface{}) {
 		doPanic(data, vp)
 	}
 	listValue := reflect.MakeSlice(reflect.TypeOf(vp).Elem(), count, count)
-	data.enter(vp)
-	defer data.exit(vp)
+	enter(data, vp)
+	defer exit(data, vp)
 	for i := 0; i < count; i++ {
-		data.next(vp)
+		next(data, vp)
 		val := reflect.New(listValue.Type().Elem())
 		unmarshal(val.Interface(), data)
 		listValue.Index(i).Set(val.Elem())
@@ -697,15 +697,15 @@ func getSequence(data *C.pn_data_t, vp interface{}) {
 
 func getDescribed(data *C.pn_data_t, vp interface{}) {
 	d, isDescribed := vp.(*Described)
-	data.enter(vp)
-	defer data.exit(vp)
-	data.next(vp)
+	enter(data, vp)
+	defer exit(data, vp)
+	next(data, vp)
 	if isDescribed {
 		unmarshal(&d.Descriptor, data)
-		data.next(vp)
+		next(data, vp)
 		unmarshal(&d.Value, data)
 	} else {
-		data.next(vp)       // Skip descriptor
+		next(data, vp)      // Skip descriptor
 		unmarshal(vp, data) // Unmarshal plain value
 	}
 }
@@ -725,7 +725,6 @@ func decode(data *C.pn_data_t, bytes []byte) (int, error) {
 }
 
 // Checked versions of pn_data functions
-
-func (data *C.pn_data_t) enter(v interface{}) { checkOp(bool(C.pn_data_enter(data)), v) }
-func (data *C.pn_data_t) exit(v interface{})  { checkOp(bool(C.pn_data_exit(data)), v) }
-func (data *C.pn_data_t) next(v interface{})  { checkOp(bool(C.pn_data_next(data)), v) }
+func enter(data *C.pn_data_t, v interface{}) { checkOp(bool(C.pn_data_enter(data)), v) }
+func exit(data *C.pn_data_t, v interface{})  { checkOp(bool(C.pn_data_exit(data)), v) }
+func next(data *C.pn_data_t, v interface{})  { checkOp(bool(C.pn_data_next(data)), v) }

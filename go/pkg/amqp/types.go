@@ -29,7 +29,7 @@ import (
 	"unsafe"
 )
 
-func (t C.pn_type_t) String() string {
+func String(t C.pn_type_t) string {
 	switch C.pn_type_t(t) {
 	case C.PN_NULL:
 		return "null"
