@@ -145,7 +145,7 @@ add_custom_command(OUTPUT ./tox.ini
                    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini" tox.ini
                    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini")
 
-# Make python source and binary packages if we have prerequisistes
+# Make python source and binary packages if we have prerequisites
 check_python_module("setuptools" SETUPTOOLS_MODULE_FOUND)
 check_python_module("wheel" WHEEL_MODULE_FOUND)
 check_python_module("cffi" CFFI_MODULE_FOUND)
