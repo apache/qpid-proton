@@ -374,7 +374,8 @@ static void ssl_vlog(pn_transport_t *transport, pn_log_level_t sev, const char *
   }
 }
 
-static void ssl_log(pn_transport_t *transport, pn_log_level_t sev, const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(3, 4)
+static void ssl_log(pn_transport_t *transport, pn_log_level_t sev, PN_PRINTF_FORMAT const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
@@ -383,7 +384,8 @@ static void ssl_log(pn_transport_t *transport, pn_log_level_t sev, const char *f
 }
 
 // @todo: used to avoid littering the code with calls to printf...
-static void ssl_log_error(const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(1, 2)
+static void ssl_log_error(PN_PRINTF_FORMAT const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
@@ -391,7 +393,8 @@ static void ssl_log_error(const char *fmt, ...)
   va_end(ap);
 }
 
-static void ssl_log_error_status(HRESULT status, const char *fmt, ...)
+PN_PRINTF_FORMAT_ATTR(2, 3)
+static void ssl_log_error_status(HRESULT status, PN_PRINTF_FORMAT const char *fmt, ...)
 {
   char buf[512];
   va_list ap;

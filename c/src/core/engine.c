@@ -2215,7 +2215,7 @@ int pn_condition_vformat(pn_condition_t *condition, const char *name, const char
   return err;
 }
 
-int pn_condition_format(pn_condition_t *condition, const char *name, const char *fmt, ...)
+int pn_condition_format(pn_condition_t *condition, const char *name, PN_PRINTF_FORMAT const char *fmt, ...)
 {
   assert(condition);
   va_list ap;

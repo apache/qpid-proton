@@ -157,7 +157,7 @@ void pn_connection_driver_verrorf(pn_connection_driver_t *d, const char *name, c
   pn_condition_vformat(cond, name, fmt, ap);
 }
 
-void pn_connection_driver_errorf(pn_connection_driver_t *d, const char *name, const char *fmt, ...) {
+void pn_connection_driver_errorf(pn_connection_driver_t *d, const char *name, PN_PRINTF_FORMAT const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   pn_connection_driver_verrorf(d, name, fmt, ap);
@@ -168,7 +168,7 @@ void pn_connection_driver_log(pn_connection_driver_t *d, const char *msg) {
   pni_logger_log(&d->transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_TRACE, msg);
 }
 
-void pn_connection_driver_logf(pn_connection_driver_t *d, const char *fmt, ...) {
+void pn_connection_driver_logf(pn_connection_driver_t *d, PN_PRINTF_FORMAT const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   pni_logger_vlogf(&d->transport->logger, PN_SUBSYSTEM_IO, PN_LEVEL_TRACE, fmt, ap);

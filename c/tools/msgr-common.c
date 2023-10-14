@@ -164,7 +164,7 @@ void enable_logging(void)
     dolog = 1;
 }
 
-void LOG( const char *fmt, ... )
+void LOG( PN_PRINTF_FORMAT const char *fmt, ... )
 {
     if (dolog) {
         va_list ap;

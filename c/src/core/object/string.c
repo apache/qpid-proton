@@ -204,7 +204,7 @@ void pn_string_clear(pn_string_t *string)
   pn_string_set(string, NULL);
 }
 
-int pn_string_format(pn_string_t *string, const char *format, ...)
+int pn_string_format(pn_string_t *string, PN_PRINTF_FORMAT const char *format, ...)
 {
   va_list ap;
 
@@ -220,7 +220,7 @@ int pn_string_vformat(pn_string_t *string, const char *format, va_list ap)
   return pn_string_vaddf(string, format, ap);
 }
 
-int pn_string_addf(pn_string_t *string, const char *format, ...)
+int pn_string_addf(pn_string_t *string, PN_PRINTF_FORMAT const char *format, ...)
 {
   va_list ap;
 
