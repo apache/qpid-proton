@@ -163,8 +163,8 @@ set (COMMON_WARNING_GNU "-Wall -pedantic-errors")
 set (COMMON_WARNING_Clang "-Wall -pedantic")
 set (COMMON_WARNING_MSVC "")
 
-set (CC_WARNING_GNU "-Wno-unused-parameter -Wstrict-prototypes -Wvla -Wsign-compare -Wwrite-strings")
-set (CC_WARNING_Clang "-Wno-unused-parameter -Wstrict-prototypes -Wvla -Wsign-compare -Wwrite-strings")
+set (CC_WARNING_GNU "-Wno-unused-parameter -Wstrict-prototypes -Wvla -Wsign-compare -Wwrite-strings -Wimplicit-fallthrough=3")
+set (CC_WARNING_Clang "-Wno-unused-parameter -Wstrict-prototypes -Wvla -Wsign-compare -Wwrite-strings -Wimplicit-fallthrough")
 set (CC_WARNING_MSVC "/wd4244 /wd4267 /wd4800 /wd4996")
 
 set (CXX_WARNING_GNU "")

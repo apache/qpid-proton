@@ -90,4 +90,26 @@
     #endif
 #endif
 
+// fallthrough
+
+#if defined __has_cpp_attribute
+    #if __cplusplus >= __has_cpp_attribute(fallthrough)
+        #define PN_FALLTHROUGH [[fallthrough]]
+    #endif
+#endif
+
+#if !defined PN_FALLTHROUGH && defined __has_c_attribute
+    #if __STDC_VERSION__ >= __has_c_attribute(fallthrough)
+        #define PN_FALLTHROUGH [[fallthrough]]
+    #endif
+#endif
+#if !defined PN_FALLTHROUGH && defined __has_attribute
+    #if __has_attribute(__fallthrough__)
+        #define PN_FALLTHROUGH __attribute__((__fallthrough__))
+    #endif
+#endif
+#if !defined PN_FALLTHROUGH
+    #define PN_FALLTHROUGH (void)0
+#endif
+
 #endif /* annotations.h */
