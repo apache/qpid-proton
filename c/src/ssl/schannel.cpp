@@ -59,7 +59,7 @@ extern "C" {
 /** @file
  * SSL/TLS support API.
  *
- * This file contains an SChannel-based implemention of the SSL/TLS API for Windows platforms.
+ * This file contains an SChannel-based implementation of the SSL/TLS API for Windows platforms.
  */
 
 static void ssl_log(pn_transport_t *transport, pn_log_level_t sev, PN_PRINTF_FORMAT const char *fmt, ...) PN_PRINTF_FORMAT_ATTR(3, 4);

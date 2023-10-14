@@ -29,7 +29,7 @@ There are two types of spans:
        std::unique_ptr<opentelemetry::sdk::trace::SpanExporter> exporter = std::unique_ptr<opentelemetry::sdk::trace::SpanExporter>(
             new opentelemetry::exporter::jaeger::JaegerExporter(opts));
 
-Above is an example of initializing a jaeger exporter. Apart from jaeger exporter, there are many other exporters supported by OpenTelelemetry.
+Above is an example of initializing a jaeger exporter. Apart from jaeger exporter, there are many other exporters supported by OpenTelemetry.
 
 ### 2. Set the Tracer Provider
 
