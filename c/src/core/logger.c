@@ -222,7 +222,7 @@ void pni_logger_log_raw(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_lo
   }
 }
 
-void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, void* object, const char *fmt, ...) {
+void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, void* object, PN_PRINTF_FORMAT const char *fmt, ...) {
   va_list ap;
   char buf[1024];
   pn_fixed_string_t out = pn_fixed_string(buf, sizeof(buf));
@@ -236,7 +236,7 @@ void pni_logger_log_msg_inspect(pn_logger_t *logger, pn_log_subsystem_t subsyste
   pni_logger_log(logger, subsystem, severity, buf);
 }
 
-void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t frame, const char *fmt, ...) {
+void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, pn_bytes_t frame, PN_PRINTF_FORMAT const char *fmt, ...) {
   va_list ap;
   char buf[1024];
   pn_fixed_string_t output = pn_fixed_string(buf, sizeof(buf));
@@ -283,7 +283,7 @@ void pni_logger_vlogf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_
   pni_logger_log(logger, subsystem, severity, buf);
 }
 
-void pn_logger_logf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *fmt, ...)
+void pn_logger_logf(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, PN_PRINTF_FORMAT const char *fmt, ...)
 {
   va_list ap;
 

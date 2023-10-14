@@ -993,7 +993,7 @@ static void pni_close_tail(pn_transport_t *transport)
   }
 }
 
-int pn_do_error(pn_transport_t *transport, const char *condition, const char *fmt, ...)
+int pn_do_error(pn_transport_t *transport, const char *condition, PN_PRINTF_FORMAT const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
@@ -2840,7 +2840,7 @@ void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, va_list ap)
   pni_logger_vlogf(logger, PN_SUBSYSTEM_ALL, PN_LEVEL_TRACE, fmt, ap);
 }
 
-void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...)
+void pn_transport_logf(pn_transport_t *transport, PN_PRINTF_FORMAT const char *fmt, ...)
 {
   va_list ap;
 

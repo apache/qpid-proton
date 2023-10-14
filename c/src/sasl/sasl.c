@@ -49,7 +49,7 @@ static const char pni_excluded_mechs[] = "GSSAPI GSS-SPNEGO GS2-KRB5 GS2-IAKERB"
 //-----------------------------------------------------------------------------
 // pnx_sasl: API for SASL implementations to use
 
-void pnx_sasl_logf(pn_transport_t *logger, pn_log_level_t level, const char *fmt, ...)
+void pnx_sasl_logf(pn_transport_t *logger, pn_log_level_t level, PN_PRINTF_FORMAT const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);

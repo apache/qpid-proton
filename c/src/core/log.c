@@ -55,7 +55,7 @@ void pni_vlogf_impl(const char *fmt, va_list ap) {
  * complicated messages.) It is important that a disabled log statement results
  * in nothing more than a call to pni_log_enabled().
  */
-void pni_logf_impl(const char *fmt, ...) {
+void pni_logf_impl(PN_PRINTF_FORMAT const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   pni_vlogf_impl(fmt, ap);

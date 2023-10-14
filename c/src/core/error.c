@@ -90,7 +90,7 @@ int pn_error_vformat(pn_error_t *error, int code, const char *fmt, va_list ap)
   return pn_error_set(error, code, text);
 }
 
-int pn_error_format(pn_error_t *error, int code, const char *fmt, ...)
+int pn_error_format(pn_error_t *error, int code, PN_PRINTF_FORMAT const char *fmt, ...)
 {
   assert(error);
   va_list ap;
