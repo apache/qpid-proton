@@ -167,15 +167,59 @@ option(BUILD_TLS "Enable building separate TLS library for Proton raw connection
 # Set any additional compiler specific flags
 set (WERROR_GNU "-Werror")
 set (WERROR_Clang "-Werror")
-set (WERROR_MSVC "")
+set (WERROR_MSVC "/WX")
 
 set (COMMON_WARNING_GNU "-Wall -pedantic-errors")
 set (COMMON_WARNING_Clang "-Wall -pedantic")
-set (COMMON_WARNING_MSVC "")
+string (JOIN " " COMMON_WARNING_MSVC "/W4" "/analyze"
+  # disabled warnings /wd
+  "/wd4090" # 'function': different 'const' qualifiers
+  "/wd4100" # 'argv': unreferenced formal parameter
+  "/wd4127" # conditional expression is constant
+  "/wd4133" # 'function': incompatible types - from 'pn_durability_t *' to 'uint32_t *'
+  "/wd4180" # qualifier applied to function type has no meaning; ignored
+  "/wd4189" # 'status': local variable is initialized but not referenced
+  "/wd4211" # nonstandard extension used: redefined extern to static
+  "/wd4232" # nonstandard extension used: 'incref': address of dllimport 'pn_void_incref' is not static, identity not guaranteed
+  "/wd4244" # '+=': conversion from 'ssize_t' to 'uint32_t', possible loss of data
+  "/wd4245" # '=': conversion from 'int' to 'pn_socket_t', signed/unsigned mismatch
+  "/wd4267" # '=': conversion from 'size_t' to 'uint32_t', possible loss of data
+  "/wd4305" # 'type cast': truncation from 'pn_string_t *' to 'bool'
+  "/wd4389" # '!=': signed/unsigned mismatch
+  "/wd4456" # declaration of 'type' hides previous local declaration
+  "/wd4458" # declaration of 'handler' hides class member
+  "/wd4459" # declaration of 'buf' hides global declaration
+  "/wd4505" # 'ssl_session_free': unreferenced function with internal linkage has been removed
+  "/wd4701" # potentially uninitialized local variable 'evalue' used
+  "/wd4702" # unreachable code
+  "/wd4703" # potentially uninitialized local pointer variable 'port' used
+  "/wd4706" # assignment within conditional expression
+  "/wd4800" # Implicit conversion from 'type' to bool. Possible information loss
+  "/wd4996" # 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead.
+  "/wd6001" # Using uninitialized memory '*a->addresses'.
+  "/wd6011" # Dereferencing NULL pointer 'buf'.
+  "/wd6031" # Return value ignored: 'InitializeCriticalSectionAndSpinCount'.
+  "/wd6101" # Returning uninitialized memory '*Mtu'.  A successful path through the function does not set the named _Out_ parameter.
+  "/wd6217" # Implicit cast between semantically different integer types:  testing HRESULT with 'not'.
+  "/wd6221" # Implicit cast between semantically different integer types:  comparing HRESULT to an integer.
+  "/wd6230" # Implicit cast between semantically different integer types:  using HRESULT in a Boolean context.
+  "/wd6244" # Local declaration of 'buf' hides previous declaration at line '33'
+  "/wd6246" # Local declaration of 'type' hides declaration of the same name in outer scope.
+  "/wd6308" # 'realloc' might return null pointer: assigning null pointer to 'a->addresses', which is passed as an argument to 'realloc', will cause the original memory block to be leaked.
+  "/wd6328" # Size mismatch: 'unsigned __int64' passed as _Param_(2) when 'int' is required in call to 'iocp_log'.
+  "/wd6336" # Arithmetic operator has precedence over question operator, use parentheses to clarify intent.
+  "/wd6340" # Mismatch on sign: 'unsigned char' passed as _Param_(5) when some signed type is required in call to 'pn_logger_logf'.
+  "/wd6385" # Reading invalid data from 'conn->rbuffers'.
+  "/wd6386" # Buffer overrun while writing to 'nargv':  the writable size is '_Param_(1)*_Param_(2)' bytes, but '16' bytes might be written.
+  "/wd6387" # 'rbytes' could be '0':  this does not adhere to the specification for the function 'memcpy'.
+  # warnings as error /we
+  "/we28251" # Inconsistent annotation for function: this instance has an error
+  "/we26819" # Unannotated fallthrough between switch labels
+)
 
 set (CC_WARNING_GNU "-Wno-unused-parameter -Wstrict-prototypes -Wvla -Wsign-compare -Wwrite-strings -Wimplicit-fallthrough=3")
 set (CC_WARNING_Clang "-Wno-unused-parameter -Wstrict-prototypes -Wvla -Wsign-compare -Wwrite-strings -Wimplicit-fallthrough")
-set (CC_WARNING_MSVC "/wd4244 /wd4267 /wd4800 /wd4996 /we26819")
+set (CC_WARNING_MSVC "")
 
 set (CXX_WARNING_GNU "")
 set (CXX_WARNING_Clang "")
