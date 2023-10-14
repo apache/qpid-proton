@@ -29,12 +29,12 @@
 
 set (Proton_VERSION       ${PN_VERSION})
 
-set (Proton_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/c/include)
+set (Proton_INCLUDE_DIRS  ${PROJECT_SOURCE_DIR}/c/include)
 set (Proton_LIBRARIES     ${C_EXAMPLE_LINK_FLAGS} qpid-proton)
 set (Proton_DEFINITIONS   ${C_EXAMPLE_FLAGS})
 set (Proton_FOUND True)
 
-set (Proton_Core_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/c/include)
+set (Proton_Core_INCLUDE_DIRS  ${PROJECT_SOURCE_DIR}/c/include)
 set (Proton_Core_LIBRARIES     ${C_EXAMPLE_LINK_FLAGS} qpid-proton-core)
 set (Proton_Core_DEFINITIONS   ${C_EXAMPLE_FLAGS})
 
@@ -43,7 +43,7 @@ add_library(Proton::core ALIAS qpid-proton-core)
 set (Proton_Core_FOUND True)
 
 if (${HAS_PROACTOR})
-  set (Proton_Proactor_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/c/include)
+  set (Proton_Proactor_INCLUDE_DIRS  ${PROJECT_SOURCE_DIR}/c/include)
   set (Proton_Proactor_LIBRARIES     ${C_EXAMPLE_LINK_FLAGS} qpid-proton-proactor)
   set (Proton_Proactor_DEFINITIONS   ${C_EXAMPLE_FLAGS})
 

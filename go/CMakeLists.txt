@@ -62,7 +62,7 @@ if (BUILD_GO)
     "GOPATH=${GOPATH}"
     "CGO_CFLAGS=-I${PN_C_INCLUDE_DIR}"
     "CGO_LDFLAGS=-L${PN_C_LIBRARY_DIR}"
-    "PN_INTEROP_DIR=${CMAKE_SOURCE_DIR}/tests/interop"
+    "PN_INTEROP_DIR=${PROJECT_SOURCE_DIR}/tests/interop"
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
     CACHE INTERNAL "Run a command with Go environment variables")
 
@@ -78,12 +78,12 @@ if (BUILD_GO)
   add_custom_target(go-build ALL
     COMMAND ${GO_INSTALL} ${CMAKE_CURRENT_BINARY_DIR}/pkg/...
     DEPENDS qpid-proton-core go-pkg-link go-mod-link
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
   add_test(
     NAME go-test
     COMMAND ${GO_TEST} ${CMAKE_CURRENT_BINARY_DIR}/pkg/...
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
   # Clean up go output directories.
   list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${GOPATH}/pkg ${GOPATH}/bin)

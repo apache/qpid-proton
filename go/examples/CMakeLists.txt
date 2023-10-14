@@ -31,7 +31,7 @@ if(BUILD_GO)
     # Otherwise it's too hard to get the dependencies right.
     add_custom_target(${target} ALL
       COMMAND ${GO_BUILD} ${GO_EXAMPLE_FLAGS} -o ${output} ${CMAKE_CURRENT_SOURCE_DIR}/${example}.go
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
       DEPENDS go-build)
     list(APPEND example_targets ${target})
   endforeach()
@@ -40,7 +40,7 @@ if(BUILD_GO)
   set(test_exe ${CMAKE_CURRENT_BINARY_DIR}/example_test)
   add_custom_target(go_example_test ALL
     COMMAND ${GO_TEST} -c -o ${test_exe} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.go
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 
   pn_add_test(
     UNWRAPPED

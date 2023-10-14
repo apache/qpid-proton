@@ -28,8 +28,8 @@ merge_paths() {
     echo $newpath | sed 's/^://' # Remove leading :
 }
 
-PROTON_HOME=@CMAKE_SOURCE_DIR@
-PROTON_BUILD=@CMAKE_BINARY_DIR@
+PROTON_HOME=@PROJECT_SOURCE_DIR@
+PROTON_BUILD=@PROJECT_BINARY_DIR@
 
 PYTHON_BINDING=$PROTON_BUILD/python
 

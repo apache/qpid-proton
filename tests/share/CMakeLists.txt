@@ -24,7 +24,7 @@ include(CTest)
 include("tests/RuntimeCheck.cmake")
 
 # find example sub-directories that contain "CMakeLists.txt" or "testme"
-set(ex_dir "${CMAKE_SOURCE_DIR}/examples")
+set(ex_dir "${PROJECT_SOURCE_DIR}/examples")
 file(GLOB subs ${ex_dir}/*)
 foreach(dir ${subs})
   get_filename_component(ex "${dir}" NAME)

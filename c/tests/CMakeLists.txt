@@ -18,7 +18,7 @@
 #
 
 configure_file(test_config.h.in test_config.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/tests/include)
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/tests/include)
 if (WIN32)
   set(test_env "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
 else()
@@ -31,7 +31,7 @@ endif()
 # use the same framework for C++ tests.
 # See https://github.com/catchorg/Catch2/blob/v2.x/docs/tutorial.md for more.
 #
-# ${CMAKE_SOURCE_DIR}/include/tests/catch_extra.cpp has some general extensions to catch.
+# ${PROJECT_SOURCE_DIR}/include/tests/catch_extra.cpp has some general extensions to catch.
 # ./pn_test.hpp contains proton-C specific code to help with testing.
 #
 # Tests for each library are combined in a single executable.
@@ -113,7 +113,7 @@ if (CMAKE_CXX_COMPILER)
       set(path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
     endif(WIN32)
 
-    set(pypath "${CMAKE_SOURCE_DIR}/tests/py")
+    set(pypath "${PROJECT_SOURCE_DIR}/tests/py")
 
     # Disable fdlimit test by default. Flaky throughout its history and implementations.
     # Very useful for proactor development, so keep around.

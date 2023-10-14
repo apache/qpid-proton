@@ -53,26 +53,26 @@ WARNINGS                = YES
 
 # Configuration options related to the input files
 
-INPUT                   = @CMAKE_SOURCE_DIR@/c/include \
-                          @CMAKE_SOURCE_DIR@/c/examples \
+INPUT                   = @PROJECT_SOURCE_DIR@/c/include \
+                          @PROJECT_SOURCE_DIR@/c/examples \
                           @CMAKE_CURRENT_SOURCE_DIR@
 FILE_PATTERNS           = *.h *.md *.dox
-EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/c/examples/*.c \
-                          @CMAKE_SOURCE_DIR@/c/examples/*.h \
-                          @CMAKE_SOURCE_DIR@/c/include/proton/cid.h \
-                          @CMAKE_SOURCE_DIR@/c/include/proton/engine.h \
-                          @CMAKE_SOURCE_DIR@/c/include/proton/handlers.h \
-                          @CMAKE_SOURCE_DIR@/c/include/proton/import_export.h \
-                          @CMAKE_SOURCE_DIR@/c/include/proton/log.h \
-                          @CMAKE_SOURCE_DIR@/c/include/proton/object.h \
-                          @CMAKE_SOURCE_DIR@/c/include/proton/reactor.h \
-                          @CMAKE_SOURCE_DIR@/c/include/proton/sasl_plugin.h \
-                          @CMAKE_SOURCE_DIR@/c/include/proton/selectable.h \
-                          @CMAKE_SOURCE_DIR@/c/include/proton/type_compat.h
+EXCLUDE_PATTERNS        = @PROJECT_SOURCE_DIR@/c/examples/*.c \
+                          @PROJECT_SOURCE_DIR@/c/examples/*.h \
+                          @PROJECT_SOURCE_DIR@/c/include/proton/cid.h \
+                          @PROJECT_SOURCE_DIR@/c/include/proton/engine.h \
+                          @PROJECT_SOURCE_DIR@/c/include/proton/handlers.h \
+                          @PROJECT_SOURCE_DIR@/c/include/proton/import_export.h \
+                          @PROJECT_SOURCE_DIR@/c/include/proton/log.h \
+                          @PROJECT_SOURCE_DIR@/c/include/proton/object.h \
+                          @PROJECT_SOURCE_DIR@/c/include/proton/reactor.h \
+                          @PROJECT_SOURCE_DIR@/c/include/proton/sasl_plugin.h \
+                          @PROJECT_SOURCE_DIR@/c/include/proton/selectable.h \
+                          @PROJECT_SOURCE_DIR@/c/include/proton/type_compat.h
 FULL_PATH_NAMES         = YES
 RECURSIVE               = YES
-STRIP_FROM_PATH         = @CMAKE_SOURCE_DIR@/c/include
-EXAMPLE_PATH            = @CMAKE_SOURCE_DIR@/c/examples
+STRIP_FROM_PATH         = @PROJECT_SOURCE_DIR@/c/include
+EXAMPLE_PATH            = @PROJECT_SOURCE_DIR@/c/examples
 EXAMPLE_RECURSIVE       = YES
 
 # View and list options
