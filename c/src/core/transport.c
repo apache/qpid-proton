@@ -38,6 +38,7 @@
 #include "logger_private.h"
 
 #include "proton/event.h"
+#include "proton/annotations.h"
 
 #include <stddef.h>
 #include <string.h>
@@ -2586,7 +2587,7 @@ static ssize_t pn_input_read_amqp_header(pn_transport_t* transport, unsigned int
     return 8;
   case PNI_PROTOCOL_INSUFFICIENT:
     if (!eos) return 0;
-    /* Fallthru */
+    PN_FALLTHROUGH;
   default:
     break;
   }

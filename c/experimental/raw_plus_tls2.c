@@ -19,6 +19,7 @@
 
 #include "thread.h"
 
+#include <proton/annotations.h>
 #include <proton/raw_connection.h>
 #include <proton/tls.h>
 #include <proton/listener.h>
@@ -586,7 +587,7 @@ static bool handle(jabber_t* j, pn_event_t* event) {
 
     case PN_PROACTOR_INACTIVE:
       printf("**proactor inactive: connections and listeners finalized\n");
-      // fall through
+      PN_FALLTHROUGH;
     case PN_PROACTOR_INTERRUPT: {
       pn_proactor_t *proactor = pn_event_proactor(event);
       pn_proactor_interrupt(proactor);

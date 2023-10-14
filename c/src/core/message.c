@@ -80,9 +80,11 @@ void pni_msgid_clear(pn_atom_t* msgid) {
     case PN_BINARY:
     case PN_STRING:
       free((void*)msgid->u.as_bytes.start);
+      PN_FALLTHROUGH;
     case PN_ULONG:
     case PN_UUID:
       msgid->type = PN_NULL;
+      PN_FALLTHROUGH;
     case PN_NULL:
       return;
     default:
