@@ -24,6 +24,7 @@
 
 #include "core/logger_private.h"
 
+#include "proton/annotations.h"
 #include "proton/sasl.h"
 #include "proton/sasl_plugin.h"
 #include "proton/transport.h"
@@ -187,10 +188,13 @@ static int pni_authorize(sasl_conn_t *conn,
   return SASL_OK;
 }
 
+PN_PUSH_WARNING
+PN_GNU_DISABLE_WARNING("-Wcast-function-type")
 static const sasl_callback_t pni_server_callbacks[] = {
     {SASL_CB_PROXY_POLICY, (int(*)(void)) pni_authorize, NULL},
     {SASL_CB_LIST_END, NULL, NULL},
 };
+PN_POP_WARNING
 
 // Machinery to initialise the cyrus library only once even in a multithreaded environment
 // Relies on pthreads.
