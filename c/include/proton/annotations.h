@@ -95,8 +95,7 @@
     #if __has_cpp_attribute(fallthrough) && __cplusplus >= __has_cpp_attribute(fallthrough)
         #define PN_FALLTHROUGH [[fallthrough]]
     #endif
-#endif
-#if !defined PN_FALLTHROUGH && defined __STDC_VERSION__ && defined __has_c_attribute
+#elif defined __STDC_VERSION__ && defined __has_c_attribute
     #if __has_c_attribute(fallthrough) && __STDC_VERSION__ >= __has_c_attribute(fallthrough)
         #define PN_FALLTHROUGH [[fallthrough]]
     #endif
