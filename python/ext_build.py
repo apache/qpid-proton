@@ -41,7 +41,7 @@ sources = []
 extra = []
 libraries = []
 for root, dirs, files in os.walk(proton_core_src):
-    dirs.sort() # needed for os.walk to process directories in deterministic order
+    dirs.sort()  # needed for os.walk to process directories in deterministic order
     files.sort()
     for file_ in files:
         if file_.endswith(('.c', '.cpp')):
