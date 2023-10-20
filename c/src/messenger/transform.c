@@ -130,7 +130,7 @@ static bool pni_match_r(pn_matcher_t *matcher, const char *pattern, const char *
         if (match) pni_sub(matcher, group, text, matched);
         return match;
       }
-    // Fallthrough
+      PN_FALLTHROUGH;
     default:
       match = pni_match_r(matcher, pattern, text + 1, group, matched + 1);
       if (!match) {

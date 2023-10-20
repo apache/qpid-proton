@@ -354,6 +354,7 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
     {
     case PNE_ARRAY8:
       min_expected_size += 1; // Array has a constructor of at least 1 byte
+      PN_FALLTHROUGH;
     case PNE_LIST8:
     case PNE_MAP8:
       min_expected_size += 1; // All these types have a count
@@ -366,6 +367,7 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
       break;
     case PNE_ARRAY32:
       min_expected_size += 1; // Array has a constructor of at least 1 byte
+      PN_FALLTHROUGH;
     case PNE_LIST32:
     case PNE_MAP32:
       min_expected_size += 4; // All these types have a count

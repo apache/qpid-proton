@@ -32,6 +32,7 @@
 #include "platform/platform_fmt.h"
 #include "protocol.h"
 
+#include "proton/annotations.h"
 #include "proton/ssl.h"
 #include "proton/types.h"
 
@@ -600,7 +601,7 @@ static ssize_t pn_input_read_sasl_header(pn_transport_t* transport, unsigned int
     return SASL_HEADER_LEN;
   case PNI_PROTOCOL_INSUFFICIENT:
     if (!eos) return 0;
-    /* Fallthru */
+    PN_FALLTHROUGH;
   default:
     break;
   }
