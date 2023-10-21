@@ -24,7 +24,7 @@ set(c_lib_dir "$<TARGET_FILE_DIR:qpid-proton>") # Location of qpid-proton librar
 ## Build the swig library
 
 list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
-    ${CMAKE_SOURCE_DIR}/c/include/proton/cproton.i
+    ${PROJECT_SOURCE_DIR}/c/include/proton/cproton.i
     ${PROTON_HEADERS}
     )
 
@@ -114,7 +114,7 @@ if (result EQUAL 0)  # Have minitest
       NAME ${name}
       PREPEND_ENVIRONMENT ${test_env}
       COMMAND ${RUBY_EXECUTABLE} -r${CMAKE_CURRENT_SOURCE_DIR}/tests/collect_coverage.rb ${script} -v
-      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}  # simplecov doesn't report on code not under $CWD
+      WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}  # simplecov doesn't report on code not under $CWD
       ${ARGN})
   endmacro()
 

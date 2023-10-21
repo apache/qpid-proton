@@ -21,7 +21,7 @@ cmake_minimum_required (VERSION 3.16)
 
 project (Proton C)
 
-set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modules")
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/tools/cmake/Modules")
 set (CMAKE_THREAD_PREFER_PTHREAD TRUE)
 
 include (CTest)
@@ -57,10 +57,10 @@ set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/config)
 
 ## Variables used across components
 
-set (PN_ENV_SCRIPT "${Python_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/env.py")
-set (PN_C_INCLUDE_DIR "${CMAKE_BINARY_DIR}/c/include")
-set (PN_C_LIBRARY_DIR "${CMAKE_BINARY_DIR}/c")
-set (PN_C_SOURCE_DIR "${CMAKE_BINARY_DIR}/c/src")
+set (PN_ENV_SCRIPT "${Python_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/scripts/env.py")
+set (PN_C_INCLUDE_DIR "${PROJECT_BINARY_DIR}/c/include")
+set (PN_C_LIBRARY_DIR "${PROJECT_BINARY_DIR}/c")
+set (PN_C_SOURCE_DIR "${PROJECT_BINARY_DIR}/c/src")
 
 ## C
 set(CMAKE_C_STANDARD 99)
@@ -118,7 +118,7 @@ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
   make_directory(coverage_results)
   add_custom_target(coverage
     WORKING_DIRECTORY ./coverage_results
-    COMMAND ${CMAKE_SOURCE_DIR}/scripts/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+    COMMAND ${PROJECT_SOURCE_DIR}/scripts/record-coverage.sh ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 endif()
 
 # Try to keep any platform specific overrides together here:
@@ -338,7 +338,7 @@ if(SWIG_FOUND)
   include(UseSWIG)
 
   # All swig modules should include ${PROTON_HEADERS} in SWIG_MODULE_<name>_EXTRA_DEPS
-  file(GLOB PROTON_HEADERS "${CMAKE_SOURCE_DIR}/c/include/proton/*.h")
+  file(GLOB PROTON_HEADERS "${PROJECT_SOURCE_DIR}/c/include/proton/*.h")
   # All swig modules should include ${BINDING_DEPS} or ${BINDING_DEPS_FULL} in swig_link_libraries
   set (BINDING_DEPS qpid-proton-core)
   set (BINDING_DEPS_FULL qpid-proton)
@@ -385,10 +385,10 @@ install (FILES tests/share/examples-README.md RENAME README.md DESTINATION ${PRO
 install (DIRECTORY tests DESTINATION ${PROTON_SHARE} PATTERN share EXCLUDE)
 
 # Generate test environment settings
-configure_file(${CMAKE_SOURCE_DIR}/misc/config.sh.in
-               ${CMAKE_BINARY_DIR}/config.sh @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/misc/config.bat.in
-               ${CMAKE_BINARY_DIR}/config.bat @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/misc/config.sh.in
+               ${PROJECT_BINARY_DIR}/config.sh @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/misc/config.bat.in
+               ${PROJECT_BINARY_DIR}/config.bat @ONLY)
 
 if (BUILD_EXAMPLES)
   add_subdirectory(tests/examples)

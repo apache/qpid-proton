@@ -52,7 +52,7 @@ endmacro(add_cpp_test)
 
 add_cpp_test(codec_test)
 add_cpp_test(connection_driver_test)
-add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
+add_cpp_test(interop_test ${PROJECT_SOURCE_DIR}/tests)
 add_cpp_test(message_test)
 add_cpp_test(map_test)
 add_cpp_test(scalar_test)
@@ -81,7 +81,7 @@ endif()
 # See c/tests/ for more interesting examples.
 # Eventually all the C++ tests will migrate to Catch2.
 
-include_directories(${CMAKE_SOURCE_DIR}/tests/include)
+include_directories(${PROJECT_SOURCE_DIR}/tests/include)
 add_executable(cpp-test src/cpp-test.cpp src/url_test.cpp)
 target_link_libraries(cpp-test qpid-proton-cpp ${PLATFORM_LIBS})
 # tests that require access to pn_ functions in qpid-proton-core

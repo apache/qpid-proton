@@ -31,7 +31,7 @@ mark_as_advanced(TEST_EXE_PREFIX TEST_WRAP_PREFIX TEST_ENV)
 
 # Check for valgrind
 find_program(VALGRIND_EXECUTABLE valgrind DOC "location of valgrind program")
-set(VALGRIND_SUPPRESSIONS "${CMAKE_SOURCE_DIR}/tests/valgrind.supp" CACHE STRING "Suppressions file for valgrind")
+set(VALGRIND_SUPPRESSIONS "${PROJECT_SOURCE_DIR}/tests/valgrind.supp" CACHE STRING "Suppressions file for valgrind")
 set(VALGRIND_COMMON_ARGS "--error-exitcode=42 --quiet --suppressions=${VALGRIND_SUPPRESSIONS}")
 mark_as_advanced(VALGRIND_EXECUTABLE VALGRIND_SUPPRESSIONS VALGRIND_COMMON_ARGS)
 
@@ -102,16 +102,16 @@ elseif(RUNTIME_CHECK STREQUAL "asan")
   endif()
 
   set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer ${CLANG_ASAN_FLAG} -fsanitize=address,undefined -fsanitize-recover=vptr")
-  set(TEST_WRAP_PREFIX "${CMAKE_SOURCE_DIR}/tests/preload_asan.sh $<TARGET_FILE:qpid-proton-core>")
-  list(APPEND TEST_ENV "UBSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/tests/ubsan.supp")
-  list(APPEND TEST_ENV "LSAN_OPTIONS=suppressions=${CMAKE_SOURCE_DIR}/tests/lsan.supp")
+  set(TEST_WRAP_PREFIX "${PROJECT_SOURCE_DIR}/tests/preload_asan.sh $<TARGET_FILE:qpid-proton-core>")
+  list(APPEND TEST_ENV "UBSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tests/ubsan.supp")
+  list(APPEND TEST_ENV "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tests/lsan.supp")
 
 elseif(RUNTIME_CHECK STREQUAL "tsan")
   assert_has_sanitizers()
   message(STATUS "Runtime race checker: gcc/clang thread sanitizer")
   set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=thread")
-  set(TEST_WRAP_PREFIX "${CMAKE_SOURCE_DIR}/tests/preload_tsan.sh $<TARGET_FILE:qpid-proton-core>")
-  list(APPEND TEST_ENV "TSAN_OPTIONS=second_deadlock_stack=1 suppressions=${CMAKE_SOURCE_DIR}/tests/tsan.supp")
+  set(TEST_WRAP_PREFIX "${PROJECT_SOURCE_DIR}/tests/preload_tsan.sh $<TARGET_FILE:qpid-proton-core>")
+  list(APPEND TEST_ENV "TSAN_OPTIONS=second_deadlock_stack=1 suppressions=${PROJECT_SOURCE_DIR}/tests/tsan.supp")
 
 elseif(RUNTIME_CHECK)
   message(FATAL_ERROR "'RUNTIME_CHECK=${RUNTIME_CHECK}' is invalid, valid values: ${runtime_checks}")

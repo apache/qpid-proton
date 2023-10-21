@@ -53,19 +53,19 @@ WARNINGS                = YES
 
 # Configuration options related to the input files
 
-INPUT                   = @CMAKE_SOURCE_DIR@/cpp/docs/pages.dox \
-                          @CMAKE_SOURCE_DIR@/cpp/docs \
-                          @CMAKE_SOURCE_DIR@/cpp/include \
-                          @CMAKE_SOURCE_DIR@/cpp/examples \
-                          @CMAKE_SOURCE_DIR@/docs/connect-config.md
+INPUT                   = @PROJECT_SOURCE_DIR@/cpp/docs/pages.dox \
+                          @PROJECT_SOURCE_DIR@/cpp/docs \
+                          @PROJECT_SOURCE_DIR@/cpp/include \
+                          @PROJECT_SOURCE_DIR@/cpp/examples \
+                          @PROJECT_SOURCE_DIR@/docs/connect-config.md
 
 FILE_PATTERNS           = *.hpp *.md *.dox
-EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/cpp/examples/*.?pp \
-                          @CMAKE_SOURCE_DIR@/cpp/include/proton/internal/*.hpp
+EXCLUDE_PATTERNS        = @PROJECT_SOURCE_DIR@/cpp/examples/*.?pp \
+                          @PROJECT_SOURCE_DIR@/cpp/include/proton/internal/*.hpp
 FULL_PATH_NAMES         = YES
 RECURSIVE               = YES
-STRIP_FROM_PATH         = @CMAKE_SOURCE_DIR@/cpp/include
-EXAMPLE_PATH            = @CMAKE_SOURCE_DIR@/cpp/examples
+STRIP_FROM_PATH         = @PROJECT_SOURCE_DIR@/cpp/include
+EXAMPLE_PATH            = @PROJECT_SOURCE_DIR@/cpp/examples
 EXAMPLE_RECURSIVE       = YES
 
 # View and list options

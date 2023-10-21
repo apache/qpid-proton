@@ -90,8 +90,8 @@ install(DIRECTORY examples/
 # source distribution for Pypi/pip
 #
 
-set(py_csrc_dir ${CMAKE_SOURCE_DIR}/c/src)
-set(py_cinc_dir ${CMAKE_SOURCE_DIR}/c/include)
+set(py_csrc_dir ${PROJECT_SOURCE_DIR}/c/src)
+set(py_cinc_dir ${PROJECT_SOURCE_DIR}/c/include)
 
 file(GLOB_RECURSE py_csrc LIST_DIRECTORIES no
   "${py_csrc_dir}/core/*.[ch]"
@@ -128,9 +128,9 @@ add_custom_command(OUTPUT .timestamp.copied_pysrc
                    COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/core/frame_generators.h src/core
                    COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/core/frame_consumers.c  src/core
                    COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/core/frame_consumers.h  src/core
-                   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/VERSION.txt            .
+                   COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/VERSION.txt            .
                    COMMAND ${CMAKE_COMMAND} -E touch .timestamp.copied_pysrc
-                   DEPENDS generated_c_files ${py_cgen} ${py_csrc} ${py_cinc} ${CMAKE_SOURCE_DIR}/VERSION.txt)
+                   DEPENDS generated_c_files ${py_cgen} ${py_csrc} ${py_cinc} ${PROJECT_SOURCE_DIR}/VERSION.txt)
 
 foreach(file IN LISTS py_dist_files pysrc)
   add_custom_command(OUTPUT "${file}"
