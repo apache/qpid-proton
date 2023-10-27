@@ -151,6 +151,7 @@ option(ENABLE_HIDE_UNEXPORTED_SYMBOLS "Only export library symbols that are expl
 option(ENABLE_FUZZ_TESTING "Enable building fuzzers and regression testing with libFuzzer" ${DEFAULT_FUZZ_TESTING})
 option(ENABLE_BENCHMARKS "Enable building and running benchmarks with Google Benchmark" ${DEFAULT_BENCHMARKS})
 
+option(BUILD_TOOLS "Enable building commandline programs to send and receive simple messages" ON)
 option(BUILD_EXAMPLES "Enable building example programs" ON)
 option(BUILD_TLS "Enable building separate TLS library for Proton raw connections" OFF)
 

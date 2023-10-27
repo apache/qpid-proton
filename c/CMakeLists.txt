@@ -711,7 +711,9 @@ endif (BUILD_EXAMPLES)
 if (BUILD_TESTING)
   add_subdirectory(tests)
 endif (BUILD_TESTING)
-add_subdirectory(tools)
+if (BUILD_TOOLS)
+  add_subdirectory(tools)
+endif (BUILD_TOOLS)
 
 install (DIRECTORY examples/
          DESTINATION "${PROTON_SHARE}/examples/c"
