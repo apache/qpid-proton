@@ -758,7 +758,7 @@ static bool leader_process_listener(pn_listener_t *l) {
       uv_safe_close((uv_handle_t*)&ls->tcp, on_close_lsocket);
     }
     /* NOTE: Fall through in case we have 0 sockets - e.g. resolver error */
-
+    PN_FALLTHROUGH;
    case L_CLOSING:              /* Closing - can we send PN_LISTENER_CLOSE? */
     if (!l->lsockets) {
       l->state = L_CLOSED;
