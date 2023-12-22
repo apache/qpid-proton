@@ -73,9 +73,12 @@ set (C_EXTENDED_FLAGS ${C_EXTENDED_${CMAKE_C_COMPILER_ID}})
 ## C++
 check_language (CXX)
 if (CMAKE_CXX_COMPILER)
+  # check_language(CXX) does not handle compiler parameters in CXX env variable well
+  # forget the result of the check and let enable_language(CXX) to do this correctly
+  unset(CMAKE_CXX_COMPILER)
+  unset(CMAKE_CXX_COMPILER CACHE)
   enable_language(CXX)
 
-  # This effectively checks for cmake version 3.1 or later
   set(CMAKE_CXX_STANDARD 11)
   set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
