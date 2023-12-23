@@ -71,12 +71,18 @@ set (C_STANDARD_FLAGS ${C_STANDARD_${CMAKE_C_COMPILER_ID}})
 set (C_EXTENDED_FLAGS ${C_EXTENDED_${CMAKE_C_COMPILER_ID}})
 
 ## C++
+set(UNSET_CMAKE_CXX_COMPILER OFF)
+if (NOT DEFINED CMAKE_CXX_COMPILER)
+  set(UNSET_CMAKE_CXX_COMPILER ON)
+endif ()
 check_language (CXX)
 if (CMAKE_CXX_COMPILER)
-  # check_language(CXX) does not handle compiler parameters in CXX env variable well
-  # forget the result of the check and let enable_language(CXX) to do this correctly
-  unset(CMAKE_CXX_COMPILER)
-  unset(CMAKE_CXX_COMPILER CACHE)
+  if (UNSET_CMAKE_CXX_COMPILER)
+    # https://gitlab.kitware.com/cmake/cmake/-/issues/25535: check_language might set the variable incorrectly
+    unset(CMAKE_CXX_COMPILER)
+    unset(CMAKE_CXX_COMPILER CACHE)
+  endif ()
+
   enable_language(CXX)
 
   set(CMAKE_CXX_STANDARD 11)
