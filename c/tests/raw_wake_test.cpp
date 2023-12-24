@@ -248,9 +248,9 @@ struct basic_test {
   int drain_events() {
     int ec = 0;
     pn_event_batch_t *batch = NULL;
-    while (batch = pn_proactor_get(p.get())) {
+    while ((batch = pn_proactor_get(p.get()))) {
       pn_event_t *e;
-      while (e = pn_event_batch_next(batch)) {
+      while ((e = pn_event_batch_next(batch))) {
         ec++;
         h.dispatch(e);
       }
