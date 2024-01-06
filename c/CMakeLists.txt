@@ -555,7 +555,7 @@ if (qpid-proton-tls)
   if (BUILD_STATIC_LIBS)
     add_library (qpid-proton-tls-static STATIC ${qpid-proton-tls})
     target_compile_definitions(qpid-proton-tls-static PUBLIC PROTON_DECLARE_STATIC)
-    target_link_libraries (qpid-proton-tls-static PRIVATE ${PLATFORM_LIBS})
+    target_link_libraries (qpid-proton-tls-static PRIVATE ${SSL_LIB} ${PLATFORM_LIBS})
     set_target_properties(qpid-proton-tls-static PROPERTIES
       EXPORT_NAME tls)
     set(TARGET_qpid-proton-tls-static qpid-proton-tls-static)
