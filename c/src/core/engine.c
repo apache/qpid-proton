@@ -1645,9 +1645,9 @@ void pn_delivery_dump(pn_delivery_t *d)
   printf("{tag=%s, local.type=%" PRIu64 ", remote.type=%" PRIu64 ", local.settled=%u, "
          "remote.settled=%u, updated=%u, current=%u, writable=%u, readable=%u, "
          "work=%u}",
-         tag, d->local.type, d->remote.type, d->local.settled,
-         d->remote.settled, d->updated, pn_delivery_current(d),
-         pn_delivery_writable(d), pn_delivery_readable(d), d->work);
+         tag, d->local.type, d->remote.type, (unsigned)d->local.settled,
+         (unsigned)d->remote.settled, (unsigned)d->updated, (unsigned)pn_delivery_current(d),
+         (unsigned)pn_delivery_writable(d), (unsigned)pn_delivery_readable(d), (unsigned)d->work);
 }
 
 void *pn_delivery_get_context(pn_delivery_t *delivery)

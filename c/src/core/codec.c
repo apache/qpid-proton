@@ -1498,8 +1498,8 @@ void pn_data_dump(pn_data_t *data)
     pn_fixed_string_t str = pn_fixed_string(buf, sizeof(buf));
     pni_inspect_atom((pn_atom_t *) &node->atom, &str);
     pn_fixed_string_terminate(&str);
-    printf("Node %i: prev=%" PN_ZI ", next=%" PN_ZI ", parent=%" PN_ZI ", down=%" PN_ZI 
-           ", children=%" PN_ZI ", type=%s (%s)\n",
+    printf("Node %u: prev=%" PN_ZU ", next=%" PN_ZU ", parent=%" PN_ZU ", down=%" PN_ZU 
+           ", children=%" PN_ZU ", type=%s (%s)\n",
            i + 1, (size_t) node->prev,
            (size_t) node->next,
            (size_t) node->parent,

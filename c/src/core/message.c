@@ -180,7 +180,7 @@ void pn_message_inspect(void *obj, pn_fixed_string_t *dst)
   }
 
   if (msg->priority != HEADER_PRIORITY_DEFAULT) {
-    pn_fixed_string_addf(dst, "priority=%i, ", msg->priority);
+    pn_fixed_string_addf(dst, "priority=%u, ", msg->priority);
     comma = true;
   }
 
@@ -268,7 +268,7 @@ void pn_message_inspect(void *obj, pn_fixed_string_t *dst)
   }
 
   if (msg->group_sequence) {
-    pn_fixed_string_addf(dst, "group_sequence=%" PRIi32 ", ", msg->group_sequence);
+    pn_fixed_string_addf(dst, "group_sequence=%" PRIu32 ", ", msg->group_sequence);
     comma = true;
   }
 

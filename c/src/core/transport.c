@@ -1115,7 +1115,7 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
   if (channel > transport->channel_max) {
     pn_do_error(transport,
                 "amqp:connection:framing-error",
-                "remote channel %d is above negotiated channel_max %d.",
+                "remote channel %u is above negotiated channel_max %u.",
                 channel,
                 transport->channel_max
                );
@@ -1128,7 +1128,7 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
     if (ssn == 0) {
       pn_do_error(transport,
                 "amqp:invalid-field",
-                "begin reply to unknown channel %d.",
+                "begin reply to unknown channel %u.",
                 remote_channel
                );
       return PN_ARG_ERR;
@@ -1956,7 +1956,7 @@ static int pni_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpo
     if (!(endpoint->state & PN_LOCAL_UNINIT) && state->local_channel == (uint16_t) -1)
     {
       if (! pni_map_local_channel(ssn)) {
-        pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_WARNING, "unable to find an open available channel within limit of %d", transport->channel_max );
+        pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_WARNING, "unable to find an open available channel within limit of %u", transport->channel_max );
         return PN_ERR;
       }
       state->incoming_window = pni_session_incoming_window(ssn);
@@ -2017,7 +2017,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
         !(endpoint->state & PN_LOCAL_UNINIT) && state->local_handle == (uint32_t) -1)
     {
       if (! pni_map_local_handle(link)) {
-        pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_WARNING, "unable to find an open available handle within limit of %d", ssn_state->remote_handle_max );
+        pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_WARNING, "unable to find an open available handle within limit of %u", ssn_state->remote_handle_max );
         return PN_ERR;
       }
       const pn_distribution_mode_t dist_mode = (pn_distribution_mode_t) link->source.distribution_mode;

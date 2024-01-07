@@ -30,12 +30,12 @@
 
 
 int pni_bad_frame(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload) {
-  PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame: type: %d: Unknown performative", frame_type);
+  PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame: type: %u: Unknown performative", frame_type);
   return PN_ERR;
 }
 
 int pni_bad_frame_type(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload) {
-  PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame: Unknown frame type: %d", frame_type);
+  PN_LOG(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame: Unknown frame type: %u", frame_type);
   return PN_ERR;
 }
 
