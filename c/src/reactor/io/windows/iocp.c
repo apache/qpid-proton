@@ -1012,7 +1012,7 @@ static void drain_zombie_completions(iocp_t *iocp)
       break;
     int rv = pni_iocp_wait_one(iocp, deadline - now, NULL);
     if (rv < 0) {
-      iocp_log("unexpected IOCP failure on Proton IO shutdown %d\n", GetLastError());
+      iocp_log("unexpected IOCP failure on Proton IO shutdown %lu\n", GetLastError());
       break;
     }
     now = pn_i_now();
@@ -1165,7 +1165,7 @@ void pni_iocp_finalize(void *obj)
   iocp->completion_port = NULL;
 
   if (pn_list_size(externals) && iocp->iocp_trace)
-    iocp_log("%d external sockets not closed and removed from Proton IOCP control\n", pn_list_size(externals));
+    iocp_log("%zu external sockets not closed and removed from Proton IOCP control\n", pn_list_size(externals));
 
   // Now safe to free everything that might be touched by a former async operation.
   pn_free(externals);

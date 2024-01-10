@@ -1429,7 +1429,7 @@ static void drain_zombie_completions(iocp_t *iocp)
       break;
     int rv = pni_iocp_wait_one(iocp, deadline - now, NULL);
     if (rv < 0) {
-      iocp_log("unexpected IOCP failure on Proton IO shutdown %d\n", GetLastError());
+      iocp_log("unexpected IOCP failure on Proton IO shutdown %lu\n", GetLastError());
       break;
     }
     now = pn_proactor_now_64();

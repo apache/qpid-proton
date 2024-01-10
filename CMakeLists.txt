@@ -173,6 +173,7 @@ set (COMMON_WARNING_GNU "-Wall -pedantic-errors")
 set (COMMON_WARNING_Clang "-Wall -pedantic")
 string (JOIN " " COMMON_WARNING_MSVC "/W4" "/analyze"
   # disabled warnings /wd
+  "/wd26812" # The enum type 'pcontext_type_t' is unscoped. Prefer 'enum class' over 'enum' (Enum.3).
   "/wd4090" # 'function': different 'const' qualifiers
   "/wd4100" # 'argv': unreferenced formal parameter
   "/wd4127" # conditional expression is constant
@@ -206,15 +207,16 @@ string (JOIN " " COMMON_WARNING_MSVC "/W4" "/analyze"
   "/wd6244" # Local declaration of 'buf' hides previous declaration at line '33'
   "/wd6246" # Local declaration of 'type' hides declaration of the same name in outer scope.
   "/wd6308" # 'realloc' might return null pointer: assigning null pointer to 'a->addresses', which is passed as an argument to 'realloc', will cause the original memory block to be leaked.
-  "/wd6328" # Size mismatch: 'unsigned __int64' passed as _Param_(2) when 'int' is required in call to 'iocp_log'.
   "/wd6336" # Arithmetic operator has precedence over question operator, use parentheses to clarify intent.
-  "/wd6340" # Mismatch on sign: 'unsigned char' passed as _Param_(5) when some signed type is required in call to 'pn_logger_logf'.
   "/wd6385" # Reading invalid data from 'conn->rbuffers'.
   "/wd6386" # Buffer overrun while writing to 'nargv':  the writable size is '_Param_(1)*_Param_(2)' bytes, but '16' bytes might be written.
   "/wd6387" # 'rbytes' could be '0':  this does not adhere to the specification for the function 'memcpy'.
+
   # warnings as error /we
-  "/we28251" # Inconsistent annotation for function: this instance has an error
   "/we26819" # Unannotated fallthrough between switch labels
+  "/we28251" # Inconsistent annotation for function: this instance has an error
+  "/we6328" # Size mismatch: 'unsigned __int64' passed as _Param_(2) when 'int' is required in call to 'iocp_log'.
+  "/we6340" # Mismatch on sign: 'unsigned char' passed as _Param_(5) when some signed type is required in call to 'pn_logger_logf'.
 )
 
 set (CC_WARNING_GNU "-Wno-unused-parameter -Wstrict-prototypes -Wvla -Wsign-compare -Wwrite-strings -Wimplicit-fallthrough=3")

@@ -467,7 +467,7 @@ void pn_value_dump_array(uint32_t count, pn_bytes_t value, pn_fixed_string_t *ou
   pn_value_dump_nondescribed_value(type, evalue, output);
   if (type_isspecial(type)) {
     if (count>1) {
-      pn_fixed_string_addf(output, ", ...(%d more)]", count-1);
+      pn_fixed_string_addf(output, ", ...(%u more)]", count-1);
     } else {
       pn_fixed_string_addf(output, "]");
     }
