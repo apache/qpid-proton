@@ -16,8 +16,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
 from setuptools import setup
 
+unbundling = os.environ.get("QPID_PYTHON_UNBUNDLING")
+unbundling = f'_{unbundling}' if unbundling else ''
+
 setup(
-    cffi_modules='ext_build.py:ffibuilder'
+    cffi_modules=f'ext_build{unbundling}.py:ffibuilder'
 )

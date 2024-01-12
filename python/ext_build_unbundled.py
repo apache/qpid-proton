@@ -15,14 +15,28 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
 
-include VERSION.txt
-include ext_build.py
-include ext_build_unbundled.py
-include cproton.h
-include cproton_ext.c
-include cproton.py
-graft docs
-graft src
-graft include
-global-exclude *.pyc *.pyo
+import cffi.pkgconfig
+
+from cffi import FFI
+
+ffibuilder = FFI()
+
+# cdef() expects a single string declaring the C types, functions and
+# globals needed to use the shared object. It must be in valid C syntax
+# with cffi extensions
+cdefs = open('cproton.h').read()
+ffibuilder.cdef(cdefs)
+
+cffi.pkgconfig.flags_from_pkgconfig(['libqpid-proton-core'])
+
+c_code = open('cproton_ext.c').read()
+ffibuilder.set_source_pkgconfig(
+    "cproton_ffi",
+    ['libqpid-proton-core'],
+    c_code,
+)
+
+if __name__ == "__main__":
+    ffibuilder.compile(verbose=True)

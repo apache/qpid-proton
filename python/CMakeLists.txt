@@ -53,6 +53,8 @@ set(py_dist_files
     README.rst
     MANIFEST.in
     ext_build.py
+    ext_build_devtree.py
+    ext_build_unbundled.py
     cproton.h
     cproton_ext.c
     cproton.py
@@ -128,7 +130,6 @@ add_custom_command(OUTPUT .timestamp.copied_pysrc
                    COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/core/frame_generators.h src/core
                    COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/core/frame_consumers.c  src/core
                    COMMAND ${CMAKE_COMMAND} -E copy ${PN_C_SOURCE_DIR}/core/frame_consumers.h  src/core
-                   COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/VERSION.txt            .
                    COMMAND ${CMAKE_COMMAND} -E touch .timestamp.copied_pysrc
                    DEPENDS generated_c_files ${py_cgen} ${py_csrc} ${py_cinc} ${PROJECT_SOURCE_DIR}/VERSION.txt)
 
@@ -139,28 +140,55 @@ foreach(file IN LISTS py_dist_files pysrc)
   list(APPEND pysrc_files "${CMAKE_CURRENT_BINARY_DIR}/${file}")
 endforeach()
 
-add_custom_target(pysrc_copied ALL DEPENDS .timestamp.copied_pysrc ${pysrc_files})
+add_custom_command(OUTPUT VERSION.txt
+                  COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}/VERSION.txt .
+                  DEPENDS ${PROJECT_SOURCE_DIR}/VERSION.txt)
+
+add_custom_target(pysrc_copied DEPENDS ${pysrc_files} VERSION.txt)
+add_custom_target(pypkg_src_copied ALL DEPENDS pysrc_copied .timestamp.copied_pysrc)
 
 add_custom_command(OUTPUT ./tox.ini
                    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini" tox.ini
                    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini")
 
+option(ENABLE_PYTHON_ISOLATED "Enable python building/testing with isolated environments." ON)
+option(BUILD_PYTHON_UNBUNDLED_PKG "Build Python package without bundling qpid-proton-core library" Off)
+
 # Make python source and binary packages if we have prerequisites
+check_python_module("build" BUILD_MODULE_FOUND)
+
+if (ENABLE_PYTHON_ISOLATED)
+  set (pypkgbuildoption "")
+else ()
+  set (pypkgbuildoption "-n")
+endif ()
+
 check_python_module("setuptools" SETUPTOOLS_MODULE_FOUND)
 check_python_module("wheel" WHEEL_MODULE_FOUND)
-check_python_module("build" BUILD_MODULE_FOUND)
 check_python_module("cffi" CFFI_MODULE_FOUND)
-if (BUILD_MODULE_FOUND AND SETUPTOOLS_MODULE_FOUND AND WHEEL_MODULE_FOUND AND CFFI_MODULE_FOUND)
-  add_custom_command(OUTPUT .timestamp.dist
-    DEPENDS pysrc_copied
-    COMMAND ${CMAKE_COMMAND} -E remove -f .timestamp.dist
-    COMMAND ${Python_EXECUTABLE} -m build -n
-    COMMAND ${CMAKE_COMMAND} -E touch .timestamp.dist)
+
+if (BUILD_MODULE_FOUND AND
+    (ENABLE_PYTHON_ISOLATED OR (SETUPTOOLS_MODULE_FOUND AND WHEEL_MODULE_FOUND AND CFFI_MODULE_FOUND)))
+  if (BUILD_PYTHON_UNBUNDLED_PKG)
+    add_custom_command(OUTPUT .timestamp.dist
+      DEPENDS pypkg_src_copied
+      COMMAND ${CMAKE_COMMAND} -E remove -f .timestamp.dist
+      COMMAND ${CMAKE_COMMAND} -E env
+        QPID_PYTHON_UNBUNDLING=unbundled
+        ${Python_EXECUTABLE} -m build ${pypkgbuildoption}
+      COMMAND ${CMAKE_COMMAND} -E touch .timestamp.dist)
+  else ()
+    add_custom_command(OUTPUT .timestamp.dist
+      DEPENDS pypkg_src_copied
+      COMMAND ${CMAKE_COMMAND} -E remove -f .timestamp.dist
+      COMMAND ${Python_EXECUTABLE} -m build ${pypkgbuildoption}
+      COMMAND ${CMAKE_COMMAND} -E touch .timestamp.dist)
+  endif ()
   add_custom_target(pydist ALL DEPENDS .timestamp.dist)
 endif ()
 
 if (BUILD_TESTING)
-  add_custom_target(pytest_cffi ALL DEPENDS .timestamp.cproton_ffi)
+  add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
 
   # python test: python/tests/proton-test
   set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -179,8 +207,7 @@ if (BUILD_TESTING)
     set (python_coverage_options -m coverage run --parallel-mode)
   endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
-  option(ENABLE_PYTHON_TEST_VENV "Enable python testing within a separate virtual environment." ON)
-  if (ENABLE_PYTHON_TEST_VENV)
+  if (ENABLE_PYTHON_ISOLATED)
     # Create Python virtual environment to run tests
     set(pytest_venv "${py_bin}/pytest_env")
     # Have to use a conditional here as you can't use generator expressions in OUTPUT or BYPRODUCTS
@@ -193,27 +220,41 @@ if (BUILD_TESTING)
     set(pytest_executable "${pytest_bin}/python${CMAKE_EXECUTABLE_SUFFIX}")
 
     add_custom_command(
-      OUTPUT ${pytest_venv}/env.txt
+      OUTPUT .timestamp.test_env
       COMMAND ${Python_EXECUTABLE} -m venv ${pytest_venv}
       COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi setuptools
+      COMMAND ${CMAKE_COMMAND} -E env
+        "CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}"
+        "QPID_PROTON_CORE_TARGET_DIR=$<TARGET_FILE_DIR:qpid-proton-core>"
+        "QPID_PYTHON_UNBUNDLING=devtree"
+        ${pytest_executable} -m pip install -e .
       COMMAND ${pytest_executable} -m pip freeze > ${pytest_venv}/env.txt
+      COMMAND ${CMAKE_COMMAND} -E touch .timestamp.test_env
       BYPRODUCTS ${pytest_executable}
     )
-
   else()
     set(pytest_executable "${Python_EXECUTABLE}")
     set(pytest_venv "${py_bin}")
-    FILE(TOUCH "${pytest_venv}/env.txt")
+    add_custom_command(
+      OUTPUT .timestamp.test_env
+      COMMAND ${CMAKE_COMMAND} -E remove -f ${pytest_venv}/env.txt
+      COMMAND ${CMAKE_COMMAND} -E env
+        "CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}"
+        "QPID_PROTON_CORE_TARGET_DIR=$<TARGET_FILE_DIR:qpid-proton-core>"
+        ${pytest_executable} ext_build_devtree.py
+      COMMAND ${CMAKE_COMMAND} -E touch .timestamp.test_env
+      DEPENDS pysrc_copied qpid-proton-core
+    )
   endif()
 
-  # Create c code for cffi extension
-  add_custom_command(
-    OUTPUT .timestamp.cproton_ffi
-    COMMAND ${CMAKE_COMMAND} -E remove -f .timestamp.cproton_ffi
-    COMMAND ${pytest_executable} ext_build.py
-    COMMAND ${CMAKE_COMMAND} -E touch .timestamp.cproton_ffi
-    DEPENDS ${pytest_venv}/env.txt pysrc_copied
-  )
+  # If we are on windows copy the qpid-proton-core dll to the test directory so we can find it easily
+  if (WIN32)
+    add_custom_command(
+      OUTPUT .timestamp.test_env
+      APPEND
+      COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:qpid-proton-core>" .
+    )
+  endif()
 
   pn_add_test(
     INTERPRETED

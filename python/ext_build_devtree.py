@@ -15,14 +15,27 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
 
-include VERSION.txt
-include ext_build.py
-include ext_build_unbundled.py
-include cproton.h
-include cproton_ext.c
-include cproton.py
-graft docs
-graft src
-graft include
-global-exclude *.pyc *.pyo
+import os
+
+from cffi import FFI
+
+bld_tree_top = os.environ.get("CMAKE_BINARY_DIR")
+bld_clibdir = os.environ.get("QPID_PROTON_CORE_TARGET_DIR")
+cdefs = open('cproton.h').read()
+c_code = open('cproton_ext.c').read()
+extra_link_args = [f"-Wl,-rpath,{bld_clibdir}"] if os.name == 'posix' else None
+ffibuilder = FFI()
+ffibuilder.cdef(cdefs)
+ffibuilder.set_source(
+    "cproton_ffi",
+    c_code,
+    include_dirs=[f"{bld_tree_top}/c/include"],
+    library_dirs=[f"{bld_clibdir}"],
+    libraries=["qpid-proton-core"],
+    extra_link_args=extra_link_args,
+)
+
+if __name__ == "__main__":
+    ffibuilder.compile(verbose=True)
