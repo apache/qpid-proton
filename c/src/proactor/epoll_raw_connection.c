@@ -350,8 +350,10 @@ task_t *pni_raw_connection_task(praw_connection_t *rc) {
   return &rc->task;
 }
 
-static long snd(int fd, const void* b, size_t s) {
-  return send(fd, b, s, MSG_NOSIGNAL | MSG_DONTWAIT);
+static long snd(int fd, const void* b, size_t s, bool more) {
+  int flags = MSG_NOSIGNAL | MSG_DONTWAIT;
+  if (more) flags |= MSG_MORE;
+  return send(fd, b, s, flags);
 }
 
 static long rcv(int fd, void* b, size_t s) {
