@@ -87,10 +87,12 @@ namespace {
       ::shutdown(fd, SHUT_WR);
   }
 
-  long snd(int fd, const void* b, size_t s) {
+  long snd(int fd, const void* b, size_t s, bool more) {
     write_err = 0;
+    int flags = MSG_NOSIGNAL | MSG_DONTWAIT;
+    if (more) flags |= MSG_MORE;
     if (max_send_size && max_send_size < s) s = max_send_size;
-    return ::send(fd, b, s, MSG_NOSIGNAL | MSG_DONTWAIT);
+    return ::send(fd, b, s, flags);
   }
 
   int makepair(int fds[2]) {
@@ -164,7 +166,7 @@ namespace {
     return s;
   }
 
-  long snd(int fd, const void* b, size_t s){
+  long snd(int fd, const void* b, size_t s, bool /* more: unused */ ){
     CHECK(fd < buffers.size());
     write_err = 0;
     if (max_send_size && max_send_size < s) s = max_send_size;

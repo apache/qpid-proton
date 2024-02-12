@@ -566,7 +566,7 @@ finished_reading:
   return;
 }
 
-void pni_raw_write(pn_raw_connection_t *conn, int sock, long (*send)(int, const void*, size_t), void(*set_error)(pn_raw_connection_t *, const char *, int)) {
+void pni_raw_write(pn_raw_connection_t *conn, int sock, long (*send)(int, const void*, size_t, bool), void(*set_error)(pn_raw_connection_t *, const char *, int)) {
   assert(conn);
 
   if (pni_raw_wdrained(conn)) return;
@@ -578,7 +578,8 @@ void pni_raw_write(pn_raw_connection_t *conn, int sock, long (*send)(int, const 
     assert(conn->wbuffers[p-1].type == buff_unwritten);
     char *bytes = conn->wbuffers[p-1].bytes+conn->wbuffers[p-1].offset+conn->unwritten_offset;
     size_t s = conn->wbuffers[p-1].size-conn->unwritten_offset;
-    int r = send(sock,  bytes, s);
+    bool more = conn->wbuffers[p-1].next != 0;
+    int r = send(sock,  bytes, s, more);
     if (r < 0) {
       // Interrupted system call try again
       switch (errno) {
