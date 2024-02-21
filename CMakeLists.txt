@@ -211,6 +211,7 @@ string (JOIN " " COMMON_WARNING_MSVC "/W4" "/analyze"
   "/wd6385" # Reading invalid data from 'conn->rbuffers'.
   "/wd6386" # Buffer overrun while writing to 'nargv':  the writable size is '_Param_(1)*_Param_(2)' bytes, but '16' bytes might be written.
   "/wd6387" # 'rbytes' could be '0':  this does not adhere to the specification for the function 'memcpy'.
+  "/wd6553" # The annotation for function 'CertOpenStore' on _Param_(3) does not apply to a value type.
 
   # warnings as error /we
   "/we26819" # Unannotated fallthrough between switch labels
