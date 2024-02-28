@@ -496,21 +496,15 @@ void container::impl::receiver_options(const proton::receiver_options &opts) {
 }
 
 void container::impl::run_timer_jobs() {
-    timestamp now = timestamp::now();
-    std::vector<scheduled> tasks;
+    std::vector<work> tasks;
 
     // We first extract all the runnable tasks and then run them -  this is to avoid having tasks
     // injected as we are running them (which could potentially never end)
     {
         GUARD(deferred_lock_);
 
-        // Figure out how many tasks we need to execute and pop them to the back of the
-        // queue (in reverse order)
-        unsigned i = 0;
-        for (;;) {
-            // Have we seen all the queued tasks?
-            if  ( deferred_.size()-i==0 ) break;
-
+        // Figure out how many tasks we need to execute and pop them to the back of the queue
+        for (timestamp now = timestamp::now(); deferred_.size() > 0; deferred_.pop_back()) {
             // Is the next task in the future?
             timestamp next_time = deferred_.front().time;
             if ( next_time>now ) {
@@ -518,35 +512,16 @@ void container::impl::run_timer_jobs() {
                 break;
             }
 
-            std::pop_heap(deferred_.begin(), deferred_.end()-i);
-            ++i;
-        }
-        // Nothing to do
-        if ( i==0 ) return;
+            std::pop_heap(deferred_.begin(), deferred_.end());
 
-        // Now we know how many tasks to run
-        if ( deferred_.size()==i ) {
-            // If we sorted the entire heap, then we're executing every task
-            // so don't need to copy and can just swap
-            tasks.swap(deferred_);
-        } else {
-            // Otherwise just copy the ones we sorted
-            tasks = std::vector<scheduled>(deferred_.end()-i, deferred_.end());
-
-            // Remove tasks to be executed
-            deferred_.resize(deferred_.size()-i);
+            if (is_active_.erase(deferred_.back().w_handle))
+                tasks.push_back(std::move(deferred_.back().task));
         }
     }
+
     // We've now taken the tasks to run from the deferred tasks
     // so we can run them unlocked
-    // NB. We copied the due tasks in reverse order so execute from end
-
-    for (int i = tasks.size()-1; i>=0; --i) {
-        if(is_active_.count(tasks[i].w_handle)) {
-            tasks[i].task();
-            is_active_.erase(tasks[i].w_handle);
-        }
-    }
+    for (work task : tasks) task();
 }
 
 // Return true if this thread is finished
