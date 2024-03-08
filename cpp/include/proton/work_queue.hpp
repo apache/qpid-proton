@@ -280,7 +280,7 @@ class work {
     /// **Unsettled API**
     ///
     /// Execute the piece of work
-    void operator()() { item_(); }
+    void operator()() const { item_(); }
 
     ~work() = default;
 
