@@ -585,28 +585,52 @@ public:
         listener = c.listen("//:0", listen_handler);
 
         // We will cancel this scheduled task before its execution.
-        auto w1_handle = c.schedule(proton::duration(250), [this](){w1_state = 1;});
+        auto w1_handle = c.schedule(proton::duration(250),
+            [this](){
+                w1_state = 1;
+            });
 
         // We will cancel this scheduled task before its execution and will try to cancel it again.
-        auto w2_handle = c.schedule(proton::duration(260), [this](){w2_state = 1;});
+        auto w2_handle = c.schedule(proton::duration(260),
+            [this](){
+                w2_state = 1;
+            });
 
         // Attempt to make sure that we can cancel a task from a previous task even if the
         // previous task gets delayed and scheduled in the same batch as the task to be cancelled.
 
         // Set up task to cancel
-        auto w3_handle = c.schedule(proton::duration(37), [this](){w3_state = 3;});
+        auto w3_handle = c.schedule(proton::duration(37),
+            [this](){
+                w3_state = 3;
+            });
 
         // This task overruns and so forces the next 2 tasks to be scheduled together
-        c.schedule(proton::duration(35), [this](){w3_state = 1; std::this_thread::sleep_for(std::chrono::milliseconds(20)); });
+        c.schedule(proton::duration(35),
+            [this](){
+                w3_state = 1;
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            });
 
         // This should successfully cancel the first scheduled task and so leave w3_state at 2
-        c.schedule(proton::duration(36), [&, this](){ASSERT(w3_state==1); w3_state = 2; c.cancel(w3_handle);});
+        c.schedule(proton::duration(36),
+            [&c, w3_handle, this](){
+                ASSERT(w3_state==1);
+                w3_state = 2;
+                c.cancel(w3_handle);
+            });
 
         // We will try to cancel this task before its execution from different thread i.e connection thread.
-        w4_handle = c.schedule(proton::duration(270), [this](){w4_state = 1;});
+        w4_handle = c.schedule(proton::duration(270),
+            [this](){
+                w4_state = 1;
+            });
 
         // We will try to cancel this task after its execution from different thread i.e. connection thread.
-        w5_handle = c.schedule(proton::duration(0), [this](){w5_state = 1;});
+        w5_handle = c.schedule(proton::duration(0),
+            [this](){
+                w5_state = 1;
+            });
 
         // Cancel the first scheduled task.
         c.cancel(w1_handle);
