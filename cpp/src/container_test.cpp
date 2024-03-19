@@ -270,17 +270,13 @@ int test_container_stop() {
 
 struct hang_tester : public proton::messaging_handler {
     proton::listener listener;
-    bool done;
+    bool done = false;
 
-    hang_tester() : done(false) {}
-
-    void connect(proton::container* c) {
-        c->connect(make_url("", listener.port()));
-    }
+    hang_tester() = default;
 
     void on_container_start(proton::container& c) override {
         listener = c.listen("//:0");
-        c.schedule(proton::duration(250), proton::make_work(&hang_tester::connect, this, &c));
+        c.schedule(proton::duration(250), [&](){ c.connect(make_url("", listener.port())); });
     }
 
     void on_connection_open(proton::connection& c) override {
@@ -323,10 +319,8 @@ int test_container_pre_stop() {
 
 
 struct schedule_tester : public proton::messaging_handler {
-    void stop(proton::container* c) { c->stop(); }
-
     void on_container_start(proton::container& c) override {
-        c.schedule(proton::duration(250), proton::make_work(&schedule_tester::stop, this, &c));
+        c.schedule(proton::duration(250), [&](){ c.stop(); });
     }
 };
 
@@ -577,55 +571,33 @@ void test_container_mt_close_race() {
 class schedule_cancel : public proton::messaging_handler {
     proton::listener listener;
     test_listen_handler listen_handler;
-    long long w1_handle;
-    long long w2_handle;
-    long long w3_handle;
-    long long w4_handle;
-    long long w5_handle;
+    proton::work_handle w4_handle;
+    proton::work_handle w5_handle;
 
-    void change_w1_state(proton::container* c) {
-        w1_state = 1;
-    }
-
-    void change_w2_state(proton::container* c) {
-        w2_state = 1;
-    }
-
-    void change_w3_state(proton::container* c) {
-        w3_state = 1;
-    }
-
-    void change_w4_state(proton::container* c) {
-        w4_state = 1;
-    }
-
-    void change_w5_state(proton::container* c) {
-        w5_state = 1;
-    }
+public:
+    int w1_state = 0;
+    int w2_state = 0;
+    int w3_state = 0;
+    int w4_state = 0;
+    int w5_state = 0;
 
     void on_container_start(proton::container& c) override {
-        ASSERT(w1_state==0);
-        ASSERT(w2_state==0);
-        ASSERT(w3_state==0);
-        ASSERT(w4_state==0);
-        ASSERT(w5_state==0);
-
         listener = c.listen("//:0", listen_handler);
 
         // We will cancel this scheduled task before its execution.
-        w1_handle = c.schedule(proton::duration(250), proton::make_work(&schedule_cancel::change_w1_state, this, &c));
+        auto w1_handle = c.schedule(proton::duration(250), [this](){w1_state = 1;});
 
         // We will cancel this scheduled task before its execution and will try to cancel it again.
-        w2_handle = c.schedule(proton::duration(260), proton::make_work(&schedule_cancel::change_w2_state, this, &c));
+        auto w2_handle = c.schedule(proton::duration(260), [this](){w2_state = 1;});
 
         // We will not cancel this scheduled task.
-        w3_handle = c.schedule(proton::duration(35), proton::make_work(&schedule_cancel::change_w3_state, this, &c));
+        c.schedule(proton::duration(35), [this](){w3_state = 1;});
 
         // We will try to cancel this task before its execution from different thread i.e connection thread.
-        w4_handle = c.schedule(proton::duration(270), proton::make_work(&schedule_cancel::change_w4_state, this, &c));
+        w4_handle = c.schedule(proton::duration(270), [this](){w4_state = 1;});
 
         // We will try to cancel this task after its execution from different thread i.e. connection thread.
-        w5_handle = c.schedule(proton::duration(0), proton::make_work(&schedule_cancel::change_w5_state, this, &c));
+        w5_handle = c.schedule(proton::duration(0), [this](){w5_state = 1;});
 
         // Cancel the first scheduled task.
         c.cancel(w1_handle);
@@ -663,19 +635,20 @@ class schedule_cancel : public proton::messaging_handler {
         // the container stops.
     }
 
-public:
-    schedule_cancel(): w1_state(0), w2_state(0), w3_state(0), w4_state(0), w5_state(0) {}
-
-    int w1_state;
-    int w2_state;
-    int w3_state;
-    int w4_state;
-    int w5_state;
+    schedule_cancel() = default;
 };
 
 int test_container_schedule_cancel() {
     schedule_cancel t;
+
+    ASSERT(t.w1_state==0);
+    ASSERT(t.w2_state==0);
+    ASSERT(t.w3_state==0);
+    ASSERT(t.w4_state==0);
+    ASSERT(t.w5_state==0);
+
     proton::container(t).run(2);
+
     ASSERT(t.w1_state==0); // The value of w1_state remained 0 because we cancelled the associated task before its execution.
     ASSERT(t.w2_state==0); // The value of w2_state remained 0 because we cancelled the associated task before its execution.
     ASSERT(t.w3_state==1); // The value of w3_state changed to 1 because we hadn't cancelled this task.
