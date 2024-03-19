@@ -32,6 +32,7 @@
 #include "proton/sender_options.hpp"
 #include "proton/work_queue.hpp"
 
+#include <chrono>
 #include <cstdlib>
 #include <ctime>
 #include <string>
@@ -40,7 +41,6 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-
 
 namespace {
 
@@ -590,8 +590,17 @@ public:
         // We will cancel this scheduled task before its execution and will try to cancel it again.
         auto w2_handle = c.schedule(proton::duration(260), [this](){w2_state = 1;});
 
-        // We will not cancel this scheduled task.
-        c.schedule(proton::duration(35), [this](){w3_state = 1;});
+        // Attempt to make sure that we can cancel a task from a previous task even if the
+        // previous task gets delayed and scheduled in the same batch as the task to be cancelled.
+
+        // Set up task to cancel
+        auto w3_handle = c.schedule(proton::duration(37), [this](){w3_state = 3;});
+
+        // This task overruns and so forces the next 2 tasks to be scheduled together
+        c.schedule(proton::duration(35), [this](){w3_state = 1; std::this_thread::sleep_for(std::chrono::milliseconds(20)); });
+
+        // This should successfully cancel the first scheduled task and so leave w3_state at 2
+        c.schedule(proton::duration(36), [&, this](){ASSERT(w3_state==1); w3_state = 2; c.cancel(w3_handle);});
 
         // We will try to cancel this task before its execution from different thread i.e connection thread.
         w4_handle = c.schedule(proton::duration(270), [this](){w4_state = 1;});
@@ -651,7 +660,7 @@ int test_container_schedule_cancel() {
 
     ASSERT(t.w1_state==0); // The value of w1_state remained 0 because we cancelled the associated task before its execution.
     ASSERT(t.w2_state==0); // The value of w2_state remained 0 because we cancelled the associated task before its execution.
-    ASSERT(t.w3_state==1); // The value of w3_state changed to 1 because we hadn't cancelled this task.
+    ASSERT(t.w3_state==2); // The value of w3_state changed to 2 because we set this in the second callback, but the third was cancelled
     ASSERT(t.w4_state==0); // The value of w4_state remained 0 because we cancelled the associated task before its execution.
     ASSERT(t.w5_state==1); // The value of w5_state changed to 1 because the task was already executed before we cancelled it.
     return 0;
