@@ -20,7 +20,8 @@
 import sys
 from uuid import uuid4
 
-from proton import *
+from proton import AnnotationDict, Array, Data, Described, PropertyDict, SymbolList, UNDESCRIBED, \
+    char, decimal32, decimal64, decimal128, symbol, timestamp, ubyte, uint, ulong, ushort
 
 from . import common
 
@@ -180,7 +181,7 @@ class DataTest(Test):
         count, described, type = self.data.get_array()
         assert count == len(values), count
         if dtype is None:
-            assert described == False
+            assert described is False
         else:
             assert described
         assert type == aTYPE, type
@@ -208,14 +209,29 @@ class DataTest(Test):
     def _test_int_array(self, atype):
         self._testArray(None, None, atype, *self.int_values(atype))
 
-    def testByteArray(self): self._test_int_array("byte")
-    def testUbyteArray(self): self._test_int_array("ubyte")
-    def testShortArray(self): self._test_int_array("short")
-    def testUshortArray(self): self._test_int_array("ushort")
-    def testIntArray(self): self._test_int_array("int")
-    def testUintArray(self): self._test_int_array("uint")
-    def testLongArray(self): self._test_int_array("long")
-    def testUlongArray(self): self._test_int_array("ulong")
+    def testByteArray(self):
+        self._test_int_array("byte")
+
+    def testUbyteArray(self):
+        self._test_int_array("ubyte")
+
+    def testShortArray(self):
+        self._test_int_array("short")
+
+    def testUshortArray(self):
+        self._test_int_array("ushort")
+
+    def testIntArray(self):
+        self._test_int_array("int")
+
+    def testUintArray(self):
+        self._test_int_array("uint")
+
+    def testLongArray(self):
+        self._test_int_array("long")
+
+    def testUlongArray(self):
+        self._test_int_array("ulong")
 
     def testUUIDArray(self):
         self._testArray(None, None, "uuid", uuid4(), uuid4(), uuid4())
@@ -375,25 +391,29 @@ class DataTest(Test):
     def _test_int(self, itype):
         self._test(itype, *self.int_values(itype))
 
-    def testByte(self): self._test_int("byte")
+    def testByte(self):
+        self._test_int("byte")
 
     def testUbyte(self):
         self._test_int("ubyte")
         self.assertRaises(AssertionError, ubyte, -1)
 
-    def testShort(self): self._test_int("short")
+    def testShort(self):
+        self._test_int("short")
 
     def testUshort(self):
         self._test("ushort")
         self.assertRaises(AssertionError, ushort, -1)
 
-    def testInt(self): self._test_int("int")
+    def testInt(self):
+        self._test_int("int")
 
     def testUint(self):
         self._test_int("uint")
         self.assertRaises(AssertionError, uint, -1)
 
-    def testLong(self): self._test_int("long")
+    def testLong(self):
+        self._test_int("long")
 
     def testUlong(self):
         self._test_int("ulong")

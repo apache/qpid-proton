@@ -77,10 +77,10 @@ class ulong(long):
     An unsigned 64 bit integer in the range :math:`0` to :math:`2^{64} - 1` inclusive.
     """
 
-    def __init__(self, l: int) -> None:
-        if l < 0:
+    def __init__(self, u64: int) -> None:
+        if u64 < 0:
             raise AssertionError("initializing ulong with negative value")
-        super(ulong, self).__new__(ulong, l)
+        super(ulong, self).__new__(ulong, u64)
 
     def __repr__(self) -> str:
         return "ulong(%s)" % long.__repr__(self)
@@ -194,10 +194,10 @@ class uint(long):
     A 32 bit unsigned integer in the range :math:`0` to :math:`2^{32} - 1` inclusive.
     """
 
-    def __init__(self, l: int) -> None:
-        if l < 0:
+    def __init__(self, u32: int) -> None:
+        if u32 < 0:
             raise AssertionError("initializing uint with negative value")
-        super(uint, self).__new__(uint, l)
+        super(uint, self).__new__(uint, u32)
 
     def __repr__(self) -> str:
         return "uint(%s)" % long.__repr__(self)
@@ -517,11 +517,11 @@ class SymbolList(list):
 
     def _check_list(self, t: Iterable[Any]) -> List[Any]:
         """ Check all items in list are :class:`symbol`s (or are converted to symbols). """
-        l = []
+        item = []
         if t:
             for v in t:
-                l.append(_check_is_symbol(v, self.raise_on_error))
-        return l
+                item.append(_check_is_symbol(v, self.raise_on_error))
+        return item
 
     def to_array(self):
         return Array(UNDESCRIBED, PN_SYMBOL, *self)
@@ -1004,15 +1004,15 @@ class Data:
         """
         self._check(pn_data_put_ulong(self._data, ul))
 
-    def put_long(self, l: Union[long, int]) -> None:
+    def put_long(self, i64: Union[long, int]) -> None:
         """
         Puts a signed long value.
 
-        :param l: an integral value in the range :math:`-(2^{63})` to :math:`2^{63} - 1` inclusive.
+        :param i64: an integral value in the range :math:`-(2^{63})` to :math:`2^{63} - 1` inclusive.
         :raise: * ``AssertionError`` if parameter is out of the range :math:`-(2^{63})` to :math:`2^{63} - 1` inclusive.
                 * :exc:`DataException` if there is a Proton error.
         """
-        self._check(pn_data_put_long(self._data, l))
+        self._check(pn_data_put_long(self._data, i64))
 
     def put_timestamp(self, t: Union[timestamp, int]) -> None:
         """

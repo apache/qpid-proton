@@ -92,8 +92,8 @@ class AppTests(Test):
 
             for S in self.senders:
                 S.wait()
-                #print("SENDER OUTPUT:")
-                #print( S.stdout() )
+                # print("SENDER OUTPUT:")
+                # print( S.stdout() )
                 assert S.status() == 0, ("Command '%s' failed status=%d: '%s' '%s'"
                                          % (str(S.cmdline()),
                                             S.status(),
@@ -102,8 +102,8 @@ class AppTests(Test):
 
         for R in self.receivers:
             R.wait()
-            #print("RECEIVER OUTPUT")
-            #print( R.stdout() )
+            # print("RECEIVER OUTPUT")
+            # print( R.stdout() )
             assert R.status() == 0, ("Command '%s' failed status=%d: '%s' '%s'"
                                      % (str(R.cmdline()),
                                         R.status(),

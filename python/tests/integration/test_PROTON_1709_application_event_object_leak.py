@@ -63,7 +63,7 @@ class Proton1709Test(unittest.TestCase):
         p = Program(injector)
         c = Container(p)
         t = threading.Thread(target=c.run)
-        object_counts = array.array('L', [0]*3)
+        object_counts = array.array('L', [0] * 3)
 
         t.start()
         p.on_start_.wait()
@@ -95,4 +95,3 @@ class Proton1709Test(unittest.TestCase):
                         "Object counts should not be increasing too fast: {0}".format(object_counts))
         self.assertTrue(object_counts[2] - object_counts[0] <= 10,
                         "No objects should be leaking at the end: {0}".format(object_counts))
-

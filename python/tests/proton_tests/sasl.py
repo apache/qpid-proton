@@ -19,7 +19,7 @@
 
 import os
 
-from proton import *
+from proton import Collector, Connection, Endpoint, Event, SASL, SSL, SSLDomain, Transport
 
 from . import common
 from . import engine
@@ -64,7 +64,7 @@ def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton',
         assert self.s2.authorization == authzid, self.s2.authorization
         assert self.s2.mech == mech.strip()
         assert self.s2.outcome == SASL.OK, self.s2.outcome
-        assert self.c2.state & Endpoint.LOCAL_ACTIVE and self.c2.state & Endpoint.REMOTE_ACTIVE,\
+        assert self.c2.state & Endpoint.LOCAL_ACTIVE and self.c2.state & Endpoint.REMOTE_ACTIVE, \
             "local_active=%s, remote_active=%s" % (
                 self.c1.state & Endpoint.LOCAL_ACTIVE, self.c1.state & Endpoint.REMOTE_ACTIVE)
         # Client
@@ -72,7 +72,7 @@ def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton',
         assert self.s1.user == clientUser
         assert self.s1.mech == mech.strip()
         assert self.s1.outcome == SASL.OK, self.s1.outcome
-        assert self.c1.state & Endpoint.LOCAL_ACTIVE and self.c1.state & Endpoint.REMOTE_ACTIVE,\
+        assert self.c1.state & Endpoint.LOCAL_ACTIVE and self.c1.state & Endpoint.REMOTE_ACTIVE, \
             "local_active=%s, remote_active=%s" % (
                 self.c1.state & Endpoint.LOCAL_ACTIVE, self.c1.state & Endpoint.REMOTE_ACTIVE)
     else:
@@ -95,9 +95,9 @@ def consumeAllOuput(t):
     stops = 0
     while stops < 1:
         out = t.peek(1024)
-        l = len(out) if out else 0
-        t.pop(l)
-        if l <= 0:
+        size = len(out) if out else 0
+        t.pop(size)
+        if size <= 0:
             stops += 1
 
 
@@ -276,10 +276,10 @@ class SaslTest(Test):
         self.pump()
         assert self.s2.outcome is None
         assert self.t2.condition is None
-        assert self.t2.authenticated == False
+        assert self.t2.authenticated is False
         assert self.s1.outcome is None
         assert self.t1.condition is None
-        assert self.t1.authenticated == False
+        assert self.t1.authenticated is False
 
     def testSaslSkippedFail(self):
         """Verify that the server (with SASL) correctly handles a client without SASL"""
@@ -299,8 +299,8 @@ class SaslTest(Test):
 
         self.pump()
 
-        assert self.t2.authenticated == False
-        assert self.t1.authenticated == False
+        assert self.t2.authenticated is False
+        assert self.t1.authenticated is False
         assert self.s1.outcome != SASL.OK
         assert self.s2.outcome != SASL.OK
 
@@ -378,7 +378,7 @@ class SASLMechTest(Test):
 
 def _sslConnection(domain, transport, connection):
     transport.bind(connection)
-    ssl = SSL(transport, domain, None)
+    SSL(transport, domain, None)
     return connection
 
 
@@ -412,8 +412,8 @@ class SSLSASLTest(Test):
 
         self.client_domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER)
 
-        ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
-        ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
+        _sslConnection(self.client_domain, self.t1, self.c1)
+        _sslConnection(self.server_domain, self.t2, self.c2)
 
         _testSaslMech(self, mech, encrypted=True)
 
@@ -433,8 +433,8 @@ class SSLSASLTest(Test):
 
         self.client_domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER)
 
-        ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
-        ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
+        _sslConnection(self.client_domain, self.t1, self.c1)
+        _sslConnection(self.server_domain, self.t2, self.c2)
 
         _testSaslMech(self, mech, authzid=authzid, encrypted=True)
 
@@ -452,8 +452,8 @@ class SSLSASLTest(Test):
 
         self.client_domain.set_peer_authentication(SSLDomain.ANONYMOUS_PEER)
 
-        ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
-        ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
+        _sslConnection(self.client_domain, self.t1, self.c1)
+        _sslConnection(self.server_domain, self.t2, self.c2)
 
         _testSaslMech(self, mech, clientUser='usr@proton', encrypted=True, authenticated=False)
 
@@ -476,8 +476,8 @@ class SSLSASLTest(Test):
         self.client_domain.set_trusted_ca_db(_sslCertpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
 
-        ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
-        ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
+        _sslConnection(self.client_domain, self.t1, self.c1)
+        _sslConnection(self.server_domain, self.t2, self.c2)
 
         _testSaslMech(self, mech, clientUser=None, authUser=extUser, encrypted=True)
 
@@ -503,8 +503,8 @@ class SSLSASLTest(Test):
         self.client_domain.set_trusted_ca_db(_sslCertpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
 
-        ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
-        ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
+        _sslConnection(self.client_domain, self.t1, self.c1)
+        _sslConnection(self.server_domain, self.t2, self.c2)
 
         _testSaslMech(self, mech, clientUser=None, authUser=extUser, authzid=authzid, encrypted=True)
 
@@ -520,8 +520,8 @@ class SSLSASLTest(Test):
         self.client_domain.set_trusted_ca_db(_sslCertpath("ca-certificate.pem"))
         self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
 
-        ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
-        ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
+        _sslConnection(self.client_domain, self.t1, self.c1)
+        _sslConnection(self.server_domain, self.t2, self.c2)
 
         _testSaslMech(self, mech, clientUser=None, authUser=None, encrypted=None, authenticated=False)
 

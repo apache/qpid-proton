@@ -19,7 +19,7 @@
 
 from typing import Callable, Optional, Type, Union, TYPE_CHECKING, List
 
-from cproton import PN_EOS, PN_OK, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM, PN_SASL_SYS, PN_SASL_TEMP, \
+from cproton import PN_EOS, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM, PN_SASL_SYS, PN_SASL_TEMP, \
     PN_SSL_ANONYMOUS_PEER, PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY, PN_SSL_CERT_SUBJECT_COMMON_NAME, \
     PN_SSL_CERT_SUBJECT_COUNTRY_NAME, PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME, PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT, \
     PN_SSL_CERT_SUBJECT_STATE_OR_PROVINCE, PN_SSL_MD5, PN_SSL_MODE_CLIENT, PN_SSL_MODE_SERVER, PN_SSL_RESUME_NEW, \
@@ -861,8 +861,9 @@ class SSL(object):
             # single step.  So catch any attempt by the application to provide what
             # may be a different configuration than the original (hack)
             ssl = transport._ssl
-            if (domain and (ssl._domain is not domain) or
-                    session_details and (ssl._session_details is not session_details)):
+            different_domain = domain and (ssl._domain is not domain)
+            different_session_details = session_details and (ssl._session_details is not session_details)
+            if different_domain or different_session_details:
                 raise SSLException("Cannot re-configure existing SSL object!")
         else:
             obj = super(SSL, cls).__new__(cls)

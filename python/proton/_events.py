@@ -57,7 +57,6 @@ class Collector:
         return pn_collector_more(self._impl)
 
     def pop(self) -> None:
-        ev = self.peek()
         pn_collector_pop(self._impl)
 
     def release(self) -> None:
@@ -484,9 +483,9 @@ class Event(EventBase):
 
         If none of these has a handler, then ``None`` is returned.
         """
-        l = self.link
-        if l:
-            h = l.handler
+        link = self.link
+        if link:
+            h = link.handler
             if h:
                 return h
         s = self.session
@@ -572,9 +571,9 @@ class Event(EventBase):
         ``link`` property, that does an additional check on the type of the
         link.
         """
-        l = self.link
-        if l and l.is_sender:
-            return l
+        link = self.link
+        if link and link.is_sender:
+            return link
         else:
             return None
 
@@ -585,9 +584,9 @@ class Event(EventBase):
         none is associated with it. This is essentially an alias for
         ``link`` property, that does an additional check on the type of the link.
         """
-        l = self.link
-        if l and l.is_receiver:
-            return l
+        link = self.link
+        if link and link.is_receiver:
+            return link
         else:
             return None
 

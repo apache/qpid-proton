@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from proton_tests.main import main
+from .main import main
 
 if __name__ == '__main__':
     main()

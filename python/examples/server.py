@@ -39,7 +39,8 @@ class Server(MessagingHandler):
         self.conn = event.container.connect(self.url, desired_capabilities="ANONYMOUS-RELAY")
 
     def on_connection_opened(self, event):
-        if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
+        capabilities = event.connection.remote_offered_capabilities
+        if capabilities and 'ANONYMOUS-RELAY' in capabilities:
             self.receiver = event.container.create_receiver(self.conn, self.address)
             self.server = self.container.create_sender(self.conn, None)
         else:

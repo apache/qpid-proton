@@ -38,10 +38,10 @@ else:
                 print(r)
         elif sys.argv[1] == "insert":
             while True:
-                l = sys.stdin.readline()
-                if not l:
+                line = sys.stdin.readline()
+                if not line:
                     break
-                conn.execute("INSERT INTO records(description) VALUES (?)", (l.rstrip(),))
+                conn.execute("INSERT INTO records(description) VALUES (?)", (line.rstrip(),))
             conn.commit()
         else:
             print("Unrecognised command: %s" % sys.argv[1])

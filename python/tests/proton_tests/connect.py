@@ -17,10 +17,9 @@
 # under the License.
 #
 
-import time
-import sys
 import json
-from .common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
+
+from .common import Test, free_tcp_port, ensureCanTestExtendedSASL
 from proton import SSLDomain
 from proton.reactor import Container
 from proton.handlers import MessagingHandler

@@ -65,7 +65,7 @@ class BlockingLink:
             self.connection.wait(lambda: self.link.state & Endpoint.REMOTE_CLOSED,
                                  timeout=timeout,
                                  msg="Opening link %s" % self.link.name)
-        except Timeout as e:
+        except Timeout:
             pass
         self._checkClosed()
 

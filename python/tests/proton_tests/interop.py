@@ -19,7 +19,7 @@
 
 import os
 
-from proton import *
+from proton import Array, Data, Described, Message, UNDESCRIBED
 
 from . import common
 

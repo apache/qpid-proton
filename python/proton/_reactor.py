@@ -1460,7 +1460,8 @@ class Container(Reactor):
         :param source: Address of source node.
         :param name: Sender name.
         :param handler: Event handler for this sender.
-        :param tags: Function to generate tags for this sender of the form ``def simple_tags():`` and returns a ``bytes`` type
+        :param tags: Function to generate tags for this sender of the form ``def simple_tags():``
+                     and returns a ``bytes`` type
         :param options: A single option, or a list of sender options
 
         :return: New sender instance.

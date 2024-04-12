@@ -19,7 +19,7 @@
 
 import sys
 
-from proton import *
+from proton import Connection, Endpoint, Transport, TransportException
 
 from . import common
 
@@ -232,7 +232,7 @@ class ServerTransportTest(Test):
     def testEOS(self):
         self.transport.push(b"")  # should be a noop
         self.transport.close_tail()
-        p = self.transport.pending()
+        self.transport.pending()
         self.drain()
         assert self.transport.closed
 

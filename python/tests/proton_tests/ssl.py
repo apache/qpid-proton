@@ -19,7 +19,7 @@
 
 import os
 
-from proton import *
+from proton import Connection, Endpoint, SSL, SSLDomain, SSLException, SSLSessionDetails, Transport
 
 from . import common
 from .common import Skipped, pump
@@ -264,7 +264,8 @@ class SslTest(common.Test):
         self.assertEqual("1762688fb3c1c7908690efa158e89924a8e739b6", server.ssl.get_cert_fingerprint_sha1())
         self.assertEqual("f5890052d5ad3f38f68eae9027b30fc4c3f09758d59d8f19e3f192e29e41708d",
                          server.ssl.get_cert_fingerprint_sha256())
-        self.assertEqual("5d2b1bff39df99d101040348be015970e3da1d0ad610902dc78bba24555aae16395fd1342e26b89b422c304c32b48913000b485933720773d033aaffc561b3e9",
+        self.assertEqual("5d2b1bff39df99d101040348be015970e3da1d0ad610902dc78bba24555aae16395fd1342e26b89b422c304c32"
+                         "b48913000b485933720773d033aaffc561b3e9",
                          server.ssl.get_cert_fingerprint_sha512())
         self.assertEqual("246ea13c8a549e8c0b0cc6490d81b34b", server.ssl.get_cert_fingerprint_md5())
 
@@ -272,7 +273,8 @@ class SslTest(common.Test):
         self.assertEqual("d28c0ae17c370c269bd680ea3bcc523ea5da544e", client.ssl.get_cert_fingerprint_sha1())
         self.assertEqual("c460a601f77b77ec59480955574a227c309805dd36dbf866f42d2dce3fd4757c",
                          client.ssl.get_cert_fingerprint_sha256())
-        self.assertEqual("37c28f451105b1979e2ea62d4a38c86e158ad345894b5016662bdd1913f48764bd71deb4b4de4ce22559828634357dcaea1832dd58327dfe5b0bc368ecbeee4c",
+        self.assertEqual("37c28f451105b1979e2ea62d4a38c86e158ad345894b5016662bdd1913f48764bd71deb4b4de4ce22559828634"
+                         "357dcaea1832dd58327dfe5b0bc368ecbeee4c",
                          client.ssl.get_cert_fingerprint_sha512())
         self.assertEqual("16b075688b82c40ce5b03c984f20286b", client.ssl.get_cert_fingerprint_md5())
 
@@ -585,11 +587,7 @@ class SslTest(common.Test):
         server.connection.open()
         self._pump(client, server)
         assert server.ssl.protocol_name() is not None
-        if(API_LANGUAGE == "C"):
-            assert client.ssl.resume_status() == SSL.RESUME_REUSED
-        else:
-            # Java gives no way to check whether a previous session has been resumed
-            pass
+        assert client.ssl.resume_status() == SSL.RESUME_REUSED
 
         client.connection.close()
         server.connection.close()
@@ -609,8 +607,7 @@ class SslTest(common.Test):
         server.connection.open()
         self._pump(client, server)
         assert server.ssl.protocol_name() is not None
-        if(API_LANGUAGE == "C"):
-            assert client.ssl.resume_status() == SSL.RESUME_NEW
+        assert client.ssl.resume_status() == SSL.RESUME_NEW
 
         client.connection.close()
         server.connection.close()

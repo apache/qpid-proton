@@ -39,7 +39,6 @@ import proton.reactor
 
 from proton import Message
 from proton.utils import SyncRequestResponse, BlockingConnection
-from proton.handlers import IncomingMessageHandler
 
 
 def get_fd_set():

@@ -55,7 +55,7 @@ def check_call(args, **kwargs):
 class ExamplesTest(unittest.TestCase):
     def test_helloworld(self, example="helloworld.py"):
         with run([example]) as p:
-            output = [l.strip() for l in p.stdout]
+            output = [line.strip() for line in p.stdout]
             self.assertEqual(output, ['Hello World!'])
 
     def test_helloworld_direct(self):
@@ -74,7 +74,7 @@ class ExamplesTest(unittest.TestCase):
         with Popen([recv]) as r:
             with run([send]):
                 pass
-            actual = [l.strip() for l in r.stdout]
+            actual = [line.strip() for line in r.stdout]
             expected = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
             self.assertEqual(actual, expected)
 
@@ -84,12 +84,12 @@ class ExamplesTest(unittest.TestCase):
                 time.sleep(sleep)
             with run(client) as c:
                 s.terminate()
-                actual = [l.strip() for l in c.stdout]
+                actual = [line.strip() for line in c.stdout]
                 inputs = ["Twas brillig, and the slithy toves",
                           "Did gire and gymble in the wabe.",
                           "All mimsy were the borogroves,",
                           "And the mome raths outgrabe."]
-                expected = ["%s => %s" % (l, l.upper()) for l in inputs]
+                expected = ["%s => %s" % (line, line.upper()) for line in inputs]
                 self.assertEqual(actual, expected)
 
     def test_sync_client_server(self):
@@ -125,14 +125,14 @@ class ExamplesTest(unittest.TestCase):
                 pass
             r.wait()
             # verify output of receive
-            actual = [l.strip() for l in r.stdout]
+            actual = [line.strip() for line in r.stdout]
             expected = ["inserted message %i" % (i + 1) for i in range(100)]
             self.assertEqual(actual, expected)
 
         # verify state of databases
         with run(['db_ctrl.py', 'list', './dst_db']) as v:
             expected = ["(%i, 'Message-%i')" % (i + 1, i + 1) for i in range(100)]
-            actual = [l.strip() for l in v.stdout]
+            actual = [line.strip() for line in v.stdout]
             self.assertEqual(actual, expected)
 
     def test_tx_send_tx_recv(self):
@@ -145,7 +145,7 @@ class ExamplesTest(unittest.TestCase):
             with run(['simple_send.py', '-a', 'localhost:8888']):
                 pass
             r.wait()
-            actual = [l.strip() for l in r.stdout]
+            actual = [line.strip() for line in r.stdout]
             expected = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
             self.assertEqual(actual, expected)
 
@@ -153,7 +153,7 @@ class ExamplesTest(unittest.TestCase):
         with Popen(['direct_send.py', '-a', 'localhost:8888']):
             time.sleep(0.5)
             with run(['simple_recv.py', '-a', 'localhost:8888']) as r:
-                actual = [l.strip() for l in r.stdout]
+                actual = [line.strip() for line in r.stdout]
                 expected = ["{'sequence': %i}" % (i + 1,) for i in range(100)]
                 self.assertEqual(actual, expected)
 
@@ -162,11 +162,11 @@ class ExamplesTest(unittest.TestCase):
             pass
 
         with run(['selected_recv.py', '-m', '50']) as r:
-            actual = [l.strip() for l in r.stdout]
+            actual = [line.strip() for line in r.stdout]
             expected = ["green %i" % (i + 1) for i in range(100) if i % 2 == 0]
             self.assertEqual(actual, expected)
 
         with run(['simple_recv.py', '-m', '50']) as r:
-            actual = [l.strip() for l in r.stdout]
+            actual = [line.strip() for line in r.stdout]
             expected = ["red %i" % (i + 1) for i in range(100) if i % 2 == 1]
             self.assertEqual(actual, expected)

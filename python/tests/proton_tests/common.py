@@ -26,7 +26,7 @@ import subprocess
 from random import randint
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE
 from string import Template
 
 from proton import SASL, SSL
@@ -47,7 +47,7 @@ def free_tcp_ports(count=1):
             sockets[-1].bind(("0.0.0.0", port))
             ports.append(port)
             retry = 0
-        except:
+        except OSError:
             retry += 1
             assert retry != 100, "No free sockets available for test!"
     for s in sockets:
@@ -88,8 +88,7 @@ def pump(transport1, transport2, buffer_size=1024):
         Asserts that each engine accepts some bytes every time
         (unless it's already closed).
     """
-    while (pump_uni(transport1, transport2, buffer_size) or
-           pump_uni(transport2, transport1, buffer_size)):
+    while (pump_uni(transport1, transport2, buffer_size) or pump_uni(transport2, transport1, buffer_size)):
         pass
 
 
@@ -275,7 +274,7 @@ class MessengerApp(object):
         self._verbose = verbose
         if self._verbose:
             print("COMMAND='%s'" % str(cmd))
-        #print("ENV='%s'" % str(os.environ.copy()))
+        # print("ENV='%s'" % str(os.environ.copy()))
         try:
             # Handle python launch by replacing script 'filename' with
             # 'python abspath-to-filename' in cmdline arg list.

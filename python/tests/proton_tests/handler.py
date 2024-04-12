@@ -17,11 +17,9 @@
 # under the License.
 #
 
-import os
-import gc
 import traceback
 
-from proton import *
+from proton import EventType, Handler
 from proton.reactor import Container
 
 from . import common

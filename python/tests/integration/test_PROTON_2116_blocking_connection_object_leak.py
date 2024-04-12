@@ -87,14 +87,14 @@ class ReconnectingTestClient:
                     try:
                         recv.close()
                         recv = None
-                    except:
+                    except Exception:
                         self.count_objects("link close() failed")
                         pass
                     try:
                         conn.close()
                         conn = None
                         self.count_objects("conn closed")
-                    except:
+                    except Exception:
                         self.count_objects("conn close() failed")
                         pass
                     subscribed = False

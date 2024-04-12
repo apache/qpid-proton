@@ -20,7 +20,8 @@
 import os
 import gc
 from time import time, sleep
-from proton import *
+from proton import Array, Condition, Collector, Connection, Data, Delivery, Disposition, Endpoint, Event, Link, \
+    PropertyDict, SASL, SessionException, SymbolList, Terminus, Transport, UNDESCRIBED, symbol
 from proton.reactor import Container
 from . import common
 from .common import pump, Skipped
@@ -265,7 +266,7 @@ class ConnectionTest(Test):
         try:
             self.c1.transport.channel_max = 666
             assert False, "expected session exception"
-        except:
+        except SessionException:
             pass
 
         assert self.c1.transport.channel_max == upper_limit
@@ -605,10 +606,10 @@ class LinkTest(Test):
         rcv.open()
         self.pump()
         c2 = self.rcv.session.connection
-        l = c2.link_head(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
-        while l:
-            l.open()
-            l = l.next(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
+        link = c2.link_head(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
+        while link:
+            link.open()
+            link = link.next(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
         self.pump()
 
         assert self.snd
@@ -898,8 +899,10 @@ class TransferTest(Test):
         # Confirm abort discards the sender's buffered content, i.e. no data in generated transfer frame.
         # We want:
         # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag", message-format=0, settled=true, aborted=true]
-        # wanted = b"\x00\x00\x00%\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x15\x00\x00\x00\nR\x00R\x00\xa0\x03tagR\x00A@@@@A"
-        # wanted = b"\x00\x00\x00\x26\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x16\x00\x00\x00\x0bR\x00R\x00\xa0\x03tagR\x00A@@@@A@"
+        # wanted = b"\x00\x00\x00%\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x15\x00\x00\x00\nR\x00R'\
+        #          b'\x00\xa0\x03tagR\x00A@@@@A"
+        # wanted = b"\x00\x00\x00\x26\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x16\x00\x00\x00\x0bR\x00R'\
+        #          b'\x00\xa0\x03tagR\x00A@@@@A@"
         # wanted = b'\x00\x00\x00\x20\x02\x00\x00\x00\x00S\x14\xc0\x13\x0bR\x00R\x00\xa0\x03tagR\x00A@@@@A@'
         # wanted = b'\x00\x00\x00"\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x12\x00\x00\x00\nCC\xa0\x03tagCA@@@@A'
         # wanted = b'\x00\x00\x00\x1d\x02\x00\x00\x00\x00S\x14\xc0\x10\x0bCC\xa0\x03tagCA@@@@A@'
@@ -913,7 +916,7 @@ class TransferTest(Test):
 
     def test_multiframe_last_empty(self):
         self.rcv.flow(1)
-        sd = self.snd.delivery("tag")
+        self.snd.delivery("tag")
         msg_p1 = b"this is a test"
         n = self.snd.send(msg_p1)
         assert n == len(msg_p1)
@@ -981,7 +984,7 @@ class TransferTest(Test):
 
         # fill up delivery buffer on sender
         for m in range(1024):
-            sd = self.snd.delivery("tag%s" % m)
+            self.snd.delivery("tag%s" % m)
             msg = ("message %s" % m).encode('ascii')
             n = self.snd.send(msg)
             assert n == len(msg)
@@ -1003,7 +1006,7 @@ class TransferTest(Test):
 
         # add some new deliveries
         for m in range(1024, 1450):
-            sd = self.snd.delivery("tag%s" % m)
+            self.snd.delivery("tag%s" % m)
             msg = ("message %s" % m).encode('ascii')
             n = self.snd.send(msg)
             assert n == len(msg)
@@ -1011,7 +1014,7 @@ class TransferTest(Test):
 
         # submit some more deliveries
         for m in range(1450, 1500):
-            sd = self.snd.delivery("tag%s" % m)
+            self.snd.delivery("tag%s" % m)
             msg = ("message %s" % m).encode('ascii')
             n = self.snd.send(msg)
             assert n == len(msg)
@@ -1290,8 +1293,10 @@ class MaxFrameTransferTest(Test):
         assert sd.aborted
         # Expect a single abort transfer frame with no content.  One credit is consumed.
         # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag_1", message-format=0, settled=true, aborted=true]
-        # wanted = b"\x00\x00\x00\x27\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x17\x00\x00\x00\nR\x00R\x00\xa0\x05tag_1R\x00A@@@@A"
-        # wanted = b"\x00\x00\x00\x28\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x18\x00\x00\x00\x0bR\x00R\x00\xa0\x05tag_1R\x00A@@@@A@"
+        # wanted = b"\x00\x00\x00\x27\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x17\x00\x00\x00\nR\x00R'\
+        #          b'\x00\xa0\x05tag_1R\x00A@@@@A"
+        # wanted = b"\x00\x00\x00\x28\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x18\x00\x00\x00\x0bR\x00R'\
+        #          b'\x00\xa0\x05tag_1R\x00A@@@@A@"
         # wanted = b'\x00\x00\x00\x22\x02\x00\x00\x00\x00S\x14\xc0\x15\x0bR\x00R\x00\xa0\x05tag_1R\x00A@@@@A@'
         # wanted = b'\x00\x00\x00\x24\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x14\x00\x00\x00\nCC\xa0\x05tag_1CA@@@@A'
         # wanted = b'\x00\x00\x00\x1f\x02\x00\x00\x00\x00S\x14\xc0\x12\x0bCC\xa0\x05tag_1CA@@@@A@'
@@ -1816,13 +1821,13 @@ class CreditTest(Test):
         self.pump()
 
         for i in range(5):
-            b = self.rcv.recv(512)
+            self.rcv.recv(512)
             assert self.rcv.advance()
-            b = self.rcv2.recv(512)
+            self.rcv2.recv(512)
             assert self.rcv2.advance()
 
         for i in range(5):
-            b = self.rcv2.recv(512)
+            self.rcv2.recv(512)
             assert self.rcv2.advance()
 
 
@@ -2230,8 +2235,8 @@ class NoValue:
         assert dlv.section_number == 0
         assert dlv.section_offset == 0
         assert dlv.condition is None
-        assert dlv.failed == False
-        assert dlv.undeliverable == False
+        assert dlv.failed is False
+        assert dlv.undeliverable is False
         assert dlv.annotations is None
 
 
@@ -2247,8 +2252,8 @@ class RejectValue:
         assert dlv.section_number == 0
         assert dlv.section_offset == 0
         assert dlv.condition == self.condition, (dlv.condition, self.condition)
-        assert dlv.failed == False
-        assert dlv.undeliverable == False
+        assert dlv.failed is False
+        assert dlv.undeliverable is False
         assert dlv.annotations is None
 
 
@@ -2266,8 +2271,8 @@ class ReceivedValue:
         assert dlv.section_number == self.section_number, (dlv.section_number, self.section_number)
         assert dlv.section_offset == self.section_offset
         assert dlv.condition is None
-        assert dlv.failed == False
-        assert dlv.undeliverable == False
+        assert dlv.failed is False
+        assert dlv.undeliverable is False
         assert dlv.annotations is None
 
 
@@ -2304,8 +2309,8 @@ class CustomValue:
         assert dlv.section_number == 0
         assert dlv.section_offset == 0
         assert dlv.condition is None
-        assert dlv.failed == False
-        assert dlv.undeliverable == False
+        assert dlv.failed is False
+        assert dlv.undeliverable is False
         assert dlv.annotations is None
 
 
@@ -2749,7 +2754,7 @@ class IdleTimeoutEventTest(PeerTest):
         assert self.transport.pending() < 0
 
     def testTimeoutWithZombieServerAndSASL(self):
-        sasl = self.transport.sasl()
+        self.transport.sasl()
         self.testTimeoutWithZombieServer(expectOpenCloseFrames=False)
 
 
@@ -2765,7 +2770,7 @@ class DeliverySegFaultTest(Test):
         del dlv
         t.bind(conn)
         t.unbind()
-        dlv = snd.delivery("tag")
+        snd.delivery("tag")
 
 
 class SaslEventTest(CollectorTest):
@@ -2782,9 +2787,9 @@ class SaslEventTest(CollectorTest):
                        b'AMQP\x00\x01\x00\x00')
         self.expect(Event.TRANSPORT)
         for i in range(1024):
-            p = transport.pending()
+            transport.pending()
             self.drain()
-        p = transport.pending()
+        transport.pending()
         self.expect()
 
     def testPipelinedServerReadFirst(self):
@@ -2823,7 +2828,7 @@ class SaslEventTest(CollectorTest):
         s.allowed_mechs("ANONYMOUS")
         transport.bind(conn)
         p = transport.pending()
-        bytes = transport.peek(p)
+        # bytes = transport.peek(p)
         transport.pop(p)
         self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND)
         transport.push(
@@ -2838,7 +2843,7 @@ class SaslEventTest(CollectorTest):
         )
         self.expect(Event.TRANSPORT)
         p = transport.pending()
-        bytes = transport.peek(p)
+        # bytes = transport.peek(p)
         transport.pop(p)
         assert s.outcome == SASL.OK
         # XXX: the bytes above appear to be correct, but we don't get any

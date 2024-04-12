@@ -74,15 +74,16 @@ parser.add_option("-D", "--define", metavar="DEFINE", dest="defines",
 parser.add_option("-x", "--xml", metavar="XML", dest="xml",
                   help="write test results in Junit style xml suitable for use by CI tools etc")
 parser.add_option("-a", "--always-colorize", action="store_true", dest="always_colorize", default=False,
-                  help="always colorize the test results rather than relying on terminal tty detection. Useful when invoked from Jython/Maven.")
+                  help="always colorize the test results rather than relying on terminal tty detection. "
+                  "Useful when invoked from Jython/Maven.")
 parser.add_option("-n", metavar="count", dest="count", type=int, default=1,
                   help="run the tests <count> times")
 parser.add_option("-b", "--bare", action="store_true", default=False,
-                  help="Run bare, i.e. don't capture stack traces. This is useful under Jython as " +
-                  "captured stack traces do not include the Java portion of the stack," +
+                  help="Run bare, i.e. don't capture stack traces. This is useful under Jython as "
+                  "captured stack traces do not include the Java portion of the stack,"
                   "whereas non captured stack traces do.")
 parser.add_option("-j", "--javatrace", action="store_true", default=False,
-                  help="Show the full java stack trace. This disables heuristics to eliminate the " +
+                  help="Show the full java stack trace. This disables heuristics to eliminate the "
                   "jython portion of java stack traces.")
 
 
@@ -389,7 +390,7 @@ class Runner:
                 phase()
             except KeyboardInterrupt:
                 raise
-            except:
+            except BaseException:
                 self.exception_phase_name = phase_name
                 self.exception = sys.exc_info()
                 exception_type = self.exception[0]
@@ -580,7 +581,7 @@ class PatternMatcher:
 class FunctionScanner(PatternMatcher):
 
     def inspect(self, obj):
-        return type(obj) == types.FunctionType and self.matches(obj.__name__)
+        return type(obj) is types.FunctionType and self.matches(obj.__name__)
 
     def descend(self, func):
         # the None is required for older versions of python
@@ -611,7 +612,7 @@ class ClassScanner(PatternMatcher):
 class ModuleScanner:
 
     def inspect(self, obj):
-        return type(obj) == types.ModuleType
+        return type(obj) is types.ModuleType
 
     def descend(self, obj):
         for name in sorted(dir(obj)):
@@ -745,6 +746,6 @@ def main():
             continue
 
     if failures:
-        return(1)
+        return 1
     else:
-        return(0)
+        return 0

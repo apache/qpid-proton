@@ -149,8 +149,9 @@ class SyncRequestResponseTest(Test):
             # This will cause an exception because we are specifying allowed_mechs as
             # EXTERNAL. The SASL handshake will fail because the server is not setup
             # to handle EXTERNAL
-            connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES,
-                                            offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES, allowed_mechs=EXTERNAL)
+            BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES,
+                               offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES,
+                               allowed_mechs=EXTERNAL)
             self.fail("Expected ConnectionException")
         except ConnectionException as e:
             self.assertTrue('amqp:unauthorized-access' in str(e), "expected unauthorized-access")
@@ -163,7 +164,8 @@ class SyncRequestResponseTest(Test):
         server.wait()
         # An ANONYMOUS allowed_mechs will work, anonymous connections are allowed by ConnPropertiesServer
         connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES,
-                                        offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES, allowed_mechs=ANONYMOUS)
+                                        offered_capabilities=OFFERED_CAPABILITIES,
+                                        desired_capabilities=DESIRED_CAPABILITIES, allowed_mechs=ANONYMOUS)
         client = SyncRequestResponse(connection)
         client.connection.close()
         server.join(timeout=self.timeout)

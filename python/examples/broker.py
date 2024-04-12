@@ -114,11 +114,11 @@ class Broker(MessagingHandler):
         self.remove_stale_consumers(event.connection)
 
     def remove_stale_consumers(self, connection):
-        l = connection.link_head(Endpoint.REMOTE_ACTIVE)
-        while l:
-            if l.is_sender:
-                self._unsubscribe(l)
-            l = l.next(Endpoint.REMOTE_ACTIVE)
+        link = connection.link_head(Endpoint.REMOTE_ACTIVE)
+        while link:
+            if link.is_sender:
+                self._unsubscribe(link)
+            link = link.next(Endpoint.REMOTE_ACTIVE)
 
     def on_sendable(self, event):
         self._queue(event.link.source.address).dispatch(event.link)

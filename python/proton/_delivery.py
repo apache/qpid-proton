@@ -31,7 +31,7 @@ from ._condition import cond2obj, obj2cond
 from ._data import dat2obj, obj2dat
 from ._wrapper import Wrapper
 
-from typing import Dict, List, Optional, Type, Union, TYPE_CHECKING, Any
+from typing import Dict, List, Optional, Type, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._condition import Condition

@@ -17,6 +17,9 @@
 # under the License.
 #
 
+# Ignore unused imports in this file
+# flake8: noqa: F401
+
 import atexit
 from uuid import UUID
 
@@ -202,7 +205,7 @@ def bytes2string(b, encoding='utf8'):
 
 
 def py2bytes(py):
-    if isinstance(py, (bytes, bytearray,memoryview)):
+    if isinstance(py, (bytes, bytearray, memoryview)):
         s = ffi.from_buffer(py)
         return len(s), s
     elif isinstance(py, str):
@@ -299,16 +302,20 @@ def pn_transport_set_pytracer(transport, tracer):
     attrs['_tracer'] = tracer
     lib.pn_transport_set_tracer(transport, lib.pn_pytracer)
 
+
 retained_objects = set()
 lib.init()
+
 
 @atexit.register
 def clear_retained_objects():
     retained_objects.clear()
 
+
 def retained_count():
     """ Debugging aid to give the number of wrapper objects retained by the bindings"""
     return len(retained_objects)
+
 
 @ffi.def_extern()
 def pn_pyref_incref(obj):
@@ -443,9 +450,11 @@ def pn_condition_get_description(cond):
 def pn_error_text(error):
     return utf82string(lib.pn_error_text(error))
 
+
 # pn_data bindings
 def pn_data_lookup(data, name):
     return lib.pn_data_lookup(data, string2utf8(name))
+
 
 def pn_data_put_decimal128(data, d):
     return lib.pn_data_put_decimal128(data, py2decimal128(d))
@@ -465,6 +474,7 @@ def pn_data_put_string(data, s):
 
 def pn_data_put_symbol(data, s):
     return lib.pn_data_put_symbol(data, string2bytes(s, 'ascii'))
+
 
 def pn_data_get_decimal128(data):
     return decimal1282py(lib.pn_data_get_decimal128(data))
@@ -544,6 +554,7 @@ def pn_receiver(session, name):
 
 def pn_delivery(link, tag):
     return lib.pn_delivery(link, py2bytes(tag))
+
 
 def pn_link_name(link):
     return utf82string(lib.pn_link_name(link))
@@ -644,6 +655,7 @@ def pn_message_set_reply_to_group_id(message, value):
 def pn_transport_log(transport, message):
     lib.pn_transport_log(transport, string2utf8(message))
 
+
 def pn_transport_get_user(transport):
     return utf82string(lib.pn_transport_get_user(transport))
 
@@ -671,6 +683,7 @@ def pn_sasl_config_name(sasl, name):
 def pn_sasl_config_path(sasl, path):
     lib.pn_sasl_config_path(sasl, string2utf8(path))
 
+
 def pn_ssl_domain_set_credentials(domain, cert_file, key_file, password):
     return lib.pn_ssl_domain_set_credentials(domain, string2utf8(cert_file), string2utf8(key_file), string2utf8(password))
 
@@ -692,7 +705,7 @@ def pn_ssl_get_remote_subject_subfield(ssl, subfield_name):
 
 
 def pn_ssl_get_remote_subject(ssl):
-    return  utf82string(lib.pn_ssl_get_remote_subject(ssl))
+    return utf82string(lib.pn_ssl_get_remote_subject(ssl))
 
 
 # int pn_ssl_domain_set_protocols(pn_ssl_domain_t *domain, const char *protocols);
@@ -727,7 +740,7 @@ def pn_ssl_get_protocol_name(ssl, size):
 def pn_ssl_get_cert_fingerprint(ssl, fingerprint_len, hash_alg):
     buff = ffi.new('char[]', fingerprint_len)
     r = lib.pn_ssl_get_cert_fingerprint(ssl, buff, fingerprint_len, hash_alg)
-    if r==PN_OK:
+    if r == PN_OK:
         return utf82string(buff)
     return None
 
@@ -736,10 +749,10 @@ def pn_ssl_get_cert_fingerprint(ssl, fingerprint_len, hash_alg):
 def pn_ssl_get_peer_hostname(ssl, size):
     buff = ffi.new('char[]', size)
     r = lib.pn_ssl_get_peer_hostname_py(ssl, buff, size)
-    if r==PN_OK:
+    if r == PN_OK:
         return r, utf82string(buff)
     return r, None
 
+
 def pn_ssl_set_peer_hostname(ssl, hostname):
     return lib.pn_ssl_set_peer_hostname(ssl, string2utf8(hostname))
-

@@ -167,8 +167,8 @@ class ExceptionTest(Test):
     def test_link_set(self):
         c = self.container.connection()
         s = c.session()
-        l = s.sender("xxx")
-        l.handler = BarfOnInit()
+        sender = s.sender("xxx")
+        sender.handler = BarfOnInit()
         try:
             self.container.run()
             assert False, "expected to barf"
@@ -178,9 +178,9 @@ class ExceptionTest(Test):
     def test_link_add(self):
         c = self.container.connection()
         s = c.session()
-        l = s.sender("xxx")
-        l.handler = object()
-        l.handler.add(BarfOnInit())
+        sender = s.sender("xxx")
+        sender.handler = object()
+        sender.handler.add(BarfOnInit())
         try:
             self.container.run()
             assert False, "expected to barf"
@@ -497,34 +497,30 @@ class ContainerTest(Test):
     def test_container_id_1(self):
         server_handler = ContainerTest._ServerHandler("localhost")
         container = Container(server_handler, container_id='container123')
-        conn = container.connect(url="localhost:%s" % (server_handler.port),
-                                 handler=ContainerTest._ClientHandler(),)
+        container.connect(url=f"localhost:{server_handler.port}", handler=ContainerTest._ClientHandler())
         container.run()
         assert server_handler.peer_container_id == 'container123', server_handler.peer_container_id
 
     def test_container_id_2(self):
         server_handler = ContainerTest._ServerHandler("localhost")
         container = Container(server_handler, container_id='Not_this_id')
-        conn = container.connect(url="localhost:%s" % (server_handler.port),
-                                 handler=ContainerTest._ClientHandler(),
-                                 container_id='container456')
+        container.connect(url=f"localhost:{server_handler.port}", handler=ContainerTest._ClientHandler(),
+                          container_id='container456')
         container.run()
         assert server_handler.peer_container_id == 'container456', server_handler.peer_container_id
 
     def test_container_id_3(self):
         server_handler = ContainerTest._ServerHandler("localhost")
-        container = Container(server_handler, container_id = None)
-        conn = container.connect(url="localhost:%s" % (server_handler.port),
-                                 handler=ContainerTest._ClientHandler())
+        container = Container(server_handler, container_id=None)
+        container.connect(url=f"localhost:{server_handler.port}", handler=ContainerTest._ClientHandler())
         container.run()
         assert server_handler.peer_container_id != '', server_handler.peer_container_id
 
     def test_container_id_4(self):
         server_handler = ContainerTest._ServerHandler("localhost")
         container = Container(server_handler)
-        conn = container.connect(url="localhost:%s" % (server_handler.port),
-                                 handler=ContainerTest._ClientHandler(),
-                                 container_id=None)
+        container.connect(url=f"localhost:{server_handler.port}", handler=ContainerTest._ClientHandler(),
+                          container_id=None)
         container.run()
         assert server_handler.peer_container_id != '', server_handler.peer_container_id
 
@@ -532,9 +528,8 @@ class ContainerTest(Test):
         ensureCanTestExtendedSASL()
         server_handler = ContainerTest._ServerHandler("localhost")
         container = Container(server_handler)
-        conn = container.connect(url="localhost:%s" % (server_handler.port),
-                                 handler=ContainerTest._ClientHandler(),
-                                 virtual_host="a.b.c.org")
+        container.connect(url=f"localhost:{server_handler.port}", handler=ContainerTest._ClientHandler(),
+                          virtual_host="a.b.c.org")
         container.run()
         assert server_handler.peer_hostname == "a.b.c.org", server_handler.peer_hostname
 
@@ -544,9 +539,8 @@ class ContainerTest(Test):
         # Python Container.
         server_handler = ContainerTest._ServerHandler("localhost")
         container = Container(server_handler)
-        conn = container.connect(url="localhost:%s" % (server_handler.port),
-                                 handler=ContainerTest._ClientHandler(),
-                                 virtual_host="")
+        container.connect(url=f"localhost:{server_handler.port}", handler=ContainerTest._ClientHandler(),
+                          virtual_host="")
         container.run()
         assert server_handler.peer_hostname is None, server_handler.peer_hostname
 
@@ -583,7 +577,7 @@ class ContainerTest(Test):
             event.connection.close()
 
         def on_transport_error(self, event):
-            assert self.connect_failed == False
+            assert self.connect_failed is False
             self.connect_failed = True
             self.server_handler.listen(event.container)
 
@@ -702,6 +696,7 @@ class ContainerTest(Test):
         container.run()
         assert server_handler.closed
         assert client_handler.closed
+
 
 class SelectorTest(Test):
     """Test the Selector"""

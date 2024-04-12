@@ -18,11 +18,9 @@
 #
 
 import atexit
-import functools
 import os
 import sys
 import time
-import weakref
 
 try:
     import opentracing
