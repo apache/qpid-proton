@@ -26,7 +26,7 @@ import sys
 import time
 import traceback
 import types
-import cgi
+import html
 from fnmatch import fnmatchcase as match
 from logging import getLogger, StreamHandler, Formatter, Filter, \
     WARN, DEBUG, ERROR, INFO
@@ -235,9 +235,9 @@ class JunitXmlStyleReporter:
         module = '.'.join(parts[0:-1])
         self.f.write('<testcase classname="%s" name="%s" time="%f">\n' % (module, method, result.time))
         if result.failed:
-            escaped_type = cgi.escape(str(result.exception_type))
-            escaped_message = cgi.escape(str(result.exception_message))
-            self.f.write('<failure type="%s" message="%s">\n' % (escaped_type, escaped_message))
+            escaped_type = html.escape(str(result.exception_type), quote=True)
+            escaped_message = html.escape(str(result.exception_message), quote=True)
+            self.f.write(f'<failure type="{escaped_type}" message="{escaped_message}">\n')
             self.f.write('<![CDATA[\n')
             self.f.write(result.formatted_exception_trace)
             self.f.write(']]>\n')
