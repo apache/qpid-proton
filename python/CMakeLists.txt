@@ -149,19 +149,13 @@ add_custom_command(OUTPUT ./tox.ini
 # Make python source and binary packages if we have prerequisites
 check_python_module("setuptools" SETUPTOOLS_MODULE_FOUND)
 check_python_module("wheel" WHEEL_MODULE_FOUND)
+check_python_module("build" BUILD_MODULE_FOUND)
 check_python_module("cffi" CFFI_MODULE_FOUND)
-if (SETUPTOOLS_MODULE_FOUND)
-  set (pydist_cmds sdist)
-  if (WHEEL_MODULE_FOUND AND CFFI_MODULE_FOUND)
-    set (pydist_cmds sdist bdist_wheel --py-limited-api=cp38)
-  endif()
-endif()
-
-if (pydist_cmds)
+if (BUILD_MODULE_FOUND AND SETUPTOOLS_MODULE_FOUND AND WHEEL_MODULE_FOUND AND CFFI_MODULE_FOUND)
   add_custom_command(OUTPUT .timestamp.dist
     DEPENDS pysrc_copied
     COMMAND ${CMAKE_COMMAND} -E remove -f .timestamp.dist
-    COMMAND ${Python_EXECUTABLE} setup.py ${pydist_cmds}
+    COMMAND ${Python_EXECUTABLE} -m build -n
     COMMAND ${CMAKE_COMMAND} -E touch .timestamp.dist)
   add_custom_target(pydist ALL DEPENDS .timestamp.dist)
 endif ()
