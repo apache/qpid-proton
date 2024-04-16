@@ -1,6 +1,7 @@
 include VERSION.txt
 include ext_build.py
 include cproton.h
+include cproton_ext.c
 include cproton.py
 graft docs
 graft src

@@ -6,7 +6,7 @@ steps:
     architecture: $(PythonArch)
 - script: |
     python -m pip install --user --upgrade pip
-    python -m pip install --user --upgrade setuptools wheel tox flake8
+    python -m pip install --user --upgrade -r python/ci_requirements.txt
   name: InstallPythonModules
 - task: CMake@1
   name: CMakeConfigure

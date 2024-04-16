@@ -1,4 +1,5 @@
 pip
+build
 setuptools
 wheel
 flake8

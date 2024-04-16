@@ -55,6 +55,7 @@ set(py_dist_files
     MANIFEST.in
     ext_build.py
     cproton.h
+    cproton_ext.c
     cproton.py
     docs/conf.py
     docs/index.rst
