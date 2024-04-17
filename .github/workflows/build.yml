@@ -25,21 +25,12 @@ jobs:
       PKG_CONFIG_PATH: ${{matrix.pkg_config_path}}
       VCPKG_DEFAULT_TRIPLET: x64-windows
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Create Build and Install directories
       run: mkdir -p "${BuildDir}" "${InstallPrefix}"
       shell: bash
-
-    # PROTON-2295 avoid using go 1.15.3 on macOS, which is broken
-    - if: runner.os == 'macOS'
-      name: Setup go (Mac OS)
-      uses: actions/setup-go@v3
-      with:
-        go-version: '^1.15.4'
-
-    # PROTON-2644 upgrading setup-python to v4 breaks cmake discovery of openssl on macOS
     - name: Setup python
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: 3.9
         architecture: x64
@@ -74,15 +65,20 @@ jobs:
       run: cmake --build "${BuildDir}" --config ${BuildType} -t install
       shell: bash
     - name: Upload Install
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: qpid_proton_pkg_${{matrix.os}}_${{matrix.buildType}}
         path: ${{env.InstallPrefix}}
-    - name: Upload python packages
-      uses: actions/upload-artifact@v3
+    - name: Upload python source
+      uses: actions/upload-artifact@v4
       with:
-        name: python-pkgs
-        path: ${{env.BuildDir}}/python/dist
+        name: python-src_${{matrix.os}}
+        path: ${{env.BuildDir}}/python/dist/*.tar.gz
+    - name: Upload python wheel
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-wheel_${{matrix.os}}
+        path: ${{env.BuildDir}}/python/dist/*.whl
     - id: ctest
       name: ctest
       working-directory: ${{env.BuildDir}}
@@ -90,12 +86,12 @@ jobs:
       shell: bash
     - name: Upload Test results
       if: always() && (steps.ctest.outcome == 'failure' || steps.ctest.outcome == 'success')
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Test_Results_${{matrix.os}}_${{matrix.buildType}}
         path: ${{env.BuildDir}}/Testing/**/*.xml
     - name: Upload Python & C build directories on failure
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: Debug-python-C-BLD_${{matrix.os}}_${{matrix.buildType}}
