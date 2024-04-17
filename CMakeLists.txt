@@ -42,7 +42,7 @@ endif ()
 if (NOT DEFINED Python_FIND_FRAMEWORK)
   set(Python_FIND_FRAMEWORK "LAST")
 endif ()
-find_package(Python 3.8
+find_package(Python 3.9
         REQUIRED COMPONENTS Interpreter
         OPTIONAL_COMPONENTS Development)
 
