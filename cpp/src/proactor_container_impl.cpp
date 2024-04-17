@@ -542,16 +542,9 @@ void container::impl::run_timer_jobs() {
     // NB. We copied the due tasks in reverse order so execute from end
 
     for (int i = tasks.size()-1; i>=0; --i) {
-        const auto& task = tasks[i];
-        bool active;
-
-        {
-          GUARD(deferred_lock_);
-          // NB. erase returns the number of items erased
-          active = is_active_.erase(task.w_handle);
-        }
-        if (active) {
-            task.task();
+        if(is_active_.count(tasks[i].w_handle)) {
+            tasks[i].task();
+            is_active_.erase(tasks[i].w_handle);
         }
     }
 }
