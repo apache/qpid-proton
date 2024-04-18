@@ -49,7 +49,6 @@ set (pysrc
 # extra files included in the source distribution
 set(py_dist_files
     setup.py
-    setup.cfg
     pyproject.toml
     README.rst
     MANIFEST.in
