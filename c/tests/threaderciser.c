@@ -423,7 +423,7 @@ static bool handle(global *g, pn_event_t *e) {
      if (lctx->pn_listener) {
        pn_netaddr_str(pn_listener_addr(lctx->pn_listener), lctx->addr, sizeof(lctx->addr));
      }
-     debug("[%p] listening on %s", lctx->pn_listener, lctx->addr);
+     debug("[%p] listening on %s", (void *)lctx->pn_listener, lctx->addr);
      pthread_mutex_unlock(&lctx->lock);
      cpool_connect(&g->connections_active, g->proactor, lctx->addr); /* Initial connection */
      break;
