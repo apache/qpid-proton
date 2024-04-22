@@ -275,7 +275,6 @@ TEST_CASE("proactor_raw_connection_wake") {
   pn_proactor_raw_connect(pn_listener_proactor(l), rc, addr.c_str());
 
 
-  REQUIRE_RUN(p, PN_LISTENER_ACCEPT);
   REQUIRE_RUN(p, PN_RAW_CONNECTION_NEED_READ_BUFFERS);
   REQUIRE_RUN(p, PN_RAW_CONNECTION_NEED_READ_BUFFERS);
   CHECK(pn_proactor_get(p) == NULL); /* idle */

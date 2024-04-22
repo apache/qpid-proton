@@ -810,6 +810,7 @@ static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_con
   pc->wbuf_current = NULL;
   pc->hog_count = 0;
   pc->batch.next_event = pconnection_batch_next;
+  pc->first_schedule = false;
 
   if (server) {
     pn_transport_set_server(pc->driver.transport);
@@ -1122,6 +1123,7 @@ static void write_flush(pconnection_t *pc) {
 
 static void pconnection_connected_lh(pconnection_t *pc);
 static void pconnection_maybe_connect_lh(pconnection_t *pc);
+static void pconnection_first_connect_lh(pconnection_t *pc);
 
 static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events, bool sched_ready, bool topup) {
   bool waking = false;
@@ -1138,6 +1140,21 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
     events = 0;
   }
   if (sched_ready) schedule_done(&pc->task);
+
+  if (pc->first_schedule) {
+    // Normal case: resumed logic from pn_proactor_connect2.
+    // But possible tie: pn_connection_wake() or pn_proactor_disconnect().
+    // Respect the latter.  Check former after connect attempt.
+    pc->first_schedule = false;
+    assert(!topup && !events);
+    if (!pc->queued_disconnect) {
+      pconnection_first_connect_lh(pc);  // Drops and reaquires lock.  Wake or disconnect state may change.
+      if (pc->psocket.epoll_io.fd != -1 && !pc->queued_disconnect && !pni_task_wake_pending(&pc->task)) {
+        unlock(&pc->task.mutex);
+        return NULL;
+      }
+    }
+  }
 
   if (topup) {
     // Only called by the batch owner.  Does not loop, just "tops up"
@@ -1396,6 +1413,7 @@ static void pconnection_maybe_connect_lh(pconnection_t *pc) {
 
 int pgetaddrinfo(const char *host, const char *port, int flags, struct addrinfo **res)
 {
+  // NOTE: getaddrinfo can block on DNS lookup (PROTON-2812).
   struct addrinfo hints = { 0 };
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
@@ -1416,7 +1434,23 @@ bool schedule_if_inactive(pn_proactor_t *p) {
   return false;
 }
 
+// Call from pconnection_process with task lock held.
+static void pconnection_first_connect_lh(pconnection_t *pc) {
+  unlock(&pc->task.mutex);
+  // TODO: move this step to a separate worker thread that scales in response to multiple blocking DNS lookups.
+  int gai_error = pgetaddrinfo(pc->host, pc->port, 0, &pc->addrinfo);
+  lock(&pc->task.mutex);
+
+  if (!gai_error) {
+    pc->ai = pc->addrinfo;
+    pconnection_maybe_connect_lh(pc); /* Start connection attempts */
+  } else {
+    psocket_gai_error(&pc->psocket, gai_error, "connect to ");
+  }
+}
+
 void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
+  // Called from an arbitrary thread.  Do setup prior to getaddrinfo, then switch to a worker thread.
   size_t addrlen = strlen(addr);
   pconnection_t *pc = (pconnection_t*) malloc(sizeof(pconnection_t)+addrlen);
   assert(pc); // TODO: memory safety
@@ -1430,27 +1464,8 @@ void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *
   lock(&pc->task.mutex);
   proactor_add(&pc->task);
   pn_connection_open(pc->driver.connection); /* Auto-open */
-
-  bool notify = false;
-
-  if (pc->disconnected) {
-    notify = schedule(&pc->task);    /* Error during initialization */
-  } else {
-    int gai_error = pgetaddrinfo(pc->host, pc->port, 0, &pc->addrinfo);
-    if (!gai_error) {
-      pn_connection_open(pc->driver.connection); /* Auto-open */
-      pc->ai = pc->addrinfo;
-      pconnection_maybe_connect_lh(pc); /* Start connection attempts */
-      if (pc->disconnected) notify = schedule(&pc->task);
-    } else {
-      psocket_gai_error(&pc->psocket, gai_error, "connect to ");
-      notify = schedule(&pc->task);
-      lock(&p->task.mutex);
-      notify |= schedule_if_inactive(p);
-      unlock(&p->task.mutex);
-    }
-  }
-  /* We need to issue INACTIVE on immediate failure */
+  pc->first_schedule = true; // Resume connection setup when next scheduled.
+  bool notify = schedule(&pc->task);
   unlock(&pc->task.mutex);
   if (notify) notify_poller(p);
 }
