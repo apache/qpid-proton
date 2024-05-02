@@ -26,10 +26,10 @@ typedef unsigned long int uint32_t;
 typedef long int int32_t;
 typedef unsigned long long int uint64_t;
 typedef long long int int64_t;
-#if UINTPTR_SIZE==8
-typedef unsigned long long int uintptr_t;
+#if INTPTR_SIZE==8
+typedef long long int intptr_t;
 #else
-typedef unsigned long int uintptr_t;
+typedef long int intptr_t;
 #endif
 
 /* Parse these interface header files to generate APIs for script languages */

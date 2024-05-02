@@ -56,7 +56,7 @@ Keep preprocessor directives and macro expansions in the normal header section.
 %}
 
 /* Treat pn_handle_t like uintptr_t - syntactically it is a C void* but really it's just an int */
-%apply uintptr_t { pn_handle_t };
+%apply intptr_t { pn_handle_t };
 
 %typemap(in) pn_bytes_t {
   if ($input == Qnil) {

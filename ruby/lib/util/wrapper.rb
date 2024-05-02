@@ -111,7 +111,7 @@ module Qpid::Proton
         end
         return result
       end
-      RBCTX = self.hash.to_i
+      RBCTX = self.hash
     end
 
     # @private
