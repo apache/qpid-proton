@@ -188,8 +188,6 @@ if (BUILD_MODULE_FOUND AND
 endif ()
 
 if (BUILD_TESTING)
-  add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
-
   # python test: python/tests/proton-test
   set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
   set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
@@ -222,7 +220,7 @@ if (BUILD_TESTING)
     add_custom_command(
       OUTPUT .timestamp.test_env
       COMMAND ${Python_EXECUTABLE} -m venv ${pytest_venv}
-      COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi setuptools
+      COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi
       COMMAND ${CMAKE_COMMAND} -E env
         "CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}"
         "QPID_PROTON_CORE_TARGET_DIR=$<TARGET_FILE_DIR:qpid-proton-core>"
@@ -232,7 +230,8 @@ if (BUILD_TESTING)
       COMMAND ${CMAKE_COMMAND} -E touch .timestamp.test_env
       BYPRODUCTS ${pytest_executable}
     )
-  else()
+  add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
+  elseif(CFFI_MODULE_FOUND)
     set(pytest_executable "${Python_EXECUTABLE}")
     set(pytest_venv "${py_bin}")
     add_custom_command(
@@ -245,82 +244,91 @@ if (BUILD_TESTING)
       COMMAND ${CMAKE_COMMAND} -E touch .timestamp.test_env
       DEPENDS pysrc_copied qpid-proton-core
     )
+  add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
   endif()
 
-  # If we are on windows copy the qpid-proton-core dll to the test directory so we can find it easily
-  if (WIN32)
-    add_custom_command(
-      OUTPUT .timestamp.test_env
-      APPEND
-      COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:qpid-proton-core>" .
-    )
-  endif()
 
-  pn_add_test(
-    INTERPRETED
-    NAME python-test
-    PREPEND_ENVIRONMENT
-      "PATH=${py_path}"
-      "PYTHONPATH=."
-      "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-    COMMAND ${pytest_executable} ${python_coverage_options} -- "${py_tests}/proton-test")
-  set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
-  set(PYTHON_TEST_COMMAND "-m" "unittest")
-  pn_add_test(
-    INTERPRETED
-    NAME python-integration-test
-    PREPEND_ENVIRONMENT
-      "PATH=${py_path}"
-      "PYTHONPATH=.:${py_pythonpath}"
-      "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-    COMMAND
-      ${pytest_executable}
-        ${python_coverage_options}
-        ${PYTHON_TEST_COMMAND} discover -v -s "${py_tests}/integration")
-endif(BUILD_TESTING)
+  if (TARGET pytest_cffi)
+    # If we are on windows copy the qpid-proton-core dll to the test directory so we can find it easily
+    if (WIN32)
+      add_custom_command(
+        OUTPUT .timestamp.test_env
+        APPEND
+        COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:qpid-proton-core>" .
+      )
+    endif()
 
-check_python_module("flake8" FLAKE_MODULE_FOUND)
-if (FLAKE_MODULE_FOUND)
-  option(ENABLE_PEP8_TEST "Enable pep8 python testing with flake8" ON)
-  if (ENABLE_PEP8_TEST)
     pn_add_test(
       INTERPRETED
-      NAME python-pep8-test
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      COMMAND ${Python_EXECUTABLE} -m flake8)
-  endif ()
-endif ()
+      NAME python-test
+      PREPEND_ENVIRONMENT
+        "PATH=${py_path}"
+        "PYTHONPATH=."
+        "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+      COMMAND ${pytest_executable} ${python_coverage_options} -- "${py_tests}/proton-test")
+    set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
-check_python_module("tox" TOX_MODULE_FOUND)
-if (NOT TOX_MODULE_FOUND)
-  message(STATUS "The tox tool is not available; skipping the python-tox-tests")
-else ()
-  option(ENABLE_TOX_TEST "Enable multi-version python testing with TOX" ON)
+    set(PYTHON_TEST_COMMAND "-m" "unittest")
+    pn_add_test(
+      INTERPRETED
+      NAME python-integration-test
+      PREPEND_ENVIRONMENT
+        "PATH=${py_path}"
+        "PYTHONPATH=.:${py_pythonpath}"
+        "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+      COMMAND
+        ${pytest_executable}
+          ${python_coverage_options}
+          ${PYTHON_TEST_COMMAND} discover -v -s "${py_tests}/integration")
+  endif()
 
-  set(TOX_ENVLIST "" CACHE STRING "List of python environments for TOX tests" )
-  mark_as_advanced(TOX_ENVLIST)
-
-  if (ENABLE_TOX_TEST)
-    if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-      message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
-    else ()
-      add_custom_target(pytest_tox ALL DEPENDS pydist tox.ini)
+  check_python_module("flake8" FLAKE_MODULE_FOUND)
+  if (FLAKE_MODULE_FOUND)
+    option(ENABLE_PEP8_TEST "Enable pep8 python testing with flake8" ON)
+    if (ENABLE_PEP8_TEST)
       pn_add_test(
         INTERPRETED
-        NAME python-tox-test
-        WORKING_DIRECTORY ${py_dist_dir}
-        PREPEND_ENVIRONMENT
-          "PATH=${py_path}"
-          "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-          "TOXENV=${TOX_ENVLIST}"
-          "PY_TEST_DIR=${CMAKE_CURRENT_SOURCE_DIR}/tests"
-        COMMAND ${Python_EXECUTABLE} -m tox)
-      set_tests_properties(python-tox-test
-        PROPERTIES
-        REQUIRED_FILES tox.ini
-        PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
-        FAIL_REGULAR_EXPRESSION "ERROR:.*commands failed")
+        NAME python-pep8-test
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND ${Python_EXECUTABLE} -m flake8)
     endif ()
-  endif (ENABLE_TOX_TEST)
-endif (NOT TOX_MODULE_FOUND)
+  endif ()
+
+  check_python_module("tox" TOX_MODULE_FOUND)
+  option(ENABLE_TOX_TEST "Enable multi-version python testing with TOX" ${TOX_MODULE_FOUND})
+  set (DO_TOX_TEST ${ENABLE_TOX_TEST})
+
+  if (DO_TOX_TEST AND (NOT TOX_MODULE_FOUND OR NOT TARGET pydist))
+    message(STATUS "The tox prerequisites not available; skipping the python-tox-tests")
+    set (DO_TOX_TEST Off)
+  endif ()
+
+  if (DO_TOX_TEST AND CMAKE_BUILD_TYPE MATCHES "Coverage")
+    message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
+    set (DO_TOX_TEST Off)
+  endif ()
+
+  if (DO_TOX_TEST)
+    set(TOX_ENVLIST "" CACHE STRING "List of python environments for TOX tests" )
+    mark_as_advanced(TOX_ENVLIST)
+
+    add_custom_target(pytest_tox ALL DEPENDS pydist tox.ini)
+    pn_add_test(
+      INTERPRETED
+      NAME python-tox-test
+      WORKING_DIRECTORY ${py_dist_dir}
+      PREPEND_ENVIRONMENT
+        "PATH=${py_path}"
+        "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+        "TOXENV=${TOX_ENVLIST}"
+        "PY_TEST_DIR=${CMAKE_CURRENT_SOURCE_DIR}/tests"
+      COMMAND ${Python_EXECUTABLE} -m tox)
+    set_tests_properties(python-tox-test
+      PROPERTIES
+      REQUIRED_FILES tox.ini
+      PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
+      FAIL_REGULAR_EXPRESSION "ERROR:.*commands failed")
+  endif (DO_TOX_TEST)
+
+endif(BUILD_TESTING)
