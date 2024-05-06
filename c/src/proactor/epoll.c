@@ -1123,7 +1123,7 @@ static void write_flush(pconnection_t *pc) {
 
 static void pconnection_connected_lh(pconnection_t *pc);
 static void pconnection_maybe_connect_lh(pconnection_t *pc);
-static void pconnection_first_connect_lh(pconnection_t *pc);
+static bool pconnection_first_connect_lh(pconnection_t *pc);
 
 static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events, bool sched_ready, bool topup) {
   bool waking = false;
@@ -1142,14 +1142,10 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
   if (sched_ready) schedule_done(&pc->task);
 
   if (pc->first_schedule) {
-    // Normal case: resumed logic from pn_proactor_connect2.
-    // But possible tie: pn_connection_wake() or pn_proactor_disconnect().
-    // Respect the latter.  Check former after connect attempt.
     pc->first_schedule = false;
     assert(!topup && !events);
     if (!pc->queued_disconnect) {
-      pconnection_first_connect_lh(pc);  // Drops and reaquires lock.  Wake or disconnect state may change.
-      if (pc->psocket.epoll_io.fd != -1 && !pc->queued_disconnect && !pni_task_wake_pending(&pc->task)) {
+      if (pconnection_first_connect_lh(pc)) {
         unlock(&pc->task.mutex);
         return NULL;
       }
@@ -1435,7 +1431,8 @@ bool schedule_if_inactive(pn_proactor_t *p) {
 }
 
 // Call from pconnection_process with task lock held.
-static void pconnection_first_connect_lh(pconnection_t *pc) {
+// Return true if the socket is connecting and there are no Proton events to deliver.
+static bool pconnection_first_connect_lh(pconnection_t *pc) {
   unlock(&pc->task.mutex);
   // TODO: move this step to a separate worker thread that scales in response to multiple blocking DNS lookups.
   int gai_error = pgetaddrinfo(pc->host, pc->port, 0, &pc->addrinfo);
@@ -1444,9 +1441,12 @@ static void pconnection_first_connect_lh(pconnection_t *pc) {
   if (!gai_error) {
     pc->ai = pc->addrinfo;
     pconnection_maybe_connect_lh(pc); /* Start connection attempts */
+    if (pc->psocket.epoll_io.fd != -1 && !pc->queued_disconnect && !pni_task_wake_pending(&pc->task))
+      return true;
   } else {
     psocket_gai_error(&pc->psocket, gai_error, "connect to ");
   }
+  return false;
 }
 
 void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
