@@ -17,6 +17,11 @@
 # under the License.
 #
 
+# Proton cpp requires the proactor library so don't build if that's not present
+if (NOT TARGET qpid-proton-proactor)
+  return()
+endif()
+
 include(CMakeDependentOption)
 enable_language(CXX)
 
