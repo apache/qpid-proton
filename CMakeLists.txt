@@ -85,7 +85,7 @@ if (CMAKE_CXX_COMPILER)
 
   enable_language(CXX)
 
-  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 

@@ -10,22 +10,22 @@ Dependencies
 Cross-platform dependencies
 
   - CMake 3.16+
-  - Python 3.8+ (required to build core C library)
-  - Swig 1.3+ (for the bindings)
+  - Python 3.9+ (required to build core C library)
+  - Swig 1.3+ (for the Ruby binding)
   - Ruby 1.9+ (for the Ruby binding)
   - Go 1.11+ (for the Go binding)
 
 Linux dependencies
 
   - GNU Make 3.81+
-  - GCC 4.8.4+
+  - GCC 9+
   - Cyrus SASL 2.1+ (for SASL support)
   - OpenSSL 1.0+ (for SSL support)
   - JsonCpp 1.8+ for C++ connection configuration file support
 
 Windows dependencies
 
-  - Visual Studio 2015 or newer (regular or C++ Express)
+  - Visual Studio 2019 or newer (Community or Enterprise Editions)
 
 CMake (Linux)
 -------------
@@ -60,7 +60,7 @@ The following prerequisites are required to do a full build on
 Debian-based systems (Ubuntu).  If you do not wish to build a given
 language binding you can omit the dev package for that language.
 
-    # Required dependencies 
+    # Required dependencies
     $ apt-get install gcc g++ cmake cmake-curses-gui uuid-dev
 
     # Dependencies needed for SSL support
@@ -107,8 +107,8 @@ Studio and used to build the Proton library.
 
 The following packages must be installed:
 
-  - Visual Studio 2017 or newer (Community or Enterprise Editions)
-  - Python (www.python.org)
+  - Visual Studio 2019 or newer (Community or Enterprise Editions)
+  - Python 3.9 or newer (www.python.org)
   - CMake (www.cmake.org)
 
 Additional packages are required for language bindings:
@@ -130,9 +130,6 @@ this `INSTALL.md` file:
     > cmake ..
 
 If CMake doesn't guess things correctly, useful additional arguments are:
-
-    -G "Visual Studio 15 2017"
-or
 
     -G "Visual Studio 16 2019"
 or

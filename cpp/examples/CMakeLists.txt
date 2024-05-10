@@ -21,10 +21,8 @@ cmake_minimum_required (VERSION 3.16)
 project(ProtonCppExamples C CXX)
 
 find_package(ProtonCpp REQUIRED)
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-find_package(Threads REQUIRED)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Single-threaded examples
@@ -51,7 +49,9 @@ foreach(example
     ssl_client_cert
     encode_decode
     scheduled_send
-    service_bus)
+    service_bus
+    multithreaded_client
+    multithreaded_client_flow_control)
   add_executable(${example} ${example}.cpp)
   target_link_libraries(${example} Proton::cpp)
 endforeach()
@@ -63,11 +63,3 @@ if (ENABLE_OPENTELEMETRYCPP)
     target_link_libraries(${example} Proton::cpp opentelemetry-cpp::trace opentelemetry-cpp::otlp_http_exporter)
   endforeach()
 endif()
-
-# Examples that use threads directly
-foreach(example
-    multithreaded_client
-    multithreaded_client_flow_control)
-  add_executable(${example} ${example}.cpp)
-  target_link_libraries(${example} Proton::cpp Threads::Threads)
-endforeach()
