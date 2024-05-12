@@ -238,6 +238,7 @@ typedef struct pconnection_t {
   bool server;                /* accept, not connect */
   bool tick_pending;
   bool queued_disconnect;     /* deferred from pn_proactor_disconnect() */
+  bool first_schedule;
   pn_condition_t *disconnect_condition;
   // Following values only changed by (sole) working task:
   uint32_t current_arm;  // active epoll io events

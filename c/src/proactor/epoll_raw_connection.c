@@ -52,6 +52,8 @@ struct praw_connection_t {
   bool disconnected;
   bool hup_detected;
   bool read_check;
+  bool first_schedule;
+  char *taddr;
 };
 
 static void psocket_error(praw_connection_t *rc, int err, const char* msg) {
@@ -145,6 +147,8 @@ static void praw_connection_init(praw_connection_t *prc, pn_proactor_t *p, pn_ra
 
   prc->connected = false;
   prc->disconnected = false;
+  prc->first_schedule = false;
+  prc->taddr = NULL;
   prc->batch.next_event = pni_raw_batch_next;
 
   pmutex_init(&prc->rearm_mutex);
@@ -163,6 +167,7 @@ static void praw_connection_cleanup(praw_connection_t *prc) {
     task_finalize(&prc->task);
     if (prc->addrinfo)
       freeaddrinfo(prc->addrinfo);
+    free(prc->taddr);
     free(prc);
   }
   // else proactor_disconnect logic owns prc and its final free
@@ -177,39 +182,48 @@ pn_raw_connection_t *pn_raw_connection(void) {
   return &conn->raw_connection;
 }
 
+// Call from pconnection_process with task lock held.
+// Return true if the socket is connecting and there are no Proton events to deliver.
+static bool praw_connection_first_connect_lh(praw_connection_t *prc) {
+  const char *host;
+  const char *port;
+
+  unlock(&prc->task.mutex);
+  size_t addrlen = strlen(prc->taddr);
+  char *addr_buf = (char*) alloca(addrlen+1);
+  pni_parse_addr(prc->taddr, addr_buf, addrlen+1, &host, &port);
+  // TODO: move this step to a separate worker thread that scales in response to multiple blocking DNS lookups.
+  int gai_error = pgetaddrinfo(host, port, 0, &prc->addrinfo);
+  lock(&prc->task.mutex);
+
+  if (!gai_error) {
+    prc->ai = prc->addrinfo;
+    praw_connection_maybe_connect_lh(prc); /* Start connection attempts */
+    if (prc->psocket.epoll_io.fd != -1 && !pni_task_wake_pending(&prc->task))
+      return true;
+  } else {
+    psocket_gai_error(prc, gai_error, "connect to ", prc->taddr);
+  }
+  return false;
+}
+
 void pn_proactor_raw_connect(pn_proactor_t *p, pn_raw_connection_t *rc, const char *addr) {
+  // Called from an arbitrary thread.  Do setup prior to getaddrinfo, then switch to a worker thread.
   assert(rc);
   praw_connection_t *prc = containerof(rc, praw_connection_t, raw_connection);
   praw_connection_init(prc, p, rc);
   // TODO: check case of proactor shutting down
 
   lock(&prc->task.mutex);
-  proactor_add(&prc->task);
-
-  bool notify = false;
-
-  const char *host;
-  const char *port;
   size_t addrlen = strlen(addr);
-  char *addr_buf = (char*) alloca(addrlen+1);
-  pni_parse_addr(addr, addr_buf, addrlen+1, &host, &port);
-
-  int gai_error = pgetaddrinfo(host, port, 0, &prc->addrinfo);
-  if (!gai_error) {
-    prc->ai = prc->addrinfo;
-    praw_connection_maybe_connect_lh(prc); /* Start connection attempts */
-    if (prc->disconnected) notify = schedule(&prc->task);
-  } else {
-    psocket_gai_error(prc, gai_error, "connect to ", addr);
-    prc->disconnected = true;
-    notify = schedule(&prc->task);
-    lock(&p->task.mutex);
-    notify |= schedule_if_inactive(p);
-    unlock(&p->task.mutex);
-  }
-
-  /* We need to issue INACTIVE on immediate failure */
+  prc->taddr = (char*) malloc(addrlen+1);
+  assert(prc->taddr); // TODO: memory safety
+  memcpy(prc->taddr, addr, addrlen+1);
+  prc->first_schedule = true; // Resume connection setup when next scheduled.
+  proactor_add(&prc->task);
+  bool notify = schedule(&prc->task);
   unlock(&prc->task.mutex);
+
   if (notify) notify_poller(p);
 }
 
@@ -394,6 +408,16 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool
   }
   int events = io_events;
   int fd = rc->psocket.epoll_io.fd;
+
+  if (rc->first_schedule) {
+    rc->first_schedule = false;
+    assert(!events); // No socket yet.
+    assert(!rc->connected);
+    if (praw_connection_first_connect_lh(rc)) {
+      unlock(&rc->task.mutex);
+      return NULL;
+    }
+  }
   if (!rc->connected) {
     if (events & (EPOLLHUP | EPOLLERR)) {
       praw_connection_maybe_connect_lh(rc);
@@ -413,6 +437,7 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool
     }
     if (events & EPOLLOUT)
       praw_connection_connected_lh(rc);
+
     unlock(&rc->task.mutex);
     return &rc->batch;
   }
