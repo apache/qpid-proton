@@ -115,6 +115,7 @@ class OutgoingMessageHandler(Handler):
                 self.on_rejected(event)
             elif dlv.remote_state == Delivery.RELEASED or dlv.remote_state == Delivery.MODIFIED:
                 self.on_released(event)
+            self.on_delivery_updated(event)
             if dlv.settled:
                 self.on_settled(event)
                 if self.auto_settle:
@@ -162,6 +163,18 @@ class OutgoingMessageHandler(Handler):
         """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_released', event)
+
+    def on_delivery_updated(self, event: DeliveryEvent):
+        """
+        Called when the remote peer updates the status of a delivery. Note that
+        this will be called even if the more specific disposition update events
+        are also called.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        """
+        if self.delegate is not None:
+            _dispatch(self.delegate, 'on_delivery_updated', event)
 
     def on_settled(self, event: DeliveryEvent):
         """
@@ -911,6 +924,17 @@ class MessagingHandler(Handler, Acking):
         Called when the remote peer releases an outgoing message. Note
         that this may be in response to either the RELEASE or MODIFIED
         state as defined by the AMQP specification.
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        """
+        pass
+
+    def on_delivery_updated(self, event: DeliveryEvent) -> None:
+        """
+        Called when the remote peer updates the status of a delivery. Note that
+        this will be called even if the more specific disposition update events
+        are also called.
 
         :param event: The underlying event object. Use this to obtain further
             information on the event.
