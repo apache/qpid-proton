@@ -50,6 +50,13 @@
 #include <openssl/dh.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
+
+#if OPENSSL_VERSION_PREREQ(3, 0)
+#include <openssl/provider.h>
+#include <openssl/store.h>
+#include <openssl/ui.h>
+#endif
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -607,27 +614,122 @@ void pn_ssl_domain_free( pn_ssl_domain_t *domain )
   }
 }
 
+#if OPENSSL_VERSION_PREREQ(3, 0)
+static int ui_read_string(UI *ui, UI_STRING *uis)
+{
+    return UI_set_result(ui, uis, UI_get0_user_data(ui));
+}
+
+static OSSL_STORE_INFO *pkcs11_provider_get_info( const char *uri, const char *pin, int type )
+{
+  UI_METHOD *ui_method = NULL;
+
+  if (pin) {
+    ui_method = UI_create_method("Pin Reader");
+    if (!ui_method) {
+      ssl_log_error("Failed to set up UI_METHOD");
+      return NULL;
+    }
+    UI_method_set_reader(ui_method, ui_read_string);
+  }
+
+  OSSL_STORE_CTX *store = OSSL_STORE_open_ex(uri, NULL, "provider=pkcs11",
+                                             ui_method, (void *)pin, NULL, NULL, NULL);
+  if (!store) {
+    ssl_log_error("Failed to open store for provider=pkcs11\n");
+    return NULL;
+  }
+
+  for (OSSL_STORE_INFO *info = OSSL_STORE_load(store); info;
+       info = OSSL_STORE_load(store)) {
+    if (type == OSSL_STORE_INFO_get_type(info)) {
+      OSSL_STORE_close(store);
+      return info;
+    }
+    OSSL_STORE_INFO_free(info);
+  }
+
+  OSSL_STORE_close(store);
+  return NULL;
+}
+
+static X509 *read_certificate_pkcs11( const char *uri, const char *key_pass )
+{
+  OSSL_STORE_INFO *info = pkcs11_provider_get_info(uri, key_pass, OSSL_STORE_INFO_CERT);
+  if (!info) return NULL;
+
+  X509 *cert = OSSL_STORE_INFO_get1_CERT(info);
+  OSSL_STORE_INFO_free(info);
+  return cert;
+}
+
+static EVP_PKEY *read_private_key_pkcs11( const char *uri, const char *key_pass )
+{
+  OSSL_STORE_INFO *info = pkcs11_provider_get_info(uri, key_pass, OSSL_STORE_INFO_PKEY);
+  if (!info) return NULL;
+
+  EVP_PKEY *key = OSSL_STORE_INFO_get1_PKEY(info);
+  OSSL_STORE_INFO_free(info);
+  return key;
+}
+#else /* < OpenSSL 3.0 */
+static X509 *read_certificate_pkcs11( const char *uri, const char *key_pass ) {
+  ssl_log_error("pkcs11: URI support requires >= OpenSSL 3.0\n");
+  return NULL
+}
+static EVP_PKEY *read_private_key_pkcs11( const char *uri, const char *key_pass ) {
+  ssl_log_error("pkcs11: URI support requires >= OpenSSL 3.0\n");
+  return NULL
+}
+#endif
+
+static bool is_pkcs11_uri( const char *file_path )
+{
+  return strncmp(file_path, "pkcs11:", sizeof("pkcs11:") - 1) == 0;
+}
 
 int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
                                    const char *certificate_file,
                                    const char *private_key_file,
                                    const char *password)
 {
+  int rc;
+
   if (!domain || !domain->ctx) return -1;
 
-  if (SSL_CTX_use_certificate_chain_file(domain->ctx, certificate_file) != 1) {
-    ssl_log_error("SSL_CTX_use_certificate_chain_file( %s ) failed", certificate_file);
+  if (is_pkcs11_uri(certificate_file)) {
+    X509 *cert = read_certificate_pkcs11(certificate_file, password);
+    if (cert)
+      rc = SSL_CTX_use_certificate(domain->ctx, cert);
+    else
+      rc = -1;
+  } else {
+    rc = SSL_CTX_use_certificate_chain_file(domain->ctx, certificate_file);
+  }
+
+  if (rc != 1) {
+    ssl_log_error("Failed to load certificate %s", certificate_file);
     return -3;
   }
 
-  if (password) {
-    domain->keyfile_pw = pn_strdup(password);  // @todo: obfuscate me!!!
-    SSL_CTX_set_default_passwd_cb(domain->ctx, keyfile_pw_cb);
-    SSL_CTX_set_default_passwd_cb_userdata(domain->ctx, domain->keyfile_pw);
+  if (is_pkcs11_uri(private_key_file)) {
+    EVP_PKEY *pkey = read_private_key_pkcs11(private_key_file, password);
+    if (pkey)
+      rc = SSL_CTX_use_PrivateKey(domain->ctx, pkey);
+    else
+      rc = -1;
+  } else {
+    if (password) {
+      domain->keyfile_pw = pn_strdup(password);  // @todo: obfuscate me!!!
+      SSL_CTX_set_default_passwd_cb(domain->ctx, keyfile_pw_cb);
+      SSL_CTX_set_default_passwd_cb_userdata(domain->ctx, domain->keyfile_pw);
+    }
+
+    rc = SSL_CTX_use_PrivateKey_file(domain->ctx, private_key_file, SSL_FILETYPE_PEM);
   }
 
-  if (SSL_CTX_use_PrivateKey_file(domain->ctx, private_key_file, SSL_FILETYPE_PEM) != 1) {
-    ssl_log_error("SSL_CTX_use_PrivateKey_file( %s ) failed", private_key_file);
+  if (rc != 1) {
+    ssl_log_error("Failed to load private key %s", private_key_file);
     return -4;
   }
 
