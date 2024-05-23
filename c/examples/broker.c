@@ -35,7 +35,13 @@
 /* The ssl-certs subdir must be in the current directory for an ssl-enabled broker */
 #define SSL_PW "tserverpw"
 /* Windows vs. OpenSSL certificates */
-#if defined(_WIN32)
+#if defined(PKCS11_URI)
+#  define SSL_FILE(NAME) PKCS11_URI ";object=" NAME
+#  define PRIVATEKEY(NAME) SSL_FILE(NAME ";type=private")
+#  define CERTIFICATE(NAME) SSL_FILE(NAME ";type=cert")
+#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
+  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME), PRIVATEKEY(NAME), SSL_PW)
+#elif defined(_WIN32)
 #  define SSL_FILE(NAME) "ssl-certs/" NAME
 #  define PRIVATEKEY(NAME) SSL_FILE(NAME "-full.p12")
 #  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
