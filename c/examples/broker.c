@@ -33,17 +33,20 @@
 #include <string.h>
 
 /* The ssl-certs subdir must be in the current directory for an ssl-enabled broker */
-#define SSL_FILE(NAME) "ssl-certs/" NAME
 #define SSL_PW "tserverpw"
 /* Windows vs. OpenSSL certificates */
 #if defined(_WIN32)
+#  define SSL_FILE(NAME) "ssl-certs/" NAME
+#  define PRIVATEKEY(NAME) SSL_FILE(NAME "-full.p12")
 #  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
 #  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, SSL_FILE(NAME "-full.p12"), "", SSL_PW)
+  pn_ssl_domain_set_credentials(DOMAIN, PRIVATEKEY(NAME), "", SSL_PW)
 #else
+#  define SSL_FILE(NAME) "ssl-certs/" NAME
+#  define PRIVATEKEY(NAME) SSL_FILE(NAME "-private-key.pem")
 #  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem")
 #  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME), SSL_FILE(NAME "-private-key.pem"), SSL_PW)
+  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME), PRIVATEKEY(NAME), SSL_PW)
 #endif
 
 /* Simple re-sizable vector that acts as a queue */
@@ -459,7 +462,7 @@ int main(int argc, char **argv) {
   b.ssl_domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
   err = SET_CREDENTIALS(b.ssl_domain, "tserver");
   if (err) {
-    printf("Failed to set up server certificate: %s, private key: %s\n", CERTIFICATE("tserver"), SSL_FILE("tserver-private-key.pem"));
+    printf("Failed to set up server certificate: %s, private key: %s\n", CERTIFICATE("tserver"), PRIVATEKEY("tserver"));
   }
   {
   /* Listen on addr */
