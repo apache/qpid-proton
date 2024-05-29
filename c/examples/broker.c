@@ -329,7 +329,12 @@ static bool handle(broker_t* b, pn_event_t* e, pn_connection_t *c) {
    }
    case PN_LINK_REMOTE_OPEN: {
      pn_link_t *l = pn_event_link(e);
-     if (pn_link_is_sender(l)) {
+     if (pn_terminus_get_type(pn_link_remote_target(l))==PN_COORDINATOR) {
+       pn_condition_t *error = pn_link_condition(l);
+       pn_condition_set_name(error, "amqp:not-implemented");
+       pn_link_close(l);
+       break;
+     } else if (pn_link_is_sender(l)) {
        const char *source = pn_terminus_get_address(pn_link_remote_source(l));
        pn_terminus_set_address(pn_link_source(l), source);
      } else {
