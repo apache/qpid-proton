@@ -34,6 +34,7 @@
 
 #include "proton/connection.h"
 #include "proton/session.h"
+#include "proton/tracker.hpp"
 
 namespace proton {
 

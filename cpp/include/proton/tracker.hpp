@@ -25,6 +25,8 @@
 #include "./binary.hpp"
 #include "./internal/export.hpp"
 #include "./transfer.hpp"
+#include "./messaging_handler.hpp"
+#include "./transaction.hpp"
 
 /// @file
 /// @copybrief proton::tracker
@@ -43,6 +45,7 @@ class tracker : public transfer {
     tracker(pn_delivery_t* d);
     /// @endcond
 
+    Transaction *transaction;
   public:
     /// Create an empty tracker.
     tracker() = default;
@@ -52,6 +55,12 @@ class tracker : public transfer {
 
     /// Get the tag for this tracker.
     PN_CPP_EXTERN binary tag() const;
+
+   // set_transaction here is a problem. As evry time we call it will change
+   // the pointer in current object and update won' be reflected in any copies of this tracker.
+    PN_CPP_EXTERN void set_transaction(Transaction *t);
+
+    PN_CPP_EXTERN Transaction* get_transaction() const;
 
     /// @cond INTERNAL
   friend class internal::factory<tracker>;

@@ -88,6 +88,8 @@ class target_options {
     /// **Unsettled API** Set the dynamic node properties.
     PN_CPP_EXTERN target_options& dynamic_properties(const target::dynamic_property_map&);
 
+    PN_CPP_EXTERN target_options& type(const int);
+
   private:
     void apply(target&) const;
 
