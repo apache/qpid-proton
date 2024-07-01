@@ -184,7 +184,9 @@ if (MSVC)
 endif (MSVC)
 
 install (DIRECTORY "include/proton" DESTINATION ${INCLUDE_INSTALL_DIR} FILES_MATCHING PATTERN "*.hpp")
-install (DIRECTORY "examples/"
+file (COPY "${CMAKE_CURRENT_SOURCE_DIR}/examples/ssl-certs"
+      DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/examples/")
+install (DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/examples/"
   DESTINATION "${PROTON_SHARE}/examples/cpp"
   USE_SOURCE_PERMISSIONS
   PATTERN "ProtonCppConfig.cmake" EXCLUDE

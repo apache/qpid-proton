@@ -715,7 +715,9 @@ if (BUILD_TOOLS)
   add_subdirectory(tools)
 endif (BUILD_TOOLS)
 
-install (DIRECTORY examples/
+file (COPY "${CMAKE_CURRENT_SOURCE_DIR}/examples/ssl-certs"
+      DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/examples/")
+install (DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/examples/"
          DESTINATION "${PROTON_SHARE}/examples/c"
          USE_SOURCE_PERMISSIONS
          PATTERN "ProtonConfig.cmake" EXCLUDE
