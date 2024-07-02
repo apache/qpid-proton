@@ -2226,15 +2226,16 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
     if (!trust_anchor) {
       // We don't trust any of the certs in the chain, see if the last cert
       // is issued by a Proton trusted CA.
-      DWORD flags = CERT_STORE_NO_ISSUER_FLAG || CERT_STORE_SIGNATURE_FLAG ||
-        CERT_STORE_TIME_VALIDITY_FLAG;
+      DWORD flags = CERT_STORE_SIGNATURE_FLAG | CERT_STORE_TIME_VALIDITY_FLAG;
       trust_anchor = CertGetIssuerCertificateFromStore(root_store, trunk_cert, 0, &flags);
       if (trust_anchor) {
         if (tracing) {
+          if (flags & CERT_STORE_NO_ISSUER_FLAG)
+            ssl_log_error("certificate no issuer");
           if (flags & CERT_STORE_SIGNATURE_FLAG)
-            ssl_log_error("root certificate signature failure");
+            ssl_log_error("certificate signature failure");
           if (flags & CERT_STORE_TIME_VALIDITY_FLAG)
-            ssl_log_error("root certificate time validity failure");
+            ssl_log_error("certificate time validity failure");
         }
         if (flags) {
           CertFreeCertificateContext(trust_anchor);

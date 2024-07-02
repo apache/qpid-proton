@@ -25,8 +25,13 @@ endif()
 include(CMakeDependentOption)
 enable_language(CXX)
 
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-find_package(Threads)
+# This is only needed for FreeBSD with clang (its system compiler)
+# Everything else will get threads support by default with C++ libs
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+  set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+  find_package(Threads)
+  link_libraries(Threads::Threads)
+endif()
 
 include(versions.cmake)
 
@@ -53,8 +58,6 @@ if (ENABLE_OPENTELEMETRYCPP)
 else()
   set(TRACING_SRC src/tracing_stub.cpp src/init_tracer_stub.cpp)
 endif()
-
-list(APPEND PLATFORM_LIBS Threads::Threads)
 
 set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CXX_STANDARD}")
 set(CXX_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}")
