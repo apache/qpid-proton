@@ -25,13 +25,15 @@ endif()
 include(CMakeDependentOption)
 enable_language(CXX)
 
-# This is only needed for FreeBSD with clang (its system compiler)
-# Everything else will get threads support by default with C++ libs
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-  set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-  find_package(Threads)
-  link_libraries(Threads::Threads)
-endif()
+# This is not needed for modern versions of Linux using glibc 2.34 or later
+# However RHEL before RHEL 9; Ubuntu before 22.04; Debian before 12 and FreeBSD
+# with clang (its system compiler) all still need to link the threads library
+# explicitly even though thread support is now included in C++17.
+#
+# So leave this here for a few more years!
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads)
+link_libraries(Threads::Threads)
 
 include(versions.cmake)
 
