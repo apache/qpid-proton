@@ -33,7 +33,7 @@ enable_language(CXX)
 # So leave this here for a few more years!
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads)
-link_libraries(Threads::Threads)
+list(APPEND PLATFORM_LIBS Threads::Threads)
 
 include(versions.cmake)
 

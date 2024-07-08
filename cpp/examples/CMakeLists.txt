@@ -25,6 +25,15 @@ find_package(ProtonCpp REQUIRED)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# This is not needed for modern versions of Linux using glibc 2.34 or later
+# However RHEL before RHEL 9; Ubuntu before 22.04; Debian before 12 and FreeBSD
+# with clang (its system compiler) all still need to link the threads library
+# explicitly even though thread support is now included in C++17.
+#
+# So leave this here for a few more years!
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads)
+
 # Single-threaded examples
 foreach(example
     broker
@@ -53,7 +62,7 @@ foreach(example
     multithreaded_client
     multithreaded_client_flow_control)
   add_executable(${example} ${example}.cpp)
-  target_link_libraries(${example} Proton::cpp)
+  target_link_libraries(${example} Proton::cpp Threads::Threads)
 endforeach()
 
 # Tracing examples
