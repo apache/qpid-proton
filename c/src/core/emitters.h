@@ -571,6 +571,21 @@ static inline void emit_described_type_raw(pni_emitter_t* emitter, pni_compound_
   compound->count++;
 }
 
+static inline void emit_copy_or_raw(pni_emitter_t* emitter, pni_compound_context* compound, pn_data_t* data, pn_bytes_t raw)
+{
+  if (data) {
+    emit_copy(emitter, compound, data);
+  } else {
+    emit_raw(emitter, compound, raw);
+  }
+}
+
+static inline void emit_list0(pni_emitter_t* emitter, pni_compound_context* compound)
+{
+  pni_emitter_writef8(emitter, PNE_LIST0);
+  compound->count++;
+}
+
 static inline void emit_condition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_condition_t* condition) {
   if (!condition || !condition->name || !pn_string_get(condition->name)) {
     emit_null(emitter, compound0);
@@ -593,11 +608,7 @@ static inline void emit_condition(pni_emitter_t* emitter, pni_compound_context* 
     } else {
       emit_string_bytes(emitter, &compound, description_bytes);
     }
-    if (condition->info) {
-      emit_copy(emitter, &compound, condition->info);
-    } else {
-      emit_raw(emitter, &compound, condition->info_raw);
-    }
+    emit_copy_or_raw(emitter, &compound, condition->info, condition->info_raw);
     emit_end_list(emitter, &compound, small_encoding);
     if (encode_succeeded(emitter, &compound)) break;
   }
@@ -624,6 +635,7 @@ static inline void emit_disposition(pni_emitter_t* emitter, pni_compound_context
       return;
     case PN_ACCEPTED:
     case PN_RELEASED:
+      emit_list0(emitter, compound0);
       return;
     case PN_REJECTED:
       for (bool small_encoding = true; ; small_encoding = false) {
@@ -640,21 +652,20 @@ static inline void emit_disposition(pni_emitter_t* emitter, pni_compound_context
         pni_compound_context compound = c;
         emit_bool(emitter, &compound, disposition->failed);
         emit_bool(emitter, &compound, disposition->undeliverable);
-        if (disposition->annotations) {
-          emit_copy(emitter, &compound, disposition->annotations);
-        } else {
-          emit_raw(emitter, &compound, disposition->annotations_raw);
-        }
+        emit_copy_or_raw(emitter, &compound, disposition->annotations, disposition->annotations_raw);
         emit_end_list(emitter, &compound, small_encoding);
         if (encode_succeeded(emitter, &compound)) break;
       }
       return;
     default:
-      if (disposition->data) {
-        emit_copy(emitter, compound0, disposition->data);
-      } else {
-        emit_raw(emitter, compound0, disposition->data_raw);
+      if ((disposition->data && pn_data_size(disposition->data) == 0) ||
+          (!disposition->data && disposition->data_raw.size == 0)) {
+        emit_list0(emitter, compound0);
+        return;
       }
+      pni_compound_context c = make_compound();
+      emit_copy_or_raw(emitter, &c, disposition->data, disposition->data_raw);
+      compound0->count++;
       return;
   }
 }
