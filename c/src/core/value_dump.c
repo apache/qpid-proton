@@ -94,7 +94,7 @@ static inline bool type_isunsigned_ifsimpleint(uint8_t type) {
 }
 
 static inline bool type_isulong(uint8_t type) {
-  return type==PNE_ULONG0 || type==PNE_SMALLULONG || type==PNE_ULONG0;
+  return type==PNE_ULONG0 || type==PNE_SMALLULONG || type==PNE_ULONG;
 }
 
 static inline bool type_iscompund(uint8_t type) {
@@ -598,6 +598,7 @@ size_t pni_value_dump(pn_bytes_t frame, pn_fixed_string_t *output)
       fsize += pn_value_dump_described(frame, dcode, output);
     } else {
       pn_value_dump_nondescribed_value(type, value, output);
+      pn_fixed_string_addf(output, " ");
       fsize += pn_value_dump_nondescribed(frame, output);
     }
     return fsize;
