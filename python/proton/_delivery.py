@@ -188,7 +188,8 @@ class Disposition(object):
         if self.local:
             return self._data
         else:
-            return dat2obj(pn_disposition_data(self._impl))
+            r = dat2obj(pn_disposition_data(self._impl))
+            return r if r != [] else None
 
     @data.setter
     def data(self, obj: List[int]) -> None:
