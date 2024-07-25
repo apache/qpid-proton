@@ -2319,7 +2319,11 @@ class DeliveryTest(Test):
     def tearDown(self):
         self.cleanup()
 
-    def testDisposition(self, count=1, tag="tag%i", type=Delivery.ACCEPTED, value=NoValue()):
+    def _testDisposition(self, count=1, tag="tag%i", type=None, value=None):
+        assert type is not None
+        if value is None:
+            value = NoValue()
+
         snd, rcv = self.link("test-link")
         snd.open()
         rcv.open()
@@ -2369,22 +2373,31 @@ class DeliveryTest(Test):
             assert d.settled, d.settled
             d.settle()
 
+    def testAccepted(self):
+        self._testDisposition(type=Disposition.ACCEPTED)
+
     def testReceived(self):
-        self.testDisposition(type=Disposition.RECEIVED, value=ReceivedValue(1, 2))
+        self._testDisposition(type=Disposition.RECEIVED, value=ReceivedValue(1, 2))
 
     def testRejected(self):
-        self.testDisposition(type=Disposition.REJECTED, value=RejectValue(Condition(symbol("foo"))))
+        self._testDisposition(type=Disposition.REJECTED, value=RejectValue(Condition(symbol("foo"))))
 
     def testReleased(self):
-        self.testDisposition(type=Disposition.RELEASED)
+        self._testDisposition(type=Disposition.RELEASED)
 
     def testModified(self):
-        self.testDisposition(type=Disposition.MODIFIED,
-                             value=ModifiedValue(failed=True, undeliverable=True,
-                                                 annotations={"key": "value"}))
+        self._testDisposition(type=Disposition.MODIFIED,
+                              value=ModifiedValue(failed=True, undeliverable=True,
+                                                  annotations={"key": "value"}))
 
     def testCustom(self):
-        self.testDisposition(type=0x12345, value=CustomValue([1, 2, 3]))
+        self._testDisposition(type=0x12345, value=CustomValue([1, 2, 3]))
+
+    def testEmptyCustom(self):
+        self._testDisposition(type=0x12345)
+
+    def testNullCustom(self):
+        self._testDisposition(type=0x12345, value=CustomValue(None))
 
 
 class CollectorTest(Test):
