@@ -431,6 +431,7 @@ void pn_data_clear(pn_data_t *data)
     data->current = 0;
     data->base_parent = 0;
     data->base_current = 0;
+    pn_error_clear(data->error);
     if (data->buf) pn_buffer_clear(data->buf);
   }
 }
