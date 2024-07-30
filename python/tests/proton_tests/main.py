@@ -33,11 +33,6 @@ from logging import getLogger, StreamHandler, Formatter, Filter, \
 
 from .common import SkipTest
 
-if sys.version_info[0] == 3:
-    CLASS_TYPES = (type,)
-else:
-    CLASS_TYPES = (type, types.ClassType)
-
 levels = {
     "DEBUG": DEBUG,
     "INFO": INFO,
@@ -581,12 +576,11 @@ class PatternMatcher:
 class FunctionScanner(PatternMatcher):
 
     def inspect(self, obj):
-        return type(obj) is types.FunctionType and self.matches(obj.__name__)
+        return isinstance(obj, types.FunctionType) and self.matches(obj.__name__)
 
     def descend(self, func):
-        # the None is required for older versions of python
         return
-        yield None
+        yield
 
     def extract(self, func):
         yield FunctionTest(func)
@@ -595,12 +589,11 @@ class FunctionScanner(PatternMatcher):
 class ClassScanner(PatternMatcher):
 
     def inspect(self, obj):
-        return type(obj) in CLASS_TYPES and self.matches(obj.__name__)
+        return isinstance(obj, type) and self.matches(obj.__name__)
 
     def descend(self, cls):
-        # the None is required for older versions of python
         return
-        yield None
+        yield
 
     def extract(self, cls):
         for name in sorted(dir(cls)):
@@ -612,16 +605,15 @@ class ClassScanner(PatternMatcher):
 class ModuleScanner:
 
     def inspect(self, obj):
-        return type(obj) is types.ModuleType
+        return isinstance(obj, types.ModuleType)
 
     def descend(self, obj):
         for name in sorted(dir(obj)):
             yield getattr(obj, name)
 
     def extract(self, obj):
-        # the None is required for older versions of python
         return
-        yield None
+        yield
 
 
 class Harness:
