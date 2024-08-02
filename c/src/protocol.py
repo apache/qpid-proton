@@ -16,25 +16,21 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import mllib
 import os
-import sys
+import xml.etree.ElementTree as ET
 
-doc = mllib.xml_parse(os.path.join(os.path.dirname(__file__), "transport.xml"))
-mdoc = mllib.xml_parse(os.path.join(os.path.dirname(__file__), "messaging.xml"))
-tdoc = mllib.xml_parse(os.path.join(os.path.dirname(__file__), "transactions.xml"))
-sdoc = mllib.xml_parse(os.path.join(os.path.dirname(__file__), "security.xml"))
-
-
-def eq(attr, value):
-    return lambda nd: nd[attr] == value
+ns = {'amqp': 'http://www.amqp.org/schema/amqp.xsd'}
+doc = ET.parse(os.path.join(os.path.dirname(__file__), "transport.xml")).getroot()
+mdoc = ET.parse(os.path.join(os.path.dirname(__file__), "messaging.xml")).getroot()
+tdoc = ET.parse(os.path.join(os.path.dirname(__file__), "transactions.xml")).getroot()
+sdoc = ET.parse(os.path.join(os.path.dirname(__file__), "security.xml")).getroot()
 
 
-TYPEStmp = doc.query["amqp/section/type", eq("@class", "composite")] + \
-    mdoc.query["amqp/section/type", eq("@class", "composite")] + \
-    tdoc.query["amqp/section/type", eq("@class", "composite")] + \
-    sdoc.query["amqp/section/type", eq("@class", "composite")] + \
-    mdoc.query["amqp/section/type", eq("@provides", "section")]
+TYPEStmp = doc.findall("./amqp:section/amqp:type/[@class='composite']", ns) + \
+    mdoc.findall("./amqp:section/amqp:type/[@class='composite']", ns) + \
+    tdoc.findall("./amqp:section/amqp:type/[@class='composite']", ns) + \
+    sdoc.findall("./amqp:section/amqp:type/[@class='composite']", ns) + \
+    mdoc.findall("./amqp:section/amqp:type/[@provides='section']", ns)
 TYPES = []
 for ty in TYPEStmp:
     if ty not in TYPES:
@@ -42,14 +38,14 @@ for ty in TYPEStmp:
 RESTRICTIONS = {}
 COMPOSITES = {}
 
-for type in doc.query["amqp/section/type"] + mdoc.query["amqp/section/type"] + \
-        sdoc.query["amqp/section/type"] + tdoc.query["amqp/section/type"]:
+for type in doc.findall("./amqp:section/amqp:type", ns) + mdoc.findall("./amqp:section/amqp:type", ns) + \
+        sdoc.findall("./amqp:section/amqp:type", ns) + tdoc.findall("./amqp:section/amqp:type", ns):
 
-    source = type["@source"]
+    source = type.attrib["source"]
     if source:
-        RESTRICTIONS[type["@name"]] = source
-    if type["@class"] == "composite":
-        COMPOSITES[type["@name"]] = type
+        RESTRICTIONS[type.attrib["name"]] = source
+    if type.attrib["class"] == "composite":
+        COMPOSITES[type.attrib["name"]] = type
 
 
 def resolve(name):
@@ -90,24 +86,24 @@ NULLABLE = set(["string", "symbol"])
 
 
 def fname(field):
-    return field["@name"].replace("-", "_")
+    return field.attrib["name"].replace("-", "_")
 
 
 def tname(t):
-    return t["@name"].replace("-", "_")
+    return t.attrib["name"].replace("-", "_")
 
 
 def multi(f):
-    return f["@multiple"] == "true"
+    return f.attrib.get("multiple") == "true"
 
 
 def ftype(field):
     if multi(field):
         return "list"
-    elif field["@type"] in COMPOSITES:
+    elif field.attrib["type"] in COMPOSITES:
         return "box"
     else:
-        return resolve(field["@type"]).replace("-", "_")
+        return resolve(field.attrib["type"]).replace("-", "_")
 
 
 def fconstruct(field, expr):

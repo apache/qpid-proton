@@ -30,10 +30,10 @@ fields = {}
 
 for type in TYPES:
     fidx = 0
-    for f in type.query["field"]:
+    for f in type.findall("amqp:field", ns):
         print("#define %s_%s (%s)" % (field_kw(type), field_kw(f), fidx))
         fidx += 1
-        d = f["@default"]
+        d = f.attrib.get("default")
         if d:
             ft = ftype(f)
             # Don't bother to emit a boolean default that is False
@@ -51,13 +51,13 @@ for type in TYPES:
 idx = 0
 
 for type in TYPES:
-    desc = type["descriptor"]
-    name = type["@name"].upper().replace("-", "_")
-    print("#define %s_SYM (\"%s\")" % (name, desc["@name"]))
-    hi, lo = [int(x, 0) for x in desc["@code"].split(":")]
+    desc = type.find("./amqp:descriptor", ns)
+    name = type.attrib["name"].upper().replace("-", "_")
+    print("#define %s_SYM (\"%s\")" % (name, desc.attrib["name"]))
+    hi, lo = [int(x, 0) for x in desc.attrib["code"].split(":")]
     code = (hi << 32) + lo
     print("#define %s ((uint64_t) %s)" % (name, code))
-    fields[code] = (type["@name"], [f["@name"] for f in type.query["field"]])
+    fields[code] = (type.attrib["name"], [f.attrib["name"] for f in type.findall("amqp:field", ns)])
     idx += 1
 
 print("""

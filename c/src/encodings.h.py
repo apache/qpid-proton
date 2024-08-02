@@ -18,13 +18,13 @@
 # under the License.
 #
 
-import mllib
-import optparse
 import os
-import sys
+import xml.etree.ElementTree as ET
 
+ns = {'amqp': 'http://www.amqp.org/schema/amqp.xsd'}
 xml = os.path.join(os.path.dirname(__file__), "types.xml")
-doc = mllib.xml_parse(xml)
+doc = ET.parse(xml).getroot()
+
 
 print("/* generated from %s */" % xml)
 print("#ifndef _PROTON_ENCODINGS_H")
@@ -32,13 +32,14 @@ print("#define _PROTON_ENCODINGS_H 1")
 print()
 print("#define PNE_DESCRIPTOR          (0x00)")
 
-for enc in doc.query["amqp/section/type/encoding"]:
-    name = enc["@name"] or enc.parent["@name"]
-    # XXX: a bit hacky
-    if name == "ieee-754":
-        name = enc.parent["@name"]
+types = doc.findall('./amqp:section/amqp:type', ns)
+encodings = [(t.attrib['name'], e) for t in types for e in t.findall('./amqp:encoding', ns)]
+for parentname, enc in encodings:
+    name = enc.attrib.get("name")
+    if not name or name == "ieee-754":
+        name = parentname
     cname = "PNE_" + name.replace("-", "_").upper()
-    print("#define %s%s(%s)" % (cname, " " * (20 - len(cname)), enc["@code"]))
+    print("#define %s%s(%s)" % (cname, " " * (20 - len(cname)), enc.attrib["code"]))
 
 print()
 print("#endif /* encodings.h */")
