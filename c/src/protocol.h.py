@@ -28,10 +28,13 @@ print("#include \"proton/type_compat.h\"")
 
 fields = {}
 
+print()
+print("/* Field constants */")
+
 for type in TYPES:
     fidx = 0
     for f in type.findall("amqp:field", ns):
-        print("#define %s_%s (%s)" % (field_kw(type), field_kw(f), fidx))
+        print("#define AMQP_FIELD_%s_%s (%s)" % (field_kw(type), field_kw(f), fidx))
         fidx += 1
         d = f.attrib.get("default")
         if d:
@@ -46,21 +49,25 @@ for type in TYPES:
                 d = '"' + d + '"'
             elif d[0] not in '0123456789':
                 continue
-            print("#define %s_%s_DEFAULT (%s) /* %s */" % (field_kw(type), field_kw(f), d, ft))
+            print("#define AMQP_%s_%s_DEFAULT (%s) /* %s */" % (field_kw(type), field_kw(f), d, ft))
+
+
+print()
+print("/* Descriptors */")
 
 idx = 0
-
 for type in TYPES:
     desc = type.find("./amqp:descriptor", ns)
     name = type.attrib["name"].upper().replace("-", "_")
-    print("#define %s_SYM (\"%s\")" % (name, desc.attrib["name"]))
+    print("#define AMQP_DESC_%s_SYM (\"%s\")" % (name, desc.attrib["name"]))
     hi, lo = [int(x, 0) for x in desc.attrib["code"].split(":")]
     code = (hi << 32) + lo
-    print("#define %s ((uint64_t) %s)" % (name, code))
+    print("#define AMQP_DESC_%s ((uint64_t) %s)" % (name, code))
     fields[code] = (type.attrib["name"], [f.attrib["name"] for f in type.findall("amqp:field", ns)])
     idx += 1
 
 print("""
+/* Described type field descriptions */
 #include <stddef.h>
 
 typedef struct {

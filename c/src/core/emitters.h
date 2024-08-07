@@ -592,7 +592,7 @@ static inline void emit_condition(pni_emitter_t* emitter, pni_compound_context* 
     return;
   }
 
-  emit_descriptor(emitter, compound0, ERROR);
+  emit_descriptor(emitter, compound0, AMQP_DESC_ERROR);
   for (bool small_encoding = true; ; small_encoding = false) {
     pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
     pni_compound_context compound = c;

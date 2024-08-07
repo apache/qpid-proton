@@ -437,7 +437,7 @@ static void pn_transport_initialize(void *object)
   transport->remote_container = NULL;
   transport->remote_hostname = NULL;
   transport->local_max_frame = PN_DEFAULT_MAX_FRAME_SIZE;
-  transport->remote_max_frame = OPEN_MAX_FRAME_SIZE_DEFAULT;
+  transport->remote_max_frame = AMQP_OPEN_MAX_FRAME_SIZE_DEFAULT;
 
   /*
    * We set the local limit on channels to 2^15, because
@@ -451,7 +451,7 @@ static void pn_transport_initialize(void *object)
    */
   // There is no constraint yet from remote peer,
   // so set to max possible.
-  transport->remote_channel_max = OPEN_CHANNEL_MAX_DEFAULT;
+  transport->remote_channel_max = AMQP_OPEN_CHANNEL_MAX_DEFAULT;
   transport->local_channel_max  = PN_IMPL_CHANNEL_MAX;
   transport->channel_max        = transport->local_channel_max;
 
@@ -870,7 +870,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
  compute_performatives:;
   /* "DL[IIzI?o?on?DLC?o?o?o]" */
   pn_bytes_t performative =
-    pn_amqp_encode_DLEIIzIQoQondQoQoQoe(&transport->scratch_space, TRANSFER,
+    pn_amqp_encode_DLEIIzIQoQondQoQoQoe(&transport->scratch_space, AMQP_DESC_TRANSFER,
                          handle,
                          id,
                          tag.size, tag.start,
@@ -920,7 +920,7 @@ static int pni_post_close(pn_transport_t *transport, pn_condition_t *cond)
   if (!cond && transport->connection) {
     cond = pn_connection_condition(transport->connection);
   }
-  pn_bytes_t buf = pn_amqp_encode_DLEce(&transport->scratch_space, CLOSE, cond);
+  pn_bytes_t buf = pn_amqp_encode_DLEce(&transport->scratch_space, AMQP_DESC_CLOSE, cond);
   return pn_framing_send_amqp(transport, 0, buf);
 }
 
@@ -1028,8 +1028,8 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
    * find them in the args, so don't give the variable
    * directly to the scanner.
    */
-  transport->remote_channel_max = remote_channel_max_q ? remote_channel_max : OPEN_CHANNEL_MAX_DEFAULT;
-  transport->remote_max_frame = remote_max_frame_q ? remote_max_frame : OPEN_MAX_FRAME_SIZE_DEFAULT;
+  transport->remote_channel_max = remote_channel_max_q ? remote_channel_max : AMQP_OPEN_CHANNEL_MAX_DEFAULT;
+  transport->remote_max_frame = remote_max_frame_q ? remote_max_frame : AMQP_OPEN_MAX_FRAME_SIZE_DEFAULT;
 
   if (transport->remote_max_frame > 0) {
     if (transport->remote_max_frame < AMQP_MIN_MAX_FRAME_SIZE) {
@@ -1257,9 +1257,9 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   } else {
     uint64_t code = 0;
     pn_amqp_decode_DqEqqqqqDqqDLqqqqe(payload, &code);
-    if (code == COORDINATOR) {
+    if (code == AMQP_DESC_COORDINATOR) {
       pn_terminus_set_type(rtgt, PN_COORDINATOR);
-    } else if (code == TARGET) {
+    } else if (code == AMQP_DESC_TARGET) {
       pn_terminus_set_type(rtgt, PN_TARGET);
     } else {
       pn_terminus_set_type(rtgt, PN_UNSPECIFIED);
@@ -1837,14 +1837,14 @@ static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endp
       pni_switch_to_raw_multiple(&transport->scratch_space, &connection->offered_capabilities, &connection->offered_capabilities_raw);
       pni_switch_to_raw_multiple(&transport->scratch_space, &connection->desired_capabilities, &connection->desired_capabilities_raw);
       pni_switch_to_raw(&transport->scratch_space, &connection->properties, &connection->properties_raw);
-      pn_bytes_t buf = pn_amqp_encode_DLESSQIQHQInnMMRe(&transport->scratch_space, OPEN,
+      pn_bytes_t buf = pn_amqp_encode_DLESSQIQHQInnMMRe(&transport->scratch_space, AMQP_DESC_OPEN,
                               cid,
                               pn_string_bytes(connection->hostname),
                               // TODO: This is messy, because we also have to allow local_max_frame_ to be 0 to mean unlimited
                               // otherwise flow control goes wrong
-                              transport->local_max_frame!=0 && transport->local_max_frame!=OPEN_MAX_FRAME_SIZE_DEFAULT,
+                              transport->local_max_frame!=0 && transport->local_max_frame!=AMQP_OPEN_MAX_FRAME_SIZE_DEFAULT,
                               transport->local_max_frame,
-                              transport->channel_max!=OPEN_CHANNEL_MAX_DEFAULT, transport->channel_max,
+                              transport->channel_max!=AMQP_OPEN_CHANNEL_MAX_DEFAULT, transport->channel_max,
                               (bool)idle_timeout, idle_timeout,
                               connection->offered_capabilities_raw,
                               connection->desired_capabilities_raw,
@@ -1940,7 +1940,7 @@ static int pni_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpo
       state->incoming_window = pni_session_incoming_window(ssn);
       state->outgoing_window = pni_session_outgoing_window(ssn);
       /* "DL[?HIIII]" */
-      pn_bytes_t buf = pn_amqp_encode_DLEQHIIIIe(&transport->scratch_space, BEGIN,
+      pn_bytes_t buf = pn_amqp_encode_DLEQHIIIIe(&transport->scratch_space, AMQP_DESC_BEGIN,
                     ((int16_t) state->remote_channel >= 0), state->remote_channel,
                     state->outgoing_transfer_count,
                     state->incoming_window,
@@ -2006,13 +2006,13 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
       pni_switch_to_raw_multiple(&transport->scratch_space, &link->source.capabilities, &link->source.capabilities_raw);
       pni_switch_to_raw_multiple(&transport->scratch_space, &link->target.capabilities, &link->target.capabilities_raw);
       if (link->target.type == PN_COORDINATOR) {
-        pn_bytes_t buf = pn_amqp_encode_DLESIoBBQDLESIsIoRQsRnRReDLERennIe(&transport->scratch_space, ATTACH,
+        pn_bytes_t buf = pn_amqp_encode_DLESIoBBQDLESIsIoRQsRnRReDLERennIe(&transport->scratch_space, AMQP_DESC_ATTACH,
                                 pn_string_bytes(link->name),
                                 state->local_handle,
                                 endpoint->type == RECEIVER,
                                 link->snd_settle_mode,
                                 link->rcv_settle_mode,
-                                (bool) link->source.type, SOURCE,
+                                (bool) link->source.type, AMQP_DESC_SOURCE,
                                 pn_string_bytes(link->source.address),
                                 link->source.durability,
                                 expiry_symbol(&link->source),
@@ -2023,21 +2023,21 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
                                 link->source.filter_raw,
                                 link->source.outcomes_raw,
                                 link->source.capabilities_raw,
-                                COORDINATOR, link->target.capabilities_raw,
+                                AMQP_DESC_COORDINATOR, link->target.capabilities_raw,
                                 0);
         int err = pn_framing_send_amqp(transport, ssn_state->local_channel, buf);
         if (err) return err;
       } else {
         pni_switch_to_raw(&transport->scratch_space, &link->properties, &link->properties_raw);
         pni_switch_to_raw(&transport->scratch_space, &link->target.properties, &link->target.properties_raw);
-        pn_bytes_t buf = pn_amqp_encode_DLESIoBBQDLESIsIoRQsRnMMeQDLESIsIoRMennILnnRe(&transport->scratch_space, ATTACH,
+        pn_bytes_t buf = pn_amqp_encode_DLESIoBBQDLESIsIoRQsRnMMeQDLESIsIoRMennILnnRe(&transport->scratch_space, AMQP_DESC_ATTACH,
                                 pn_string_bytes(link->name),
                                 state->local_handle,
                                 endpoint->type == RECEIVER,
                                 link->snd_settle_mode,
                                 link->rcv_settle_mode,
 
-                                (bool) link->source.type, SOURCE,
+                                (bool) link->source.type, AMQP_DESC_SOURCE,
                                 pn_string_bytes(link->source.address),
                                 link->source.durability,
                                 expiry_symbol(&link->source),
@@ -2049,7 +2049,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
                                 link->source.outcomes_raw,
                                 link->source.capabilities_raw,
 
-                                (bool) link->target.type, TARGET,
+                                (bool) link->target.type, AMQP_DESC_TARGET,
                                 pn_string_bytes(link->target.address),
                                 link->target.durability,
                                 expiry_symbol(&link->target),
@@ -2079,7 +2079,7 @@ static int pni_post_flow(pn_transport_t *transport, pn_session_t *ssn, pn_link_t
   bool linkq = (bool) link;
   pn_link_state_t *state = linkq ? &link->state : NULL;
   /* "DL[?IIII?I?I?In?o]" */
-  pn_bytes_t buf = pn_amqp_encode_DLEQIIIIQIQIQInQoe(&transport->scratch_space, FLOW,
+  pn_bytes_t buf = pn_amqp_encode_DLEQIIIIQIQIQInQoe(&transport->scratch_space, AMQP_DESC_FLOW,
                        (int16_t) ssn->state.remote_channel >= 0, ssn->state.incoming_transfer_count,
                        ssn->state.incoming_window,
                        ssn->state.outgoing_transfer_count,
@@ -2126,7 +2126,7 @@ static int pni_flush_disp(pn_transport_t *transport, pn_session_t *ssn)
   bool settled = ssn->state.disp_settled;
   if (ssn->state.disp) {
     /* "DL[oI?I?o?DL[]]" */
-    pn_bytes_t buf = pn_amqp_encode_DLEoIQIQoQDLEee(&transport->scratch_space, DISPOSITION,
+    pn_bytes_t buf = pn_amqp_encode_DLEoIQIQoQDLEee(&transport->scratch_space, AMQP_DESC_DISPOSITION,
                             ssn->state.disp_type,
                             ssn->state.disp_first,
                             ssn->state.disp_last!=ssn->state.disp_first, ssn->state.disp_last,
@@ -2160,7 +2160,7 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
   }
 
   if (!pni_disposition_batchable(&delivery->local)) {
-    pn_bytes_t buf = pn_amqp_encode_DLEoInQode(&transport->scratch_space, DISPOSITION,
+    pn_bytes_t buf = pn_amqp_encode_DLEoInQode(&transport->scratch_space, AMQP_DESC_DISPOSITION,
       role, state->id,
       delivery->local.settled, delivery->local.settled,
       &delivery->local);
@@ -2387,7 +2387,7 @@ static int pni_process_link_teardown(pn_transport_t *transport, pn_endpoint_t *e
           (int16_t) ssn_state->remote_channel != -2 &&
           !transport->close_rcvd) return 0;
 
-      pn_bytes_t buf = pn_amqp_encode_DLEIQoce(&transport->scratch_space, DETACH,
+      pn_bytes_t buf = pn_amqp_encode_DLEIQoce(&transport->scratch_space, AMQP_DESC_DETACH,
                                                state->local_handle,
                                                !link->detached, !link->detached,
                                                &endpoint->condition);
@@ -2453,7 +2453,7 @@ static int pni_process_ssn_teardown(pn_transport_t *transport, pn_endpoint_t *en
         return 0;
       }
 
-      pn_bytes_t buf = pn_amqp_encode_DLEce(&transport->scratch_space, END, &endpoint->condition);
+      pn_bytes_t buf = pn_amqp_encode_DLEce(&transport->scratch_space, AMQP_DESC_END, &endpoint->condition);
       int err = pn_framing_send_amqp(transport, state->local_channel, buf);
       if (err) return err;
       pni_unmap_local_channel(session);
@@ -2529,7 +2529,7 @@ static void pn_error_amqp(pn_transport_t* transport, unsigned int layer)
   if (!transport->close_sent) {
     if (!transport->open_sent) {
       /* "DL[S]" */
-      pn_bytes_t buf = pn_amqp_encode_DLESe(&transport->scratch_space, OPEN, (pn_bytes_t){.size=0, .start=""});
+      pn_bytes_t buf = pn_amqp_encode_DLESe(&transport->scratch_space, AMQP_DESC_OPEN, (pn_bytes_t){.size=0, .start=""});
       pn_framing_send_amqp(transport, 0, buf);
     }
 

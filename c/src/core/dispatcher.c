@@ -48,30 +48,30 @@ static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode,
   case AMQP_FRAME_TYPE:
     /* Regular AMQP frames */
     switch (lcode) {
-    case OPEN:            action = pn_do_open; break;
-    case BEGIN:           action = pn_do_begin; break;
-    case ATTACH:          action = pn_do_attach; break;
-    case FLOW:            action = pn_do_flow; break;
-    case TRANSFER:        action = pn_do_transfer; break;
-    case DISPOSITION:     action = pn_do_disposition; break;
-    case DETACH:          action = pn_do_detach; break;
-    case END:             action = pn_do_end; break;
-    case CLOSE:           action = pn_do_close; break;
-    default:              action = pni_bad_frame; break;
+    case AMQP_DESC_OPEN:            action = pn_do_open; break;
+    case AMQP_DESC_BEGIN:           action = pn_do_begin; break;
+    case AMQP_DESC_ATTACH:          action = pn_do_attach; break;
+    case AMQP_DESC_FLOW:            action = pn_do_flow; break;
+    case AMQP_DESC_TRANSFER:        action = pn_do_transfer; break;
+    case AMQP_DESC_DISPOSITION:     action = pn_do_disposition; break;
+    case AMQP_DESC_DETACH:          action = pn_do_detach; break;
+    case AMQP_DESC_END:             action = pn_do_end; break;
+    case AMQP_DESC_CLOSE:           action = pn_do_close; break;
+    default:                        action = pni_bad_frame; break;
     };
     break;
   case SASL_FRAME_TYPE:
     /* SASL frames */
     switch (lcode) {
-    case SASL_MECHANISMS: action = pn_do_mechanisms; break;
-    case SASL_INIT:       action = pn_do_init; break;
-    case SASL_CHALLENGE:  action = pn_do_challenge; break;
-    case SASL_RESPONSE:   action = pn_do_response; break;
-    case SASL_OUTCOME:    action = pn_do_outcome; break;
-    default:              action = pni_bad_frame; break;
+    case AMQP_DESC_SASL_MECHANISMS: action = pn_do_mechanisms; break;
+    case AMQP_DESC_SASL_INIT:       action = pn_do_init; break;
+    case AMQP_DESC_SASL_CHALLENGE:  action = pn_do_challenge; break;
+    case AMQP_DESC_SASL_RESPONSE:   action = pn_do_response; break;
+    case AMQP_DESC_SASL_OUTCOME:    action = pn_do_outcome; break;
+    default:                        action = pni_bad_frame; break;
     };
     break;
-  default:              action = pni_bad_frame_type; break;
+  default:                          action = pni_bad_frame_type; break;
   };
   return action(transport, frame_type, channel, frame_payload);
 }
