@@ -323,9 +323,12 @@ class Delivery(Wrapper):
 
         :param state: State of delivery
         """
-        obj2dat(self.local._data, pn_disposition_data(self.local._impl))
-        obj2dat(self.local._annotations, pn_disposition_annotations(self.local._impl))
-        obj2cond(self.local._condition, pn_disposition_condition(self.local._impl))
+        if state == self.MODIFIED:
+            obj2dat(self.local._annotations, pn_disposition_annotations(self.local._impl))
+        elif state == self.REJECTED:
+            obj2cond(self.local._condition, pn_disposition_condition(self.local._impl))
+        elif state not in (self.ACCEPTED, self.RECEIVED, self.RELEASED):
+            obj2dat(self.local._data, pn_disposition_data(self.local._impl))
         pn_delivery_update(self._impl, state)
 
     @property

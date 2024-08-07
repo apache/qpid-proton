@@ -1331,6 +1331,8 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
   pn_decref(delivery);
 }
 
+static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn_disposition_t *disp);
+
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   // XXX: multi transfer
@@ -1414,9 +1416,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
                          state->id, id);
     }
     if (has_type) {
-      delivery->remote.type = type;
-      pn_bytes_free(delivery->remote.data_raw);
-      delivery->remote.data_raw = pn_bytes_dup(disp_data);
+      pni_amqp_decode_disposition(type, disp_data, &delivery->remote);
     }
     link->state.delivery_count++;
     link->state.link_credit--;
@@ -1546,69 +1546,79 @@ static inline bool sequence_lte(pn_sequence_t a, pn_sequence_t b) {
   return b-a <= INT32_MAX;
 }
 
+static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn_disposition_t *disp) {
+  switch (type) {
+    case AMQP_DESC_RECEIVED: {
+      bool qnumber;
+      uint32_t number;
+      bool qoffset;
+      uint64_t offset;
+      pn_amqp_decode_DqEQIQLe(disp_data, &qnumber, &number, &qoffset, &offset);
+
+      disp->type = PN_DISP_RECEIVED;
+
+      if (qnumber) {
+          disp->u.s_received.section_number = number;
+      }
+      if (qoffset) {
+          disp->u.s_received.section_offset = offset;
+      }
+      break;
+    }
+    case AMQP_DESC_ACCEPTED:
+      disp->type = PN_DISP_ACCEPTED;
+      break;
+
+    case AMQP_DESC_REJECTED: {
+      pn_bytes_t cond;
+      pn_bytes_t desc;
+      pn_bytes_t info;
+      pn_amqp_decode_DqEDqEsSRee(disp_data, &cond, &desc, &info);
+      disp->type = PN_DISP_REJECTED;
+      pn_condition_set(&disp->u.s_rejected.condition, cond, desc, info);
+
+      break;
+    }
+    case AMQP_DESC_RELEASED:
+      disp->type = PN_DISP_RELEASED;
+      break;
+
+    case AMQP_DESC_MODIFIED: {
+      bool qfailed;
+      bool failed;
+      bool qundeliverable;
+      bool undeliverable;
+      pn_bytes_t annotations_raw = (pn_bytes_t){0, NULL};
+      pn_amqp_decode_DqEQoQoRe(disp_data, &qfailed, &failed, &qundeliverable, &undeliverable, &annotations_raw);
+      disp->type = PN_DISP_MODIFIED;
+      pn_bytes_free(disp->u.s_modified.annotations_raw);
+      disp->u.s_modified.annotations_raw = pn_bytes_dup(annotations_raw);
+
+      if (qfailed) {
+          disp->u.s_modified.failed = failed;
+      }
+      if (qundeliverable) {
+          disp->u.s_modified.undeliverable = undeliverable;
+      }
+      break;
+    }
+    default: {
+      pn_bytes_t data_raw = (pn_bytes_t){0, NULL};
+      pn_amqp_decode_DqR(disp_data, &data_raw);
+      disp->type = PN_DISP_CUSTOM;
+      disp->u.s_custom.type = type;
+      pn_bytes_free(disp->u.s_custom.data_raw);
+      disp->u.s_custom.data_raw = pn_bytes_dup(data_raw);
+      break;
+    }
+  }
+}
+
 static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t *delivery, bool settled, bool remote_data, bool type_init, uint64_t type, pn_bytes_t disp_data) {
   pn_disposition_t *remote = &delivery->remote;
 
-  if (type_init) remote->type = type;
-
-  if (remote_data) {
-    switch (type) {
-      case PN_RECEIVED: {
-        bool qnumber;
-        uint32_t number;
-        bool qoffset;
-        uint64_t offset;
-        pn_amqp_decode_DqEQIQLe(disp_data, &qnumber, &number, &qoffset, &offset);
-
-        if (qnumber) {
-          remote->section_number = number;
-        }
-        if (qoffset) {
-          remote->section_offset = offset;
-        }
-        break;
-      }
-      case PN_ACCEPTED:
-        break;
-
-      case PN_REJECTED: {
-        pn_bytes_t cond;
-        pn_bytes_t desc;
-        pn_bytes_t info;
-        pn_amqp_decode_DqEDqEsSRee(disp_data, &cond, &desc, &info);
-        pn_condition_set(&remote->condition, cond, desc, info);
-
-        break;
-      }
-      case PN_RELEASED:
-        break;
-
-      case PN_MODIFIED: {
-        bool qfailed;
-        bool failed;
-        bool qundeliverable;
-        bool undeliverable;
-        pn_bytes_t annotations_raw = (pn_bytes_t){0, NULL};
-        pn_amqp_decode_DqEQoQoRe(disp_data, &qfailed, &failed, &qundeliverable, &undeliverable, &annotations_raw);
-        pn_bytes_free(remote->annotations_raw);
-        remote->annotations_raw = pn_bytes_dup(annotations_raw);
-
-        if (qfailed) {
-          remote->failed = failed;
-        }
-        if (qundeliverable) {
-          remote->undeliverable = undeliverable;
-        }
-        break;
-      }
-      default: {
-        pn_bytes_t data_raw = (pn_bytes_t){0, NULL};
-        pn_amqp_decode_DqR(disp_data, &data_raw);
-        pn_bytes_free(remote->data_raw);
-        remote->data_raw = pn_bytes_dup(data_raw);
-        break;
-      }
-    }
+  if (remote_data && type_init) {
+    pni_amqp_decode_disposition(type, disp_data, remote);
   }
 
   remote->settled = settled;

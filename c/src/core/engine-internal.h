@@ -333,17 +333,46 @@ struct pn_link_t {
   bool more_pending;
 };
 
-struct pn_disposition_t {
-  pn_condition_t condition;
-  uint64_t type;
-  pn_data_t *data;
-  pn_bytes_t data_raw;
-  pn_data_t *annotations;
-  pn_bytes_t annotations_raw;
+typedef enum pn_disposition_type_t {
+  PN_DISP_EMPTY    = 0,
+  PN_DISP_CUSTOM   = 1,
+  PN_DISP_RECEIVED = PN_RECEIVED,
+  PN_DISP_ACCEPTED = PN_ACCEPTED,
+  PN_DISP_REJECTED = PN_REJECTED,
+  PN_DISP_RELEASED = PN_RELEASED,
+  PN_DISP_MODIFIED = PN_MODIFIED,
+} pn_disposition_type_t;
+
+typedef struct pn_received_disposition_t {
   uint64_t section_offset;
   uint32_t section_number;
+} pn_received_disposition_t;
+
+typedef struct pn_rejected_disposition_t {
+  pn_condition_t condition;
+} pn_rejected_disposition_t;
+
+typedef struct pn_modified_disposition_t {
+  pn_data_t *annotations;
+  pn_bytes_t annotations_raw;
   bool failed;
   bool undeliverable;
+} pn_modified_disposition_t;
+
+typedef struct pn_custom_disposition_t {
+  pn_data_t *data;
+  uint64_t   type;
+  pn_bytes_t data_raw;
+} pn_custom_disposition_t;
+
+struct pn_disposition_t {
+  union {
+    struct pn_received_disposition_t s_received;
+    struct pn_rejected_disposition_t s_rejected;
+    struct pn_modified_disposition_t s_modified;
+    struct pn_custom_disposition_t   s_custom;
+  } u;
+  uint16_t type;
   bool settled;
 };
 

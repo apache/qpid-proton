@@ -614,58 +614,81 @@ static inline void emit_condition(pni_emitter_t* emitter, pni_compound_context* 
   }
 }
 
+static inline void emit_received_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_received_disposition_t *disposition) {
+  for (bool small_encoding = true; ; small_encoding = false) {
+    pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
+    pni_compound_context compound = c;
+    emit_uint(emitter, &compound, disposition->section_number);
+    emit_ulong(emitter, &compound, disposition->section_offset);
+    emit_end_list(emitter, &compound, small_encoding);
+    if (encode_succeeded(emitter, &compound)) break;
+  }
+}
+
+static inline void emit_rejected_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_rejected_disposition_t *disposition) {
+  for (bool small_encoding = true; ; small_encoding = false) {
+    pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
+    pni_compound_context compound = c;
+    emit_condition(emitter, &compound, &disposition->condition);
+    emit_end_list(emitter, &compound, small_encoding);
+    if (encode_succeeded(emitter, &compound)) break;
+  }
+}
+
+static inline void emit_modified_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_modified_disposition_t *disposition){
+  for (bool small_encoding = true; ; small_encoding = false) {
+    pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
+    pni_compound_context compound = c;
+    emit_bool(emitter, &compound, disposition->failed);
+    emit_bool(emitter, &compound, disposition->undeliverable);
+    emit_copy_or_raw(emitter, &compound, disposition->annotations, disposition->annotations_raw);
+    emit_end_list(emitter, &compound, small_encoding);
+    if (encode_succeeded(emitter, &compound)) break;
+  }
+}
+
+static inline void emit_custom_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_custom_disposition_t *disposition){
+  emit_descriptor(emitter, compound0, disposition->type);
+  if ((disposition->data && pn_data_size(disposition->data) == 0) ||
+      (!disposition->data && disposition->data_raw.size == 0)) {
+    emit_list0(emitter, compound0);
+    return;
+  }
+  pni_compound_context c = make_compound();
+  emit_copy_or_raw(emitter, &c, disposition->data, disposition->data_raw);
+  compound0->count++;
+}
+
 static inline void emit_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_disposition_t *disposition)
 {
-  if (!disposition || !disposition->type) {
+  if (!disposition || pn_disposition_type(disposition)==PN_DISP_EMPTY) {
     emit_null(emitter, compound0);
     return;
   }
 
-  emit_descriptor(emitter, compound0, disposition->type);
   switch (disposition->type) {
-    case PN_RECEIVED:
-      for (bool small_encoding = true; ; small_encoding = false) {
-        pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
-        pni_compound_context compound = c;
-        emit_uint(emitter, &compound, disposition->section_number);
-        emit_ulong(emitter, &compound, disposition->section_offset);
-        emit_end_list(emitter, &compound, small_encoding);
-        if (encode_succeeded(emitter, &compound)) break;
-      }
+    case PN_DISP_RECEIVED:
+      emit_descriptor(emitter, compound0, AMQP_DESC_RECEIVED);
+      emit_received_disposition(emitter, compound0, &disposition->u.s_received);
       return;
-    case PN_ACCEPTED:
-    case PN_RELEASED:
+    case PN_DISP_ACCEPTED:
+      emit_descriptor(emitter, compound0, AMQP_DESC_ACCEPTED);
       emit_list0(emitter, compound0);
       return;
-    case PN_REJECTED:
-      for (bool small_encoding = true; ; small_encoding = false) {
-        pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
-        pni_compound_context compound = c;
-        emit_condition(emitter, &compound, &disposition->condition);
-        emit_end_list(emitter, &compound, small_encoding);
-        if (encode_succeeded(emitter, &compound)) break;
-      }
+    case PN_DISP_RELEASED:
+      emit_descriptor(emitter, compound0, AMQP_DESC_RELEASED);
+      emit_list0(emitter, compound0);
       return;
-    case PN_MODIFIED:
-      for (bool small_encoding = true; ; small_encoding = false) {
-        pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
-        pni_compound_context compound = c;
-        emit_bool(emitter, &compound, disposition->failed);
-        emit_bool(emitter, &compound, disposition->undeliverable);
-        emit_copy_or_raw(emitter, &compound, disposition->annotations, disposition->annotations_raw);
-        emit_end_list(emitter, &compound, small_encoding);
-        if (encode_succeeded(emitter, &compound)) break;
-      }
+    case PN_DISP_REJECTED:
+      emit_descriptor(emitter, compound0, AMQP_DESC_REJECTED);
+      emit_rejected_disposition(emitter, compound0, &disposition->u.s_rejected);
       return;
-    default:
-      if ((disposition->data && pn_data_size(disposition->data) == 0) ||
-          (!disposition->data && disposition->data_raw.size == 0)) {
-        emit_list0(emitter, compound0);
-        return;
-      }
-      pni_compound_context c = make_compound();
-      emit_copy_or_raw(emitter, &c, disposition->data, disposition->data_raw);
-      compound0->count++;
+    case PN_DISP_MODIFIED:
+      emit_descriptor(emitter, compound0, AMQP_DESC_MODIFIED);
+      emit_modified_disposition(emitter, compound0, &disposition->u.s_modified);
+      return;
+    case PN_DISP_CUSTOM:
+      emit_custom_disposition(emitter, compound0, &disposition->u.s_custom);
       return;
   }
 }

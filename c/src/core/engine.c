@@ -26,6 +26,7 @@
 
 #include "consumers.h"
 #include "core/frame_consumers.h"
+#include "emitters.h"
 #include "fixed_string.h"
 #include "framing.h"
 #include "memory.h"
@@ -1577,11 +1578,26 @@ pn_session_t *pn_link_session(pn_link_t *link)
 
 static void pn_disposition_finalize(pn_disposition_t *ds)
 {
-  pn_free(ds->data);
-  pn_bytes_free(ds->data_raw);
-  pn_free(ds->annotations);
-  pn_bytes_free(ds->annotations_raw);
-  pn_condition_tini(&ds->condition);
+  switch (ds->type) {
+    case PN_DISP_EMPTY:
+      break;
+    case PN_DISP_RECEIVED:
+      break;
+    case PN_DISP_MODIFIED:
+      pn_data_free(ds->u.s_modified.annotations);
+      pn_bytes_free(ds->u.s_modified.annotations_raw);
+      break;
+    case PN_DISP_REJECTED:
+      pn_condition_tini(&ds->u.s_rejected.condition);
+      break;
+    case PN_DISP_ACCEPTED:
+    case PN_DISP_RELEASED:
+      break;
+    case PN_DISP_CUSTOM:
+      pn_data_free(ds->u.s_custom.data);
+      pn_bytes_free(ds->u.s_custom.data_raw);
+      break;
+  }
 }
 
 static void pn_delivery_incref(void *object)
@@ -1656,28 +1672,13 @@ static void pn_delivery_finalize(void *object)
 
 static void pn_disposition_init(pn_disposition_t *ds)
 {
-  ds->data = NULL;
-  ds->data_raw = (pn_bytes_t){0, NULL};
-  ds->annotations = NULL;
-  ds->annotations_raw = (pn_bytes_t){0, NULL};
-  pn_condition_init(&ds->condition);
+  memset(ds, 0, sizeof(*ds));
 }
 
 static void pn_disposition_clear(pn_disposition_t *ds)
 {
-  ds->type = 0;
-  ds->section_number = 0;
-  ds->section_offset = 0;
-  ds->failed = false;
-  ds->undeliverable = false;
-  ds->settled = false;
-  pn_data_clear(ds->data);
-  pn_bytes_free(ds->data_raw);
-  ds->data_raw = (pn_bytes_t){0, NULL};
-  pn_data_clear(ds->annotations);
-  pn_bytes_free(ds->annotations_raw);
-  ds->annotations_raw = (pn_bytes_t){0, NULL};
-  pn_condition_clear(&ds->condition);
+  pn_disposition_finalize(ds);
+  pn_disposition_init(ds);
 }
 
 void pn_delivery_inspect(void *obj, pn_fixed_string_t *dst) {
@@ -1804,7 +1805,7 @@ void pn_delivery_dump(pn_delivery_t *d)
   printf("{tag=%s, local.type=%" PRIu64 ", remote.type=%" PRIu64 ", local.settled=%d, "
          "remote.settled=%d, updated=%d, current=%d, writable=%d, readable=%d, "
          "work=%d}",
-         tag, d->local.type, d->remote.type, d->local.settled,
+         tag, pn_disposition_type(&d->local), pn_disposition_type(&d->remote), d->local.settled,
          d->remote.settled, d->updated, pn_delivery_current(d),
          pn_delivery_writable(d), pn_delivery_readable(d), d->work);
 }
@@ -1830,75 +1831,151 @@ pn_record_t *pn_delivery_attachments(pn_delivery_t *delivery)
 uint64_t pn_disposition_type(pn_disposition_t *disposition)
 {
   assert(disposition);
-  return disposition->type;
+  switch (disposition->type) {
+    case PN_DISP_CUSTOM:
+      return disposition->u.s_custom.type;
+    default:
+      // This relies on the disposition types having the protocol values
+      return (uint64_t)disposition->type;
+  }
+}
+
+void pni_disposition_to_raw(pn_disposition_t *disposition) {
+
+  uint64_t type = disposition->type;
+  if (type==PN_DISP_CUSTOM) return;
+
+  char buffer[512];
+  pn_rwbytes_t bytes = {.size=sizeof(buffer), .start=&buffer[0]};
+  pni_emitter_t emitter = make_emitter_from_bytes(bytes);
+  pni_compound_context compound = make_compound();
+
+  switch (type) {
+    case PN_DISP_EMPTY:
+      break;
+    case PN_DISP_RECEIVED:
+      emit_received_disposition(&emitter, &compound, &disposition->u.s_received);
+      break;
+    case PN_DISP_ACCEPTED:
+      emit_list0(&emitter, &compound);
+      break;
+    case PN_DISP_RELEASED:
+      emit_list0(&emitter, &compound);
+      break;
+    case PN_DISP_REJECTED:
+      emit_rejected_disposition(&emitter, &compound, &disposition->u.s_rejected);
+      break;
+    case PN_DISP_MODIFIED:
+      emit_modified_disposition(&emitter, &compound, &disposition->u.s_modified);
+      break;
+  }
+
+  if (type != PN_DISP_EMPTY) {
+    pn_disposition_clear(disposition);
+    disposition->u.s_custom.data_raw = pn_bytes_dup(make_bytes_from_emitter(emitter));
+  }
+
+  disposition->type = PN_DISP_CUSTOM;
+  disposition->u.s_custom.type = type;
 }
 
 pn_data_t *pn_disposition_data(pn_disposition_t *disposition)
 {
   assert(disposition);
-  pni_switch_to_data(&disposition->data_raw, &disposition->data);
-  return disposition->data;
+  if (disposition->type != PN_DISP_CUSTOM) {
+    pni_disposition_to_raw(disposition);
+  }
+  pni_switch_to_data(&disposition->u.s_custom.data_raw, &disposition->u.s_custom.data);
+  return disposition->u.s_custom.data;
 }
 
 uint32_t pn_disposition_get_section_number(pn_disposition_t *disposition)
 {
   assert(disposition);
-  return disposition->section_number;
+  if (disposition->type == PN_DISP_RECEIVED) return disposition->u.s_received.section_number;
+  else return 0;
 }
 
 void pn_disposition_set_section_number(pn_disposition_t *disposition, uint32_t section_number)
 {
   assert(disposition);
-  disposition->section_number = section_number;
+  if (disposition->type != PN_DISP_RECEIVED) {
+    pn_disposition_clear(disposition);
+    disposition->type = PN_DISP_RECEIVED;
+  }
+  disposition->u.s_received.section_number = section_number;
 }
 
 uint64_t pn_disposition_get_section_offset(pn_disposition_t *disposition)
 {
   assert(disposition);
-  return disposition->section_offset;
+  if (disposition->type == PN_DISP_RECEIVED) return disposition->u.s_received.section_offset;
+  else return 0;
 }
 
 void pn_disposition_set_section_offset(pn_disposition_t *disposition, uint64_t section_offset)
 {
   assert(disposition);
-  disposition->section_offset = section_offset;
+  if (disposition->type != PN_DISP_RECEIVED) {
+    pn_disposition_clear(disposition);
+    disposition->type = PN_DISP_RECEIVED;
+  }
+  disposition->u.s_received.section_offset = section_offset;
 }
 
 bool pn_disposition_is_failed(pn_disposition_t *disposition)
 {
   assert(disposition);
-  return disposition->failed;
+  if (disposition->type == PN_DISP_MODIFIED) return disposition->u.s_modified.failed;
+  else return false;
 }
 
 void pn_disposition_set_failed(pn_disposition_t *disposition, bool failed)
 {
   assert(disposition);
-  disposition->failed = failed;
+  if (disposition->type != PN_DISP_MODIFIED) {
+    pn_disposition_clear(disposition);
+    disposition->type = PN_DISP_MODIFIED;
+  }
+  disposition->u.s_modified.failed = failed;
 }
 
 bool pn_disposition_is_undeliverable(pn_disposition_t *disposition)
 {
   assert(disposition);
-  return disposition->undeliverable;
+  if (disposition->type == PN_DISP_MODIFIED) return disposition->u.s_modified.undeliverable;
+  else return false;
 }
 
 void pn_disposition_set_undeliverable(pn_disposition_t *disposition, bool undeliverable)
 {
   assert(disposition);
-  disposition->undeliverable = undeliverable;
+  if (disposition->type != PN_DISP_MODIFIED) {
+    pn_disposition_clear(disposition);
+    disposition->type = PN_DISP_MODIFIED;
+  }
+  disposition->u.s_modified.undeliverable = undeliverable;
 }
 
 pn_data_t *pn_disposition_annotations(pn_disposition_t *disposition)
 {
   assert(disposition);
-  pni_switch_to_data(&disposition->annotations_raw, &disposition->annotations);
-  return disposition->annotations;
+  if (disposition->type != PN_DISP_MODIFIED) {
+    pn_disposition_clear(disposition);
+    disposition->type = PN_DISP_MODIFIED;
+  }
+  pni_switch_to_data(&disposition->u.s_modified.annotations_raw, &disposition->u.s_modified.annotations);
+  return disposition->u.s_modified.annotations;
 }
 
 pn_condition_t *pn_disposition_condition(pn_disposition_t *disposition)
 {
   assert(disposition);
-  return &disposition->condition;
+  if (disposition->type != PN_DISP_REJECTED) {
+    pn_disposition_clear(disposition);
+    disposition->type = PN_DISP_REJECTED;
+  }
+  return &disposition->u.s_rejected.condition;
 }
 
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
@@ -2196,7 +2273,7 @@ pn_disposition_t *pn_delivery_local(pn_delivery_t *delivery)
 uint64_t pn_delivery_local_state(pn_delivery_t *delivery)
 {
   assert(delivery);
-  return delivery->local.type;
+  return pn_disposition_type(&delivery->local);
 }
 
 pn_disposition_t *pn_delivery_remote(pn_delivery_t *delivery)
@@ -2208,7 +2285,7 @@ pn_disposition_t *pn_delivery_remote(pn_delivery_t *delivery)
 uint64_t pn_delivery_remote_state(pn_delivery_t *delivery)
 {
   assert(delivery);
-  return delivery->remote.type;
+  return pn_disposition_type(&delivery->remote);
 }
 
 bool pn_delivery_settled(pn_delivery_t *delivery)
@@ -2230,7 +2307,34 @@ void pn_delivery_clear(pn_delivery_t *delivery)
 void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
 {
   if (!delivery) return;
-  delivery->local.type = state;
+  if (delivery->local.type == PN_DISP_CUSTOM) {
+    switch (state) {
+      case PN_ACCEPTED:
+      case PN_REJECTED:
+      case PN_RECEIVED:
+      case PN_MODIFIED:
+      case PN_RELEASED:
+        break;
+      default:
+        delivery->local.u.s_custom.type = state;
+        pni_add_tpwork(delivery);
+        return;
+    }
+  }
+  if (delivery->local.type != state) pn_disposition_clear(&delivery->local);
+  switch (state) {
+    case PN_ACCEPTED:
+    case PN_REJECTED:
+    case PN_RECEIVED:
+    case PN_MODIFIED:
+    case PN_RELEASED:
+      delivery->local.type = state;
+      break;
+    default:
+      delivery->local.type = PN_DISP_CUSTOM;
+      delivery->local.u.s_custom.type = state;
+      break;
+  }
   pni_add_tpwork(delivery);
 }
 
