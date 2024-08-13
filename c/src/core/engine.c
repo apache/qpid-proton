@@ -1978,6 +1978,112 @@ pn_condition_t *pn_disposition_condition(pn_disposition_t *disposition)
   return &disposition->u.s_rejected.condition;
 }
 
+pn_custom_disposition_t *pn_custom_disposition(pn_disposition_t *disposition)
+{
+  pni_disposition_to_raw(disposition);
+  return &disposition->u.s_custom;
+}
+
+pn_received_disposition_t *pn_received_disposition(pn_disposition_t *disposition)
+{
+  if (disposition->type==PN_DISP_EMPTY) disposition->type = PN_DISP_RECEIVED;
+  else if (disposition->type!=PN_DISP_RECEIVED) return NULL;
+  return &disposition->u.s_received;
+}
+
+pn_rejected_disposition_t *pn_rejected_disposition(pn_disposition_t *disposition)
+{
+  if (disposition->type==PN_DISP_EMPTY) disposition->type = PN_DISP_REJECTED;
+  else if (disposition->type!=PN_DISP_REJECTED) return NULL;
+  return &disposition->u.s_rejected;
+}
+
+pn_modified_disposition_t *pn_modified_disposition(pn_disposition_t *disposition)
+{
+  if (disposition->type==PN_DISP_EMPTY) disposition->type = PN_DISP_MODIFIED;
+  else if (disposition->type!=PN_DISP_MODIFIED) return NULL;
+  return &disposition->u.s_modified;
+}
+
+pn_data_t *pn_custom_disposition_data(pn_custom_disposition_t *disposition)
+{
+  assert(disposition);
+  pni_switch_to_data(&disposition->data_raw, &disposition->data);
+  return disposition->data;
+}
+
+uint64_t pn_custom_disposition_get_type(pn_custom_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->type;
+}
+
+void pn_custom_disposition_set_type(pn_custom_disposition_t *disposition, uint64_t type)
+{
+  assert(disposition);
+  disposition->type = type;
+}
+
+pn_condition_t *pn_rejected_disposition_condition(pn_rejected_disposition_t *disposition)
+{
+  assert(disposition);
+  return &disposition->condition;
+}
+
+uint32_t pn_received_disposition_get_section_number(pn_received_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->section_number;
+}
+
+void pn_received_disposition_set_section_number(pn_received_disposition_t *disposition, uint32_t section_number)
+{
+  assert(disposition);
+  disposition->section_number = section_number;
+}
+
+uint64_t pn_received_disposition_get_section_offset(pn_received_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->section_offset;
+}
+
+void pn_received_disposition_set_section_offset(pn_received_disposition_t *disposition, uint64_t section_offset)
+{
+  assert(disposition);
+  disposition->section_offset = section_offset;
+}
+
+bool pn_modified_disposition_is_failed(pn_modified_disposition_t *disposition) {
+  assert(disposition);
+  return disposition->failed;
+}
+
+void pn_modified_disposition_set_failed(pn_modified_disposition_t *disposition, bool failed)
+{
+  assert(disposition);
+  disposition->failed = failed;
+}
+
+bool pn_modified_disposition_is_undeliverable(pn_modified_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->undeliverable;
+}
+
+void pn_modified_disposition_set_undeliverable(pn_modified_disposition_t *disposition, bool undeliverable)
+{
+  assert(disposition);
+  disposition->undeliverable = undeliverable;
+}
+
+pn_data_t *pn_modified_disposition_annotations(pn_modified_disposition_t *disposition)
+{
+  assert(disposition);
+  pni_switch_to_data(&disposition->annotations_raw, &disposition->annotations);
+  return disposition->annotations;
+}
+
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
 {
   if (delivery) {

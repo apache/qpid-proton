@@ -158,7 +158,24 @@ from cproton_ffi.lib import (PN_ACCEPTED, PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE,
                              pn_transport_require_encryption, pn_transport_set_channel_max,
                              pn_transport_set_idle_timeout, pn_transport_set_max_frame,
                              pn_transport_set_server, pn_transport_tick, pn_transport_trace,
-                             pn_transport_unbind)
+                             pn_transport_unbind,
+                             pn_custom_disposition,
+                             pn_custom_disposition_get_type,
+                             pn_custom_disposition_set_type,
+                             pn_custom_disposition_data,
+                             pn_rejected_disposition,
+                             pn_rejected_disposition_condition,
+                             pn_received_disposition,
+                             pn_received_disposition_get_section_number,
+                             pn_received_disposition_set_section_number,
+                             pn_received_disposition_get_section_offset,
+                             pn_received_disposition_set_section_offset,
+                             pn_modified_disposition,
+                             pn_modified_disposition_is_failed,
+                             pn_modified_disposition_set_failed,
+                             pn_modified_disposition_is_undeliverable,
+                             pn_modified_disposition_set_undeliverable,
+                             pn_modified_disposition_annotations)
 
 
 def isnull(obj):

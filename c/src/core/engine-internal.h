@@ -343,27 +343,27 @@ typedef enum pn_disposition_type_t {
   PN_DISP_MODIFIED = PN_MODIFIED,
 } pn_disposition_type_t;
 
-typedef struct pn_received_disposition_t {
+struct pn_received_disposition_t {
   uint64_t section_offset;
   uint32_t section_number;
-} pn_received_disposition_t;
+};
 
-typedef struct pn_rejected_disposition_t {
+struct pn_rejected_disposition_t {
   pn_condition_t condition;
-} pn_rejected_disposition_t;
+};
 
-typedef struct pn_modified_disposition_t {
+struct pn_modified_disposition_t {
   pn_data_t *annotations;
   pn_bytes_t annotations_raw;
   bool failed;
   bool undeliverable;
-} pn_modified_disposition_t;
+};
 
-typedef struct pn_custom_disposition_t {
+struct pn_custom_disposition_t {
   pn_data_t *data;
-  uint64_t   type;
   pn_bytes_t data_raw;
-} pn_custom_disposition_t;
+  uint64_t   type;
+};
 
 struct pn_disposition_t {
   union {
