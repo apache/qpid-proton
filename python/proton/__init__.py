@@ -36,7 +36,8 @@ from cproton import PN_VERSION_MAJOR, PN_VERSION_MINOR, PN_VERSION_POINT
 from ._condition import Condition
 from ._data import UNDESCRIBED, Array, Data, Described, char, symbol, timestamp, ubyte, ushort, uint, ulong, \
     byte, short, int32, float32, decimal32, decimal64, decimal128, AnnotationDict, PropertyDict, SymbolList
-from ._delivery import Delivery, Disposition, DispositionType
+from ._delivery import Delivery, Disposition, DispositionType, CustomDisposition, RejectedDisposition, \
+    ModifiedDisposition, ReceivedDisposition
 from ._endpoints import Endpoint, Connection, Session, Link, Receiver, Sender, Terminus
 from ._events import Collector, Event, EventType
 from ._exceptions import ProtonException, MessageException, DataException, TransportException, \
@@ -47,8 +48,6 @@ from ._transport import Transport, SASL, SSL, SSLDomain, SSLSessionDetails
 from ._url import Url
 
 __all__ = [
-    "API_LANGUAGE",
-    "IMPLEMENTATION_LANGUAGE",
     "UNDESCRIBED",
     "AnnotationDict",
     "Array",
@@ -56,6 +55,7 @@ __all__ = [
     "Condition",
     "Connection",
     "ConnectionException",
+    "CustomDisposition",
     "Data",
     "DataException",
     "Delivery",
@@ -70,11 +70,12 @@ __all__ = [
     "LinkException",
     "Message",
     "MessageException",
+    "ModifiedDisposition",
     "PropertyDict",
     "ProtonException",
-    "VERSION_MAJOR",
-    "VERSION_MINOR",
     "Receiver",
+    "ReceivedDisposition",
+    "RejectedDisposition",
     "SASL",
     "Sender",
     "Session",
@@ -111,9 +112,6 @@ VERSION_MAJOR = PN_VERSION_MAJOR
 VERSION_MINOR = PN_VERSION_MINOR
 VERSION_POINT = PN_VERSION_POINT
 VERSION = (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
-API_LANGUAGE = "C"
-IMPLEMENTATION_LANGUAGE = "C"
-
 
 handler = logging.NullHandler()
 

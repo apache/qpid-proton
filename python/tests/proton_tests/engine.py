@@ -23,7 +23,8 @@ from time import time, sleep
 from typing import Union
 
 from proton import Array, Condition, Collector, Connection, Data, Delivery, Disposition, DispositionType, Endpoint, \
-    Event, Link, PropertyDict, SASL, SessionException, SymbolList, Terminus, Transport, UNDESCRIBED, symbol
+    Event, CustomDisposition, Link, ModifiedDisposition, PropertyDict, ReceivedDisposition, RejectedDisposition, \
+    SASL, SessionException, SymbolList, Terminus, Transport, UNDESCRIBED, symbol
 from proton.reactor import Container
 
 from . import common
@@ -2275,20 +2276,36 @@ class DispositionTester:
 
 class RejectedTester(DispositionTester):
     def __init__(self, condition: Condition):
-        self.condition = condition
+        self._condition = condition
         super().__init__(Disposition.REJECTED)
 
     def apply(self, dlv: Delivery):
-        dlv.local.condition = self.condition
+        dlv.local.condition = self._condition
         dlv.update(self._type)
 
     def check(self, dlv: Delivery):
         assert dlv.remote_state == self._type
         assert dlv.remote.type == self._type
-        assert dlv.remote.condition == self.condition, (dlv.condition, self.condition)
+        assert dlv.remote.condition == self._condition, (dlv.remote.condition, self._condition)
 
 
-class ReceivedValue(DispositionTester):
+class NewRejectedTester(DispositionTester):
+
+    def __init__(self, condition: Condition):
+        self._condition = condition
+        super().__init__(Disposition.REJECTED)
+
+    def apply(self, dlv: Delivery):
+        dlv.local = RejectedDisposition(self._condition)
+        dlv.update()
+
+    def check(self, dlv: Delivery):
+        assert dlv.remote_state == self._type
+        assert dlv.remote.type == self._type
+        assert dlv.remote.condition == self._condition, (dlv.remote.condition, self._condition)
+
+
+class ReceivedTester(DispositionTester):
     def __init__(self, section_number: int, section_offset: int):
         self._section_number = section_number
         self._section_offset = section_offset
@@ -2302,8 +2319,25 @@ class ReceivedValue(DispositionTester):
     def check(self, dlv: Delivery):
         assert dlv.remote_state == self._type
         assert dlv.remote.type == self._type
-        assert dlv.remote.section_number == self._section_number, (dlv.section_number, self._section_number)
+        assert dlv.remote.section_number == self._section_number, (dlv.remote.section_number, self._section_number)
         assert dlv.remote.section_offset == self._section_offset
+
+
+class NewReceivedTester(DispositionTester):
+    def __init__(self, section_number: int, section_offset: int):
+        self._section_number = section_number
+        self._section_offset = section_offset
+        super().__init__(Disposition.RECEIVED)
+
+    def apply(self, dlv: Delivery):
+        dlv.local = ReceivedDisposition(self._section_number, self._section_offset)
+        dlv.update()
+
+    def check(self, dlv: Delivery):
+        assert dlv.remote_state == self._type
+        assert dlv.remote.type == self._type
+        assert dlv.remote.section_number == self._section_number, (dlv.remote.section_number, self._section_number)
+        assert dlv.remote.section_offset == self._section_offset, (dlv.remote.section_offset, self._section_offset)
 
 
 class ModifiedTester(DispositionTester):
@@ -2324,7 +2358,26 @@ class ModifiedTester(DispositionTester):
         assert dlv.remote.type == self._type
         assert dlv.remote.failed == self._failed
         assert dlv.remote.undeliverable == self._undeliverable
-        assert dlv.remote.annotations == self._annotations, (dlv.annotations, self._annotations)
+        assert dlv.remote.annotations == self._annotations, (dlv.remote.annotations, self._annotations)
+
+
+class NewModifiedTester(DispositionTester):
+    def __init__(self, failed, undeliverable, annotations):
+        self._failed = failed
+        self._undeliverable = undeliverable
+        self._annotations = annotations
+        super().__init__(Disposition.MODIFIED)
+
+    def apply(self, dlv: Delivery):
+        dlv.local = ModifiedDisposition(self._failed, self._undeliverable, self._annotations)
+        dlv.update()
+
+    def check(self, dlv: Delivery):
+        assert dlv.remote_state == self._type
+        assert dlv.remote.type == self._type
+        assert dlv.remote.failed == self._failed
+        assert dlv.remote.undeliverable == self._undeliverable
+        assert dlv.remote.annotations == self._annotations, (dlv.remote.annotations, self._annotations)
 
 
 class CustomTester(DispositionTester):
@@ -2339,6 +2392,21 @@ class CustomTester(DispositionTester):
     def check(self, dlv: Delivery):
         assert dlv.remote_state == self._type
         assert dlv.remote.type == self._type
+        assert dlv.remote.data == self._data, (dlv.data, self._data)
+
+
+class NewCustomTester(DispositionTester):
+    def __init__(self, type, data):
+        self._data = data
+        super().__init__(type)
+
+    def apply(self, dlv: Delivery):
+        dlv.local = CustomDisposition(self._type, self._data)
+        dlv.update()
+
+    def check(self, dlv: Delivery):
+        assert dlv.remote_state == self._type
+        assert dlv.remote.type == self._type, (dlv.remote.type, self._type)
         assert dlv.remote.data == self._data, (dlv.data, self._data)
 
 
@@ -2398,10 +2466,16 @@ class DeliveryTest(Test):
         self._testDisposition(Disposition.ACCEPTED)
 
     def testReceived(self):
-        self._testDisposition(ReceivedValue(1, 2))
+        self._testDisposition(ReceivedTester(1, 2))
+
+    def testNewReceived(self):
+        self._testDisposition(NewReceivedTester(1, 2))
 
     def testRejected(self):
         self._testDisposition(RejectedTester(Condition(symbol("foo"))))
+
+    def testNewRejected(self):
+        self._testDisposition(NewRejectedTester(Condition(symbol("foo"))))
 
     def testReleased(self):
         self._testDisposition(Disposition.RELEASED)
@@ -2410,14 +2484,24 @@ class DeliveryTest(Test):
         self._testDisposition(ModifiedTester(failed=True, undeliverable=True,
                                              annotations={"key": "value"}))
 
+    def testNewModified(self):
+        self._testDisposition(NewModifiedTester(failed=True, undeliverable=True,
+                                                annotations={"key": "value"}))
+
     def testCustom(self):
         self._testDisposition(CustomTester(0x12345, [1, 2, 3]))
+
+    def testNewCustom(self):
+        self._testDisposition(NewCustomTester(0x12345, [1, 2, 3]))
 
     def testEmptyCustom(self):
         self._testDisposition(0x12345)
 
     def testNullCustom(self):
         self._testDisposition(CustomTester(0x12345, None))
+
+    def testNullNewCustom(self):
+        self._testDisposition(NewCustomTester(0x12345, None))
 
 
 class CollectorTest(Test):

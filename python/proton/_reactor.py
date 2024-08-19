@@ -33,7 +33,7 @@ from functools import total_ordering
 from cproton import PN_ACCEPTED, PN_EVENT_NONE
 
 from ._data import Described, symbol, ulong
-from ._delivery import Delivery
+from ._delivery import Delivery, CustomDisposition
 from ._endpoints import Connection, Endpoint, Link, Session, Terminus
 from ._events import Collector, EventType, EventBase, Event
 from ._exceptions import SSLUnavailable
@@ -584,8 +584,8 @@ class Transaction(object):
         :return: Delivery object for this message.
         """
         dlv = sender.send(msg, tag=tag)
-        dlv.local.data = [self.id]
-        dlv.update(0x34)
+        dlv.local = CustomDisposition(0x34, [self.id])
+        dlv.update()
         return dlv
 
     def accept(self, delivery: Delivery) -> None:
@@ -602,8 +602,8 @@ class Transaction(object):
 
     def update(self, delivery: Delivery, state: Optional[ulong] = None) -> None:
         if state:
-            delivery.local.data = [self.id, Described(ulong(state), [])]
-            delivery.update(0x34)
+            delivery.local = GeneralDisposition(0x34, [self.id, Described(ulong(state), [])])
+            delivery.update()
 
     def _release_pending(self):
         for d in self._pending:

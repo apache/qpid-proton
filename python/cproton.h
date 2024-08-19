@@ -406,14 +406,19 @@ void pn_disposition_set_section_offset(pn_disposition_t *disposition, uint64_t s
 void pn_disposition_set_undeliverable(pn_disposition_t *disposition, _Bool undeliverable);
 uint64_t pn_disposition_type(pn_disposition_t *disposition);
 
+typedef struct pn_custom_disposition_t pn_custom_disposition_t;
 typedef struct pn_received_disposition_t pn_received_disposition_t;
 typedef struct pn_rejected_disposition_t pn_rejected_disposition_t;
 typedef struct pn_modified_disposition_t pn_modified_disposition_t;
 
+pn_custom_disposition_t *pn_custom_disposition(pn_disposition_t *disposition);
 pn_received_disposition_t *pn_received_disposition(pn_disposition_t *disposition);
 pn_rejected_disposition_t *pn_rejected_disposition(pn_disposition_t *disposition);
 pn_modified_disposition_t *pn_modified_disposition(pn_disposition_t *disposition);
 
+void pn_custom_disposition_set_type(pn_custom_disposition_t *disposition, uint64_t type);
+uint64_t pn_custom_disposition_get_type(pn_custom_disposition_t *disposition);
+pn_data_t *pn_custom_disposition_data(pn_custom_disposition_t *disposition);
 pn_condition_t *pn_rejected_disposition_condition(pn_rejected_disposition_t *disposition);
 uint32_t pn_received_disposition_get_section_number(pn_received_disposition_t *disposition);
 void pn_received_disposition_set_section_number(pn_received_disposition_t *disposition, uint32_t section_number);
