@@ -28,7 +28,6 @@ import (
 )
 
 // Receiver is a Link that receives messages.
-//
 type Receiver interface {
 	Endpoint
 	LinkSettings
@@ -201,10 +200,19 @@ type ReceivedMessage struct {
 
 // Acknowledge a ReceivedMessage with the given delivery status.
 func (rm *ReceivedMessage) acknowledge(status uint64) error {
-	return rm.receiver.(*receiver).engine().Inject(func() {
-		// Deliveries are valid as long as the connection is, unless settled.
-		rm.pDelivery.SettleAs(uint64(status))
+	receiverError := make(chan error)
+	err := rm.receiver.(*receiver).engine().Inject(func() {
+		// Deliveries are valid as long as the receiver is, unless settled.
+		err := rm.receiver.Error()
+		receiverError <- err
+		if err == nil {
+			rm.pDelivery.SettleAs(status)
+		}
 	})
+	if err != nil {
+		return err
+	}
+	return <-receiverError
 }
 
 // Accept tells the sender that we take responsibility for processing the message.
