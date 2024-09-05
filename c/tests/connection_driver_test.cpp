@@ -444,11 +444,11 @@ TEST_CASE("driver_session_flow_control") {
   }
 
   /* Capacity smaller than frame size is an error */
-  set_capacity_and_max_frame(1234, 12345, d, "foo");
+  set_capacity_and_max_frame(1233, 1234, d, "foo");
   CHECK_THAT(
       *client.last_condition,
       cond_matches("amqp:internal-error",
-                   "session capacity 1234 is less than frame size 12345"));
+                   "session capacity 1233 is less than frame size 1234"));
   free(buf.start);
 }
 

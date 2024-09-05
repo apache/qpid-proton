@@ -1049,6 +1049,10 @@ pn_session_t *pn_session(pn_connection_t *conn)
   ssn->outgoing_deliveries = 0;
   ssn->outgoing_window = AMQP_MAX_WINDOW_SIZE;
   ssn->local_handle_max = PN_IMPL_HANDLE_MAX;
+  ssn->incoming_window_lwm = 1;
+  ssn->check_flow = false;
+  ssn->need_flow = false;
+  ssn->lwm_default = true;
 
   // begin transport state
   memset(&ssn->state, 0, sizeof(ssn->state));
@@ -1095,11 +1099,74 @@ size_t pn_session_get_incoming_capacity(pn_session_t *ssn)
   return ssn->incoming_capacity;
 }
 
+// Update required when (re)set by user or when session started (proxy: BEGIN frame).  No
+// session flow control actually means flow control with huge window, so set lwm to 1.  There is
+// low probability of a stall.  Any link credit flow frame will update session credit too.
+void pni_session_update_incoming_lwm(pn_session_t *ssn) {
+  if (ssn->incoming_capacity) {
+    // Old API.
+    if (!ssn->connection->transport)
+      return; // Defer until called again from BEGIN frame setup with max frame known.
+    if (ssn->connection->transport->local_max_frame) {
+      ssn->incoming_window_lwm = (ssn->incoming_capacity / ssn->connection->transport->local_max_frame) / 2;
+      if (!ssn->incoming_window_lwm)
+        ssn->incoming_window_lwm = 1; // Zero may hang.
+    } else {
+      ssn->incoming_window_lwm = 1;
+    }
+  } else if (ssn->max_incoming_window) {
+    // New API.
+    // Only need to deal with default.  Called whensending BEGIN frame.
+    if (ssn->connection->transport && ssn->connection->transport->local_max_frame && ssn->lwm_default) {
+      ssn->incoming_window_lwm = (ssn->max_incoming_window + 1) / 2;
+    }
+  } else {
+    ssn->incoming_window_lwm = 1;
+  }
+  assert(ssn->incoming_window_lwm != 0);  // 0 allows session flow to hang
+}
+
 void pn_session_set_incoming_capacity(pn_session_t *ssn, size_t capacity)
 {
   assert(ssn);
-  // XXX: should this trigger a flow?
   ssn->incoming_capacity = capacity;
+  ssn->max_incoming_window = 0;
+  ssn->incoming_window_lwm = 1;
+  ssn->lwm_default = true;
+  if (ssn->connection->transport) {
+    ssn->check_flow = true;
+    ssn->need_flow = true;
+    pn_modified(ssn->connection, &ssn->endpoint, false);
+  }
+  pni_session_update_incoming_lwm(ssn);
+  // If capacity invalid, failure occurs when transport calculates value of incoming window.
+}
+
+int pn_session_set_incoming_window_and_lwm(pn_session_t *ssn, pn_frame_count_t window, pn_frame_count_t lwm) {
+  assert(ssn);
+  if (!window || (lwm && lwm > window))
+    return PN_ARG_ERR;
+  // Settings fixed after session open for simplicity.  AMPQ actually allows dynamic change with risk
+  // of overflow if window reduced while transfers in flight.
+  if (ssn->endpoint.state & PN_LOCAL_ACTIVE)
+    return PN_STATE_ERR;
+  ssn->incoming_capacity = 0;
+  ssn->max_incoming_window = window;
+  ssn->lwm_default = (lwm == 0);
+  ssn->incoming_window_lwm = lwm;
+  return 0;
+}
+
+pn_frame_count_t pn_session_incoming_window(pn_session_t *ssn) {
+  return ssn->max_incoming_window;
+}
+
+pn_frame_count_t pn_session_incoming_window_lwm(pn_session_t *ssn) {
+  return (!ssn->max_incoming_window || ssn->lwm_default) ? 0 : ssn->incoming_window_lwm;
+}
+
+pn_frame_count_t pn_session_remote_incoming_window(pn_session_t *ssn) {
+  return ssn->state.remote_incoming_window;
 }
 
 size_t pn_session_get_outgoing_window(pn_session_t *ssn)
@@ -1873,11 +1940,16 @@ static void pni_advance_receiver(pn_link_t *link)
   link->session->incoming_deliveries--;
 
   pn_delivery_t *current = link->current;
-  link->session->incoming_bytes -= pn_buffer_size(current->bytes);
+  size_t drop_count = pn_buffer_size(current->bytes);
   pn_buffer_clear(current->bytes);
 
-  if (!link->session->state.incoming_window) {
-    pni_add_tpwork(current);
+  if (drop_count) {
+    pn_session_t *ssn = link->session;
+    ssn->incoming_bytes -= drop_count;
+    if (!ssn->check_flow && ssn->state.incoming_window < ssn->incoming_window_lwm) {
+      ssn->check_flow = true;
+      pni_add_tpwork(current);
+    }
   }
 
   link->current = link->current->unsettled_next;
@@ -2025,8 +2097,10 @@ ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
   size_t size = pn_buffer_get(delivery->bytes, 0, n, bytes);
   pn_buffer_trim(delivery->bytes, size, 0);
   if (size) {
-    receiver->session->incoming_bytes -= size;
-    if (!receiver->session->state.incoming_window) {
+    pn_session_t *ssn = receiver->session;
+    ssn->incoming_bytes -= size;
+    if (!ssn->check_flow && ssn->state.incoming_window < ssn->incoming_window_lwm) {
+      ssn->check_flow = true;
       pni_add_tpwork(delivery);
     }
     return size;
