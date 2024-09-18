@@ -1397,6 +1397,9 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
     pn_delivery_map_t *incoming = &ssn->state.incoming;
 
     if (!ssn->state.incoming_init) {
+      if (!id_present) {
+        return pn_do_error(transport, "amqp:invalid-field", "delivery-id required on initial transfer of session");
+      }
       incoming->next = id;
       ssn->state.incoming_init = true;
       ssn->incoming_deliveries++;
@@ -1423,9 +1426,11 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
     pn_buffer_append(delivery->bytes, payload.start, payload.size);
     if (more) {
       if (!link->more_pending) {
+        if (!id_present) {
+          return pn_do_error(transport, "amqp:invalid-field", "delivery-id required for transfer");
+        }
         // First frame of a multi-frame transfer. Remember at link level.
         link->more_pending = true;
-        assert(id_present);  // Id MUST be set on first frame, and already checked above.
         link->more_id = id;
       }
       delivery->done = false;
