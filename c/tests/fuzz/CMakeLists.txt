@@ -21,6 +21,7 @@ add_definitions(${C_STANDARD_FLAGS} ${COMPILE_WARNING_FLAGS})
 
 option(FUZZ_REGRESSION_TESTS "Run fuzz tests with regression test driver" ON)
 option(FUZZ_LONG_TESTS "Run fuzz tests that take a long time" OFF)
+set(FUZZER LibFuzzer CACHE STRING "Fuzzing engine to use")
 
 # prefer static lib for the fuzzer, if available
 if (BUILD_STATIC_LIBS)
@@ -31,10 +32,13 @@ else()
   set(FUZZING_QPID_PROTON_PROACTOR_LIBRARY qpid-proton-proactor)
 endif()
 
+set(FUZZING_LIB_LibFuzzer FuzzingEngine)
+set(FUZZING_LIB_AFL -fsanitize=fuzzer)
+
 if (FUZZ_REGRESSION_TESTS)
   set(FUZZING_LIBRARY StandaloneFuzzTargetMain)
 else ()
-  set(FUZZING_LIBRARY FuzzingEngine)
+  set(FUZZING_LIBRARY ${FUZZING_LIB_${FUZZER}})
 endif ()
 
 add_library (StandaloneFuzzTargetMain STATIC StandaloneFuzzTargetMain.c StandaloneFuzzTargetInit.c)
@@ -64,7 +68,7 @@ macro (pn_add_fuzz_test test)
     pn_add_test(
       EXECUTABLE
       NAME ${test}
-      COMMAND $<TARGET_FILE:${test}> -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test}>)
+      COMMAND $<TARGET_FILE:${test}> -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test})
   endif ()
 endmacro(pn_add_fuzz_test)
 
