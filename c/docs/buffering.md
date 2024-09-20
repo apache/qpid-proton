@@ -16,7 +16,7 @@ gets a @ref PN_LINK_FLOW event.
 
 The AMQP protocol allows peers to exchange session limits so they can predict
 their buffering requirements for incoming data (
-`pn_session_set_incoming_capacity()` and
+`pn_session_set_incoming_incoming_window_and_lwm()` and
 `pn_session_set_outgoing_window()`). Proton will not exceed those limits when
 sending to or receiving from the peer. However proton does *not* limit the
 amount of data buffered in local memory at the request of the application.  It
