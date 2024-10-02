@@ -26,9 +26,6 @@
 #include "proton/listen_handler.hpp"
 #include "proton/listener.hpp"
 #include "proton/uuid.hpp"
-#include "proton/target_options.hpp"
-#include "proton/sender_options.hpp"
-#include "proton/transaction.hpp"
 
 #include "proactor_container_impl.hpp"
 #include <vector>
@@ -49,42 +46,8 @@ returned<connection> container::connect(const std::string &url) {
     return connect(url, connection_options());
 }
 
-Transaction container::declare_transaction(proton::connection conn, proton::transaction_handler &handler, bool settle_before_discharge) {
-
-    proton::target_options t;
-    class InternalTransactionHandler : public proton::messaging_handler {
-        // TODO: auto_settle
-        void on_tracker_settle(proton::tracker &t) override {
-            if(t.get_transaction()) {
-                t.get_transaction()->handle_outcome(t);
-            }
-        }
-
-        // TODO: Add on_unhandled function
-    };
-
-    // TODO: Sender should be created only once. (May be use Singleton Class)
-    // proton::target_options t;
-
-    std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
-    t.capabilities(cap);
-    // Type PN_COORDINATOR value is 3. It is a special target identifying a transaction coordinator.
-    // TODO: Change the type from int to enum.
-    t.type(3);
-
-    proton::sender_options so;
-    so.name("txn-ctrl");
-    // Todo: Check the value, Or by deafult null?
-    //so.source() ?
-    so.target(t);
-    InternalTransactionHandler internal_handler; // internal_handler going out of scope. Fix it
-    so.handler(internal_handler);
-    proton::sender s = conn.open_sender("does not matter", so);
-
-    settle_before_discharge = false;
-
-    return Transaction(s, handler, settle_before_discharge);
-
+transaction container::declare_transaction(proton::connection conn, proton::transaction_handler &handler, bool settle_before_discharge) {
+    return impl_->declare_transaction(conn, handler, settle_before_discharge);
 }
 
 returned<sender> container::open_sender(const std::string &url) {

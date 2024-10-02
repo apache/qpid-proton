@@ -34,50 +34,38 @@
 
 namespace proton {
 
+class transaction_handler;
+
 class
-PN_CPP_CLASS_EXTERN Transaction {
-    proton::sender txn_ctrl;
-    proton::transaction_handler handler;
-    // TODO int
-    int id = 0;
-    proton::tracker _declare;
-    proton::tracker _discharge;
-    bool failed = false;
-    std::vector<proton::tracker> pending;
+PN_CPP_CLASS_EXTERN transaction {
   public:
   // TODO:
-    PN_CPP_EXTERN Transaction(proton::sender _txn_ctrl, proton::transaction_handler _handler, bool _settle_before_discharge = false);
-    PN_CPP_EXTERN virtual ~Transaction();
+    PN_CPP_EXTERN virtual ~transaction();
     PN_CPP_EXTERN virtual void commit();
     PN_CPP_EXTERN virtual void abort();
     PN_CPP_EXTERN virtual void declare();
-    PN_CPP_EXTERN virtual void discharge(bool failed);
-    PN_CPP_EXTERN virtual proton::tracker send_ctrl(proton::symbol descriptor, proton::value _value);
     PN_CPP_EXTERN virtual proton::tracker send(proton::sender s, proton::message msg);
-    PN_CPP_EXTERN virtual void handle_outcome(proton::tracker t);
 };
 
 class
 PN_CPP_CLASS_EXTERN transaction_handler {
-  
   public:
-    PN_CPP_EXTERN transaction_handler();
     PN_CPP_EXTERN virtual ~transaction_handler();
 
     /// Called when a local transaction is declared.
-    PN_CPP_EXTERN virtual void on_transaction_declared(Transaction&);
+    PN_CPP_EXTERN virtual void on_transaction_declared(transaction&);
 
     /// Called when a local transaction is discharged successfully.
-    PN_CPP_EXTERN virtual void on_transaction_committed(Transaction&);
+    PN_CPP_EXTERN virtual void on_transaction_committed(transaction&);
 
     /// Called when a local transaction is discharged unsuccessfully (aborted).
-    PN_CPP_EXTERN virtual void on_transaction_aborted(Transaction&);
+    PN_CPP_EXTERN virtual void on_transaction_aborted(transaction&);
 
     /// Called when a local transaction declare fails.
-    PN_CPP_EXTERN virtual void on_transaction_declare_failed(Transaction&);
+    PN_CPP_EXTERN virtual void on_transaction_declare_failed(transaction&);
 
     /// Called when the commit of a local transaction fails.
-    PN_CPP_EXTERN virtual void on_transaction_commit_failed(Transaction&);
+    PN_CPP_EXTERN virtual void on_transaction_commit_failed(transaction&);
 };
 
 } // namespace proton

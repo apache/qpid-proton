@@ -41,6 +41,7 @@ namespace proton {
 
 class proton_handler;
 class connector;
+class transaction;
 
 namespace io {class link_namer;}
 
@@ -161,6 +162,7 @@ class transfer_context : public context {
     transfer_context() : user_data_(nullptr) {}
     static transfer_context& get(pn_delivery_t* s);
 
+    transaction* transaction_;
     void* user_data_;
 };
 

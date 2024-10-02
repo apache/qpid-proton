@@ -45,7 +45,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
     int confirmed = 0;
     proton::container *container;
     proton::transaction_handler transaction_handler;
-    proton::Transaction *transaction;
+    proton::transaction *transaction;
     proton::connection connection;
   public:
     tx_send(const std::string &s, int c, int b):
@@ -59,7 +59,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
         c.declare_transaction(connection, transaction_handler);
     }
 
-    void on_transaction_declared(proton::Transaction &t) override {
+    void on_transaction_declared(proton::transaction &t) override {
         transaction = &t;
         send();
     }
@@ -92,7 +92,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
         confirmed += 1;
     }
 
-    void on_transaction_committed(proton::Transaction &t) override {
+    void on_transaction_committed(proton::transaction &t) override {
         committed += current_batch;
         if(committed == total) {
             std::cout << "All messages committed";

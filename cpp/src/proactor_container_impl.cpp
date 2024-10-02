@@ -26,6 +26,7 @@
 #include "proton/listener.hpp"
 #include "proton/reconnect_options.hpp"
 #include "proton/ssl.hpp"
+#include "proton/target_options.hpp"
 #include "proton/transport.hpp"
 #include "proton/url.hpp"
 
@@ -858,6 +859,46 @@ void container::impl::stop(const proton::error_condition& err) {
     set_error_condition(err, error_condition);
     pn_proactor_disconnect(proactor_, error_condition);
     pn_condition_free(error_condition);
+}
+
+// TODO: declare this in separate internal header file
+extern transaction mk_transaction_impl(sender&, transaction_handler&, bool);
+
+transaction container::impl::declare_transaction(proton::connection conn, proton::transaction_handler &handler, bool settle_before_discharge) {
+    class InternalTransactionHandler : public proton::messaging_handler {
+        // TODO: auto_settle
+        void on_tracker_settle(proton::tracker &t) override {
+            if(t.transaction()) {
+                //t.transaction()->handle_outcome(t);
+            }
+        }
+
+        // TODO: Add on_unhandled function
+    };
+
+    // TODO: Sender should be created only once. (May be use Singleton Class)
+    // proton::target_options t;
+
+    proton::target_options t;
+    std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
+    t.capabilities(cap);
+    // Type PN_COORDINATOR value is 3. It is a special target identifying a transaction coordinator.
+    // TODO: Change the type from int to enum.
+    t.type(3);
+
+    proton::sender_options so;
+    so.name("txn-ctrl");
+    // Todo: Check the value, Or by deafult null?
+    //so.source() ?
+    so.target(t);
+    InternalTransactionHandler internal_handler; // internal_handler going out of scope. Fix it
+    so.handler(internal_handler);
+    proton::sender s = conn.open_sender("does not matter", so);
+
+    settle_before_discharge = false;
+
+    return mk_transaction_impl(s, handler, settle_before_discharge);
+
 }
 
 }
