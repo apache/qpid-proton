@@ -142,6 +142,13 @@ extern "C" {
 typedef uint32_t  pn_sequence_t;
 
 /**
+ * A count or limit of AMQP transfer frames.
+ *
+ * @ingroup api_types
+ */
+typedef uint32_t pn_frame_count_t;
+
+/**
  * A span of time in milliseconds.
  *
  * @ingroup api_types

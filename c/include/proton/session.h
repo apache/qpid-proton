@@ -194,6 +194,8 @@ PN_EXTERN void pn_session_open(pn_session_t *session);
 PN_EXTERN void pn_session_close(pn_session_t *session);
 
 /**
+ * **Deprecated** - Use ::pn_session_incoming_window().
+ *
  * Get the incoming capacity of the session measured in bytes.
  *
  * The incoming capacity of a session determines how much incoming
@@ -205,6 +207,8 @@ PN_EXTERN void pn_session_close(pn_session_t *session);
 PN_EXTERN size_t pn_session_get_incoming_capacity(pn_session_t *session);
 
 /**
+ * **Deprecated** - Use ::pn_session_set_incoming_window_and_lwm().
+ *
  * Set the incoming capacity for a session object.
  *
  * The incoming capacity of a session determines how much incoming message
@@ -222,6 +226,84 @@ PN_EXTERN size_t pn_session_get_incoming_capacity(pn_session_t *session);
  * @param[in] capacity the incoming capacity for the session in bytes
  */
 PN_EXTERN void pn_session_set_incoming_capacity(pn_session_t *session, size_t capacity);
+
+/**
+ * Get the maximum incoming window window for a session object.
+ *
+ * The maximum incoming window can be set by ::pn_session_set_incoming_window_and_lwm.
+ *
+ * @param[in] session the session object
+ * @return the maximum size of the incoming window or 0 if not set.
+ **/
+PN_EXTERN pn_frame_count_t pn_session_incoming_window(pn_session_t *session);
+
+/**
+ * Get the low water mark for the session incoming window.
+ *
+ * The low water mark governs how frequently the session updates the remote
+ * peer with changes to the incoming window.
+ *
+ * A value of zero indicates that Proton will choose a default strategy for
+ * updating the peer.
+ *
+ * The low water mark can be set by ::pn_session_set_incoming_window_and_lwm.
+ *
+ * @param[in] session the session object
+ * @return the low water mark of incoming window.
+ **/
+PN_EXTERN pn_frame_count_t pn_session_incoming_window_lwm(pn_session_t *session);
+
+/**
+ * Set the maximum incoming window and low water mark for a session object.
+ *
+ * The session incoming window is a count of the number of AMQP transfer frames
+ * that can be accepted and buffered locally by the session object until
+ * processed by the application (i.e. consumed by ::pn_link_recv or dropped by
+ * ::pn_link_advance).  The maximum bytes buffered by the session will never
+ * exceed (max_incoming_window * max_frame_size). The incoming window frame count
+ * decreases 1-1 with incoming AMQP transfer frames.  Whenever the application
+ * processes the buffered incoming bytes, the incoming window increases to the
+ * largest frame count that can be used by the peer without causing the local
+ * buffered bytes to exceed the maximum stated above.
+ *
+ * The session will defer updating the peer with a changed incoming window until
+ * it drops below the low water mark (lwm).  Too many updates can delay
+ * other traffic on the connection without providing improved performance on the
+ * session.  Too few can leave a remote sender frequently unable to send due
+ * to a closed window.  The best balance is application specific.  Note that the
+ * session incoming window is always updated along with the link credit on any
+ * of its child links, so the frequency of link credit updates is also a
+ * consideration when choosing a low water mark.
+ *
+ * The low water mark must be less than or equal to the incoming window.  If
+ * set to zero, Proton will choose a default strategy for updating the
+ * incoming window.
+ *
+ * This call is only valid before the call to ::pn_session_open on the session.
+ * Subsequently, the settings are fixed for the life of the session and only
+ * have effect if a max frame size is also set on the session's connection.
+ *
+ * @param[in] session the session object
+ * @param[in] window the maximum incoming window buffered by the session
+ * @param[in] lwm the low water mark (or 0 for default window updating)
+ *
+ * @return 0 on success, PN_ARG_ERR if window is zero or lwm is greater than
+ * window, or PN_STATE_ERR if the session is already open.
+ */
+PN_EXTERN int pn_session_set_incoming_window_and_lwm(pn_session_t *session, pn_frame_count_t window, pn_frame_count_t lwm);
+
+/**
+ * Get the remote view of the incoming window for the session.
+ *
+ * This evaluates to the most recent incoming window value communicated by the
+ * peer minus any subsequent transfer frames for the session that have been
+ * sent.  It does not include transfer frames that may be created in future
+ * for locally buffered content tracked by @ref pn_session_outgoing_bytes.
+ *
+ * @param[in] session the session object
+ * @return the remote incoming window
+ */
+PN_EXTERN pn_frame_count_t pn_session_remote_incoming_window(pn_session_t *session);
 
 /**
  * Get the outgoing window for a session object.

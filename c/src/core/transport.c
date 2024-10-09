@@ -1101,6 +1101,7 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
   } else {
     ssn = pn_session(transport->connection);
   }
+  ssn->state.remote_incoming_window = incoming_window;
   ssn->state.incoming_transfer_count = next;
   if (handle_max_q) {
     ssn->state.remote_handle_max = handle_max;
@@ -1459,9 +1460,11 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   ssn->state.incoming_transfer_count++;
   ssn->state.incoming_window--;
 
-  // XXX: need better policy for when to refresh window
-  if (!ssn->state.incoming_window && (int32_t) link->state.local_handle >= 0) {
-    pni_post_flow(transport, ssn, link);
+  if ((int32_t) link->state.local_handle >= 0 && ssn->state.incoming_window < ssn->incoming_window_lwm) {
+    if (!ssn->check_flow) {
+      ssn->check_flow = true;
+      pn_modified(ssn->connection, &link->endpoint, false);
+    }
   }
 
   return 0;
@@ -1873,23 +1876,35 @@ static size_t pni_session_outgoing_window(pn_session_t *ssn)
   return ssn->outgoing_window;
 }
 
-static size_t pni_session_incoming_window(pn_session_t *ssn)
+// Calculate the available incomming window
+static pn_frame_count_t pni_session_incoming_window(pn_session_t *ssn)
 {
   pn_transport_t *t = ssn->connection->transport;
   uint32_t size = t->local_max_frame;
   size_t capacity = ssn->incoming_capacity;
-  if (!size || !capacity) {     /* session flow control is not enabled */
+  if (!size || (!capacity && !ssn->max_incoming_window)) {     /* session flow control is not enabled */
     return AMQP_MAX_WINDOW_SIZE;
-  } else if (capacity >= size) { /* precondition */
-    return (capacity - ssn->incoming_bytes) / size;
-  } else {                     /* error: we will never have a non-zero window */
-    pn_condition_format(
-      pn_transport_condition(t),
-      "amqp:internal-error",
-      "session capacity %zu is less than frame size %" PRIu32,
-      capacity, size);
-    pn_transport_close_tail(t);
-    return 0;
+  }
+  // Calculate depending on whether application specified capacity or a frame count.
+  assert(capacity || ssn->max_incoming_window);
+  if (capacity) {
+    // Old API
+    if (capacity >= size) { /* precondition */
+      return capacity > ssn->incoming_bytes ? (pn_frame_count_t) (capacity - ssn->incoming_bytes) / size : 0;
+    } else {                     /* error: we will never have a non-zero window */
+      pn_condition_format(
+                          pn_transport_condition(t),
+                          "amqp:internal-error",
+                          "session capacity %zu is less than frame size %" PRIu32,
+                          capacity, size);
+      pn_transport_close_tail(t);
+      return 0;
+    }
+  } else {
+    // New API
+    // Find smallest number of frames that could have sent the buffered bytes.
+    pn_frame_count_t nominal_fc = (ssn->incoming_bytes + size - 1) / size;
+    return nominal_fc >= ssn->max_incoming_window ? 0 : ssn->max_incoming_window - nominal_fc;
   }
 }
 
@@ -1920,6 +1935,8 @@ static int pni_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpo
         pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_WARNING, "unable to find an open available channel within limit of %u", transport->channel_max );
         return PN_ERR;
       }
+      if (ssn->incoming_capacity || ssn->max_incoming_window)
+        pni_session_update_incoming_lwm(ssn);
       state->incoming_window = pni_session_incoming_window(ssn);
       state->outgoing_window = pni_session_outgoing_window(ssn);
       /* "DL[?HIIII]" */
@@ -2055,10 +2072,12 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
 
 static int pni_post_flow(pn_transport_t *transport, pn_session_t *ssn, pn_link_t *link)
 {
+  ssn->check_flow = false;
+  ssn->need_flow = false;
   ssn->state.incoming_window = pni_session_incoming_window(ssn);
   ssn->state.outgoing_window = pni_session_outgoing_window(ssn);
   bool linkq = (bool) link;
-  pn_link_state_t *state = &link->state;
+  pn_link_state_t *state = linkq ? &link->state : NULL;
   /* "DL[?IIII?I?I?In?o]" */
   pn_bytes_t buf = pn_amqp_encode_DLEQIIIIQIQIQInQoe(&transport->scratch_space, FLOW,
                        (int16_t) ssn->state.remote_channel >= 0, ssn->state.incoming_transfer_count,
@@ -2072,6 +2091,17 @@ static int pni_post_flow(pn_transport_t *transport, pn_session_t *ssn, pn_link_t
   return pn_framing_send_amqp(transport, ssn->state.local_channel, buf);
 }
 
+static inline bool pni_session_need_flow(pn_session_t *ssn) {
+  if (ssn->need_flow)
+    return true;
+  if (ssn->check_flow && ssn->state.incoming_window < ssn->incoming_window_lwm &&
+      pni_session_incoming_window(ssn) > ssn->state.incoming_window)
+    return true;
+
+  ssn->check_flow = false;
+  return false;
+}
+
 static int pni_process_flow_receiver(pn_transport_t *transport, pn_endpoint_t *endpoint)
 {
   if (endpoint->type == RECEIVER && endpoint->state & PN_LOCAL_ACTIVE)
@@ -2081,7 +2111,7 @@ static int pni_process_flow_receiver(pn_transport_t *transport, pn_endpoint_t *e
     pn_link_state_t *state = &rcv->state;
     if ((int16_t) ssn->state.local_channel >= 0 &&
         (int32_t) state->local_handle >= 0 &&
-        ((rcv->drain || state->link_credit != rcv->credit - rcv->queued) || !ssn->state.incoming_window)) {
+        ((rcv->drain || state->link_credit != rcv->credit - rcv->queued) || pni_session_need_flow(ssn))) {
       state->link_credit = rcv->credit - rcv->queued;
       return pni_post_flow(transport, ssn, rcv);
     }
@@ -2244,8 +2274,7 @@ static int pni_process_tpwork_receiver(pn_transport_t *transport, pn_delivery_t 
     if (err) return err;
   }
 
-  // XXX: need to centralize this policy and improve it
-  if (!ssn->state.incoming_window) {
+  if (pni_session_need_flow(ssn)) {
     int err = pni_post_flow(transport, ssn, link);
     if (err) return err;
   }
@@ -2299,6 +2328,10 @@ static int pni_process_flush_disp(pn_transport_t *transport, pn_endpoint_t *endp
     {
       int err = pni_flush_disp(transport, session);
       if (err) return err;
+      if (session->need_flow) {
+        err = pni_post_flow(transport, session, NULL);
+        if (err) return err;
+      }
     }
   }
 
@@ -2832,6 +2865,10 @@ uint32_t pn_transport_get_max_frame(pn_transport_t *transport)
 
 void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size)
 {
+  if (transport->open_sent) {
+    pn_logger_logf(&transport->logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_WARNING, "Cannot change local max-frame after OPEN frame sent.");
+    return;
+  }
   // if size == 0, no advertised limit to input frame size.
   if (size && size < AMQP_MIN_MAX_FRAME_SIZE)
     size = AMQP_MIN_MAX_FRAME_SIZE;

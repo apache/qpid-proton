@@ -397,7 +397,8 @@ TEST_CASE("driver_message_abort_mixed") {
 static void set_capacity_and_max_frame(size_t capacity, size_t max_frame,
                                        pn_test::driver_pair &d,
                                        const char *data) {
-  pn_transport_set_max_frame(d.client.transport, max_frame);
+  if (pn_transport_get_max_frame(d.client.transport) != max_frame)
+    pn_transport_set_max_frame(d.client.transport, max_frame);
   pn_connection_open(d.client.connection);
   pn_session_t *ssn = pn_session(d.client.connection);
   pn_session_set_incoming_capacity(ssn, capacity);
@@ -444,11 +445,11 @@ TEST_CASE("driver_session_flow_control") {
   }
 
   /* Capacity smaller than frame size is an error */
-  set_capacity_and_max_frame(1234, 12345, d, "foo");
+  set_capacity_and_max_frame(1233, 1234, d, "foo");
   CHECK_THAT(
       *client.last_condition,
       cond_matches("amqp:internal-error",
-                   "session capacity 1234 is less than frame size 12345"));
+                   "session capacity 1233 is less than frame size 1234"));
   free(buf.start);
 }
 
