@@ -331,3 +331,18 @@ func TestHeartbeat(t *testing.T) {
 		t.Error("expected server side  time-out or connection abort error")
 	}
 }
+
+func TestReceiverCloseBeforeAcknowledge(t *testing.T) {
+	p := newPipe(t, nil, nil)
+	defer func() { p.close() }()
+	r, s := p.receiver(Source("foo"))
+	go func() {
+		out := s.SendSync(amqp.NewMessageWith(0))
+		_ = test.ErrorIf(t, test.Differ(Closed, out.Error))
+	}()
+	rm, err := r.Receive()
+	test.FatalIf(t, err)
+	r.Close(nil)
+	<-r.Done()
+	_ = test.ErrorIf(t, test.Differ(Closed, rm.Accept()))
+}
