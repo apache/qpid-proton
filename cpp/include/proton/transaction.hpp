@@ -44,6 +44,7 @@ PN_CPP_CLASS_EXTERN transaction {
     PN_CPP_EXTERN virtual void commit();
     PN_CPP_EXTERN virtual void abort();
     PN_CPP_EXTERN virtual void declare();
+    PN_CPP_EXTERN virtual void handle_outcome(proton::tracker);
     PN_CPP_EXTERN virtual proton::tracker send(proton::sender s, proton::message msg);
 };
 

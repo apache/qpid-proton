@@ -34,6 +34,7 @@
 #include "proton/listener.h"
 #include "proton/proactor.h"
 #include "proton/transport.h"
+#include "proton/transaction.hpp"
 
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
@@ -49,7 +50,7 @@
 #include <random>
 
 // XXXX: Debug
-//#include <iostream>
+#include <iostream>
 
 namespace proton {
 
@@ -868,9 +869,11 @@ transaction container::impl::declare_transaction(proton::connection conn, proton
     class InternalTransactionHandler : public proton::messaging_handler {
         // TODO: auto_settle
         void on_tracker_settle(proton::tracker &t) override {
-            if(t.transaction()) {
-                //t.transaction()->handle_outcome(t);
-            }
+            std::cout<<"    [InternalTransactionHandler][on_tracker_settle] called with tracker.txn"
+                 << std::endl;
+            // if(t.transaction()) {
+                t.transaction().handle_outcome(t);
+            // }
         }
 
         // TODO: Add on_unhandled function
@@ -882,23 +885,28 @@ transaction container::impl::declare_transaction(proton::connection conn, proton
     proton::target_options t;
     std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
     t.capabilities(cap);
-    // Type PN_COORDINATOR value is 3. It is a special target identifying a transaction coordinator.
-    // TODO: Change the type from int to enum.
-    t.type(3);
+    t.type(PN_COORDINATOR);
 
     proton::sender_options so;
     so.name("txn-ctrl");
     // Todo: Check the value, Or by deafult null?
     //so.source() ?
     so.target(t);
-    InternalTransactionHandler internal_handler; // internal_handler going out of scope. Fix it
+    // TODO: FIX STATIC
+    static InternalTransactionHandler internal_handler; // internal_handler going out of scope. Fix it
     so.handler(internal_handler);
+    std::cout<<"    [declare_transaction] txn-name sender open with handler: " << &internal_handler << std::endl;
+
     proton::sender s = conn.open_sender("does not matter", so);
 
     settle_before_discharge = false;
 
-    return mk_transaction_impl(s, handler, settle_before_discharge);
+    std::cout<<"    [declare_transaction] calling mk_transaction_impl" << std::endl;
 
+    auto txn = mk_transaction_impl(s, handler, settle_before_discharge);
+    std::cout<<"    [declare_transaction] txn address:" << &txn << std::endl;
+
+    return txn;
 }
 
 }

@@ -44,8 +44,8 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
     int committed = 0;
     int confirmed = 0;
     proton::container *container;
-    proton::transaction_handler transaction_handler;
-    proton::transaction *transaction;
+    // proton::transaction_handler transaction_handler;
+    proton::transaction transaction;
     proton::connection connection;
   public:
     tx_send(const std::string &s, int c, int b):
@@ -55,22 +55,34 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
         container = &c; // TODO: Fix error
         sender = c.open_sender(url);
         connection = sender.connection();
-        transaction = NULL;
-        c.declare_transaction(connection, transaction_handler);
+        std::cout << "    [on_container_start] declare_txn started..." << std::endl;
+        transaction = c.declare_transaction(connection, *this);
+        std::cout << "    [on_container_start] completed!! txn: " << &transaction << std::endl;
     }
 
+    void on_transaction_aborted(proton::transaction&) {}
+    void on_transaction_declare_failed(proton::transaction &) {}
+    void on_transaction_commit_failed(proton::transaction&) {}
+
+
     void on_transaction_declared(proton::transaction &t) override {
-        transaction = &t;
-        send();
+        std::cout<<"[on_transaction_declared] txn: "<<(&transaction)<< " new_txn: "<<(&t)<<std::endl;
+        connection.close();
+        // transaction = &t;
+        // ASSUME: THIS FUNCTION DOESN"T WORK
+        // send();
     }
 
     void on_sendable(proton::sender &s) override {
-        send();
+        // send();
+        // std::cout<<"    [OnSendable] transaction: "<< &transaction << std::endl;
+        // send(s);
     }
 
-    void send() {
+    void send(proton::sender &s) {
         // TODO: Add more condition in while loop
-        while (transaction && sender.credit() && (committed + current_batch) < total)
+        // transaction != null
+        while ( sender.credit() && (committed + current_batch) < total)
         {
             proton::message msg;
             std::map<std::string, int> m;
@@ -78,11 +90,13 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
 
             msg.id(committed + current_batch + 1);
             msg.body(m);
+            transaction.send(sender, msg);
             current_batch += 1;
             if(current_batch == batch_size)
             {
-                transaction->commit();
-                transaction = NULL;
+                transaction.commit();
+                // WE DON"T CARE ANY MORE FOR NOW
+                // transaction = NULL;
             }
         }
 
@@ -94,13 +108,14 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
 
     void on_transaction_committed(proton::transaction &t) override {
         committed += current_batch;
+        std::cout<<"    [OnTxnCommitted] Committed:"<< committed<< std::endl;
         if(committed == total) {
             std::cout << "All messages committed";
-            connection.close();
+            // connection.close();
         }
         else {
-            current_batch = 0;
-            container->declare_transaction(connection, transaction_handler);
+            // current_batch = 0;
+            // container->declare_transaction(connection, transaction_handler);
         }
     }
 
@@ -112,7 +127,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
 
 int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
-    int message_count = 100;
+    int message_count = 10;
     int batch_size = 10;
     example::options opts(argc, argv);
 

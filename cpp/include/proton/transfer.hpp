@@ -78,9 +78,9 @@ class transfer : public internal::object<pn_delivery_t> {
     PN_CPP_EXTERN bool settled() const;
 
    // Set transaction
-    PN_CPP_EXTERN void transaction(transaction& t);
+    PN_CPP_EXTERN void transaction(transaction t);
 
-    PN_CPP_EXTERN class transaction* transaction() const;
+    PN_CPP_EXTERN class transaction transaction() const;
 
     /// Set user data on this transfer.
     PN_CPP_EXTERN void user_data(void* user_data) const;
@@ -93,9 +93,9 @@ class transfer : public internal::object<pn_delivery_t> {
     /// @endcond
 };
 
-/// Human-readalbe name of the transfer::state
+/// Human-readable name of the transfer::state
 PN_CPP_EXTERN std::string to_string(enum transfer::state);
-/// Human-readalbe name of the transfer::state
+/// Human-readable name of the transfer::state
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const enum transfer::state);
 
 } // proton

@@ -21,10 +21,16 @@
 
 #include "proton/message.hpp"
 #include "proton/transaction.hpp"
+#include "proton/target_options.hpp"
 #include "proton/tracker.hpp"
+
+#include <proton/types.hpp>
+
+#include <iostream>
 
 namespace proton {
 
+transaction_handler::~transaction_handler() = default;
 void transaction_handler::on_transaction_declared(transaction &) {}
 void transaction_handler::on_transaction_committed(transaction &) {}
 void transaction_handler::on_transaction_aborted(transaction &) {}
@@ -36,6 +42,10 @@ void transaction::commit() {};
 void transaction::abort() {};
 void transaction::declare() {};
 proton::tracker transaction::send(proton::sender s, proton::message msg) { return {}; };
+void transaction::handle_outcome(proton::tracker t) {
+    std::cout<<"    transaction_impl::handle_outcome = NO OP base class " << std::endl;
+
+};
 
 class transaction_impl : public transaction {
   public:
@@ -76,26 +86,40 @@ void transaction_impl::abort() {
 }
 
 void transaction_impl::declare() {
+    std::cout<<"    [transaction_impl][declare] staring it" << std::endl;
+
     proton::symbol descriptor("amqp:declare:list");
     // proton::value _value = vd;
     // TODO: How to make list;
-    std::vector<uint16_t> vd;
-    proton::value _value;
-    // proton::get()
+    std::list<proton::value> vd;
+    proton::value i_am_null;
+    vd.push_back(i_am_null);
+    proton::value _value = vd;
+    std::cout<<"   [transaction_impl::declare()] value to send_ctrl: " << _value<< std::endl;
     _declare = send_ctrl(descriptor, _value );
 }
 
 void transaction_impl::discharge(bool failed) {
     failed = failed;
-    proton::symbol descriptor("amqp:declare:list");;
+    proton::symbol descriptor("amqp:declare:list");
     proton::value _value;
     proton::tracker discharge = send_ctrl(descriptor, _value);
 }
 
 proton::tracker transaction_impl::send_ctrl(proton::symbol descriptor, proton::value _value) {
-    proton::message msg = _value; // TODO
+    proton::value msg_value;
+    proton::codec::encoder enc(msg_value);
+    enc << proton::codec::start::described()
+        << descriptor
+        << _value
+        << proton::codec::finish();
+
+
+    proton::message msg = msg_value;
+    std::cout << "    [transaction_impl::send_ctrl] sending " << msg << std::endl;
     proton::tracker delivery = txn_ctrl->send(msg);
     delivery.transaction(*this);
+    std::cout << "    [transaction_impl::send_ctrl] sending done. I guess queued! " << std::endl;
     return delivery;
 }
 
@@ -105,7 +129,13 @@ proton::tracker transaction_impl::send(proton::sender s, proton::message msg) {
 }
 
 void transaction_impl::handle_outcome(proton::tracker t) {
-    // this->handler.on_transaction_declared();
+    // TODO: handle outcome
+    if(_declare == t) {
+        std::cout<<"    transaction_impl::handle_outcome => got _declare" << std::endl;
+
+    }
+    std::cout<<"    transaction_impl::handle_outcome => calling txn declared. handler: " << handler << std::endl;
+    handler->on_transaction_declared(*this);
 
 }
 

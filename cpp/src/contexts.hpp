@@ -25,6 +25,7 @@
 #include "reconnect_options_impl.hpp"
 
 #include "proton/work_queue.hpp"
+#include "proton/transaction.hpp"
 #include "proton/message.hpp"
 
 #include "proton/object.h"
@@ -162,7 +163,7 @@ class transfer_context : public context {
     transfer_context() : user_data_(nullptr) {}
     static transfer_context& get(pn_delivery_t* s);
 
-    transaction* transaction_;
+    std::unique_ptr<transaction> transaction_;
     void* user_data_;
 };
 

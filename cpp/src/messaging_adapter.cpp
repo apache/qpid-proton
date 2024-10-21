@@ -30,6 +30,7 @@
 #include "proton/receiver_options.hpp"
 #include "proton/sender.hpp"
 #include "proton/sender_options.hpp"
+#include "proton/target_options.hpp"
 #include "proton/session.hpp"
 #include "proton/tracker.hpp"
 #include "proton/transport.hpp"
@@ -69,6 +70,11 @@ void on_link_flow(messaging_handler& handler, pn_event_t* event) {
     // TODO: process session flow data, if no link-specific data, just return.
     if (!lnk) return;
     int state = pn_link_state(lnk);
+    if (pn_terminus_get_type(pn_link_remote_target(lnk))==PN_COORDINATOR) {
+        std::cout << "    on_link_flow, type: PN_COORDINATOR"  << std::endl;
+        return;
+
+    }
     if ((state&PN_LOCAL_ACTIVE) && (state&PN_REMOTE_ACTIVE)) {
         link_context& lctx = link_context::get(lnk);
         if (pn_link_is_sender(lnk)) {
@@ -115,8 +121,14 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
     pn_delivery_t *dlv = pn_event_delivery(event);
     link_context& lctx = link_context::get(lnk);
     Tracing& ot = Tracing::getTracing();
+    if (pn_terminus_get_type(pn_link_remote_target(lnk))==PN_COORDINATOR) {
+        std::cout<< "    on_delivery: COOORINDATOR.. " << &handler << std::endl;
+        tracker t(make_wrapper<tracker>(dlv));
+        std::cout<< "    on_delivery: COOORINDATOR.. tracker" << &t << std::endl;
+        handler.on_tracker_settle(t);
+    }
 
-    if (pn_link_is_receiver(lnk)) {
+    else if (pn_link_is_receiver(lnk)) {
         delivery d(make_wrapper<delivery>(dlv));
         if (pn_delivery_aborted(dlv)) {
             pn_delivery_settle(dlv);
@@ -274,23 +286,73 @@ void on_link_local_open(messaging_handler& handler, pn_event_t* event) {
 
 void on_link_remote_open(messaging_handler& handler, pn_event_t* event) {
     auto lnk = pn_event_link(event);
-    // Currently don't implement (transaction) coordinator
+    int type = pn_terminus_get_type(pn_link_remote_target(lnk));
+    std::cout << "    on_link_remote_open, type:" << type << std::endl;
     if (pn_terminus_get_type(pn_link_remote_target(lnk))==PN_COORDINATOR) {
-      auto error = pn_link_condition(lnk);
-      pn_condition_set_name(error, "amqp:not-implemented");
-      pn_link_close(lnk);
+      auto cond = pn_link_condition(lnk);
+      if (pn_condition_is_set(cond)) {
+            std::cout<<"    Got condition on_link_remote_open(.PN_COORDINATOR): "
+                << pn_event_type_name(pn_event_type(event)) << " "
+                << pn_condition_get_name(cond) << " "
+                << pn_condition_get_description(cond) << std::endl;
+
+            pn_condition_set_name(cond, "amqp:on_link_remote_open:FAILED");
+            pn_link_close(lnk);
+            return;
+        }
+        std::cout<<"    IN on_link_remote_open(.PN_COORDINATOR) success " << std::endl;
+
+        // WHY???
+        // pn_terminus_copy(pn_link_source(lnk), pn_link_remote_source(lnk));
+        // pn_terminus_copy(pn_link_target(lnk), pn_link_remote_target(lnk));
+
+        // We need a new class?
+        // auto coordinator = pn_link_remote_target(lnk);
+
+
+            // proton::target_options to;
+            // std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
+            // to.capabilities(cap);
+            // to.type(PN_COORDINATOR);
+
+            // proton::receiver_options ro;
+            // ro.name("txn-ctrl");
+            // ro.target(to);
+            // ro.handler(handler);
+            // receiver r(make_wrapper<receiver>(lnk));
+
+            // proton::receiver rcv = r.connection().open_receiver("does not matter", ro);
+              std::cout<<"    IN on_link_remote_open(.PN_COORDINATOR) have handler " << &handler << std::endl;
+
+            // handler.on_receiver_open(rcv);
+        // credit_topup(lnk);
+
+    // pn_delivery_t *dlv = pn_event_delivery(event);
+    //         tracker t(make_wrapper<tracker>(dlv));
+
+    //     // sender s(make_wrapper<sender>(lnk));
+    //     handler.on_tracker_settle(t);
+    // TODO: find what to do...
+        // HAHA.. treating coordinator like sender...
+    //   sender s(make_wrapper<sender>(lnk));
+    //   handler.on_sender_open(s);
+    // pn_link_close(lnk);
       return;
     }
     if (pn_link_state(lnk) & PN_LOCAL_UNINIT) { // Incoming link
         // Copy source and target from remote end.
+          std::cout<<"    Inside on_link_remote_open() .. PN_LOCAL_UNINIT " << std::endl;
+
         pn_terminus_copy(pn_link_source(lnk), pn_link_remote_source(lnk));
         pn_terminus_copy(pn_link_target(lnk), pn_link_remote_target(lnk));
     }
     if (pn_link_is_receiver(lnk)) {
+          std::cout<<"    Inside on_link_remote_open() .. pn_link_is_receiver " << std::endl;
       receiver r(make_wrapper<receiver>(lnk));
       handler.on_receiver_open(r);
       credit_topup(lnk);
     } else {
+          std::cout<<"    Inside on_link_remote_open() .. sender " << std::endl;
       sender s(make_wrapper<sender>(lnk));
       handler.on_sender_open(s);
     }
