@@ -2079,6 +2079,12 @@ ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n)
     current->bytes_offset = 0;
     // Expensive defrag/rotate is here.  Future calls to pn_buffer_bytes() are fast if no trim.
     pn_buffer_bytes(current->bytes);
+    if (current->tpwork) {
+      // Some content was sent: bytes_offset > 0.  Give other senders a turn.
+      pn_connection_t *connection = current->link->session->connection;
+      LL_REMOVE(connection, tpwork, current);
+      current->tpwork = false;
+    }
   }
   pn_buffer_append(current->bytes, bytes, n);
   sender->session->outgoing_bytes += n;
