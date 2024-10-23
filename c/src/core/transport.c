@@ -2209,15 +2209,22 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
   pn_session_state_t *ssn_state = &link->session->state;
   pn_link_state_t *link_state = &link->state;
   bool xfr_posted = false;
+  uint32_t unsent = pn_buffer_size(delivery->bytes) - delivery->bytes_offset;
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
-    if (!state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
+    if (!state->sent && (delivery->done || unsent > 0) &&
         ssn_state->remote_incoming_window > 0 && link_state->link_credit > 0) {
       if (!state->init) {
         state = pni_delivery_map_push(&ssn_state->outgoing, delivery);
       }
-
+      // Content may be consumed in chunks via multiple calls to transport_produce().
+      // pn_link_send() ensures next call is always fast: buffer already in rotated state.
       pn_bytes_t bytes = pn_buffer_bytes(delivery->bytes);
-      size_t full_size = bytes.size;
+      if (delivery->bytes_offset) {
+        // Account for previous sent data while avoiding expensive buffer rotate.
+        bytes.size -= delivery->bytes_offset;
+        bytes.start += delivery->bytes_offset;
+      }
+      size_t remaining_size = bytes.size;
       int count = pni_post_amqp_transfer_frame(transport,
                                                ssn_state->local_channel,
                                                link_state->local_handle,
@@ -2237,10 +2244,11 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
       ssn_state->outgoing_transfer_count += count;
       ssn_state->remote_incoming_window -= count;
 
-      int sent = full_size - bytes.size;
-      pn_buffer_trim(delivery->bytes, sent, 0);
+      int sent = remaining_size - bytes.size;
+      delivery->bytes_offset += sent;
       link->session->outgoing_bytes -= sent;
-      if (!pn_buffer_size(delivery->bytes) && delivery->done) {
+      remaining_size -= sent;
+      if (!remaining_size && delivery->done) {
         state->sent = true;
         link_state->delivery_count++;
         link_state->link_credit--;
