@@ -88,9 +88,9 @@ string configure(connection_options& opts, const string& config) {
 void test_default_file() {
     // Default file locations in order of preference.
     ::setenv("MESSAGING_CONNECT_FILE", "environment", 1);
-    ofstream("connect.json") << "{ \"host\": \"current\" }" << endl;
+    ofstream("connect.json") << R"({ "host": "current" })" << endl;
     ::setenv("HOME", "testdata", 1);
-    ofstream("testdata/.config/messaging/connect.json") << "{ \"host\": \".config\" }" << endl;
+    ofstream("testdata/.config/messaging/connect.json") << R"({ "host": ".config" })" << endl;
     ASSERT_EQUAL("environment", connect_config::default_file());
     ::unsetenv("MESSAGING_CONNECT_FILE");
     ASSERT_EQUAL("connect.json", connect_config::default_file());
@@ -106,28 +106,28 @@ void test_default_file() {
 
 void test_addr() {
     connection_options opts;
-    ASSERT_EQUAL("foo:bar", configure(opts, "{ \"host\":\"foo\", \"port\":\"bar\" }"));
-    ASSERT_EQUAL("foo:1234", configure(opts, "{ \"host\":\"foo\", \"port\":\"1234\" }"));
+    ASSERT_EQUAL("foo:bar", configure(opts, R"({ "host":"foo", "port":"bar" })"));
+    ASSERT_EQUAL("foo:1234", configure(opts, R"({ "host":"foo", "port":"1234" })"));
     ASSERT_EQUAL("localhost:amqps", configure(opts, "{}"));
-    ASSERT_EQUAL("localhost:amqp", configure(opts, "{\"scheme\":\"amqp\"}"));
-    ASSERT_EQUAL("foo:bar", configure(opts, "{ \"host\":\"foo\", /* inline comment */\"port\":\"bar\" // end of line comment\n}"));
-
-    ASSERT_THROWS_MSG(error, "'scheme' must be", configure(opts, "{\"scheme\":\"bad\"}"));
-    ASSERT_THROWS_MSG(error, "'scheme' expected string, found boolean", configure(opts, "{\"scheme\":true}"));
-    ASSERT_THROWS_MSG(error, "'port' expected string or uint, found boolean", configure(opts, "{\"port\":true}"));
-    ASSERT_THROWS_MSG(error, "'host' expected string, found boolean", configure(opts, "{\"host\":true}"));
+    ASSERT_EQUAL("localhost:amqp", configure(opts, R"({"scheme":"amqp"})"));
+    ASSERT_EQUAL("foo:bar", configure(opts, R"(
+{ "host":"foo", /* inline comment */"port":"bar" // end of line comment
 }
+    )"));
 
-// Hack to write strings with embedded '"' and newlines
-#define RAW_STRING(...) #__VA_ARGS__
+    ASSERT_THROWS_MSG(error, "'scheme' must be", configure(opts, R"({"scheme":"bad"})"));
+    ASSERT_THROWS_MSG(error, "'scheme' expected string, found boolean", configure(opts, R"({"scheme":true})"));
+    ASSERT_THROWS_MSG(error, "'port' expected string or uint, found boolean", configure(opts, R"({"port":true})"));
+    ASSERT_THROWS_MSG(error, "'host' expected string, found boolean", configure(opts, R"({"host":true})"));
+}
 
 void test_invalid_config() {
     connection_options opts;
-    ASSERT_THROWS_MSG(proton::error, "expected string", configure(opts, RAW_STRING({ "scheme":true})));
-    ASSERT_THROWS_MSG(proton::error, "expected object", configure(opts, RAW_STRING({ "tls":""})));
-    ASSERT_THROWS_MSG(proton::error, "expected object", configure(opts, RAW_STRING({ "sasl":true})));
-    ASSERT_THROWS_MSG(proton::error, "expected boolean", configure(opts, RAW_STRING({ "sasl": { "enable":""}})));
-    ASSERT_THROWS_MSG(proton::error, "expected boolean", configure(opts, RAW_STRING({ "tls": { "verify":""}})));
+    ASSERT_THROWS_MSG(proton::error, "expected string", configure(opts, R"({ "scheme":true})"));
+    ASSERT_THROWS_MSG(proton::error, "expected object", configure(opts, R"({ "tls":""})"));
+    ASSERT_THROWS_MSG(proton::error, "expected object", configure(opts, R"({ "sasl":true})"));
+    ASSERT_THROWS_MSG(proton::error, "expected boolean", configure(opts, R"({ "sasl": { "enable":""}})"));
+    ASSERT_THROWS_MSG(proton::error, "expected boolean", configure(opts, R"({ "tls": { "verify":""}})"));
 }
 
 void test_invalid_json() {
@@ -138,11 +138,11 @@ void test_invalid_json() {
   if (std::make_tuple(JSONCPP_VERSION_MAJOR, JSONCPP_VERSION_MINOR) < std::make_tuple(1, 7)) {
     ASSERT_THROWS_MSG(proton::error, "reader error", configure(opts, "{"));
     ASSERT_THROWS_MSG(proton::error, "reader error", configure(opts, ""));
-    ASSERT_THROWS_MSG(proton::error, "reader error", configure(opts, RAW_STRING({ "user" : "x" "host" : "y"})));
+    ASSERT_THROWS_MSG(proton::error, "reader error", configure(opts, R"({ "user" : "x" "host" : "y"})"));
   } else {
     ASSERT_THROWS_MSG(proton::error, "Missing '}'", configure(opts, "{"));
     ASSERT_THROWS_MSG(proton::error, "Syntax error", configure(opts, ""));
-    ASSERT_THROWS_MSG(proton::error, "Missing ','", configure(opts, RAW_STRING({ "user":"x" "host":"y"})));
+    ASSERT_THROWS_MSG(proton::error, "Missing ','", configure(opts, R"({ "user":"x" "host":"y"})"));
   }
 }
 
@@ -231,7 +231,7 @@ class test_almost_default_connect : public test_handler {
 
     void on_listener_start(container& c) override {
         ofstream os("connect.json");
-        ASSERT(os << config_with_port(RAW_STRING("scheme":"amqp")));
+        ASSERT(os << config_with_port(R"("scheme":"amqp")"));
         os.close();
         c.connect();
     }
@@ -282,7 +282,7 @@ class test_host_user_pass : public test_handler {
   public:
 
     void on_listener_start(proton::container & c) override {
-        connect(c, RAW_STRING("scheme":"amqp", "host":"127.0.0.1", "user":"user@proton", "password":"password"));
+        connect(c, R"("scheme":"amqp", "host":"127.0.0.1", "user":"user@proton", "password":"password")");
     }
 
     void check_connection(connection& c) override {
@@ -310,7 +310,7 @@ class test_tls : public test_handler {
     test_tls() : test_handler(make_opts()) {}
 
     void on_listener_start(proton::container & c) override {
-        connect(c, RAW_STRING("scheme":"amqps", "tls": { "verify":false }));
+        connect(c, R"("scheme":"amqps", "tls": { "verify":false })");
     }
 };
 
@@ -330,7 +330,7 @@ class test_tls_default_fail : public test_handler {
     test_tls_default_fail() : test_handler(make_opts()), failed_(false) {}
 
     void on_listener_start(proton::container& c) override {
-        connect(c, RAW_STRING("scheme":"amqps"));
+        connect(c, R"("scheme":"amqps")");
     }
 
     void on_messaging_error(const proton::error_condition& c) override {
@@ -366,14 +366,15 @@ class test_tls_external : public test_handler {
     test_tls_external() : test_handler(make_opts()) {}
 
     void on_listener_start(container& c) override {
-        connect(c, RAW_STRING(
+        connect(c, R"(
                     "scheme":"amqps",
                     "sasl":{ "mechanisms": "EXTERNAL" },
                     "tls": {
                             "cert":"testdata/certs/client-certificate.pem",
                             "key":"testdata/certs/client-private-key-no-password.pem",
                             "ca":"testdata/certs/ca-certificate.pem",
-                            "verify":true }));
+                            "verify":true })"
+                );
     }
 };
 
@@ -396,14 +397,15 @@ class test_tls_plain : public test_handler {
     test_tls_plain() : test_handler(make_opts()) {}
 
     void on_listener_start(container& c) override {
-        connect(c, RAW_STRING(
+        connect(c, R"(
                     "scheme":"amqps", "user":"user@proton", "password": "password",
                     "sasl":{ "mechanisms": "PLAIN" },
                     "tls": {
                             "cert":"testdata/certs/client-certificate.pem",
                             "key":"testdata/certs/client-private-key-no-password.pem",
                             "ca":"testdata/certs/ca-certificate.pem",
-                            "verify":true }));
+                            "verify":true })"
+                );
     }
 };
 
