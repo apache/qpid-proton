@@ -236,7 +236,10 @@ static void pn_buffer_rotate (pn_buffer_t *buf, size_t sz) {
 
 static inline int pn_buffer_defrag(pn_buffer_t *buf)
 {
-  pn_buffer_rotate(buf, buf->start);
+  if (pni_buffer_wrapped(buf))
+    pn_buffer_rotate(buf, buf->start);
+  else
+    memmove(buf->bytes, buf->bytes + buf->start, buf->size);
   buf->start = 0;
   return 0;
 }
