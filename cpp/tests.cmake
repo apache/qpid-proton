@@ -69,6 +69,16 @@ if (ENABLE_JSONCPP)
   set_tests_properties(cpp-connect_config_test PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   # Test data and output directories for connect_config_test
   file(COPY  "${CMAKE_CURRENT_SOURCE_DIR}/testdata" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+
+  if (NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
+    add_executable (pkcs11_test src/pkcs11_test.cpp)
+    target_link_libraries (pkcs11_test qpid-proton-cpp qpid-proton-core ${PLATFORM_LIBS})
+    # PKCS#11 URIs contain semicolons, which CMake would interpret as
+    # list sepearator, so we side step add_cpp_test and pass the env
+    # through as is.
+    add_test(NAME cpp-pkcs11_test COMMAND $<TARGET_FILE:pkcs11_test>)
+    set_tests_properties(cpp-pkcs11_test PROPERTIES SKIP_RETURN_CODE 127)
+  endif()
 endif()
 
 if (ENABLE_OPENTELEMETRYCPP)
