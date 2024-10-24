@@ -18,6 +18,7 @@ keytool -storetype pkcs12 -keystore server-lh.pkcs12 -storepass server-password 
 keytool -storetype pkcs12 -keystore server-lh.pkcs12 -storepass server-password -alias server-certificate -keypass server-password -certreq -file server-request-lh.pem
 keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile server-request-lh.pem -outfile server-certificate-lh.pem
 openssl pkcs12 -nocerts -passin pass:server-password -in server-lh.pkcs12 -passout pass:server-password -out server-private-key-lh.pem
+openssl pkcs12 -nocerts -passin pass:server-password -in server-lh.pkcs12 -nodes -out server-private-key-lh-no-password.pem
 
 # Create a certificate request for the client certificate.  Use the CA's certificate to sign it:
 keytool -storetype pkcs12 -keystore client.pkcs12 -storepass client-password -alias client-certificate -keypass client-password -keyalg RSA -genkey  -dname "O=Client,CN=127.0.0.1" -validity 99999

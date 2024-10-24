@@ -1,0 +1,22 @@
+HOME = .
+
+# Use this in order to automatically load providers.
+openssl_conf = openssl_init
+
+[openssl_init]
+providers = provider_sect
+
+[provider_sect]
+default = default_sect
+pkcs11 = pkcs11_sect
+
+[default_sect]
+activate = 1
+
+[pkcs11_sect]
+module = $ENV::PKCS11_PROVIDER
+pkcs11-module-quirks = no-operation-state no-deinit
+pkcs11-module-load-behavior = $ENV::PKCS11_MODULE_LOAD_BEHAVIOR
+pkcs11-module-encode-provider-uri-to-pem = true
+pkcs11-module-token-pin = tclientpw
+activate = 1
