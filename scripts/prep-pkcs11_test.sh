@@ -19,8 +19,9 @@
 # prep-pkcs11_test.sh - Source to set up environment for pkcs11_test to run
 #                       against a SoftHSM
 
-KEYDIR="$(readlink -f cpp/testdata/certs)"
+set -x
 
+KEYDIR="$(readlink -f cpp/testdata/certs)"
 
 if [ -z "$PKCS11_PROVIDER" ]; then
     export PKCS11_PROVIDER=$(openssl version -m | cut -d'"' -f2)/pkcs11.so
@@ -53,22 +54,26 @@ sed -r "s;@softhsmtokendir@;${softhsmtokendir};g" scripts/softhsm2.conf.in >$SOF
 
 export PKCS11_MODULE_LOAD_BEHAVIOR=late
 
+set -x
+
 softhsm2-util --delete-token --token proton-test 2>/dev/null || true
 softhsm2-util --init-token --free --label proton-test --pin tclientpw --so-pin tclientpw
 
-alias pkcs11-tool="pkcs11-tool --module=$PKCS11_PROVIDER_MODULE --token-label proton-test --pin tclientpw"
+pkcs11_tool () { pkcs11-tool --module=$PKCS11_PROVIDER_MODULE --token-label proton-test --pin tclientpw "$@"; }
 
-pkcs11-tool -l --label tclient --delete-object --type privkey 2>/dev/null || true
+pkcs11_tool --module=$PKCS11_PROVIDER_MODULE --token-label proton-test --pin tclientpw -l --label tclient --delete-object --type privkey 2>/dev/null || true
 
-pkcs11-tool -l --label tclient --id 2222 \
+pkcs11_tool --module=$PKCS11_PROVIDER_MODULE --token-label proton-test --pin tclientpw -l --label tclient --id 2222 \
     --write-object "$KEYDIR/client-certificate.pem" --type cert --usage-sign
-pkcs11-tool -l --label tclient --id 2222 \
+pkcs11_tool --module=$PKCS11_PROVIDER_MODULE --token-label proton-test --pin tclientpw -l --label tclient --id 2222 \
     --write-object "$KEYDIR/client-private-key-no-password.pem" --type privkey --usage-sign
 
-pkcs11-tool -l --label tserver --id 4444 \
+pkcs11_tool --module=$PKCS11_PROVIDER_MODULE --token-label proton-test --pin tclientpw -l --label tserver --id 4444 \
     --write-object "$KEYDIR/server-certificate-lh.pem" --type cert --usage-sign
-pkcs11-tool -l --label tserver --id 4444 \
+pkcs11_tool --module=$PKCS11_PROVIDER_MODULE --token-label proton-test --pin tclientpw -l --label tserver --id 4444 \
     --write-object "$KEYDIR/server-private-key-lh-no-password.pem" --type privkey --usage-sign
+
+set +x
 
 # Workaround for https://github.com/latchset/pkcs11-provider/issues/419
 export PKCS11_MODULE_LOAD_BEHAVIOR=early
