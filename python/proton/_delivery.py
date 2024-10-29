@@ -17,9 +17,9 @@
 # under the License.
 #
 
-from cproton import (PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEASED, pn_delivery_abort,
-                     pn_delivery_aborted, pn_delivery_attachments, pn_delivery_link, pn_delivery_local,
-                     pn_delivery_local_state,
+from cproton import (PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEASED, PN_TRANSACTIONAL_STATE,
+                     pn_delivery_abort, pn_delivery_aborted, pn_delivery_attachments, pn_delivery_link,
+                     pn_delivery_local, pn_delivery_local_state,
                      pn_delivery_partial, pn_delivery_pending, pn_delivery_readable, pn_delivery_remote,
                      pn_delivery_remote_state,
                      pn_delivery_settle, pn_delivery_settled, pn_delivery_tag, pn_delivery_update, pn_delivery_updated,
@@ -43,7 +43,12 @@ from cproton import (PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELE
                      pn_modified_disposition_set_failed,
                      pn_modified_disposition_is_undeliverable,
                      pn_modified_disposition_set_undeliverable,
-                     pn_modified_disposition_annotations)
+                     pn_modified_disposition_annotations,
+                     pn_transactional_disposition,
+                     pn_transactional_disposition_get_id,
+                     pn_transactional_disposition_set_id,
+                     pn_transactional_disposition_get_outcome_type,
+                     pn_transactional_disposition_set_outcome_type)
 
 from ._condition import cond2obj, obj2cond, Condition
 from ._data import dat2obj, obj2dat
@@ -98,6 +103,12 @@ class DispositionType(IntEnum):
     delivery being settled.
     """
 
+    TRANSACTIONAL_STATE = PN_TRANSACTIONAL_STATE
+    """
+    A non-terminal delivery state indicating the transactional
+    state of a delivery
+    """
+
     @classmethod
     def or_int(cls, i: int) -> Union[int, 'DispositionType']:
         return cls(i) if i in cls._value2member_map_ else i
@@ -119,6 +130,7 @@ class Disposition:
     REJECTED = DispositionType.REJECTED
     RELEASED = DispositionType.RELEASED
     MODIFIED = DispositionType.MODIFIED
+    TRANSACTIONAL_STATE = DispositionType.TRANSACTIONAL_STATE
 
 
 class RemoteDisposition(Disposition):
@@ -133,6 +145,8 @@ class RemoteDisposition(Disposition):
             return super().__new__(RemoteRejectedDisposition)
         elif state == cls.MODIFIED:
             return super().__new__(RemoteModifiedDisposition)
+        elif state == cls.TRANSACTIONAL_STATE:
+            return super().__new__(RemoteTransactionalDisposition)
         else:
             return super().__new__(RemoteCustomDisposition)
 
@@ -235,6 +249,29 @@ class RemoteModifiedDisposition(RemoteDisposition):
 
     def apply_to(self, local_disposition: 'LocalDisposition'):
         ModifiedDisposition(self._failed, self._undeliverable, self._annotations).apply_to(local_disposition)
+
+
+class RemoteTransactionalDisposition(RemoteDisposition):
+
+    def __init__(self, delivery_impl):
+        impl = pn_transactional_disposition(pn_delivery_remote(delivery_impl))
+        self._id = pn_transactional_disposition_get_id(impl)
+        self._outcome_type = pn_transactional_disposition_get_outcome_type(impl)
+
+    @property
+    def type(self) -> Union[int, DispositionType]:
+        return Disposition.TRANSACTIONAL_STATE
+
+    @property
+    def id(self):
+        return self._id
+
+    @property
+    def outcome_type(self):
+        return self._outcome_type
+
+    def apply_to(self, local_disposition: 'LocalDisposition'):
+        TransactionalDisposition(self._id, self._outcome_type).apply_to(local_disposition)
 
 
 class LocalDisposition(Disposition):
@@ -428,6 +465,39 @@ class ModifiedDisposition(LocalDisposition):
         if self._undeliverable:
             pn_modified_disposition_set_undeliverable(disp, self._undeliverable)
         obj2dat(self._annotations, pn_modified_disposition_annotations(disp))
+
+
+class TransactionalDisposition(LocalDisposition):
+
+    def __init__(self, id, outcome_type=None):
+        self._id = id
+        self._outcome_type = outcome_type
+
+    @property
+    def type(self) -> Union[int, DispositionType]:
+        return Disposition.TRANSACTIONAL_STATE
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, id):
+        self._id = id
+
+    @property
+    def outcome_type(self):
+        return self._outcome_type
+
+    @outcome_type.setter
+    def outcome_type(self, type):
+        self._outcome_type = type
+
+    def apply_to(self, local_disposition: LocalDisposition):
+        disp = pn_transactional_disposition(local_disposition._impl)
+        pn_transactional_disposition_set_id(disp, self._id)
+        if self._outcome_type:
+            pn_transactional_disposition_set_outcome_type(disp, self._outcome_type)
 
 
 class Delivery(Wrapper):

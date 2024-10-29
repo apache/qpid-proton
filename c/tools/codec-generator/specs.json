@@ -2,6 +2,7 @@
   "fill_specs": [
     "R",
     "DLR",
+    "DL[]",
     "DL[c]",
     "DL[?HIIII]",
     "DL[?IIII?I?I?In?o]",
@@ -44,6 +45,7 @@
     "D.[s]",
     "D.[z]",
     "D.[Bz]",
+    "D.[z?R]",
     "D.[R]",
     "D?L.",
     "D?L?."

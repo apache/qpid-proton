@@ -24,7 +24,7 @@ from typing import Union
 
 from proton import Array, Condition, Collector, Connection, Data, Delivery, Disposition, DispositionType, Endpoint, \
     Event, CustomDisposition, Link, ModifiedDisposition, PropertyDict, ReceivedDisposition, RejectedDisposition, \
-    SASL, SessionException, SymbolList, Terminus, Transport, UNDESCRIBED, symbol
+    SASL, SessionException, SymbolList, Terminus, TransactionalDisposition, Transport, UNDESCRIBED, symbol
 from proton.reactor import Container
 
 from . import common
@@ -2410,6 +2410,23 @@ class NewCustomTester(DispositionTester):
         assert dlv.remote.data == self._data, (dlv.data, self._data)
 
 
+class TransactionalTester(DispositionTester):
+    def __init__(self, id, outcome_type):
+        self._id = id
+        self._outcome_type = outcome_type
+        super().__init__(Disposition.TRANSACTIONAL_STATE)
+
+    def apply(self, dlv: Delivery):
+        dlv.local = TransactionalDisposition(self._id, self._outcome_type)
+        dlv.update()
+
+    def check(self, dlv: Delivery):
+        assert dlv.remote_state == self._type
+        assert dlv.remote.type == self._type
+        assert dlv.remote.id == self._id
+        assert dlv.remote.outcome_type == self._outcome_type
+
+
 class DeliveryTest(Test):
 
     def tearDown(self):
@@ -2487,6 +2504,9 @@ class DeliveryTest(Test):
     def testNewModified(self):
         self._testDisposition(NewModifiedTester(failed=True, undeliverable=True,
                                                 annotations={"key": "value"}))
+
+    def testTransactional(self):
+        self._testDisposition(TransactionalTester(id=b'1324xxx', outcome_type=Disposition.ACCEPTED))
 
     def testCustom(self):
         self._testDisposition(CustomTester(0x12345, [1, 2, 3]))

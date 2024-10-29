@@ -27,6 +27,7 @@
 #include "consumers.h"
 #include "core/frame_consumers.h"
 #include "emitters.h"
+#include "core/frame_generators.h"
 #include "fixed_string.h"
 #include "framing.h"
 #include "memory.h"
@@ -1597,6 +1598,10 @@ static void pn_disposition_finalize(pn_disposition_t *ds)
       pn_data_free(ds->u.s_custom.data);
       pn_bytes_free(ds->u.s_custom.data_raw);
       break;
+    case PN_DISP_TRANSACTIONAL:
+      pn_bytes_free(ds->u.s_transactional.id);
+      pn_bytes_free(ds->u.s_transactional.outcome_raw);
+      break;
   }
 }
 
@@ -1868,6 +1873,9 @@ void pni_disposition_to_raw(pn_disposition_t *disposition) {
     case PN_DISP_MODIFIED:
       emit_modified_disposition(&emitter, &compound, &disposition->u.s_modified);
       break;
+    case PN_DISP_TRANSACTIONAL:
+      emit_transactional_disposition(&emitter, &compound, &disposition->u.s_transactional);
+      break;
   }
 
   if (type != PN_DISP_EMPTY) {
@@ -2005,6 +2013,13 @@ pn_modified_disposition_t *pn_modified_disposition(pn_disposition_t *disposition
   return &disposition->u.s_modified;
 }
 
+pn_transactional_disposition_t *pn_transactional_disposition(pn_disposition_t *disposition)
+{
+  if (disposition->type==PN_DISP_EMPTY) disposition->type = PN_DISP_TRANSACTIONAL;
+  else if (disposition->type!=PN_DISP_TRANSACTIONAL) return NULL;
+  return &disposition->u.s_transactional;
+}
+
 pn_data_t *pn_custom_disposition_data(pn_custom_disposition_t *disposition)
 {
   assert(disposition);
@@ -2082,6 +2097,44 @@ pn_data_t *pn_modified_disposition_annotations(pn_modified_disposition_t *dispos
   assert(disposition);
   pni_switch_to_data(&disposition->annotations_raw, &disposition->annotations);
   return disposition->annotations;
+}
+
+pn_bytes_t pn_transactional_disposition_get_id(pn_transactional_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->id;
+}
+
+void pn_transactional_disposition_set_id(pn_transactional_disposition_t *disposition, pn_bytes_t id)
+{
+  assert(disposition);
+  pn_bytes_free(disposition->id);
+  disposition->id = pn_bytes_dup(id);
+}
+
+uint64_t pn_transactional_disposition_get_outcome_type(pn_transactional_disposition_t *disposition)
+{
+  assert(disposition);
+  if (disposition->outcome_raw.size) {
+    bool qtype = false;
+    uint64_t type;
+    pn_amqp_decode_DQLq(disposition->outcome_raw, &qtype, &type);
+    if (qtype) {
+      return type;
+    }
+  }
+  return PN_DISP_EMPTY;
+}
+
+void pn_transactional_disposition_set_outcome_type(pn_transactional_disposition_t *disposition, uint64_t type)
+{
+  assert(disposition);
+  // Generate a described LIST0 directly - this needs a max of 11 bytes
+  char outcome_scratch[11];
+  pn_rwbytes_t scratch = {.size=sizeof(outcome_scratch), .start=outcome_scratch};
+  pn_bytes_t outcome_raw = pn_amqp_encode_DLEe(&scratch, type);
+  pn_bytes_free(disposition->outcome_raw);
+  disposition->outcome_raw = pn_bytes_dup(outcome_raw);
 }
 
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)
@@ -2420,6 +2473,7 @@ void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
       case PN_RECEIVED:
       case PN_MODIFIED:
       case PN_RELEASED:
+      case PN_TRANSACTIONAL_STATE:
         break;
       default:
         delivery->local.u.s_custom.type = state;
@@ -2434,6 +2488,7 @@ void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
     case PN_RECEIVED:
     case PN_MODIFIED:
     case PN_RELEASED:
+    case PN_TRANSACTIONAL_STATE:
       delivery->local.type = state;
       break;
     default:
@@ -2804,6 +2859,7 @@ const char *pn_disposition_type_name(uint64_t d) {
    case PN_REJECTED: return "rejected";
    case PN_RELEASED: return "released";
    case PN_MODIFIED: return "modified";
+   case PN_TRANSACTIONAL_STATE: return "transactional_state";
    default: return "unknown";
   }
 }

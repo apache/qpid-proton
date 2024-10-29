@@ -1602,6 +1602,20 @@ static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn
       }
       break;
     }
+    case AMQP_DESC_TRANSACTIONAL_STATE: {
+      pn_bytes_t id;
+      bool qoutcome;
+      pn_bytes_t outcome_raw;
+      pn_amqp_decode_DqEzQRe(disp_data, &id, &qoutcome, &outcome_raw);
+      disp->type = PN_DISP_TRANSACTIONAL;
+      pn_bytes_free(disp->u.s_transactional.id);
+      disp->u.s_transactional.id = pn_bytes_dup(id);
+      disp->u.s_transactional.outcome_raw = (pn_bytes_t){0, NULL};
+      if (qoutcome) {
+        disp->u.s_transactional.outcome_raw = pn_bytes_dup(outcome_raw);
+      }
+      break;
+    }
     default: {
       pn_bytes_t data_raw = (pn_bytes_t){0, NULL};
       pn_amqp_decode_DqR(disp_data, &data_raw);

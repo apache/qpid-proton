@@ -54,7 +54,7 @@ from cproton_ffi.lib import (PN_ACCEPTED, PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE,
                              PN_SSL_RESUME_UNKNOWN, PN_SSL_SHA1, PN_SSL_SHA256, PN_SSL_SHA512,
                              PN_SSL_VERIFY_PEER, PN_SSL_VERIFY_PEER_NAME, PN_STRING, PN_SYMBOL,
                              PN_TARGET, PN_TIMEOUT, PN_TIMER_TASK, PN_TIMESTAMP, PN_TRACE_DRV,
-                             PN_TRACE_FRM, PN_TRACE_OFF, PN_TRACE_RAW, PN_TRANSPORT,
+                             PN_TRACE_FRM, PN_TRACE_OFF, PN_TRACE_RAW, PN_TRANSACTIONAL_STATE, PN_TRANSPORT,
                              PN_TRANSPORT_CLOSED, PN_TRANSPORT_ERROR, PN_TRANSPORT_HEAD_CLOSED,
                              PN_TRANSPORT_TAIL_CLOSED, PN_UBYTE, PN_UINT, PN_ULONG, PN_UNSPECIFIED,
                              PN_USHORT, PN_UUID, PN_VERSION_MAJOR, PN_VERSION_MINOR,
@@ -145,7 +145,9 @@ from cproton_ffi.lib import (PN_ACCEPTED, PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE,
                              pn_terminus_properties, pn_terminus_set_distribution_mode,
                              pn_terminus_set_durability, pn_terminus_set_dynamic,
                              pn_terminus_set_expiry_policy, pn_terminus_set_timeout,
-                             pn_terminus_set_type, pn_transport, pn_transport_attachments,
+                             pn_terminus_set_type, pn_transactional_disposition,
+                             pn_transactional_disposition_get_outcome_type,
+                             pn_transactional_disposition_set_outcome_type, pn_transport, pn_transport_attachments,
                              pn_transport_bind, pn_transport_capacity, pn_transport_close_head,
                              pn_transport_close_tail, pn_transport_closed, pn_transport_condition,
                              pn_transport_connection, pn_transport_error,
@@ -763,3 +765,11 @@ def pn_ssl_get_peer_hostname(ssl, size):
 
 def pn_ssl_set_peer_hostname(ssl, hostname):
     return lib.pn_ssl_set_peer_hostname(ssl, string2utf8(hostname))
+
+
+def pn_transactional_disposition_get_id(disp):
+    return bytes2pybytes(lib.pn_transactional_disposition_get_id(disp))
+
+
+def pn_transactional_disposition_set_id(disp, id):
+    return lib.pn_transactional_disposition_set_id(disp, py2bytes(id))

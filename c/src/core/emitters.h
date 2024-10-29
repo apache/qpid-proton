@@ -647,6 +647,19 @@ static inline void emit_modified_disposition(pni_emitter_t* emitter, pni_compoun
   }
 }
 
+static inline void emit_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_disposition_t *disposition);
+
+static inline void emit_transactional_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_transactional_disposition_t *disposition){
+  for (bool small_encoding = true; ; small_encoding = false) {
+    pni_compound_context c = emit_list(emitter, compound0, small_encoding, true);
+    pni_compound_context compound = c;
+    emit_binary_bytes(emitter, &compound, disposition->id);
+    emit_raw(emitter, &compound, disposition->outcome_raw);
+    emit_end_list(emitter, &compound, small_encoding);
+    if (encode_succeeded(emitter, &compound)) break;
+  }
+}
+
 static inline void emit_custom_disposition(pni_emitter_t* emitter, pni_compound_context* compound0, pn_custom_disposition_t *disposition){
   emit_descriptor(emitter, compound0, disposition->type);
   if ((disposition->data && pn_data_size(disposition->data) == 0) ||
@@ -686,6 +699,10 @@ static inline void emit_disposition(pni_emitter_t* emitter, pni_compound_context
     case PN_DISP_MODIFIED:
       emit_descriptor(emitter, compound0, AMQP_DESC_MODIFIED);
       emit_modified_disposition(emitter, compound0, &disposition->u.s_modified);
+      return;
+    case PN_DISP_TRANSACTIONAL:
+      emit_descriptor(emitter, compound0, AMQP_DESC_TRANSACTIONAL_STATE);
+      emit_transactional_disposition(emitter, compound0, &disposition->u.s_transactional);
       return;
     case PN_DISP_CUSTOM:
       emit_custom_disposition(emitter, compound0, &disposition->u.s_custom);

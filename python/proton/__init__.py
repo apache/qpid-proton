@@ -37,7 +37,7 @@ from ._condition import Condition
 from ._data import UNDESCRIBED, Array, Data, Described, char, symbol, timestamp, ubyte, ushort, uint, ulong, \
     byte, short, int32, float32, decimal32, decimal64, decimal128, AnnotationDict, PropertyDict, SymbolList
 from ._delivery import Delivery, Disposition, DispositionType, CustomDisposition, RejectedDisposition, \
-    ModifiedDisposition, ReceivedDisposition
+    ModifiedDisposition, ReceivedDisposition, TransactionalDisposition
 from ._endpoints import Endpoint, Connection, Session, Link, Receiver, Sender, Terminus
 from ._events import Collector, Event, EventType
 from ._exceptions import ProtonException, MessageException, DataException, TransportException, \
@@ -89,6 +89,7 @@ __all__ = [
     "Terminus",
     "Timeout",
     "Interrupt",
+    "TransactionalDisposition",
     "Transport",
     "TransportException",
     "Url",
