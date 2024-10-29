@@ -171,13 +171,13 @@ class connection_options {
     /// **Unsettled API** - Set the SASL configuration path.
     PN_CPP_EXTERN connection_options& sasl_config_path(const std::string&);
 
-    /// **Unsettled API** - Set reconnect timing options.
+    /// Set reconnect timing options.
     ///
     /// If reconnect timing options are set, but no specific reconnect or failover urls are set
     /// then the original url used for the connection will be used as the reconnect url.
     PN_CPP_EXTERN connection_options& reconnect(const reconnect_options&);
 
-    /// **Unsettled API** - Set reconnect URL.
+    /// Set reconnect URL.
     ///
     /// If the connection to the primary connection url fails then try to reconnect using
     /// the reconnect url.
@@ -192,7 +192,7 @@ class connection_options {
     /// If both the failover_urls and reconnect_url options are set then the behavior is not defined.
     PN_CPP_EXTERN connection_options& reconnect_url(const std::string&);
 
-    /// **Unsettled API** - Set Fail-over URLs.
+    /// Set Fail-over URLs.
     ///
     /// If the connection to the primary connection url fails then try each of the fail-over
     /// connection urls in turn.

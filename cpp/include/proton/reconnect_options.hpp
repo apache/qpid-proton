@@ -35,8 +35,7 @@
 
 namespace proton {
 
-/// **Unsettled API** - Options for reconnect and failover after
-/// connection loss.
+/// Options for reconnect and failover after connection loss.
 ///
 /// These options determine a series of delays to coordinate
 /// reconnection attempts.  They may be open-ended or limited in time.
