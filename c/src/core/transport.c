@@ -2870,6 +2870,8 @@ void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size)
     return;
   }
   // if size == 0, no advertised limit to input frame size.
+  if (transport->open_sent)
+    return;  // Too late.  Silently disregard request.
   if (size && size < AMQP_MIN_MAX_FRAME_SIZE)
     size = AMQP_MIN_MAX_FRAME_SIZE;
   transport->local_max_frame = size;
