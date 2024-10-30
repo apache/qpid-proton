@@ -555,6 +555,10 @@ static bool pni_init_ssl_domain( pn_ssl_domain_t * domain, pn_ssl_mode_t mode )
     return false;
   };
 
+  // Support intermediate/subordinate CAs as trust anchors.
+  X509_STORE* store = SSL_CTX_get_cert_store(domain->ctx);
+  X509_STORE_set_flags(store, X509_V_FLAG_PARTIAL_CHAIN);
+
   const long reject_insecure =
       SSL_OP_NO_SSLv2
     | SSL_OP_NO_SSLv3
