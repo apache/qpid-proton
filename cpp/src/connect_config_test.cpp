@@ -24,9 +24,6 @@
 #include "proton/connection_options.hpp"
 #include "proton/container.hpp"
 #include "proton/error_condition.hpp"
-#include "proton/listener.hpp"
-#include "proton/listen_handler.hpp"
-#include "proton/messaging_handler.hpp"
 #include "proton/transport.hpp"
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
@@ -34,6 +31,8 @@
 // The C++ API lacks a way to test for presence of extended SASL or SSL support.
 #include "proton/sasl.h"
 #include "proton/ssl.h"
+
+#include "test_handler.hpp"
 
 #include <sstream>
 #include <fstream>
@@ -78,12 +77,6 @@ namespace {
 
 using namespace std;
 using namespace proton;
-using proton::error_condition;
-
-string configure(connection_options& opts, const string& config) {
-    istringstream is(config);
-    return connect_config::parse(is, opts);
-}
 
 void test_default_file() {
     // Default file locations in order of preference.
@@ -146,86 +139,6 @@ void test_invalid_json() {
   }
 }
 
-// Extra classes to resolve clash of on_error in both messaging_handler and listen_handler
-class messaging_handler : public proton::messaging_handler {
-    virtual void on_messaging_error(const error_condition&) = 0;
-
-    void on_error(const error_condition& c) override {
-        on_messaging_error(c);
-    }
-};
-
-class listen_handler : public proton::listen_handler {
-    virtual void on_listen_error(listener& , const string&) = 0;
-
-    void on_error(listener& l, const string& s) override {
-        on_listen_error(l, s);
-    }
-};
-
-class test_handler : public messaging_handler,  public listen_handler {
-    bool opened_;
-    connection_options connection_options_;
-    listener listener_;
-
-    void on_open(listener& l) override {
-        on_listener_start(l.container());
-    }
-
-    connection_options on_accept(listener& l) override {
-        return connection_options_;
-    }
-
-    void on_container_start(container& c) override {
-        listener_ = c.listen("//:0", *this);
-    }
-
-    void on_connection_open(connection& c) override {
-        if (!c.active()) {      // Server side
-            opened_ = true;
-            check_connection(c);
-            listener_.stop();
-            c.close();
-        }
-    }
-
-    void on_messaging_error(const error_condition& e) override {
-        FAIL("unexpected error " << e);
-    }
-
-    void on_listen_error(listener&, const string& s) override {
-        FAIL("unexpected listen error " << s);
-    }
-
-    virtual void check_connection(connection& c) {}
-    virtual void on_listener_start(container& c) = 0;
-
-  protected:
-    string config_with_port(const string& bare_config) {
-        ostringstream ss;
-        ss << "{" << "\"port\":" << listener_.port() << ", " << bare_config << "}";
-        return ss.str();
-    }
-
-    void connect(container& c, const string& bare_config) {
-        connection_options opts;
-        c.connect(configure(opts, config_with_port(bare_config)), opts);
-    }
-
-    void stop_listener() {
-        listener_.stop();
-    }
-
-  public:
-    test_handler(const connection_options& listen_opts = connection_options()) :
-        opened_(false), connection_options_(listen_opts) {}
-
-    void run() {
-        container(*this).run();
-        ASSERT(opened_);
-    }
-};
-
 class test_almost_default_connect : public test_handler {
   public:
 
@@ -239,15 +152,6 @@ class test_almost_default_connect : public test_handler {
     void check_connection(connection& c) override {
         ASSERT_EQUAL("localhost", c.virtual_host());
     }
-};
-
-// Hack to use protected pn_object member of proton::object
-template <class P, class T>
-class internal_access_of: public P {
-
-public:
-    internal_access_of(const P& t) : P(t) {}
-    T* pn_object() { return proton::internal::object<T>::pn_object(); }
 };
 
 class test_default_connect : public test_handler {
