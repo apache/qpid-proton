@@ -43,6 +43,18 @@ keytool -ext san=dns:alternate.name.one.com,dns:another.name.com -storetype pkcs
 keytool -ext san=dns:alternate.name.one.com,dns:another.name.com  -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile server-wc-request.pem -outfile server-wc-certificate.pem
 openssl pkcs12 -nocerts -passin pass:server-password -in server-wc.pkcs12 -passout pass:server-password -out server-wc-private-key.pem
 
+# Create a certificate for a subordinate (intermediate) CA certificate issued by the root CA
+keytool -storetype pkcs12 -keystore subca.pkcs12 -storepass subca-password -alias subca-certificate -keypass subca-password -keyalg RSA -genkey  -dname "O=Trust Me Inc.,CN=Trusted.CA.com level 2 CA" -validity 99999
+keytool -storetype pkcs12 -keystore subca.pkcs12 -storepass subca-password -alias subca-certificate -keypass subca-password -certreq -file subca-request.pem
+keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile subca-request.pem -outfile subca-certificate.pem -ext bc:c=ca:true -ext ku:c=digitalSignature,keyCertSign
+
+# Create a certificate request for a server certificate signed by the subordinate CA.
+keytool -storetype pkcs12 -keystore server-ca2.pkcs12 -storepass server-password -alias server-certificate -keypass server-password -keyalg RSA -genkey  -dname "O=Server,CN=serverbyca2.domain.com" -validity 99999
+keytool -storetype pkcs12 -keystore server-ca2.pkcs12 -storepass server-password -alias server-certificate -keypass server-password -certreq -file server-request-ca2.pem
+keytool -storetype pkcs12 -keystore subca.pkcs12 -storepass subca-password -alias subca-certificate -keypass subca-password -gencert -rfc -validity 99999 -infile server-request-ca2.pem -outfile server-certificate-ca2.pem -ext bc:c=ca:false
+openssl pkcs12 -nocerts -passin pass:server-password -in server-ca2.pkcs12 -passout pass:server-password -out server-private-key-ca2.pem
+
+
 # Create pkcs12 versions of the above certificates (for Windows SChannel)
 # The CA certificate store/DB is created without public keys.
 # Give the "p12" files the same base name so the tests can just change the extension to switch between platforms.

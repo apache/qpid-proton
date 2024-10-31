@@ -20,7 +20,7 @@ Linux dependencies
   - GNU Make 3.81+
   - GCC 9+
   - Cyrus SASL 2.1+ (for SASL support)
-  - OpenSSL 1.0+ (for SSL support)
+  - OpenSSL 1.0.2a+ (for SSL support)
   - JsonCpp 1.8+ for C++ connection configuration file support
 
 Windows dependencies

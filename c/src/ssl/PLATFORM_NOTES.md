@@ -21,6 +21,10 @@ of the certificate's name.  See
 [here](https://www.openssl.org/docs/ssl/SSL_CTX_load_verify_locations.htm)
 for more details.
 
+Proton uses the OpenSSL X509_V_FLAG_PARTIAL_CHAIN flag during peer verification.
+All certificates included in a CA database, including those for intermediate
+Certificate Authorities, will be treated as potential trust anchors by OpenSSL.
+
 
 SChannel
 ========
