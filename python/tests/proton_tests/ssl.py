@@ -229,6 +229,30 @@ class SslTest(common.Test):
         server.connection.close()
         self._pump(client, server)
 
+    def test_intermediate_ca(self):
+        """ Ensure an intermediate/subordinate certificate can be used as a CA for validation.
+        """
+        if os.name == "nt":
+            raise Skipped("Test of OpenSSL X509_V_FLAG_PARTIAL_CHAIN flag.")
+        self.server_domain.set_credentials(self._testpath("server-certificate-ca2.pem"),
+                                           self._testpath("server-private-key-ca2.pem"),
+                                           "server-password")
+
+        self.client_domain.set_trusted_ca_db(self._testpath("subca-certificate.pem"))
+        self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
+
+        server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
+        client = SslTest.SslTestConnection(self.client_domain)
+
+        client.connection.open()
+        server.connection.open()
+        self._pump(client, server)
+        assert client.ssl.get_cert_subject() is not None
+        assert client.transport.condition is None
+        client.connection.close()
+        server.connection.close()
+        self._pump(client, server)
+
     def test_certificate_fingerprint_and_subfields(self):
         if os.name == "nt":
             raise Skipped("Windows support for certificate fingerprint and subfield not implemented yet")
