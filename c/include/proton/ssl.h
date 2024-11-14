@@ -143,12 +143,12 @@ PN_EXTERN void pn_ssl_domain_free(pn_ssl_domain_t *domain);
  *
  * @param[in] domain the ssl domain that will use this certificate.
  * @param[in] credential_1 specifier for the file/database containing the identifying
- * certificate. For Openssl users, this is a PEM file. For Windows SChannel users, this is
- * the PKCS#12 file or system store.
+ * certificate. For OpenSSL users, this is a PEM file or PKCS#11 URI. For Windows SChannel
+ * users, this is the PKCS#12 file or system store.
  * @param[in] credential_2 an optional key to access the identifying certificate. For
- * Openssl users, this is an optional PEM file containing the private key used to sign the
- * certificate. For Windows SChannel users, this is the friendly name of the
- * self-identifying certificate if there are multiple certificates in the store.
+ * OpenSSL users, this is an optional PEM file or PKCS#11 URI containing the private key
+ * used to sign the certificate. For Windows SChannel users, this is the friendly name of
+ * the self-identifying certificate if there are multiple certificates in the store.
  * @param[in] password the password used to sign the key, else NULL if key is not
  * protected.
  * @return 0 on success

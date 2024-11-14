@@ -8,7 +8,7 @@ On OpenSSL (POSIX) based systems, certificates and their private keys are
 specified separately in two files: the public X509 certificate in PEM format
 and the password protected PKCS#8 encoded private key.
 
-  `pn_ssl_domain_set_credentials(path_to_public_x509.pem,  
+  `pn_ssl_domain_set_credentials(domain, path_to_public_x509.pem,  
                 path_to_private_pkcs8.pem, password_for_pkcs8)`
 
 
@@ -25,6 +25,11 @@ Proton uses the OpenSSL X509_V_FLAG_PARTIAL_CHAIN flag during peer verification.
 All certificates included in a CA database, including those for intermediate
 Certificate Authorities, will be treated as potential trust anchors by OpenSSL.
 
+PKCS#11 support for Hardware Security Module provider extensions is available on
+systems with OpenSSL version >= 3.0.0.  Credentials specified in PKCS#11 URI
+format are retrieved by the provider extension.  The OpenSSL config file must
+contain a valid "providers" initialization section for a provider named "pkcs11"
+that loads and activates the HSM.
 
 SChannel
 ========
