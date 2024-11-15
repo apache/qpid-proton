@@ -268,6 +268,31 @@ namespace {
     if (b.bytes) {b.capacity = s; b.size = s;}
     return b;
   }
+
+  bool drain_events_to(pn_raw_connection_t *c, pn_event_type_t target) {
+    while (pn_event_t *e = pni_raw_event_next(c)) {
+      if (pn_event_type(e) == target)
+        return true;
+    }
+    return false;
+  }
+
+  bool drain_events_until_both(pn_raw_connection_t *c, pn_event_type_t target1, pn_event_type_t target2) {
+    bool t1 = false; // target 1 seen
+    bool t2 = false;
+    while (pn_event_t *e = pni_raw_event_next(c)) {
+      if (pn_event_type(e) == target1) {
+        t1 = true;
+        if (t2) return true;
+      }
+      if (pn_event_type(e) == target2) {
+        t2 = true;
+        if (t1) return true;
+      }
+    }
+    return false;
+  }
+
 }
 
 char message[] =
@@ -813,4 +838,55 @@ TEST_CASE("raw connection") {
       freepair(fds);
     }
   }
+}
+
+TEST_CASE("raw connection async close") {
+  auto_free<pn_raw_connection_t, free_raw_connection> p(mk_raw_connection());
+
+  REQUIRE(p);
+  CHECK_FALSE(pn_raw_connection_is_read_closed(p));
+  CHECK_FALSE(pn_raw_connection_is_write_closed(p));
+  pni_raw_connected(p);
+  REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_RAW_CONNECTION_CONNECTED);
+
+  SECTION("Async close only") {
+    // nothing
+  }
+
+  SECTION("Read close then async close") {
+    pni_raw_read_close(p);
+    REQUIRE(drain_events_to(p, PN_RAW_CONNECTION_CLOSED_READ));
+  }
+
+  SECTION("Write close then async close") {
+    pni_raw_write_close(p);
+    REQUIRE(drain_events_to(p, PN_RAW_CONNECTION_CLOSED_WRITE));
+  }
+
+  SECTION("Full close then async close") {
+    pni_raw_close(p);
+    REQUIRE(drain_events_until_both(p, PN_RAW_CONNECTION_CLOSED_READ, PN_RAW_CONNECTION_CLOSED_WRITE));
+  }
+
+  pni_raw_async_disconnect(p);
+  CHECK(pn_raw_connection_is_read_closed(p));
+  CHECK(pn_raw_connection_is_write_closed(p));
+
+  SECTION("Async close then read close") {
+    pni_raw_read_close(p);
+    REQUIRE(drain_events_until_both(p, PN_RAW_CONNECTION_CLOSED_READ, PN_RAW_CONNECTION_CLOSED_WRITE));
+  }
+
+  SECTION("Async close then write close") {
+    pni_raw_write_close(p);
+    REQUIRE(drain_events_until_both(p, PN_RAW_CONNECTION_CLOSED_READ, PN_RAW_CONNECTION_CLOSED_WRITE));
+  }
+
+  SECTION("Async close then full close") {
+    pni_raw_close(p);
+    REQUIRE(drain_events_until_both(p, PN_RAW_CONNECTION_CLOSED_READ, PN_RAW_CONNECTION_CLOSED_WRITE));
+  }
+
+  REQUIRE(drain_events_to(p, PN_RAW_CONNECTION_DISCONNECTED));
+  REQUIRE(pn_event_type(pni_raw_event_next(p)) == PN_EVENT_NONE);
 }

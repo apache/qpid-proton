@@ -83,8 +83,8 @@ if (CMAKE_CXX_COMPILER)
     target_link_libraries(c-raw-connection-test qpid-proton-core ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 
     if (PROACTOR_OK STREQUAL "epoll")
-      add_c_test(c-raw-wake-test raw_wake_test.cpp pn_test_proactor.cpp $<TARGET_OBJECTS:qpid-proton-proactor-objects>)
-      target_link_libraries(c-raw-wake-test qpid-proton-core ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+      add_c_test(c-raw-connection-proactor-test raw_connection_proactor_test.cpp pn_test_proactor.cpp $<TARGET_OBJECTS:qpid-proton-proactor-objects>)
+      target_link_libraries(c-raw-connection-proactor-test qpid-proton-core ${PLATFORM_LIBS} ${PROACTOR_LIBS})
     endif()
 
     add_c_test(c-ssl-proactor-test pn_test_proactor.cpp ssl_proactor_test.cpp)
