@@ -36,10 +36,14 @@
 #include "proton/transport.h"
 #include "proton/transaction.hpp"
 
+#include "proton/delivery.h"
+
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
 #include "reconnect_options_impl.hpp"
 #include "proton_bits.hpp"
+
+#include <proton/types.hpp>
 
 #include <assert.h>
 #include <string.h>
@@ -863,7 +867,7 @@ void container::impl::stop(const proton::error_condition& err) {
 }
 
 // TODO: declare this in separate internal header file
-extern transaction mk_transaction_impl(sender&, transaction_handler&, bool);
+// extern transaction mk_transaction_impl(sender&, transaction_handler&, bool);
 
 transaction container::impl::declare_transaction(proton::connection conn, proton::transaction_handler &handler, bool settle_before_discharge) {
     class InternalTransactionHandler : public proton::messaging_handler {
@@ -871,8 +875,24 @@ transaction container::impl::declare_transaction(proton::connection conn, proton
         void on_tracker_settle(proton::tracker &t) override {
             std::cout<<"    [InternalTransactionHandler][on_tracker_settle] called with tracker.txn"
                  << std::endl;
+            t.transaction().handle_outcome(t);
+
+            // t.user_data = val; // not
+
+            //   proton::disposition _disposition =  make_wrapper(disposition);
+            //   // # t.remote();
+
+            //          proton::value val2 = _disposition.data();
+
+            //  proton::disposition _disposition = t.remote();
+
+            //  proton::value val = _disposition.data();
+
+            //   std::cout<< "    declare_transaction: on_tracker_settle with
+            //   TXN IN :" << val << std::endl;
+
             // if(t.transaction()) {
-                t.transaction().handle_outcome(t);
+            // t.transaction().handle_outcome(t);
             // }
         }
 
@@ -903,7 +923,8 @@ transaction container::impl::declare_transaction(proton::connection conn, proton
 
     std::cout<<"    [declare_transaction] calling mk_transaction_impl" << std::endl;
 
-    auto txn = mk_transaction_impl(s, handler, settle_before_discharge);
+    auto txn =
+        transaction::mk_transaction_impl(s, handler, settle_before_discharge);
     std::cout<<"    [declare_transaction] txn address:" << &txn << std::endl;
 
     return txn;

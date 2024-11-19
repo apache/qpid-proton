@@ -327,6 +327,7 @@ class PN_CPP_CLASS_EXTERN container {
   friend class receiver_options;
   friend class sender_options;
   friend class work_queue;
+  friend class transaction;
     /// @endcond
 };
 

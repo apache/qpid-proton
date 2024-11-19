@@ -60,13 +60,13 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
         std::cout << "    [on_container_start] completed!! txn: " << &transaction << std::endl;
     }
 
-    void on_transaction_aborted(proton::transaction&) {}
-    void on_transaction_declare_failed(proton::transaction &) {}
-    void on_transaction_commit_failed(proton::transaction&) {}
+    void on_transaction_aborted(proton::transaction) {}
+    void on_transaction_declare_failed(proton::transaction) {}
+    void on_transaction_commit_failed(proton::transaction) {}
 
-
-    void on_transaction_declared(proton::transaction &t) override {
-        std::cout<<"[on_transaction_declared] txn: "<<(&transaction)<< " new_txn: "<<(&t)<<std::endl;
+    void on_transaction_declared(proton::transaction t) override {
+        std::cout << "[on_transaction_declared] txn: " << (&transaction)
+                  << " new_txn: " << (t._impl->id) << std::endl;
         connection.close();
         // transaction = &t;
         // ASSUME: THIS FUNCTION DOESN"T WORK
@@ -95,7 +95,6 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
             if(current_batch == batch_size)
             {
                 transaction.commit();
-                // WE DON"T CARE ANY MORE FOR NOW
                 // transaction = NULL;
             }
         }
@@ -106,7 +105,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
         confirmed += 1;
     }
 
-    void on_transaction_committed(proton::transaction &t) override {
+    void on_transaction_committed(proton::transaction t) override {
         committed += current_batch;
         std::cout<<"    [OnTxnCommitted] Committed:"<< committed<< std::endl;
         if(committed == total) {

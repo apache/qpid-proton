@@ -32,6 +32,7 @@
 
 #include "proton_bits.hpp"
 
+#include <iostream>
 #include <ostream>
 
 namespace proton {
@@ -52,8 +53,7 @@ std::string to_string(enum transfer::state s) { return pn_disposition_type_name(
 std::ostream& operator<<(std::ostream& o, const enum transfer::state s) { return o << to_string(s); }
 
 void transfer::transaction(proton::transaction t) {
-    transfer_context& cc = transfer_context::get(pn_object());
-    // FIX THIS
+    transfer_context &cc = transfer_context::get(pn_object());
     cc.transaction_ = std::make_unique<proton::transaction>(t);
 }
 
@@ -72,4 +72,23 @@ void* transfer::user_data() const {
     return cc.user_data_;
 }
 
+disposition transfer::remote() {
+    auto me = pn_object();
+    std::cout << "   transfer::remote ME => " << me << std::endl;
+
+    auto dd = pn_delivery_remote(me);
+    std::cout << "   transfer::remote dd => " << dd << std::endl;
+    std::cout << "   transfer::remote.data dd => "
+              << proton::value(pn_disposition_data(dd)) << std::endl;
+    auto d2 = make_wrapper<disposition>(dd);
+    std::cout << "   transfer::remote d2 ready => " << std::endl;
+    return d2;
+}
+disposition transfer::local() {
+    return make_wrapper<disposition>(pn_delivery_local(pn_object()));
+}
+
+proton::value disposition::data() const {
+    return proton::value(pn_disposition_data(pn_object()));
+}
 }

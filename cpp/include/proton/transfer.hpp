@@ -33,8 +33,25 @@
 /// @copybrief proton::transfer
 
 struct pn_delivery_t;
+struct pn_disposition_t;
 
 namespace proton {
+
+class disposition : public internal::object<pn_disposition_t> {
+    /// @cond INTERNAL
+    disposition(pn_disposition_t *d) : internal::object<pn_disposition_t>(d) {}
+    /// @endcond
+
+  public:
+    /// Create an empty disposition.
+    disposition() : internal::object<pn_disposition_t>(0) {}
+
+    proton::value data() const;
+
+    /// @cond INTERNAL
+    friend class internal::factory<disposition>;
+    /// @endcond
+};
 
 /// The base class for delivery and tracker.
 class transfer : public internal::object<pn_delivery_t> {
@@ -87,6 +104,9 @@ class transfer : public internal::object<pn_delivery_t> {
 
     /// Get user data from this transfer.
     PN_CPP_EXTERN void* user_data() const;
+
+    PN_CPP_EXTERN disposition remote();
+    PN_CPP_EXTERN disposition local();
 
     /// @cond INTERNAL
   friend class internal::factory<transfer>;

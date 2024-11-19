@@ -41,6 +41,7 @@
 
 #include <proton/connection.h>
 #include <proton/delivery.h>
+#include <proton/disposition.h>
 #include <proton/handlers.h>
 #include <proton/link.h>
 #include <proton/message.h>
@@ -115,20 +116,32 @@ void message_decode(message& msg, proton::delivery delivery) {
     msg.decode(buf);
     pn_link_advance(unwrap(link));
 }
-
 void on_delivery(messaging_handler& handler, pn_event_t* event) {
     pn_link_t *lnk = pn_event_link(event);
     pn_delivery_t *dlv = pn_event_delivery(event);
     link_context& lctx = link_context::get(lnk);
     Tracing& ot = Tracing::getTracing();
     if (pn_terminus_get_type(pn_link_remote_target(lnk))==PN_COORDINATOR) {
-        std::cout<< "    on_delivery: COOORINDATOR.. " << &handler << std::endl;
+        // delivery d(make_wrapper<delivery>(dlv));
+        pn_disposition_t *disposition = pn_delivery_remote(dlv);
+        proton::value val(pn_disposition_data(disposition));
+        std::cout << "    on_delivery: COOORINDATOR.. tracker: " << val
+                  << std::endl;
         tracker t(make_wrapper<tracker>(dlv));
-        std::cout<< "    on_delivery: COOORINDATOR.. tracker" << &t << std::endl;
-        handler.on_tracker_settle(t);
-    }
+        std::cout << "    on_delivery: COOORINDATOR.. TRACKER MADE: "
+                  << std::endl;
+        // t.user_data = val; // not
 
-    else if (pn_link_is_receiver(lnk)) {
+        //   proton::disposition _disposition =  make_wrapper(disposition); // #
+        //   t.remote();
+
+        //          proton::value val2 = _disposition.data();
+
+        //           std::cout<< "    on_delivery: COOORINDATOR with TXN IN :"
+        //           << val2 << std::endl;
+
+        handler.on_tracker_settle(t);
+    } else if (pn_link_is_receiver(lnk)) {
         delivery d(make_wrapper<delivery>(dlv));
         if (pn_delivery_aborted(dlv)) {
             pn_delivery_settle(dlv);
