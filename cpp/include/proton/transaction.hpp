@@ -40,7 +40,7 @@ class transaction_handler;
 // TODO: This should not be accessible to users.
 class transaction_impl {
   public:
-    proton::sender *txn_ctrl = nullptr;
+    proton::sender txn_ctrl;
     proton::transaction_handler *handler = nullptr;
     proton::binary id;
     proton::tracker _declare;
@@ -54,6 +54,11 @@ class transaction_impl {
     proton::tracker send(proton::sender s, proton::message msg);
 
     void discharge(bool failed);
+    void release_pending();
+    void accept(tracker &d);
+    void update(tracker &d, uint64_t state);
+    void set_id(binary _id);
+
     proton::tracker send_ctrl(proton::symbol descriptor, proton::value _value);
     void handle_outcome(proton::tracker t);
     transaction_impl(proton::sender &_txn_ctrl,
@@ -67,19 +72,21 @@ class transaction_impl {
 
 class
 PN_CPP_CLASS_EXTERN transaction {
-  // private:
-  //   PN_CPP_EXTERN transaction(proton::sender& _txn_ctrl,
-  //   proton::transaction_handler& _handler, bool _settle_before_discharge);
+  private:
+    //   PN_CPP_EXTERN transaction(proton::sender& _txn_ctrl,
+    //   proton::transaction_handler& _handler, bool _settle_before_discharge);
 
-  static transaction mk_transaction_impl(sender &s, transaction_handler &h,
-                                        bool f);
-  PN_CPP_EXTERN transaction(transaction_impl* impl);
+    static transaction mk_transaction_impl(sender &s, transaction_handler &h,
+                                           bool f);
+    PN_CPP_EXTERN transaction(transaction_impl *impl);
+    transaction_impl *_impl;
+
   public:
-  transaction_impl* _impl;
-  // TODO:
+    // TODO:
     // PN_CPP_EXTERN transaction(transaction &o);
     PN_CPP_EXTERN transaction();
     PN_CPP_EXTERN ~transaction();
+    PN_CPP_EXTERN bool is_empty();
     PN_CPP_EXTERN void commit();
     PN_CPP_EXTERN void abort();
     PN_CPP_EXTERN void declare();

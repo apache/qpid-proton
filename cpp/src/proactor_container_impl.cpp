@@ -872,35 +872,15 @@ void container::impl::stop(const proton::error_condition& err) {
 transaction container::impl::declare_transaction(proton::connection conn, proton::transaction_handler &handler, bool settle_before_discharge) {
     class InternalTransactionHandler : public proton::messaging_handler {
         // TODO: auto_settle
+
         void on_tracker_settle(proton::tracker &t) override {
             std::cout<<"    [InternalTransactionHandler][on_tracker_settle] called with tracker.txn"
                  << std::endl;
-            t.transaction().handle_outcome(t);
-
-            // t.user_data = val; // not
-
-            //   proton::disposition _disposition =  make_wrapper(disposition);
-            //   // # t.remote();
-
-            //          proton::value val2 = _disposition.data();
-
-            //  proton::disposition _disposition = t.remote();
-
-            //  proton::value val = _disposition.data();
-
-            //   std::cout<< "    declare_transaction: on_tracker_settle with
-            //   TXN IN :" << val << std::endl;
-
-            // if(t.transaction()) {
-            // t.transaction().handle_outcome(t);
-            // }
+            if (!t.transaction().is_empty()) {
+                t.transaction().handle_outcome(t);
+            }
         }
-
-        // TODO: Add on_unhandled function
     };
-
-    // TODO: Sender should be created only once. (May be use Singleton Class)
-    // proton::target_options t;
 
     proton::target_options t;
     std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
@@ -909,15 +889,12 @@ transaction container::impl::declare_transaction(proton::connection conn, proton
 
     proton::sender_options so;
     so.name("txn-ctrl");
-    // Todo: Check the value, Or by deafult null?
-    //so.source() ?
     so.target(t);
-    // TODO: FIX STATIC
     static InternalTransactionHandler internal_handler; // internal_handler going out of scope. Fix it
     so.handler(internal_handler);
     std::cout<<"    [declare_transaction] txn-name sender open with handler: " << &internal_handler << std::endl;
 
-    proton::sender s = conn.open_sender("does not matter", so);
+    static proton::sender s = conn.open_sender("does not matter", so);
 
     settle_before_discharge = false;
 

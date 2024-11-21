@@ -21,9 +21,11 @@
 
 #include "proton/transaction.hpp"
 #include "proton/delivery.h"
+#include "proton/delivery.hpp"
 #include "proton/message.hpp"
 #include "proton/target_options.hpp"
 #include "proton/tracker.hpp"
+#include "proton/transfer.hpp"
 
 #include "proton_bits.hpp"
 #include <proton/types.hpp>
@@ -51,6 +53,7 @@ transaction::~transaction() = default;
 void transaction::commit() { _impl->commit(); };
 void transaction::abort() { _impl->abort(); };
 void transaction::declare() { _impl->declare(); };
+bool transaction::is_empty() { return _impl == NULL; };
 proton::tracker transaction::send(proton::sender s, proton::message msg) {
     return _impl->send(s, msg);
 };
@@ -60,11 +63,10 @@ void transaction::handle_outcome(proton::tracker t) {
     _impl->handle_outcome(t);
 };
 
-
-transaction_impl::transaction_impl(proton::sender& _txn_ctrl, proton::transaction_handler& _handler, bool _settle_before_discharge):
-    txn_ctrl(&_txn_ctrl),
-    handler(&_handler)
-{
+transaction_impl::transaction_impl(proton::sender &_txn_ctrl,
+                                   proton::transaction_handler &_handler,
+                                   bool _settle_before_discharge)
+    : txn_ctrl(_txn_ctrl), handler(&_handler) {
     // bool settle_before_discharge = _settle_before_discharge;
     declare();
 }
@@ -95,11 +97,19 @@ void transaction_impl::declare() {
               << std::endl;
 }
 
-void transaction_impl::discharge(bool failed) {
-    failed = failed;
-    proton::symbol descriptor("amqp:declare:list");
-    proton::value _value;
-    proton::tracker discharge = send_ctrl(descriptor, _value);
+void transaction_impl::discharge(bool _failed) {
+    failed = _failed;
+    proton::symbol descriptor("amqp:discharge:list");
+    std::list<proton::value> vd;
+    vd.push_back(id);
+    vd.push_back(failed);
+    proton::value _value = vd;
+    _discharge = send_ctrl(descriptor, _value);
+}
+
+void transaction_impl::set_id(binary _id) {
+    std::cout << "    TXN ID: " << _id << " from " << this << std::endl;
+    id = _id;
 }
 
 proton::tracker transaction_impl::send_ctrl(proton::symbol descriptor, proton::value _value) {
@@ -113,7 +123,7 @@ proton::tracker transaction_impl::send_ctrl(proton::symbol descriptor, proton::v
 
     proton::message msg = msg_value;
     std::cout << "    [transaction_impl::send_ctrl] sending " << msg << std::endl;
-    proton::tracker delivery = txn_ctrl->send(msg);
+    proton::tracker delivery = txn_ctrl.send(msg);
     std::cout << "    # declare, delivery as tracker: " << delivery
               << std::endl;
     delivery.transaction(transaction(this));
@@ -125,7 +135,42 @@ proton::tracker transaction_impl::send_ctrl(proton::symbol descriptor, proton::v
 
 proton::tracker transaction_impl::send(proton::sender s, proton::message msg) {
     proton::tracker tracker = s.send(msg);
+    std::cout << "    transaction_impl::send " << id << ", done: " << msg
+              << " tracker: " << tracker << std::endl;
+    update(tracker, 0x34);
+    std::cout << "     transaction_impl::send, update" << std::endl;
     return tracker;
+}
+
+void transaction_impl::accept(tracker &t) {
+    // TODO: settle-before-discharge
+    t.settle();
+    // pending.push_back(d);
+}
+
+// TODO: use enum transfer::state
+void transaction_impl::update(tracker &t, uint64_t state) {
+    if (state) {
+        proton::value data(pn_disposition_data(pn_delivery_local(unwrap(t))));
+        std::list<proton::value> data_to_send;
+        data_to_send.push_back(id);
+        data = data_to_send;
+
+        pn_delivery_update(unwrap(t), state);
+        // pn_delivery_settle(o);
+        // delivery.update(0x34)
+    }
+}
+
+void transaction_impl::release_pending() {
+    for (auto d : pending) {
+        // d.update(released);
+        // d.settle();
+        // TODO: fix it
+        delivery d2(make_wrapper<delivery>(unwrap(d)));
+        d2.release();
+    }
+    pending.clear();
 }
 
 void transaction_impl::handle_outcome(proton::tracker t) {
@@ -133,24 +178,58 @@ void transaction_impl::handle_outcome(proton::tracker t) {
     // std::vector<std::string> _data =
     // proton::get<std::vector<std::string>>(val);
     auto txn = t.transaction();
-    std::cout << "  handle_outcome::txn_impl i am is " << this << std::endl;
-    std::cout << "  handle_outcome::_declare is " << _declare << std::endl;
-    std::cout << "  handle_outcome::tracker is " << t << std::endl;
+    std::cout << "  ## handle_outcome::txn_impl i am is " << this << std::endl;
+    std::cout << "  ## handle_outcome::_declare is " << _declare << std::endl;
+    std::cout << "  ## handle_outcome::tracker is " << t << std::endl;
 
+    pn_disposition_t *disposition = pn_delivery_remote(unwrap(t));
     // TODO: handle outcome
     if(_declare == t) {
-        std::cout<<"    transaction_impl::handle_outcome => got _declare" << std::endl;
-        pn_disposition_t *disposition = pn_delivery_remote(unwrap(t));
+        std::cout << "    transaction_impl::handle_outcome => got _declare"
+                  << std::endl;
         proton::value val(pn_disposition_data(disposition));
         auto vd = get<std::vector<proton::binary>>(val);
-        txn._impl->id = vd[0];
-        std::cout << "    transaction_impl: handle_outcome.. got txnid:: "
-                  << vd[0] << std::endl;
-        handler->on_transaction_declared(txn);
+        if (vd.size() > 0) {
+            txn._impl->set_id(vd[0]);
+            std::cout << "    transaction_impl: handle_outcome.. txn_declared "
+                         "got txnid:: "
+                      << vd[0] << std::endl;
+            handler->on_transaction_declared(txn);
+        } else if (pn_disposition_is_failed(disposition)) {
+            std::cout << "    transaction_impl: handle_outcome.. "
+                         "txn_declared_failed pn_disposition_is_failed "
+                      << std::endl;
+            handler->on_transaction_declare_failed(txn);
+        } else {
+            std::cout
+                << "    transaction_impl: handle_outcome.. txn_declared_failed "
+                << std::endl;
+            handler->on_transaction_declare_failed(txn);
+        }
     } else if (_discharge == t) {
-        std::cout << "    transaction_impl::handle_outcome => got _discharge"
-                  << std::endl;
-        handler->on_transaction_committed(txn);
+        if (pn_disposition_is_failed(disposition)) {
+            if (!failed) {
+                std::cout
+                    << "    transaction_impl: handle_outcome.. commit failed "
+                    << std::endl;
+                handler->on_transaction_commit_failed(txn);
+                // release pending
+            }
+        } else {
+            if (failed) {
+                handler->on_transaction_aborted(txn);
+                std::cout
+                    << "    transaction_impl: handle_outcome.. txn aborted"
+                    << std::endl;
+                // release pending
+            } else {
+                handler->on_transaction_committed(txn);
+                std::cout
+                    << "    transaction_impl: handle_outcome.. txn commited"
+                    << std::endl;
+            }
+        }
+        pending.clear();
     } else {
         std::cout << "    transaction_impl::handle_outcome => got NONE!"
                   << std::endl;

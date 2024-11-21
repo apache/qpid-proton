@@ -71,12 +71,8 @@ void on_link_flow(messaging_handler& handler, pn_event_t* event) {
     // TODO: process session flow data, if no link-specific data, just return.
     if (!lnk) return;
     int state = pn_link_state(lnk);
-    if (pn_terminus_get_type(pn_link_remote_target(lnk))==PN_COORDINATOR) {
-        std::cout << "    on_link_flow, type: PN_COORDINATOR"  << std::endl;
-        return;
-
-    }
-    if ((state&PN_LOCAL_ACTIVE) && (state&PN_REMOTE_ACTIVE)) {
+    if (pn_terminus_get_type(pn_link_remote_target(lnk)) == PN_COORDINATOR ||
+        ((state & PN_LOCAL_ACTIVE) && (state & PN_REMOTE_ACTIVE))) {
         link_context& lctx = link_context::get(lnk);
         if (pn_link_is_sender(lnk)) {
             if (pn_link_credit(lnk) > 0) {
@@ -123,13 +119,36 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
     Tracing& ot = Tracing::getTracing();
     if (pn_terminus_get_type(pn_link_remote_target(lnk))==PN_COORDINATOR) {
         // delivery d(make_wrapper<delivery>(dlv));
-        pn_disposition_t *disposition = pn_delivery_remote(dlv);
-        proton::value val(pn_disposition_data(disposition));
-        std::cout << "    on_delivery: COOORINDATOR.. tracker: " << val
-                  << std::endl;
-        tracker t(make_wrapper<tracker>(dlv));
+        // pn_disposition_t *disposition = pn_delivery_remote(dlv);
+        // proton::value val(pn_disposition_data(disposition));
+        // std::cout << "    on_delivery: COOORINDATOR.. tracker: " << val
+        //           << std::endl;
+        // tracker t(make_wrapper<tracker>(dlv));
         std::cout << "    on_delivery: COOORINDATOR.. TRACKER MADE: "
                   << std::endl;
+
+        if (pn_delivery_updated(dlv)) {
+            tracker t(make_wrapper<tracker>(dlv));
+            ot.on_settled_span(t);
+            switch (pn_delivery_remote_state(dlv)) {
+            case PN_ACCEPTED:
+                handler.on_tracker_accept(t);
+                break;
+            case PN_REJECTED:
+                handler.on_tracker_reject(t);
+                break;
+            case PN_RELEASED:
+            case PN_MODIFIED:
+                handler.on_tracker_release(t);
+                break;
+            }
+            if (t.settled()) {
+                handler.on_tracker_settle(t);
+                if (lctx.auto_settle)
+                    t.settle();
+            }
+        }
+
         // t.user_data = val; // not
 
         //   proton::disposition _disposition =  make_wrapper(disposition); // #
@@ -140,7 +159,7 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
         //           std::cout<< "    on_delivery: COOORINDATOR with TXN IN :"
         //           << val2 << std::endl;
 
-        handler.on_tracker_settle(t);
+        // handler.on_tracker_settle(t);
     } else if (pn_link_is_receiver(lnk)) {
         delivery d(make_wrapper<delivery>(dlv));
         if (pn_delivery_aborted(dlv)) {
