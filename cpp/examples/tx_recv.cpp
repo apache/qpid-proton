@@ -36,26 +36,23 @@
 #include <chrono>
 #include <thread>
 
-class tx_send : public proton::messaging_handler, proton::transaction_handler {
+class tx_recv : public proton::messaging_handler, proton::transaction_handler {
   private:
-    proton::sender sender; 
+    proton::receiver receiver; 
     std::string url;
-    int total;
+    int expected;
     int batch_size;
-    int sent;
-    int batch_index = 0;
     int current_batch = 0;
     int committed = 0;
-    int confirmed = 0;
 
     proton::session session;
     proton::transaction transaction;
   public:
-    tx_send(const std::string &s, int c, int b):
-        url(s), total(c), batch_size(b), sent(0) {}
+    tx_recv(const std::string &s, int c, int b):
+        url(s), expected(c), batch_size(b) {}
 
     void on_container_start(proton::container &c) override {
-        sender = c.open_sender(url);
+        receiver = c.open_receiver(url);
     }
 
     void on_session_open(proton::session &s) override {
@@ -77,57 +74,24 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
                   << std::endl;
         std::cout << "[on_transaction_declared] txn is_empty " << (t.is_empty())
                   << "\t" << transaction.is_empty() << std::endl;
+        receiver.add_credit(batch_size); 
         transaction = t;
-
-        send(sender);
     }
 
-    void on_sendable(proton::sender &s) override {
-        std::cout << "    [OnSendable] transaction: " << &transaction
-                  << std::endl;
-        send(s);
-    }
-
-    void send(proton::sender &s) {
-        static int unique_id = 10000;
-        while (!transaction.is_empty() && sender.credit() &&
-               (committed + current_batch) < total) {
-            proton::message msg;
-            std::map<std::string, int> m;
-            m["sequence"] = committed + current_batch;
-
-            msg.id(unique_id++);
-            msg.body(m);
-            std::cout << "##### [example] transaction send msg: " << msg
-                      << std::endl;
-            transaction.send(sender, msg);
-            current_batch += 1;
-            if(current_batch == batch_size)
-            {
-                std::cout << " >> Txn attempt commit" << std::endl;
-                if (batch_index % 2 == 0) {
-                    transaction.commit();
-                } else {
-                    transaction.abort();
-                }
-
-                transaction = proton::transaction();
-                batch_index++;
-            }
+    void on_message(proton::delivery &d, proton::message &msg) override {
+        std::cout<<"# MESSAGE: " << msg.id() <<": "  << msg.body() << std::endl;
+        transaction.accept(d);
+        current_batch += 1;
+        if(current_batch == batch_size) {
+            transaction = proton::transaction(); // null
         }
-    }
-
-    void on_tracker_accept(proton::tracker &t) override {
-        confirmed += 1;
-        std::cout << "    [example] on_tracker_accept:" << confirmed
-                  << std::endl;
     }
 
     void on_transaction_committed(proton::transaction t) override {
         committed += current_batch;
         current_batch = 0;
         std::cout<<"    [OnTxnCommitted] Committed:"<< committed<< std::endl;
-        if(committed == total) {
+        if(committed == expected) {
             std::cout << "All messages committed" << std::endl;
             t.connection().close();
         }
@@ -136,21 +100,11 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
         }
     }
 
-    void on_transaction_aborted(proton::transaction t) override {
-        std::cout << "Meesages Aborted ....." << std::endl;
-        current_batch = 0;
-        session.declare_transaction(*this);
-    }
-
-    void on_sender_close(proton::sender &s) override {
-        current_batch = 0;
-    }
-
 };
 
 int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
-    int message_count = 6;
+    int message_count = 9;
     int batch_size = 3;
     example::options opts(argc, argv);
 
@@ -161,8 +115,8 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
 
-        tx_send send(address, message_count, batch_size);
-        proton::container(send).run();
+        tx_recv recv(address, message_count, batch_size);
+        proton::container(recv).run();
 
         return 0;
     } catch (const example::bad_option& e) {

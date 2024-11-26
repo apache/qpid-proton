@@ -55,7 +55,7 @@ class transaction_impl {
 
     void discharge(bool failed);
     void release_pending();
-    void accept(tracker &d);
+    void accept(delivery &d);
     void update(tracker &d, uint64_t state);
     void set_id(binary _id);
 
@@ -92,9 +92,11 @@ PN_CPP_CLASS_EXTERN transaction {
     PN_CPP_EXTERN void declare();
     PN_CPP_EXTERN void handle_outcome(proton::tracker);
     PN_CPP_EXTERN proton::tracker send(proton::sender s, proton::message msg);
+    PN_CPP_EXTERN void accept(delivery &t);
+    PN_CPP_EXTERN proton::connection connection() const;
 
   friend class transaction_impl;
-  friend class container::impl;
+  friend class session;
 };
 
 class

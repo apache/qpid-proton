@@ -50,18 +50,19 @@ transaction::transaction(transaction_impl *impl)
     : _impl(impl) {}
 // transaction::transaction( transaction_impl* impl): _impl(impl){}
 transaction::~transaction() = default;
-void transaction::commit() { _impl->commit(); };
-void transaction::abort() { _impl->abort(); };
-void transaction::declare() { _impl->declare(); };
-bool transaction::is_empty() { return _impl == NULL; };
+void transaction::commit() { _impl->commit(); }
+void transaction::abort() { _impl->abort(); }
+void transaction::declare() { _impl->declare(); }
+bool transaction::is_empty() { return _impl == NULL; }
+void transaction::accept(delivery &t) { return _impl->accept(t); }
 proton::tracker transaction::send(proton::sender s, proton::message msg) {
     return _impl->send(s, msg);
-};
+}
 void transaction::handle_outcome(proton::tracker t) {
     std::cout << "    transaction::handle_outcome = NO OP base class "
               << std::endl;
     _impl->handle_outcome(t);
-};
+}
 
 transaction_impl::transaction_impl(proton::sender &_txn_ctrl,
                                    proton::transaction_handler &_handler,
@@ -142,7 +143,7 @@ proton::tracker transaction_impl::send(proton::sender s, proton::message msg) {
     return tracker;
 }
 
-void transaction_impl::accept(tracker &t) {
+void transaction_impl::accept(delivery &t) {
     // TODO: settle-before-discharge
     t.settle();
     // pending.push_back(d);
@@ -236,8 +237,14 @@ void transaction_impl::handle_outcome(proton::tracker t) {
     }
 }
 
+
 transaction transaction::mk_transaction_impl(sender &s, transaction_handler &h,
                                              bool f) {
     return transaction(new transaction_impl(s, h, f));
 }
+
+proton::connection transaction::connection() const {
+    return _impl->txn_ctrl.connection();
+}
+
 }

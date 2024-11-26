@@ -105,6 +105,8 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Get user data from this session.
     PN_CPP_EXTERN void* user_data() const;
 
+    PN_CPP_EXTERN transaction declare_transaction(proton::transaction_handler &handler, bool settle_before_discharge = false);
+
     /// @cond INTERNAL
   friend class internal::factory<session>;
   friend class session_iterator;

@@ -25,7 +25,6 @@
 #include "./binary.hpp"
 #include "./internal/export.hpp"
 #include "./transfer.hpp"
-#include "./messaging_handler.hpp"
 
 /// @file
 /// @copybrief proton::tracker

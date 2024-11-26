@@ -61,7 +61,8 @@ foreach(example
     service_bus
     multithreaded_client
     multithreaded_client_flow_control
-    tx_send)
+    tx_send
+    tx_recv)
   add_executable(${example} ${example}.cpp)
   target_link_libraries(${example} Proton::cpp Threads::Threads)
 endforeach()
