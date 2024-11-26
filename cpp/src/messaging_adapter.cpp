@@ -333,42 +333,8 @@ void on_link_remote_open(messaging_handler& handler, pn_event_t* event) {
             return;
         }
         std::cout<<"    IN on_link_remote_open(.PN_COORDINATOR) success " << std::endl;
+        std::cout<<"    IN on_link_remote_open(.PN_COORDINATOR) have handler " << &handler << std::endl;
 
-        // WHY???
-        // pn_terminus_copy(pn_link_source(lnk), pn_link_remote_source(lnk));
-        // pn_terminus_copy(pn_link_target(lnk), pn_link_remote_target(lnk));
-
-        // We need a new class?
-        // auto coordinator = pn_link_remote_target(lnk);
-
-
-            // proton::target_options to;
-            // std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
-            // to.capabilities(cap);
-            // to.type(PN_COORDINATOR);
-
-            // proton::receiver_options ro;
-            // ro.name("txn-ctrl");
-            // ro.target(to);
-            // ro.handler(handler);
-            // receiver r(make_wrapper<receiver>(lnk));
-
-            // proton::receiver rcv = r.connection().open_receiver("does not matter", ro);
-              std::cout<<"    IN on_link_remote_open(.PN_COORDINATOR) have handler " << &handler << std::endl;
-
-            // handler.on_receiver_open(rcv);
-        // credit_topup(lnk);
-
-    // pn_delivery_t *dlv = pn_event_delivery(event);
-    //         tracker t(make_wrapper<tracker>(dlv));
-
-    //     // sender s(make_wrapper<sender>(lnk));
-    //     handler.on_tracker_settle(t);
-    // TODO: find what to do...
-        // HAHA.. treating coordinator like sender...
-    //   sender s(make_wrapper<sender>(lnk));
-    //   handler.on_sender_open(s);
-    // pn_link_close(lnk);
       return;
     }
     if (pn_link_state(lnk) & PN_LOCAL_UNINIT) { // Incoming link
