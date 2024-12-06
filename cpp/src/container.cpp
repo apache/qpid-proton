@@ -28,6 +28,7 @@
 #include "proton/uuid.hpp"
 
 #include "proactor_container_impl.hpp"
+#include <vector>
 
 namespace proton {
 
@@ -43,6 +44,10 @@ container::~container() = default;
 
 returned<connection> container::connect(const std::string &url) {
     return connect(url, connection_options());
+}
+
+transaction container::declare_transaction(proton::connection conn, proton::transaction_handler &handler, bool settle_before_discharge) {
+    return impl_->declare_transaction(conn, handler, settle_before_discharge);
 }
 
 returned<sender> container::open_sender(const std::string &url) {

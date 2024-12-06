@@ -312,6 +312,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// Cancel task for the given work_handle.
     PN_CPP_EXTERN void cancel(work_handle);
 
+    PN_CPP_EXTERN transaction declare_transaction(proton::connection conn, proton::transaction_handler &handler, bool settle_before_discharge = false);
   private:
     /// Declare both v03 and v11 if compiling with c++11 as the library contains both.
     /// A C++11 user should never call the v03 overload so it is private in this case
@@ -326,6 +327,7 @@ class PN_CPP_CLASS_EXTERN container {
   friend class receiver_options;
   friend class sender_options;
   friend class work_queue;
+  friend class transaction;
     /// @endcond
 };
 

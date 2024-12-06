@@ -22,7 +22,7 @@ import collections
 import optparse
 import uuid
 
-from proton import Endpoint
+from proton import Condition, Described, Disposition, Endpoint, Terminus
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
@@ -70,9 +70,11 @@ class Queue(object):
 
 class Broker(MessagingHandler):
     def __init__(self, url):
-        super(Broker, self).__init__()
+        super().__init__(auto_accept=False)
         self.url = url
         self.queues = {}
+        self.txns = set()
+        self.acceptor = None
 
     def on_start(self, event):
         self.acceptor = event.container.listen(self.url)
@@ -86,22 +88,62 @@ class Broker(MessagingHandler):
         event.connection.offered_capabilities = 'ANONYMOUS-RELAY'
 
     def on_link_opening(self, event):
-        if event.link.is_sender:
-            if event.link.remote_source.dynamic:
+        link = event.link
+        if link.is_sender:
+            if link.remote_source.dynamic:
                 address = str(uuid.uuid4())
-                event.link.source.address = address
+                link.source.address = address
                 q = Queue(True)
                 self.queues[address] = q
-                q.subscribe(event.link)
-            elif event.link.remote_source.address:
-                event.link.source.address = event.link.remote_source.address
-                self._queue(event.link.source.address).subscribe(event.link)
-        elif event.link.remote_target.address:
-            event.link.target.address = event.link.remote_target.address
+                q.subscribe(link)
+            elif link.remote_source.address:
+                link.source.address = link.remote_source.address
+                self._queue(link.source.address).subscribe(link)
+        elif link.remote_target.type == Terminus.COORDINATOR:
+            # Set up transaction coordinator
+            # Should check for compatible capabilities
+            # requested = link.remote_target.capabilities.get_object()
+            link.target.type = Terminus.COORDINATOR
+            link.target.copy(link.remote_target)
+        elif link.remote_target.address:
+            link.target.address = link.remote_target.address
 
     def _unsubscribe(self, link):
         if link.source.address in self.queues and self.queues[link.source.address].unsubscribe(link):
             del self.queues[link.source.address]
+
+    def _allocate_txn(self):
+        tid = bytes(str(uuid.uuid4()), 'UTF8')
+        self.txns.add(tid)
+        return tid
+
+    def _settle_txn(self, tid):
+        self.txns.remove(tid)
+
+    def _coordinator_message(self, msg, delivery):
+        body = msg.body
+        if isinstance(body, Described):
+            d = body.descriptor
+            if d == "amqp:declare:list":
+                # Allocate transaction id
+                tid = self._allocate_txn()
+                print(f"Declare: txn-id={tid}")
+                delivery.local.data = [tid]
+                delivery.update(0x33)
+            elif d == "amqp:discharge:list":
+                # Always accept commit/abort!
+                value = body.value
+                tid = bytes(value[0])
+                failed = bool(value[1])
+                if tid in self.txns:
+                    print(f"Discharge: txn-id={tid}, failed={failed}")
+                    self._settle_txn(tid)
+                    delivery.update(Disposition.ACCEPTED)
+                else:
+                    print(f"Discharge unknown txn-id: txn-id={tid}, failed={failed}")
+                    delivery.local.condition = Condition('amqp:transaction:unknown-id')
+                    delivery.update(Disposition.REJECTED)
+        delivery.settle()
 
     def on_link_closing(self, event):
         if event.link.is_sender:
@@ -124,10 +166,62 @@ class Broker(MessagingHandler):
         self._queue(event.link.source.address).dispatch(event.link)
 
     def on_message(self, event):
-        address = event.link.target.address
+        link = event.link
+        delivery = event.delivery
+        msg = event.message
+        if link.target.type == Terminus.COORDINATOR:
+            # Deal with special transaction messages
+            self._coordinator_message(msg, delivery)
+            return
+
+        address = link.target.address
         if address is None:
-            address = event.message.address
+            address = msg.address
+
+        # Is this a transactioned message?
+        disposition = delivery.remote
+        if disposition.type == 0x34:
+            tid = bytes(disposition.data[0])
+            if tid in self.txns:
+                print(f"Message: txn-id={tid}")
+            else:
+                print(f"Message unknown txn-id: txn-id={tid}")
+                delivery.local.condition = Condition('amqp:transaction:unknown-id')
+                delivery.update(Disposition.REJECTED)
+                delivery.settle()
+                return
+
         self._queue(address).publish(event.message)
+        delivery.update(Disposition.ACCEPTED)
+        delivery.settle()
+
+    def on_accepted(self, event):
+        delivery = event.delivery
+        print(f"Accept: delivery={delivery}")
+
+    def on_rejected(self, event):
+        delivery = event.delivery
+        print(f"Reject: delivery={delivery}")
+
+    def on_released(self, event):
+        delivery = event.delivery
+        print(f"Released: delivery={delivery}")
+
+    def on_delivery_updated(self, event):
+        # Is this a transactioned delivery update?
+        delivery = event.delivery
+        disposition = delivery.remote
+        if disposition.type == 0x34:
+            tid = bytes(disposition.data[0])
+            outcome = disposition.data[1]
+            if tid in self.txns:
+                print(f"Delivery update: txn-id={tid} outcome={outcome}")
+            else:
+                print(f"Message unknown txn-id: txn-id={tid}")
+                delivery.local.condition = Condition('amqp:transaction:unknown-id')
+                delivery.update(Disposition.REJECTED)
+                delivery.settle()
+                return
 
 
 def main():

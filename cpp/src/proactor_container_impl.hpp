@@ -91,6 +91,7 @@ class container::impl {
     template <class T> static messaging_handler* get_handler(T s);
     messaging_handler* get_handler(pn_event_t *event);
     static work_queue::impl* make_work_queue(container&);
+    transaction declare_transaction(proton::connection conn, proton::transaction_handler &handler, bool settle_before_discharge = false);
 
   private:
     class common_work_queue;
