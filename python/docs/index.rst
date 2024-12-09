@@ -2,7 +2,7 @@
 Qpid Proton Python API Documentation
 ####################################
 
-The Proton module provides a Python 2.7 and 3.x API for Qpid Proton. It enables a developer to write Python applications
+The Proton module provides a Python 3 API for Qpid Proton. It enables a developer to write Python applications
 that send and receive AMQP messages.
 
 *******
@@ -131,8 +131,8 @@ Examples
 --------
 
 Several examples may be found in the
-`Apache Qpid Proton Examples <https://qpid.apache.org/releases/qpid-proton-0.28.0/proton/python/examples/index.html>`_
-whcih illustrate the techniques and concepts of sending messages. They are also present in the source. These make
+`Apache Qpid Proton Examples <../examples/index.html>`_
+which illustrate the techniques and concepts of sending messages. They are also present in the source. These make
 an excellent starting point for developers new to this API. Make sure to read the README file, which gives
 instructions on how to run them and a brief explanation of each example.
 
