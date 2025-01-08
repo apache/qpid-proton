@@ -31,8 +31,9 @@ try:
     ver_file_path = os.path.abspath('../../VERSION.txt')
     with open(ver_file_path, 'r') as ver_file:
         ver_str = ver_file.read().replace('\n', '')
+        # Strip '-SNAPSHOT' from end of string
         if '-' in ver_str:
-            version = ver_str.split("-")[0]  # Strip '-SNAPSHOT' from end of string
+            version = ver_str.split("-")[0]
         else:
             version = ver_str
         release = version
@@ -53,7 +54,8 @@ except IOError:
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
-    'sphinx.ext.mathjax',  # needed for math formulas on some versions of Sphinx
+    # needed for math formulas on some versions of Sphinx
+    'sphinx.ext.mathjax'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -73,7 +75,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-#language = None
+# language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -100,7 +102,7 @@ html_theme = 'sphinxdoc'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['_static']
+# html_static_path = []
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -143,7 +145,9 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'QpidProtonPythonAPI.tex', 'Qpid Proton Python API Documentation',
+    (master_doc,
+     'QpidProtonPythonAPI.tex',
+     'Qpid Proton Python API Documentation',
      'Apache Qpid Contributors', 'manual'),
 ]
 
