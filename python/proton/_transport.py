@@ -92,27 +92,32 @@ class Transport(Wrapper):
         else:
             return Transport(impl=impl)
 
+    constructor = pn_transport
+    get_context = pn_transport_attachments
+
+    def __new__(
+            cls,
+            mode: Optional[int] = None,
+            impl=None,
+    ) -> 'Transport':
+        return super().__new__(cls, impl)
+
     def __init__(
             self,
-            mode: 'Optional[int]' = None,
-            impl: 'Callable' = None,
+            mode: Optional[int] = None,
+            impl=None,
     ) -> None:
-        if impl is None:
-            Wrapper.__init__(self, constructor=pn_transport, get_context=pn_transport_attachments)
-        else:
-            Wrapper.__init__(self, impl, pn_transport_attachments)
         if mode == Transport.SERVER:
             pn_transport_set_server(self._impl)
         elif mode is None or mode == Transport.CLIENT:
             pass
         else:
             raise TransportException("Cannot initialise Transport from mode: %s" % str(mode))
-
-    def _init(self) -> None:
-        self._sasl = None
-        self._ssl = None
-        self._reactor = None
-        self._connect_selectable = None
+        if self.Uninitialized():
+            self._sasl = None
+            self._ssl = None
+            self._reactor = None
+            self._connect_selectable = None
 
     def _check(self, err: int) -> int:
         if err < 0:
@@ -468,7 +473,9 @@ class Transport(Wrapper):
 
         :return: SASL object associated with this transport.
         """
-        return SASL(self)
+        if not self._sasl:
+            self._sasl = SASL(self)
+        return self._sasl
 
     def ssl(self, domain: Optional['SSLDomain'] = None, session_details: Optional['SSLSessionDetails'] = None) -> 'SSL':
         """
@@ -512,7 +519,7 @@ class SASLException(TransportException):
     pass
 
 
-class SASL(Wrapper):
+class SASL:
     """
     The SASL layer is responsible for establishing an authenticated
     and/or encrypted tunnel over which AMQP frames are passed between
@@ -542,9 +549,14 @@ class SASL(Wrapper):
         """
         return pn_sasl_extended()
 
-    def __init__(self, transport: Transport) -> None:
-        Wrapper.__init__(self, transport._impl, pn_transport_attachments)
-        self._sasl = pn_sasl(transport._impl)
+    def __new__(cls, transport: Transport) -> 'SASL':
+        if not transport._sasl:
+            sasl = super().__new__(cls)
+            sasl._sasl = pn_sasl(transport._impl)
+            transport._sasl = sasl
+            return sasl
+        else:
+            return transport._sasl
 
     def _check(self, err):
         if err < 0:

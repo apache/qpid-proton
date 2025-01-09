@@ -17,83 +17,72 @@
 # under the License.
 #
 
-from typing import Any, Callable, Optional
+from typing import Any, Callable, ClassVar, Optional
 
-from cproton import addressof, pn_incref, pn_decref, \
-    pn_record_get_py, pn_record_def_py, pn_record_set_py
+from cproton import addressof, isnull, pn_incref, pn_decref, \
+    pn_record_get_py
 
 from ._exceptions import ProtonException
 
 
-class EmptyAttrs:
-
-    def __contains__(self, name):
-        return False
-
-    def __getitem__(self, name):
-        raise KeyError(name)
-
-    def __setitem__(self, name, value):
-        raise TypeError("does not support item assignment")
-
-
-EMPTY_ATTRS = EmptyAttrs()
-
-
-class Wrapper(object):
+class Wrapper:
     """ Wrapper for python objects that need to be stored in event contexts and be retrieved again from them
         Quick note on how this works:
-        The actual *python* object has only 3 attributes which redirect into the wrapped C objects:
+        The actual *python* object has only 2 attributes which redirect into the wrapped C objects:
         _impl   The wrapped C object itself
         _attrs  This is a special pn_record_t holding a PYCTX which is a python dict
                 every attribute in the python object is actually looked up here
 
-        Because the objects actual attributes are stored away they must be initialised *after* the wrapping
-        is set up. This is the purpose of the _init method in the wrapped  object. Wrapper.__init__ will call
-        eht subclass _init to initialise attributes. So they *must not* be initialised in the subclass __init__
-        before calling the superclass (Wrapper) __init__ or they will not be accessible from the wrapper at all.
+        Because the objects actual attributes are stored away they must be initialised *after* the wrapping. This is
+        achieved by using the __new__ method of Wrapper to create the object with the actiual attributes before the
+        __init__ method is called.
 
+        In the case where an existing object is being wrapped, the __init__ method is called with the existing object
+        but should not initialise the object. This is because the object is already initialised and the attributes
+        are already set. Use the Uninitialised method to check if the object is already initialised.
     """
 
-    def __init__(
-            self,
-            impl: Any = None,
-            get_context: Optional[Callable[[Any], Any]] = None,
-            constructor: Optional[Callable[[], Any]] = None
-    ) -> None:
-        init = False
-        if impl is None and constructor is not None:
-            # we are constructing a new object
-            impl = constructor()
-            if impl is None:
-                self.__dict__["_impl"] = impl
-                self.__dict__["_attrs"] = EMPTY_ATTRS
-                raise ProtonException(
-                    "Wrapper failed to create wrapped object. Check for file descriptor or memory exhaustion.")
-            init = True
-        else:
-            # we are wrapping an existing object
-            pn_incref(impl)
+    constructor: ClassVar[Optional[Callable[[], Any]]] = None
+    get_context: ClassVar[Optional[Callable[[Any], dict[str, Any]]]] = None
 
-        if get_context:
-            record = get_context(impl)
-            attrs = pn_record_get_py(record)
-            if attrs is None:
-                attrs = {}
-                pn_record_def_py(record)
-                pn_record_set_py(record, attrs)
-                init = True
+    __slots__ = ["_impl", "_attrs"]
+
+    @classmethod
+    def wrap(cls, impl: Any) -> Optional['Wrapper']:
+        if isnull(impl):
+            return None
         else:
-            attrs = EMPTY_ATTRS
-            init = False
-        self.__dict__["_impl"] = impl
-        self.__dict__["_attrs"] = attrs
-        if init:
-            self._init()
+            return cls(impl)
+
+    def __new__(cls, impl: Any = None) -> 'Wrapper':
+        attrs = None
+        try:
+            if impl is None:
+                # we are constructing a new object
+                assert cls.constructor
+                impl = cls.constructor()
+                if impl is None:
+                    raise ProtonException(
+                        "Wrapper failed to create wrapped object. Check for file descriptor or memory exhaustion.")
+            else:
+                # we are wrapping an existing object
+                pn_incref(impl)
+
+            assert cls.get_context
+            record = cls.get_context(impl)
+            attrs = pn_record_get_py(record)
+        finally:
+            self = super().__new__(cls)
+            self._impl = impl
+            self._attrs = attrs
+            return self
+
+    def Uninitialized(self) -> bool:
+        return self._attrs == {}
 
     def __getattr__(self, name: str) -> Any:
-        attrs = self.__dict__["_attrs"]
-        if name in attrs:
+        attrs = self._attrs
+        if attrs and name in attrs:
             return attrs[name]
         else:
             raise AttributeError(name + " not in _attrs")
@@ -102,11 +91,12 @@ class Wrapper(object):
         if hasattr(self.__class__, name):
             object.__setattr__(self, name, value)
         else:
-            attrs = self.__dict__["_attrs"]
-            attrs[name] = value
+            attrs = self._attrs
+            if attrs is not None:
+                attrs[name] = value
 
     def __delattr__(self, name: str) -> None:
-        attrs = self.__dict__["_attrs"]
+        attrs = self._attrs
         if attrs:
             del attrs[name]
 

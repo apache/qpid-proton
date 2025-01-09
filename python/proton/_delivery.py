@@ -24,11 +24,11 @@ from cproton import PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEA
     pn_delivery_writable, pn_disposition_annotations, pn_disposition_condition, pn_disposition_data, \
     pn_disposition_get_section_number, pn_disposition_get_section_offset, pn_disposition_is_failed, \
     pn_disposition_is_undeliverable, pn_disposition_set_failed, pn_disposition_set_section_number, \
-    pn_disposition_set_section_offset, pn_disposition_set_undeliverable, pn_disposition_type, \
-    isnull
+    pn_disposition_set_section_offset, pn_disposition_set_undeliverable, pn_disposition_type
 
 from ._condition import cond2obj, obj2cond
 from ._data import dat2obj, obj2dat
+from ._transport import Transport
 from ._wrapper import Wrapper
 
 from enum import IntEnum
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from ._condition import Condition
     from ._data import PythonAMQPData, symbol
     from ._endpoints import Receiver, Sender  # circular import
-    from ._reactor import Connection, Session, Transport
+    from ._reactor import Connection, Session
 
 
 class DispositionType(IntEnum):
@@ -277,19 +277,12 @@ class Delivery(Wrapper):
     delivery being settled.
     """
 
-    @staticmethod
-    def wrap(impl):
-        if isnull(impl):
-            return None
-        else:
-            return Delivery(impl)
+    get_context = pn_delivery_attachments
 
     def __init__(self, impl):
-        Wrapper.__init__(self, impl, pn_delivery_attachments)
-
-    def _init(self) -> None:
-        self.local = Disposition(pn_delivery_local(self._impl), True)
-        self.remote = Disposition(pn_delivery_remote(self._impl), False)
+        if self.Uninitialized():
+            self.local = Disposition(pn_delivery_local(self._impl), True)
+            self.remote = Disposition(pn_delivery_remote(self._impl), False)
 
     @property
     def tag(self) -> str:
@@ -414,7 +407,7 @@ class Delivery(Wrapper):
         return self.session.connection
 
     @property
-    def transport(self) -> 'Transport':
+    def transport(self) -> Optional[Transport]:
         """
         The :class:`Transport` bound to the :class:`Connection` over which
         the delivery was sent or received.

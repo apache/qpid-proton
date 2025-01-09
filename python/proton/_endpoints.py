@@ -54,8 +54,7 @@ from cproton import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN_DIST_MOD
     pn_terminus_is_dynamic, pn_terminus_outcomes, pn_terminus_properties, pn_terminus_set_address, \
     pn_terminus_set_distribution_mode, pn_terminus_set_durability, pn_terminus_set_dynamic, \
     pn_terminus_set_expiry_policy, pn_terminus_set_timeout, pn_terminus_set_type, \
-    pn_link_properties, pn_link_remote_properties, \
-    isnull
+    pn_link_properties, pn_link_remote_properties
 
 from ._condition import cond2obj, obj2cond
 from ._data import Data, dat2obj, obj2dat, PropertyDict, SymbolList
@@ -64,7 +63,7 @@ from ._exceptions import ConnectionException, EXCEPTIONS, LinkException, Session
 from ._handler import Handler
 from ._transport import Transport
 from ._wrapper import Wrapper
-from typing import Dict, List, Optional, Union, TYPE_CHECKING, Any
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._condition import Condition
@@ -112,7 +111,7 @@ class Endpoint(object):
     REMOTE_CLOSED = PN_REMOTE_CLOSED
     """ The remote endpoint state is closed. """
 
-    def _init(self) -> None:
+    def __init__(self) -> None:
         self.condition: Optional['Condition'] = None
         self._handler: Optional[Handler] = None
 
@@ -159,26 +158,17 @@ class Connection(Wrapper, Endpoint):
     A representation of an AMQP connection.
     """
 
-    @staticmethod
-    def wrap(impl):
-        if isnull(impl):
-            return None
-        else:
-            return Connection(impl)
+    constructor = pn_connection
+    get_context = pn_connection_attachments
 
     def __init__(self, impl: Any = None) -> None:
-        if impl is None:
-            Wrapper.__init__(self, constructor=pn_connection, get_context=pn_connection_attachments)
-        else:
-            Wrapper.__init__(self, impl, pn_connection_attachments)
-
-    def _init(self) -> None:
-        Endpoint._init(self)
-        self.offered_capabilities_list = None
-        self.desired_capabilities_list = None
-        self.properties = None
-        self.url = None
-        self._acceptor = None
+        if self.Uninitialized():
+            Endpoint.__init__(self)
+            self.offered_capabilities_list = None
+            self.desired_capabilities_list = None
+            self.properties = None
+            self.url = None
+            self._acceptor = None
 
     def _get_attachments(self):
         return pn_connection_attachments(self._impl)
@@ -550,15 +540,12 @@ class Connection(Wrapper, Endpoint):
 
 class Session(Wrapper, Endpoint):
     """A container of links"""
-    @staticmethod
-    def wrap(impl):
-        if isnull(impl):
-            return None
-        else:
-            return Session(impl)
+
+    get_context = pn_session_attachments
 
     def __init__(self, impl):
-        Wrapper.__init__(self, impl, pn_session_attachments)
+        if self.Uninitialized():
+            Endpoint.__init__(self)
 
     def _get_attachments(self):
         return pn_session_attachments(self._impl)
@@ -714,21 +701,18 @@ class Link(Wrapper, Endpoint):
     RCV_SECOND = PN_RCV_SECOND
     """The receiver will only settle deliveries after the sender settles."""
 
-    @staticmethod
-    def wrap(impl):
-        if isnull(impl):
-            return None
+    get_context = pn_link_attachments
+
+    def __new__(cls, impl) -> 'Link':
         if pn_link_is_sender(impl):
-            return Sender(impl)
+            return super().__new__(Sender, impl)
         else:
-            return Receiver(impl)
+            return super().__new__(Receiver, impl)
 
     def __init__(self, impl):
-        Wrapper.__init__(self, impl, pn_link_attachments)
-
-    def _init(self) -> None:
-        Endpoint._init(self)
-        self.properties = None
+        if self.Uninitialized():
+            Endpoint.__init__(self)
+            self.properties = None
 
     def _get_attachments(self):
         return pn_link_attachments(self._impl)

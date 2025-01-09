@@ -340,24 +340,14 @@ def pn_collector_put_pyref(collector, obj, etype):
     lib.pn_collector_put_py(collector, d, etype.number)
 
 
-def pn_record_def_py(record):
-    lib.pn_record_def_py(record)
-
-
 def pn_record_get_py(record):
     d = lib.pn_record_get_py(record)
     if d == ffi.NULL:
-        return None
-    return ffi.from_handle(d)
-
-
-def pn_record_set_py(record, value):
-    if value is None:
-        d = ffi.NULL
-    else:
-        d = ffi.new_handle(value)
+        d = ffi.new_handle({})
         retained_objects.add(d)
-    lib.pn_record_set_py(record, d)
+        lib.pn_record_def_py(record)
+        lib.pn_record_set_py(record, d)
+    return ffi.from_handle(d)
 
 
 def pn_event_class_name(event):
