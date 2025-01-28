@@ -41,6 +41,38 @@ void transaction_handler::on_transaction_aborted(transaction) {}
 void transaction_handler::on_transaction_declare_failed(transaction) {}
 void transaction_handler::on_transaction_commit_failed(transaction) {}
 
+class transaction_impl {
+  public:
+    proton::sender txn_ctrl;
+    proton::transaction_handler *handler = nullptr;
+    proton::binary id;
+    proton::tracker _declare;
+    proton::tracker _discharge;
+    bool failed = false;
+    std::vector<proton::tracker> pending;
+
+    void commit();
+    void abort();
+    void declare();
+    proton::tracker send(proton::sender s, proton::message msg);
+
+    void discharge(bool failed);
+    void release_pending();
+    void accept(delivery &d);
+    void update(tracker &d, uint64_t state);
+    void set_id(binary _id);
+
+    proton::tracker send_ctrl(proton::symbol descriptor, proton::value _value);
+    void handle_outcome(proton::tracker t);
+    transaction_impl(proton::sender &_txn_ctrl,
+                     proton::transaction_handler &_handler,
+                     bool _settle_before_discharge);
+
+    // delete copy and assignment operator to ensure no copy of this object is
+    // every made transaction_impl(const transaction_impl&) = delete;
+    // transaction_impl& operator=(const transaction_impl&) = delete;
+};
+
 transaction::transaction() : _impl(NULL) {}  // empty transaction, not yet ready
 // transaction::transaction(proton::sender& _txn_ctrl,
 // proton::transaction_handler& _handler, bool _settle_before_discharge) :
