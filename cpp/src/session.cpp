@@ -24,6 +24,9 @@
 #include "proton/receiver_options.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/session_options.hpp"
+#include "proton/target_options.hpp"
+#include "proton/transaction.hpp"
+#include "proton/messaging_handler.hpp"
 
 #include "contexts.hpp"
 #include "link_namer.hpp"
@@ -33,6 +36,9 @@
 #include <proton/session.h>
 
 #include <string>
+
+// XXXX: Debug
+#include <iostream>
 
 namespace proton {
 
@@ -146,6 +152,45 @@ void* session::user_data() const {
     pn_session_t* ssn = pn_object();
     session_context& sctx = session_context::get(ssn);
     return sctx.user_data_;
+}
+
+transaction session::declare_transaction(proton::transaction_handler &handler, bool settle_before_discharge) {
+    proton::connection conn = this->connection();
+    class InternalTransactionHandler : public proton::messaging_handler {
+        // TODO: auto_settle
+
+        void on_tracker_settle(proton::tracker &t) override {
+            std::cout<<"    [InternalTransactionHandler][on_tracker_settle] called with tracker.txn"
+                 << std::endl;
+            if (!t.transaction().is_empty()) {
+                t.transaction().handle_outcome(t);
+            }
+        }
+    };
+
+    proton::target_options t;
+    std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
+    t.capabilities(cap);
+    t.type(PN_COORDINATOR);
+
+    proton::sender_options so;
+    so.name("txn-ctrl");
+    so.target(t);
+    static InternalTransactionHandler internal_handler; // internal_handler going out of scope. Fix it
+    so.handler(internal_handler);
+    std::cout<<"    [declare_transaction] txn-name sender open with handler: " << &internal_handler << std::endl;
+
+    static proton::sender s = conn.open_sender("does not matter", so);
+
+    settle_before_discharge = false;
+
+    std::cout<<"    [declare_transaction] calling mk_transaction_impl" << std::endl;
+
+    auto txn =
+        transaction::mk_transaction_impl(s, handler, settle_before_discharge);
+    std::cout<<"    [declare_transaction] txn address:" << &txn << std::endl;
+
+    return txn;
 }
 
 } // namespace proton
