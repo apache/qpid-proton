@@ -200,8 +200,8 @@ def bytes2pybytes(b):
     return bytes(ffi.buffer(b.start, b.size))
 
 
-def bytes2string(b, encoding='utf8'):
-    return ffi.unpack(b.start, b.size).decode(encoding)
+def bytes2string(b, encoding='utf8', errors='surrogateescape'):
+    return ffi.unpack(b.start, b.size).decode(encoding, errors)
 
 
 def py2bytes(py):
@@ -213,8 +213,8 @@ def py2bytes(py):
         return len(s), s
 
 
-def string2bytes(py, encoding='utf8'):
-    s = ffi.from_buffer(py.encode(encoding))
+def string2bytes(py, encoding='utf8', errors='surrogateescape'):
+    s = ffi.from_buffer(py.encode(encoding, errors))
     return len(s), s
 
 
