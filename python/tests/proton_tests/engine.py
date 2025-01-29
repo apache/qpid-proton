@@ -978,6 +978,40 @@ class TransferTest(Test):
         assert sd.local_state == rd.remote_state == Delivery.ACCEPTED
         sd.settle()
 
+    def test_delivery_tag_bytes(self):
+        test_tags = [
+            (bytes([0, 0, 0, 128]), '\x00\x00\x00\x80'),
+            ('tag', 'tag'),
+            (b'tag', 'tag'),
+            (bytearray([1, 2, 32, 254, 255]), '\x01\x02 \xfe\xff'),
+            (b'\xff'+(29*b' ')+b'\xff\x00', 'ÿ                             ÿ\x00')
+        ]
+
+        self.rcv.flow(len(test_tags))
+
+        self.pump(64 * len(test_tags))
+
+        for tt in test_tags:
+            self.snd.delivery(tt[0])
+            msg = b"this is a test"
+            self.snd.send(msg)
+            assert self.snd.advance()
+
+        self.pump(64 * len(test_tags))
+
+        for tt in test_tags:
+            rd = self.rcv.current
+            assert rd is not None
+            assert rd.tag == tt[1], (rd.tag, tt[1])
+            rd.update(Delivery.ACCEPTED)
+            rd.settle()
+
+        try:
+            self.snd.delivery(chr(256))
+            assert False, "Expected UnicodeEncodeError"
+        except UnicodeEncodeError:
+            pass
+
     def test_delivery_id_ordering(self):
         self.rcv.flow(1024)
         self.pump(buffer_size=64 * 1024)
