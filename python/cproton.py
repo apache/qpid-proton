@@ -200,8 +200,8 @@ def bytes2pybytes(b):
     return bytes(ffi.buffer(b.start, b.size))
 
 
-def bytes2string(b, encoding='utf8'):
-    return ffi.unpack(b.start, b.size).decode(encoding)
+def bytes2string(b, encoding='utf8', errors='strict'):
+    return ffi.unpack(b.start, b.size).decode(encoding, errors)
 
 
 def py2bytes(py):
@@ -487,7 +487,7 @@ def pn_data_get_symbol(data):
 
 
 def pn_delivery_tag(delivery):
-    return bytes2string(lib.pn_delivery_tag(delivery))
+    return bytes2string(lib.pn_delivery_tag(delivery), errors='surrogateescape')
 
 
 def pn_connection_get_container(connection):
