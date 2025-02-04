@@ -200,16 +200,16 @@ def bytes2pybytes(b):
     return bytes(ffi.buffer(b.start, b.size))
 
 
-def bytes2string(b, encoding='utf8'):
-    return ffi.unpack(b.start, b.size).decode(encoding)
+def bytes2string(b, encoding='utf8', errors='strict'):
+    return ffi.unpack(b.start, b.size).decode(encoding, errors)
 
 
-def py2bytes(py, encoding='utf8'):
+def py2bytes(py):
     if isinstance(py, (bytes, bytearray, memoryview)):
         s = ffi.from_buffer(py)
         return len(s), s
     elif isinstance(py, str):
-        s = ffi.from_buffer(py.encode(encoding))
+        s = ffi.from_buffer(py.encode('utf8'))
         return len(s), s
 
 
@@ -487,7 +487,7 @@ def pn_data_get_symbol(data):
 
 
 def pn_delivery_tag(delivery):
-    return bytes2string(lib.pn_delivery_tag(delivery), 'latin-1')
+    return bytes2string(lib.pn_delivery_tag(delivery), errors='surrogateescape')
 
 
 def pn_connection_get_container(connection):
@@ -543,7 +543,7 @@ def pn_receiver(session, name):
 
 
 def pn_delivery(link, tag):
-    return lib.pn_delivery(link, py2bytes(tag, 'latin-1'))
+    return lib.pn_delivery(link, py2bytes(tag))
 
 
 def pn_link_name(link):
