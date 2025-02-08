@@ -49,7 +49,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
     int confirmed = 0;
 
     proton::session session;
-    proton::transaction transaction;
+    // proton::transaction transaction;
   public:
     tx_send(const std::string &s, int c, int b):
         url(s), total(c), batch_size(b), sent(0) {}
@@ -65,32 +65,31 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
         std::cout << "    [on_session_open] declare_txn ended..." << std::endl;
     }
 
-    void on_transaction_declare_failed(proton::transaction) {}
-    void on_transaction_commit_failed(proton::transaction t) {
+    void on_transaction_declare_failed(proton::session) {}
+    void on_transaction_commit_failed(proton::session s) {
         std::cout << "Transaction Commit Failed" << std::endl;
-        t.connection().close();
+        s.connection().close();
         exit(-1);
     }
 
-    void on_transaction_declared(proton::transaction t) override {
-        std::cout << "[on_transaction_declared] txn called " << (&t)
+    void on_transaction_declared(proton::session s) override {
+        std::cout << "[on_transaction_declared] Session: " << (&s)
                   << std::endl;
-        std::cout << "[on_transaction_declared] txn is_empty " << (t.is_empty())
-                  << "\t" << transaction.is_empty() << std::endl;
-        transaction = t;
+        std::cout << "[on_transaction_declared] txn is_empty " << (s.txn_is_empty())
+                  << "\t" << std::endl;
 
         send(sender);
     }
 
     void on_sendable(proton::sender &s) override {
-        std::cout << "    [OnSendable] transaction: " << &transaction
+        std::cout << "    [OnSendable] session: " << &session
                   << std::endl;
         send(s);
     }
 
     void send(proton::sender &s) {
         static int unique_id = 10000;
-        while (!transaction.is_empty() && sender.credit() &&
+        while (!session.txn_is_empty() && sender.credit() &&
                (committed + current_batch) < total) {
             proton::message msg;
             std::map<std::string, int> m;
@@ -100,18 +99,17 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
             msg.body(m);
             std::cout << "##### [example] transaction send msg: " << msg
                       << std::endl;
-            transaction.send(sender, msg);
+            session.txn_send(sender, msg);
             current_batch += 1;
             if(current_batch == batch_size)
             {
                 std::cout << " >> Txn attempt commit" << std::endl;
                 if (batch_index % 2 == 0) {
-                    transaction.commit();
+                    session.txn_commit();
                 } else {
-                    transaction.abort();
+                    session.txn_abort();
                 }
-
-                transaction = proton::transaction();
+    // TODO: Only one transaction is permitted per session.
                 batch_index++;
             }
         }
@@ -123,20 +121,20 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
                   << std::endl;
     }
 
-    void on_transaction_committed(proton::transaction t) override {
+    void on_transaction_committed(proton::session s) override {
         committed += current_batch;
         current_batch = 0;
         std::cout<<"    [OnTxnCommitted] Committed:"<< committed<< std::endl;
         if(committed == total) {
             std::cout << "All messages committed" << std::endl;
-            t.connection().close();
+            s.connection().close();
         }
         else {
             session.declare_transaction(*this);
         }
     }
 
-    void on_transaction_aborted(proton::transaction t) override {
+    void on_transaction_aborted(proton::session s) override {
         std::cout << "Meesages Aborted ....." << std::endl;
         current_batch = 0;
         session.declare_transaction(*this);
@@ -150,7 +148,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
 
 int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
-    int message_count = 6;
+    int message_count = 3;
     int batch_size = 3;
     example::options opts(argc, argv);
 

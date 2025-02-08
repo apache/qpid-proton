@@ -29,6 +29,7 @@
 #include "./sender.hpp"
 
 #include <string>
+#include <iostream>
 
 /// @file
 /// @copybrief proton::session
@@ -36,6 +37,7 @@
 struct pn_session_t;
 
 namespace proton {
+  class transaction_impl;
 
 /// A container of senders and receivers.
 class
@@ -105,11 +107,32 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Get user data from this session.
     PN_CPP_EXTERN void* user_data() const;
 
-    PN_CPP_EXTERN transaction declare_transaction(proton::transaction_handler &handler, bool settle_before_discharge = false);
+    PN_CPP_EXTERN void declare_transaction(proton::transaction_handler &handler, bool settle_before_discharge = false);
+
+
+    // static transaction mk_transaction_impl(sender &s, transaction_handler &h,
+                                          //  bool f);
+    // PN_CPP_EXTERN transaction(transaction_impl *impl);
+    
+    // PN_CPP_EXTERN transaction();
+    // PN_CPP_EXTERN ~transaction();
+    PN_CPP_EXTERN bool txn_is_empty();
+    PN_CPP_EXTERN void txn_commit();
+    PN_CPP_EXTERN void txn_abort();
+    PN_CPP_EXTERN void txn_declare();
+    PN_CPP_EXTERN void txn_handle_outcome(proton::tracker);
+    PN_CPP_EXTERN proton::tracker txn_send(proton::sender s, proton::message msg);
+    PN_CPP_EXTERN void txn_accept(delivery &t);
+    PN_CPP_EXTERN proton::connection txn_connection() const;
+
+    // PN_CPP_EXTERN session_context& get_session_context();
+
+    // transaction _txn;
 
     /// @cond INTERNAL
   friend class internal::factory<session>;
   friend class session_iterator;
+  friend class transaction_impl;
     /// @endcond
 };
 
@@ -122,6 +145,39 @@ class session_iterator : public internal::iter_base<session, session_iterator> {
 
     /// Advance to the next session.
     PN_CPP_EXTERN session_iterator operator++();
+};
+
+
+class transaction_impl {
+  public:
+    proton::sender txn_ctrl;
+    proton::transaction_handler *handler = nullptr;
+    proton::binary id;
+    proton::tracker _declare;
+    proton::tracker _discharge;
+    bool failed = false;
+    std::vector<proton::tracker> pending;
+
+    void commit();
+    void abort();
+    void declare();
+    proton::tracker send(proton::sender s, proton::message msg);
+
+    void discharge(bool failed);
+    void release_pending();
+    void accept(delivery &d);
+    void update(tracker &d, uint64_t state);
+    void set_id(binary _id);
+
+    proton::tracker send_ctrl(proton::symbol descriptor, proton::value _value);
+    void handle_outcome(proton::tracker t);
+    transaction_impl(proton::sender &_txn_ctrl,
+                     proton::transaction_handler &_handler,
+                     bool _settle_before_discharge);
+
+    // delete copy and assignment operator to ensure no copy of this object is
+    // every made transaction_impl(const transaction_impl&) = delete;
+    // transaction_impl&  operator=(const transaction_impl&) = delete;
 };
 
 /// A range of sessions.
