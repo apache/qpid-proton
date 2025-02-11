@@ -209,5 +209,36 @@ target_options& target_options::type(int t) { impl_->type = t; return *this;}
 void target_options::apply(target& s) const { impl_->apply(s); }
 
 
+class coordinator_options::impl {
+  public:
+    option<std::string> address;
+    option<std::vector<symbol> > capabilities;
+
+    void apply(coordinator& c) {
+        if(address.set) {
+            pn_terminus_set_address(unwrap(c), address.value.c_str());
+        }
+        if (capabilities.set) {
+            value(pn_terminus_capabilities(unwrap(c))) = capabilities.value;
+        }
+        pn_terminus_set_type(unwrap(c), pn_terminus_type_t(PN_COORDINATOR)); ;
+    }
+};
+
+coordinator_options::coordinator_options() : impl_(new impl()) {}
+coordinator_options::coordinator_options(const coordinator_options& x) : impl_(new impl()) {
+    *this = x;
+}
+coordinator_options::~coordinator_options() = default;
+
+coordinator_options& coordinator_options::operator=(const coordinator_options& x) {
+    *impl_ = *x.impl_;
+    return *this;
+}
+
+coordinator_options& coordinator_options::address(const std::string &addr) { impl_->address = addr; return *this; }
+coordinator_options& coordinator_options::capabilities(const std::vector<symbol>& c) { impl_->capabilities = c; return *this; }
+void coordinator_options::apply(coordinator& c) const { impl_->apply(c); }
+
 
 } // namespace proton

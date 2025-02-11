@@ -52,6 +52,7 @@ class sender_options;
 class session;
 class session_options;
 class source_options;
+class coordinator_options;
 class ssl;
 class target_options;
 class tracker;

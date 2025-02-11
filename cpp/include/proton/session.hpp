@@ -117,6 +117,7 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     // PN_CPP_EXTERN transaction();
     // PN_CPP_EXTERN ~transaction();
     PN_CPP_EXTERN bool txn_is_empty();
+    PN_CPP_EXTERN bool txn_is_declared();
     PN_CPP_EXTERN void txn_commit();
     PN_CPP_EXTERN void txn_abort();
     PN_CPP_EXTERN void txn_declare();
@@ -156,6 +157,7 @@ class transaction_impl {
     proton::tracker _declare;
     proton::tracker _discharge;
     bool failed = false;
+    bool is_declared = false;
     std::vector<proton::tracker> pending;
 
     void commit();

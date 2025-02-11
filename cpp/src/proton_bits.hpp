@@ -69,6 +69,7 @@ class acceptor;
 class terminus;
 class source;
 class target;
+class coordinator;
 class reactor;
 class messaging_handler;
 
@@ -109,6 +110,7 @@ template <> struct wrapped<error_condition> { typedef pn_condition_t type; };
 template <> struct wrapped<terminus> { typedef pn_terminus_t type; };
 template <> struct wrapped<source> { typedef pn_terminus_t type; };
 template <> struct wrapped<target> { typedef pn_terminus_t type; };
+template <> struct wrapped<coordinator> { typedef pn_terminus_t type; };
 
 template <class T> struct wrapper {};
 template <> struct wrapper<pn_data_t> { typedef internal::data type; };

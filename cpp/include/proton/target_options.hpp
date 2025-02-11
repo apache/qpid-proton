@@ -103,6 +103,39 @@ class target_options {
     /// @endcond
 };
 
+class coordinator_options {
+  public:
+    /// Create an empty set of options.
+    PN_CPP_EXTERN coordinator_options();
+
+    /// Copy options.
+    PN_CPP_EXTERN coordinator_options(const coordinator_options&);
+
+    PN_CPP_EXTERN ~coordinator_options();
+
+    /// Copy options.
+    PN_CPP_EXTERN coordinator_options& operator=(const coordinator_options&);
+
+    /// Set the address for the coordinator.  It is unset by default.  The
+    /// address is ignored if dynamic() is true.
+    PN_CPP_EXTERN coordinator_options& address(const std::string& addr);
+
+    /// **Unsettled API** Extension capabilities that are supported/requested
+    PN_CPP_EXTERN coordinator_options& capabilities(const std::vector<symbol>&);
+
+  private:
+    void apply(coordinator&) const;
+
+    class impl;
+    std::unique_ptr<impl> impl_;
+
+    /// @cond INTERNAL
+  friend class coordinator;
+  friend class sender_options;
+  friend class receiver_options;
+    /// @endcond
+};
+
 } // proton
 
 #endif // PROTON_TARGET_OPTIONS_HPP

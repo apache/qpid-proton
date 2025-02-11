@@ -182,14 +182,20 @@ void session::declare_transaction(proton::transaction_handler &handler, bool set
         }
     };
 
-    proton::target_options t;
+    // proton::target_options t;
+    // std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
+    // t.capabilities(cap);
+    // t.type(PN_COORDINATOR);
+
+    proton::coordinator_options co;
     std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
-    t.capabilities(cap);
-    t.type(PN_COORDINATOR);
+    co.capabilities(cap);
+
 
     proton::sender_options so;
     so.name("txn-ctrl");
-    so.target(t);
+    so.coordinator(co);
+
     static InternalTransactionHandler internal_handler; // internal_handler going out of scope. Fix it
     so.handler(internal_handler);
     std::cout<<"    [declare_transaction] txn-name sender open with handler: " << &internal_handler << std::endl;
@@ -222,6 +228,7 @@ void session::txn_commit() {session_context::get(pn_object())._txn_impl->commit(
 void session::txn_abort() { session_context::get(pn_object())._txn_impl->abort(); }
 void session::txn_declare() { session_context::get(pn_object())._txn_impl->declare(); }
 bool session::txn_is_empty() { return session_context::get(pn_object())._txn_impl == NULL; }
+bool session::txn_is_declared() { return (!txn_is_empty()) && session_context::get(pn_object())._txn_impl->is_declared; }
 void session::txn_accept(delivery &t) { return session_context::get(pn_object())._txn_impl->accept(t); }
 proton::tracker session::txn_send(proton::sender s, proton::message msg) {
     return session_context::get(pn_object())._txn_impl->send(s, msg);
@@ -244,17 +251,19 @@ void session::txn_handle_outcome(proton::tracker t) {
 transaction_impl::transaction_impl(proton::sender &_txn_ctrl,
                                    proton::transaction_handler &_handler,
                                    bool _settle_before_discharge)
-    : txn_ctrl(_txn_ctrl), handler(&_handler) {
+    : txn_ctrl(_txn_ctrl), handler(&_handler), is_declared(false) {
     // bool settle_before_discharge = _settle_before_discharge;
     declare();
 }
 
 void transaction_impl::commit() {
     discharge(false);
+    is_declared = false;
 }
 
 void transaction_impl::abort() {
     discharge(true);
+    is_declared = false;
 }
 
 void transaction_impl::declare() {
@@ -374,6 +383,7 @@ void transaction_impl::handle_outcome(proton::tracker t) {
             std::cout << "    transaction_impl: handle_outcome.. txn_declared "
                          "got txnid:: "
                       << vd[0] << std::endl;
+            is_declared = true;
             handler->on_transaction_declared(t.session());
         } else if (pn_disposition_is_failed(disposition)) {
             std::cout << "    transaction_impl: handle_outcome.. "

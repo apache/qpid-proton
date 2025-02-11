@@ -46,7 +46,7 @@ class tx_recv : public proton::messaging_handler, proton::transaction_handler {
     int committed = 0;
 
     proton::session session;
-    proton::transaction transaction;
+    // proton::transaction transaction;
   public:
     tx_recv(const std::string &s, int c, int b):
         url(s), expected(c), batch_size(b) {}
@@ -62,38 +62,38 @@ class tx_recv : public proton::messaging_handler, proton::transaction_handler {
         std::cout << "    [on_session_open] declare_txn ended..." << std::endl;
     }
 
-    void on_transaction_declare_failed(proton::transaction) {}
-    void on_transaction_commit_failed(proton::transaction t) {
+    void on_transaction_declare_failed(proton::session) {}
+    void on_transaction_commit_failed(proton::session s) {
         std::cout << "Transaction Commit Failed" << std::endl;
-        t.connection().close();
+        s.connection().close();
         exit(-1);
     }
 
-    void on_transaction_declared(proton::transaction t) override {
-        std::cout << "[on_transaction_declared] txn called " << (&t)
+    void on_transaction_declared(proton::session s) override {
+        std::cout << "[on_transaction_declared] txn called " << (&s)
                   << std::endl;
-        std::cout << "[on_transaction_declared] txn is_empty " << (t.is_empty())
-                  << "\t" << transaction.is_empty() << std::endl;
+        // std::cout << "[on_transaction_declared] txn is_empty " << (t.is_empty())
+        //           << "\t" << transaction.is_empty() << std::endl;
         receiver.add_credit(batch_size); 
-        transaction = t;
+        // transaction = t;
     }
 
     void on_message(proton::delivery &d, proton::message &msg) override {
         std::cout<<"# MESSAGE: " << msg.id() <<": "  << msg.body() << std::endl;
-        transaction.accept(d);
+        session.txn_accept(d);
         current_batch += 1;
         if(current_batch == batch_size) {
-            transaction = proton::transaction(); // null
+            // transaction = proton::transaction(); // null
         }
     }
 
-    void on_transaction_committed(proton::transaction t) override {
+    void on_transaction_committed(proton::session s) override {
         committed += current_batch;
         current_batch = 0;
         std::cout<<"    [OnTxnCommitted] Committed:"<< committed<< std::endl;
         if(committed == expected) {
             std::cout << "All messages committed" << std::endl;
-            t.connection().close();
+            s.connection().close();
         }
         else {
             session.declare_transaction(*this);

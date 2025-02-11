@@ -89,7 +89,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
 
     void send(proton::sender &s) {
         static int unique_id = 10000;
-        while (!session.txn_is_empty() && sender.credit() &&
+        while (session.txn_is_declared() && sender.credit() &&
                (committed + current_batch) < total) {
             proton::message msg;
             std::map<std::string, int> m;
