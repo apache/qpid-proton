@@ -36,7 +36,7 @@
 namespace proton {
 
 class transaction_handler;
-class transaction_impl;
+// class transaction_impl;
 
 // TODO: This should not be accessible to users.
 // class transaction_impl {

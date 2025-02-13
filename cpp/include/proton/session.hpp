@@ -157,7 +157,12 @@ class transaction_impl {
     proton::tracker _declare;
     proton::tracker _discharge;
     bool failed = false;
-    bool is_declared = false;
+    enum State {
+      FREE,
+      DECLARING,
+      DECLARED,
+    };
+    enum State state = State::FREE;
     std::vector<proton::tracker> pending;
 
     void commit();

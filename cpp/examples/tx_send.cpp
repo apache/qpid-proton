@@ -109,7 +109,6 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
                 } else {
                     session.txn_abort();
                 }
-    // TODO: Only one transaction is permitted per session.
                 batch_index++;
             }
         }
@@ -148,7 +147,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
 
 int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
-    int message_count = 3;
+    int message_count = 6;
     int batch_size = 3;
     example::options opts(argc, argv);
 

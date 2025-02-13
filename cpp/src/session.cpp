@@ -166,53 +166,58 @@ void* session::user_data() const {
 
 // TODO : WE ARE NOT RETURNING TRANSACTION FOR NOW.
 void session::declare_transaction(proton::transaction_handler &handler, bool settle_before_discharge) {
-    if (session_context::get(pn_object())._txn_impl != nullptr)
-        throw proton::error("Transaction is already declared for this session");
-    proton::connection conn = this->connection();
-    class InternalTransactionHandler : public proton::messaging_handler {
-        // TODO: auto_settle
+    auto &txn_impl = session_context::get(pn_object())._txn_impl;
+    if (txn_impl == nullptr) {
+        // Create _txn_impl
+        proton::connection conn = this->connection();
+        class InternalTransactionHandler : public proton::messaging_handler {
+            // TODO: auto_settle
 
-        void on_tracker_settle(proton::tracker &t) override {
-            std::cout<<"    [InternalTransactionHandler][on_tracker_settle] called with tracker.txn"
-                 << std::endl;
-            if (!t.session().txn_is_empty()) {
-                 std::cout<<"    [InternalTransactionHandler] Inside if condition" << std::endl;
-                t.session().txn_handle_outcome(t);
+            void on_tracker_settle(proton::tracker &t) override {
+                std::cout<<"    [InternalTransactionHandler][on_tracker_settle] called with tracker.txn"
+                    << std::endl;
+                if (!t.session().txn_is_empty()) {
+                    std::cout<<"    [InternalTransactionHandler] Inside if condition" << std::endl;
+                    t.session().txn_handle_outcome(t);
+                }
             }
-        }
-    };
+        };
 
-    // proton::target_options t;
-    // std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
-    // t.capabilities(cap);
-    // t.type(PN_COORDINATOR);
+        // proton::target_options t;
+        // std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
+        // t.capabilities(cap);
+        // t.type(PN_COORDINATOR);
 
-    proton::coordinator_options co;
-    std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
-    co.capabilities(cap);
+        proton::coordinator_options co;
+        std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
+        co.capabilities(cap);
 
 
-    proton::sender_options so;
-    so.name("txn-ctrl");
-    so.coordinator(co);
+        proton::sender_options so;
+        so.name("txn-ctrl");
+        so.coordinator(co);
 
-    static InternalTransactionHandler internal_handler; // internal_handler going out of scope. Fix it
-    so.handler(internal_handler);
-    std::cout<<"    [declare_transaction] txn-name sender open with handler: " << &internal_handler << std::endl;
+        static InternalTransactionHandler internal_handler; // internal_handler going out of scope. Fix it
+        so.handler(internal_handler);
+        std::cout<<"    [declare_transaction] txn-name sender open with handler: " << &internal_handler << std::endl;
 
-    static proton::sender s = conn.open_sender("does not matter", so);
+        static proton::sender s = conn.open_sender("does not matter", so);
 
-    settle_before_discharge = false;
+        settle_before_discharge = false;
 
-    std::cout<<"    [declare_transaction] calling mk_transaction_impl" << std::endl;
+        std::cout<<"    [declare_transaction] calling mk_transaction_impl" << std::endl;
 
-// get the _txn_impl from session_context.
-    session_context::get(pn_object())._txn_impl.reset(new transaction_impl(s, handler, settle_before_discharge));
-    // std::cout << "Session object UPdated: " << _txn_impl << "For session at: " << this << std::endl;
-    // std::cout<<"    [declare_transaction] txn address:" << (void*)_txn_impl << std::endl;
+    // get the _txn_impl from session_context.
+        txn_impl.reset(new transaction_impl(s, handler, settle_before_discharge));
+        // std::cout << "Session object UPdated: " << _txn_impl << "For session at: " << this << std::endl;
+        // std::cout<<"    [declare_transaction] txn address:" << (void*)_txn_impl << std::endl;
 
-    // _txn = txn;
-    // return _txn_impl;
+        // _txn = txn;
+        // return _txn_impl;
+    }
+    // Declare txn
+    txn_impl->declare();
+
 }
 
 // transaction::transaction() : _impl(NULL) {}  // empty transaction, not yet ready
@@ -228,7 +233,7 @@ void session::txn_commit() {session_context::get(pn_object())._txn_impl->commit(
 void session::txn_abort() { session_context::get(pn_object())._txn_impl->abort(); }
 void session::txn_declare() { session_context::get(pn_object())._txn_impl->declare(); }
 bool session::txn_is_empty() { return session_context::get(pn_object())._txn_impl == NULL; }
-bool session::txn_is_declared() { return (!txn_is_empty()) && session_context::get(pn_object())._txn_impl->is_declared; }
+bool session::txn_is_declared() { return (!txn_is_empty()) && session_context::get(pn_object())._txn_impl->state == transaction_impl::State::DECLARED; }
 void session::txn_accept(delivery &t) { return session_context::get(pn_object())._txn_impl->accept(t); }
 proton::tracker session::txn_send(proton::sender s, proton::message msg) {
     return session_context::get(pn_object())._txn_impl->send(s, msg);
@@ -251,22 +256,23 @@ void session::txn_handle_outcome(proton::tracker t) {
 transaction_impl::transaction_impl(proton::sender &_txn_ctrl,
                                    proton::transaction_handler &_handler,
                                    bool _settle_before_discharge)
-    : txn_ctrl(_txn_ctrl), handler(&_handler), is_declared(false) {
+    : txn_ctrl(_txn_ctrl), handler(&_handler) {
     // bool settle_before_discharge = _settle_before_discharge;
-    declare();
+    // declare();
 }
 
 void transaction_impl::commit() {
     discharge(false);
-    is_declared = false;
 }
 
 void transaction_impl::abort() {
     discharge(true);
-    is_declared = false;
 }
 
 void transaction_impl::declare() {
+    if (state != transaction_impl::State::FREE)
+        throw proton::error("This session has some associcated transaction already");
+    state = State::DECLARING;
     std::cout<<"    [transaction_impl][declare] staring it" << std::endl;
 
     proton::symbol descriptor("amqp:declare:list");
@@ -383,17 +389,19 @@ void transaction_impl::handle_outcome(proton::tracker t) {
             std::cout << "    transaction_impl: handle_outcome.. txn_declared "
                          "got txnid:: "
                       << vd[0] << std::endl;
-            is_declared = true;
+            state = State::DECLARED;
             handler->on_transaction_declared(t.session());
         } else if (pn_disposition_is_failed(disposition)) {
             std::cout << "    transaction_impl: handle_outcome.. "
                          "txn_declared_failed pn_disposition_is_failed "
                       << std::endl;
+            state = State::FREE;
             handler->on_transaction_declare_failed(t.session());
         } else {
             std::cout
                 << "    transaction_impl: handle_outcome.. txn_declared_failed "
                 << std::endl;
+            state = State::FREE;
             handler->on_transaction_declare_failed(t.session());
         }
     } else if (_discharge == t) {
@@ -402,17 +410,20 @@ void transaction_impl::handle_outcome(proton::tracker t) {
                 std::cout
                     << "    transaction_impl: handle_outcome.. commit failed "
                     << std::endl;
+                state = State::FREE;
                 handler->on_transaction_commit_failed(t.session());
                 // release pending
             }
         } else {
             if (failed) {
+                state = State::FREE;
                 handler->on_transaction_aborted(t.session());
                 std::cout
                     << "    transaction_impl: handle_outcome.. txn aborted"
                     << std::endl;
                 // release pending
             } else {
+                state = State::FREE;
                 handler->on_transaction_committed(t.session());
                 std::cout
                     << "    transaction_impl: handle_outcome.. txn commited"
