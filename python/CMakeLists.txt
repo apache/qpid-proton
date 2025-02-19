@@ -268,7 +268,6 @@ if (BUILD_TESTING)
         "PYTHONPATH=."
         "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
       COMMAND ${pytest_executable} ${python_coverage_options} -- "${py_tests}/proton-test")
-    set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
     set(PYTHON_TEST_COMMAND "-m" "unittest")
     pn_add_test(
@@ -327,9 +326,7 @@ if (BUILD_TESTING)
       COMMAND ${Python_EXECUTABLE} -m tox)
     set_tests_properties(python-tox-test
       PROPERTIES
-      REQUIRED_FILES tox.ini
-      PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
-      FAIL_REGULAR_EXPRESSION "ERROR:.*commands failed")
+      REQUIRED_FILES tox.ini)
   endif (DO_TOX_TEST)
 
 endif(BUILD_TESTING)
