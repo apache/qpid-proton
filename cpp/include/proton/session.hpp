@@ -135,6 +135,10 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
   friend class session_iterator;
   friend class transaction_impl;
     /// @endcond
+
+    private:
+    // clean up txn internally
+    void txn_delete();
 };
 
 /// @cond INTERNAL
@@ -146,45 +150,6 @@ class session_iterator : public internal::iter_base<session, session_iterator> {
 
     /// Advance to the next session.
     PN_CPP_EXTERN session_iterator operator++();
-};
-
-
-class transaction_impl {
-  public:
-    proton::sender txn_ctrl;
-    proton::transaction_handler *handler = nullptr;
-    proton::binary id;
-    proton::tracker _declare;
-    proton::tracker _discharge;
-    bool failed = false;
-    enum State {
-      FREE,
-      DECLARING,
-      DECLARED,
-    };
-    enum State state = State::FREE;
-    std::vector<proton::tracker> pending;
-
-    void commit();
-    void abort();
-    void declare();
-    proton::tracker send(proton::sender s, proton::message msg);
-
-    void discharge(bool failed);
-    void release_pending();
-    void accept(delivery &d);
-    void update(tracker &d, uint64_t state);
-    void set_id(binary _id);
-
-    proton::tracker send_ctrl(proton::symbol descriptor, proton::value _value);
-    void handle_outcome(proton::tracker t);
-    transaction_impl(proton::sender &_txn_ctrl,
-                     proton::transaction_handler &_handler,
-                     bool _settle_before_discharge);
-
-    // delete copy and assignment operator to ensure no copy of this object is
-    // every made transaction_impl(const transaction_impl&) = delete;
-    // transaction_impl&  operator=(const transaction_impl&) = delete;
 };
 
 /// A range of sessions.

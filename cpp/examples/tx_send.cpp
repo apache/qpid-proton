@@ -77,7 +77,6 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
                   << std::endl;
         std::cout << "[on_transaction_declared] txn is_empty " << (s.txn_is_empty())
                   << "\t" << std::endl;
-
         send(sender);
     }
 
@@ -97,7 +96,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
 
             msg.id(unique_id++);
             msg.body(m);
-            std::cout << "##### [example] transaction send msg: " << msg
+            std::cout << "##### [example] transaction send msg: "  << msg
                       << std::endl;
             session.txn_send(sender, msg);
             current_batch += 1;
@@ -108,7 +107,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
                     session.txn_commit();
                 } else {
                     session.txn_abort();
-                }
+                }       
                 batch_index++;
             }
         }
@@ -129,6 +128,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
             s.connection().close();
         }
         else {
+            std::cout << "redlcaring txn " << std::endl;
             session.declare_transaction(*this);
         }
     }

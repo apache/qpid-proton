@@ -160,6 +160,49 @@ void* session::user_data() const {
     return sctx.user_data_;
 }
 
+
+
+class transaction_impl {
+  public:
+    proton::sender txn_ctrl;
+    proton::transaction_handler *handler = nullptr;
+    proton::binary id;
+    proton::tracker _declare;
+    proton::tracker _discharge;
+    bool failed = false;
+    enum State {
+      FREE,
+      DECLARING,
+      DECLARED,
+      DISCHARE,
+    };
+    enum State state = State::FREE;
+    std::vector<proton::tracker> pending;
+
+    void commit();
+    void abort();
+    void declare();
+    proton::tracker send(proton::sender s, proton::message msg);
+
+    void discharge(bool failed);
+    void release_pending();
+    void accept(delivery &d);
+    void update(tracker &d, uint64_t state);
+    void set_id(binary _id);
+
+    proton::tracker send_ctrl(proton::symbol descriptor, proton::value _value);
+    void handle_outcome(proton::tracker t);
+    transaction_impl(proton::sender &_txn_ctrl,
+                     proton::transaction_handler &_handler,
+                     bool _settle_before_discharge);
+    ~transaction_impl();
+    // delete copy and assignment operator to ensure no copy of this object is
+    // every made transaction_impl(const transaction_impl&) = delete;
+    // transaction_impl&  operator=(const transaction_impl&) = delete;
+};
+
+
+
 // session_context& session::get_session_context() {
 //     return session_context::get(pn_object());
 // }
@@ -208,11 +251,11 @@ void session::declare_transaction(proton::transaction_handler &handler, bool set
         std::cout<<"    [declare_transaction] calling mk_transaction_impl" << std::endl;
 
     // get the _txn_impl from session_context.
-        txn_impl.reset(new transaction_impl(s, handler, settle_before_discharge));
+        txn_impl = new transaction_impl(s, handler, settle_before_discharge);
         // std::cout << "Session object UPdated: " << _txn_impl << "For session at: " << this << std::endl;
         // std::cout<<"    [declare_transaction] txn address:" << (void*)_txn_impl << std::endl;
 
-        // _txn = txn;
+        // _txn = txn ;
         // return _txn_impl;
     }
     // Declare txn
@@ -229,7 +272,10 @@ void session::declare_transaction(proton::transaction_handler &handler, bool set
     // : _impl(impl) {}
 // transaction::transaction( transaction_impl* impl): _impl(impl){}
 // transaction::~transaction() = default;
-void session::txn_commit() {session_context::get(pn_object())._txn_impl->commit(); }
+
+// clean up txn internally
+void session::txn_delete() { auto &_txn_impl = session_context::get(pn_object())._txn_impl; delete _txn_impl; _txn_impl = nullptr;}
+void session::txn_commit() { session_context::get(pn_object())._txn_impl->commit(); }
 void session::txn_abort() { session_context::get(pn_object())._txn_impl->abort(); }
 void session::txn_declare() { session_context::get(pn_object())._txn_impl->declare(); }
 bool session::txn_is_empty() { return session_context::get(pn_object())._txn_impl == NULL; }
@@ -253,12 +299,18 @@ void session::txn_handle_outcome(proton::tracker t) {
 //     return _txn_impl->txn_ctrl.connection();
 // }
 
+
 transaction_impl::transaction_impl(proton::sender &_txn_ctrl,
                                    proton::transaction_handler &_handler,
                                    bool _settle_before_discharge)
     : txn_ctrl(_txn_ctrl), handler(&_handler) {
     // bool settle_before_discharge = _settle_before_discharge;
     // declare();
+
+    std::cout<<"#  transaction_impl created!"<< std::endl;
+}
+transaction_impl::~transaction_impl() {
+    std::cout<<"#  transaction_impl deleted!"<< std::endl;
 }
 
 void transaction_impl::commit() {
@@ -291,6 +343,10 @@ void transaction_impl::declare() {
 }
 
 void transaction_impl::discharge(bool _failed) {
+    if (state != transaction_impl::State::DECLARED)
+        throw proton::error("Only a delcared txn can be discharged.");
+    state = State::DISCHARE;
+            
     failed = _failed;
     proton::symbol descriptor("amqp:discharge:list");
     std::list<proton::value> vd;
@@ -328,6 +384,8 @@ proton::tracker transaction_impl::send_ctrl(proton::symbol descriptor, proton::v
 }
 
 proton::tracker transaction_impl::send(proton::sender s, proton::message msg) {
+    if (state != transaction_impl::State::DECLARED)
+        throw proton::error("Only a delcared txn can send a message");
     proton::tracker tracker = s.send(msg);
     std::cout << "    transaction_impl::send " << id << ", done: " << msg
               << " tracker: " << tracker << std::endl;
@@ -395,14 +453,20 @@ void transaction_impl::handle_outcome(proton::tracker t) {
             std::cout << "    transaction_impl: handle_outcome.. "
                          "txn_declared_failed pn_disposition_is_failed "
                       << std::endl;
+
             state = State::FREE;
+            t.session().txn_delete();
             handler->on_transaction_declare_failed(t.session());
+            return;
         } else {
             std::cout
                 << "    transaction_impl: handle_outcome.. txn_declared_failed "
                 << std::endl;
+            // state = State::BAD;
             state = State::FREE;
+            t.session().txn_delete();
             handler->on_transaction_declare_failed(t.session());
+            return;
         }
     } else if (_discharge == t) {
         if (pn_disposition_is_failed(disposition)) {
@@ -411,23 +475,29 @@ void transaction_impl::handle_outcome(proton::tracker t) {
                     << "    transaction_impl: handle_outcome.. commit failed "
                     << std::endl;
                 state = State::FREE;
+                t.session().txn_delete();
                 handler->on_transaction_commit_failed(t.session());
                 // release pending
+                return;
             }
         } else {
             if (failed) {
                 state = State::FREE;
+                t.session().txn_delete();
                 handler->on_transaction_aborted(t.session());
                 std::cout
                     << "    transaction_impl: handle_outcome.. txn aborted"
                     << std::endl;
                 // release pending
+                return;
             } else {
                 state = State::FREE;
+                t.session().txn_delete();
                 handler->on_transaction_committed(t.session());
                 std::cout
                     << "    transaction_impl: handle_outcome.. txn commited"
                     << std::endl;
+                return;
             }
         }
         pending.clear();

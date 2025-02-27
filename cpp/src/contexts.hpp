@@ -153,7 +153,7 @@ class session_context : public context {
   public:
     session_context() : handler(0), user_data_(nullptr) {}
     static session_context& get(pn_session_t* s);
-    std::unique_ptr<transaction_impl> _txn_impl;
+    transaction_impl* _txn_impl;
     messaging_handler* handler;
     void* user_data_;
 };
