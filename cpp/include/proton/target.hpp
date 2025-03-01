@@ -65,6 +65,29 @@ class target : public terminus {
     /// @endcond
 };
 
+
+/// TODO: A point of coordinator for messages.
+///
+class coordinator : public terminus {
+  public:
+    /// Create an empty coordinator.
+    coordinator() = default;
+
+    /// The address of the coordinator.
+    PN_CPP_EXTERN std::string address() const;
+  private:
+    coordinator(pn_terminus_t* t);
+    coordinator(const sender&);
+    coordinator(const receiver&);
+
+
+    /// @cond INTERNAL
+  friend class proton::internal::factory<coordinator>;
+  friend class sender;
+  friend class receiver;
+    /// @endcond
+};
+
 } // proton
 
 #endif // PROTON_TARGET_HPP
