@@ -23,18 +23,7 @@ import logging
 import re
 import os
 import queue
-from typing import Any, Dict, Iterator, Optional, List, Union, Callable, TYPE_CHECKING, Tuple, Type
-
-try:
-    from typing import Literal
-except ImportError:
-    # https://www.python.org/dev/peps/pep-0560/#class-getitem
-    class GenericMeta(type):
-        def __getitem__(self, item):
-            pass
-
-    class Literal(metaclass=GenericMeta):
-        pass
+from typing import Any, Dict, Iterator, Optional, List, Literal, Union, Callable, TYPE_CHECKING, Tuple, Type
 
 import time
 import traceback

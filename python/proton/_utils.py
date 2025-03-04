@@ -30,18 +30,7 @@ from ._url import Url
 from ._reactor import Container
 from ._handlers import MessagingHandler, IncomingMessageHandler
 
-from typing import Callable, Optional, Union, TYPE_CHECKING, List, Any
-
-try:
-    from typing import Literal
-except ImportError:
-    # https://www.python.org/dev/peps/pep-0560/#class-getitem
-    class GenericMeta(type):
-        def __getitem__(self, item):
-            pass
-
-    class Literal(metaclass=GenericMeta):
-        pass
+from typing import Callable, Optional, Literal, Union, TYPE_CHECKING, List, Any
 
 if TYPE_CHECKING:
     from ._delivery import DispositionType

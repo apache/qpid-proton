@@ -27,10 +27,6 @@ from . import common
 from .common import pump, Skipped
 
 
-# older versions of gc do not provide the garbage list
-if not hasattr(gc, "garbage"):
-    gc.garbage = []
-
 # future test areas
 #  + different permutations of setup
 #   - creating deliveries and calling input/output before opening the session/link
