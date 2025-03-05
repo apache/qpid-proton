@@ -22,7 +22,11 @@
 #include "ssl_options_impl.hpp"
 
 // https://stackoverflow.com/questions/31657499/how-to-detect-stdlib-libc-in-the-preprocessor
-#include <ciso646>
+#if __has_include(<version>)
+# include <version>
+#else
+# include <ciso646>
+#endif
 
 #include "proton/ssl.hpp"
 #include "proton/error.hpp"
