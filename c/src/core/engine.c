@@ -1680,7 +1680,7 @@ static void pn_disposition_init(pn_disposition_t *ds)
   memset(ds, 0, sizeof(*ds));
 }
 
-static void pn_disposition_clear(pn_disposition_t *ds)
+void pn_disposition_clear(pn_disposition_t *ds)
 {
   pn_disposition_finalize(ds);
   pn_disposition_init(ds);

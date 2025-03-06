@@ -1547,6 +1547,9 @@ static inline bool sequence_lte(pn_sequence_t a, pn_sequence_t b) {
 }
 
 static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn_disposition_t *disp) {
+  if (disp->type != PN_DISP_EMPTY) {
+    pn_disposition_clear(disp);
+  }
   switch (type) {
     case AMQP_DESC_RECEIVED: {
       bool qnumber;
