@@ -65,9 +65,6 @@ class target : public terminus {
     /// @endcond
 };
 
-
-/// TODO: A point of coordinator for messages.
-///
 class coordinator : public terminus {
   public:
     /// Create an empty coordinator.

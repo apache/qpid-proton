@@ -32,7 +32,7 @@
 
 namespace proton {
 
-tracker::tracker(pn_delivery_t *d) : transfer(make_wrapper(d)) {}
+tracker::tracker(pn_delivery_t *d): transfer(make_wrapper(d)) {}
 sender tracker::sender() const { return make_wrapper<class sender>(pn_delivery_link(pn_object())); }
 binary tracker::tag() const { return bin(pn_delivery_tag(pn_object())); }
 }

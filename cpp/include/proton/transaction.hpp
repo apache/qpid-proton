@@ -36,69 +36,6 @@
 namespace proton {
 
 class transaction_handler;
-// class transaction_impl;
-
-// TODO: This should not be accessible to users.
-// class transaction_impl {
-//   public:
-//     proton::sender txn_ctrl;
-//     proton::transaction_handler *handler = nullptr;
-//     proton::binary id;
-//     proton::tracker _declare;
-//     proton::tracker _discharge;
-//     bool failed = false;
-//     std::vector<proton::tracker> pending;
-
-//     void commit();
-//     void abort();
-//     void declare();
-//     proton::tracker send(proton::sender s, proton::message msg);
-
-//     void discharge(bool failed);
-//     void release_pending();
-//     void accept(delivery &d);
-//     void update(tracker &d, uint64_t state);
-//     void set_id(binary _id);
-
-//     proton::tracker send_ctrl(proton::symbol descriptor, proton::value _value);
-//     void handle_outcome(proton::tracker t);
-//     transaction_impl(proton::sender &_txn_ctrl,
-//                      proton::transaction_handler &_handler,
-//                      bool _settle_before_discharge);
-
-//     // delete copy and assignment operator to ensure no copy of this object is
-//     // every made transaction_impl(const transaction_impl&) = delete;
-//     // transaction_impl& operator=(const transaction_impl&) = delete;
-// };
-
-// class
-// PN_CPP_CLASS_EXTERN transaction {
-//   private:
-//     //   PN_CPP_EXTERN transaction(proton::sender& _txn_ctrl,
-//     //   proton::transaction_handler& _handler, bool _settle_before_discharge);
-
-//     static transaction mk_transaction_impl(sender &s, transaction_handler &h,
-//                                            bool f);
-//     PN_CPP_EXTERN transaction(transaction_impl *impl);
-//     transaction_impl *_impl;
-
-//   public:
-//     // TODO:
-//     // PN_CPP_EXTERN transaction(transaction &o);
-//     PN_CPP_EXTERN transaction();
-//     PN_CPP_EXTERN ~transaction();
-//     PN_CPP_EXTERN bool is_empty();
-//     PN_CPP_EXTERN void commit();
-//     PN_CPP_EXTERN void abort();
-//     PN_CPP_EXTERN void declare();
-//     PN_CPP_EXTERN void handle_outcome(proton::tracker);
-//     PN_CPP_EXTERN proton::tracker send(proton::sender s, proton::message msg);
-//     PN_CPP_EXTERN void accept(delivery &t);
-//     PN_CPP_EXTERN proton::connection connection() const;
-
-//   friend class transaction_impl;
-//   friend class session;
-// };
 
 class
 PN_CPP_CLASS_EXTERN transaction_handler {

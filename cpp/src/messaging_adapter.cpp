@@ -112,6 +112,7 @@ void message_decode(message& msg, proton::delivery delivery) {
     msg.decode(buf);
     pn_link_advance(unwrap(link));
 }
+
 void on_delivery(messaging_handler& handler, pn_event_t* event) {
     pn_link_t *lnk = pn_event_link(event);
     pn_delivery_t *dlv = pn_event_delivery(event);
@@ -301,38 +302,25 @@ void on_link_local_open(messaging_handler& handler, pn_event_t* event) {
 void on_link_remote_open(messaging_handler& handler, pn_event_t* event) {
     auto lnk = pn_event_link(event);
     int type = pn_terminus_get_type(pn_link_remote_target(lnk));
-    std::cout << "    on_link_remote_open, type:" << type << std::endl;
     if (pn_terminus_get_type(pn_link_remote_target(lnk))==PN_COORDINATOR) {
       auto cond = pn_link_condition(lnk);
       if (pn_condition_is_set(cond)) {
-            std::cout<<"    Got condition on_link_remote_open(.PN_COORDINATOR): "
-                << pn_event_type_name(pn_event_type(event)) << " "
-                << pn_condition_get_name(cond) << " "
-                << pn_condition_get_description(cond) << std::endl;
-
             pn_condition_set_name(cond, "amqp:on_link_remote_open:FAILED");
             pn_link_close(lnk);
             return;
         }
-        std::cout<<"    IN on_link_remote_open(.PN_COORDINATOR) success " << std::endl;
-        std::cout<<"    IN on_link_remote_open(.PN_COORDINATOR) have handler " << &handler << std::endl;
-
       return;
     }
     if (pn_link_state(lnk) & PN_LOCAL_UNINIT) { // Incoming link
         // Copy source and target from remote end.
-          std::cout<<"    Inside on_link_remote_open() .. PN_LOCAL_UNINIT " << std::endl;
-
         pn_terminus_copy(pn_link_source(lnk), pn_link_remote_source(lnk));
         pn_terminus_copy(pn_link_target(lnk), pn_link_remote_target(lnk));
     }
     if (pn_link_is_receiver(lnk)) {
-          std::cout<<"    Inside on_link_remote_open() .. pn_link_is_receiver " << std::endl;
       receiver r(make_wrapper<receiver>(lnk));
       handler.on_receiver_open(r);
       credit_topup(lnk);
     } else {
-          std::cout<<"    Inside on_link_remote_open() .. sender " << std::endl;
       sender s(make_wrapper<sender>(lnk));
       handler.on_sender_open(s);
     }

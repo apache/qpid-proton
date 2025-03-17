@@ -109,13 +109,6 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
 
     PN_CPP_EXTERN void declare_transaction(proton::transaction_handler &handler, bool settle_before_discharge = false);
 
-
-    // static transaction mk_transaction_impl(sender &s, transaction_handler &h,
-                                          //  bool f);
-    // PN_CPP_EXTERN transaction(transaction_impl *impl);
-    
-    // PN_CPP_EXTERN transaction();
-    // PN_CPP_EXTERN ~transaction();
     PN_CPP_EXTERN bool txn_is_empty();
     PN_CPP_EXTERN bool txn_is_declared();
     PN_CPP_EXTERN void txn_commit();
@@ -125,10 +118,6 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN proton::tracker txn_send(proton::sender s, proton::message msg);
     PN_CPP_EXTERN void txn_accept(delivery &t);
     PN_CPP_EXTERN proton::connection txn_connection() const;
-
-    // PN_CPP_EXTERN session_context& get_session_context();
-
-    // transaction _txn;
 
     /// @cond INTERNAL
   friend class internal::factory<session>;

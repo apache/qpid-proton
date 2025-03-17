@@ -46,17 +46,6 @@ coordinator::coordinator(pn_terminus_t *t) : terminus(make_wrapper(t))
 
 coordinator::coordinator(const sender& snd) : terminus(make_wrapper(pn_link_remote_target(unwrap(snd)))) {}
 coordinator::coordinator(const receiver& rcv) : terminus(make_wrapper(pn_link_remote_target(unwrap(rcv)))) { parent_ = unwrap(rcv); }
-// coordinator::coordinator(const sender& snd) :
-//     terminus(make_wrapper(pn_link_remote_source(unwrap(snd)))),
-//     filters_(pn_terminus_filter(object_))
-// {
-//     parent_ = unwrap(snd);
-// }
-
-// coordinator::coordinator(const receiver& rcv) :
-//     terminus(make_wrapper(pn_link_remote_source(unwrap(rcv)))),
-//     filters_(pn_terminus_filter(object_))
-// {}
 
 std::string coordinator::address() const {
     pn_terminus_t *authoritative = object_;
@@ -64,6 +53,5 @@ std::string coordinator::address() const {
         authoritative = pn_link_source(parent_);
     return str(pn_terminus_get_address(authoritative));
 }
-
 
 }

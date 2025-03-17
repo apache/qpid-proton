@@ -42,7 +42,6 @@ namespace proton {
 
 class proton_handler;
 class connector;
-// class transaction;
 
 namespace io {class link_namer;}
 
@@ -153,6 +152,7 @@ class session_context : public context {
   public:
     session_context() : handler(0), user_data_(nullptr) {}
     static session_context& get(pn_session_t* s);
+
     transaction_impl* _txn_impl;
     messaging_handler* handler;
     void* user_data_;
@@ -163,7 +163,6 @@ class transfer_context : public context {
     transfer_context() : user_data_(nullptr) {}
     static transfer_context& get(pn_delivery_t* s);
 
-    // std::unique_ptr<transaction> transaction_;
     void* user_data_;
 };
 
