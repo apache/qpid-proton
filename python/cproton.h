@@ -543,6 +543,8 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
 int pn_message_set_subject(pn_message_t *msg, const char *subject);
 int pn_message_set_ttl(pn_message_t *msg, pn_millis_t ttl);
 int pn_message_set_user_id(pn_message_t *msg, pn_bytes_t user_id);
+pn_delivery_t *pn_unsettled_head(pn_link_t *link);
+pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);
 
 pn_link_t *pn_receiver(pn_session_t *session, const char *name);
 
