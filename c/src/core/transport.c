@@ -1556,7 +1556,7 @@ static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn
       uint32_t number;
       bool qoffset;
       uint64_t offset;
-      pn_amqp_decode_DqEQIQLe(disp_data, &qnumber, &number, &qoffset, &offset);
+      pn_amqp_decode_EQIQLe(disp_data, &qnumber, &number, &qoffset, &offset);
 
       disp->type = PN_DISP_RECEIVED;
 
@@ -1576,7 +1576,7 @@ static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn
       pn_bytes_t cond;
       pn_bytes_t desc;
       pn_bytes_t info;
-      pn_amqp_decode_DqEDqEsSRee(disp_data, &cond, &desc, &info);
+      pn_amqp_decode_EDqEsSRee(disp_data, &cond, &desc, &info);
       disp->type = PN_DISP_REJECTED;
       pn_condition_set(&disp->u.s_rejected.condition, cond, desc, info);
 
@@ -1592,7 +1592,7 @@ static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn
       bool qundeliverable;
       bool undeliverable;
       pn_bytes_t annotations_raw = (pn_bytes_t){0, NULL};
-      pn_amqp_decode_DqEQoQoRe(disp_data, &qfailed, &failed, &qundeliverable, &undeliverable, &annotations_raw);
+      pn_amqp_decode_EQoQoRe(disp_data, &qfailed, &failed, &qundeliverable, &undeliverable, &annotations_raw);
       disp->type = PN_DISP_MODIFIED;
       pn_bytes_free(disp->u.s_modified.annotations_raw);
       disp->u.s_modified.annotations_raw = pn_bytes_dup(annotations_raw);
@@ -1609,7 +1609,7 @@ static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn
       pn_bytes_t id;
       bool qoutcome;
       pn_bytes_t outcome_raw;
-      pn_amqp_decode_DqEzQRe(disp_data, &id, &qoutcome, &outcome_raw);
+      pn_amqp_decode_EzQRe(disp_data, &id, &qoutcome, &outcome_raw);
       disp->type = PN_DISP_TRANSACTIONAL;
       pn_bytes_free(disp->u.s_transactional.id);
       disp->u.s_transactional.id = pn_bytes_dup(id);
@@ -1621,7 +1621,7 @@ static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn
     }
     default: {
       pn_bytes_t data_raw = (pn_bytes_t){0, NULL};
-      pn_amqp_decode_DqR(disp_data, &data_raw);
+      pn_amqp_decode_R(disp_data, &data_raw);
       disp->type = PN_DISP_CUSTOM;
       disp->u.s_custom.type = type;
       pn_bytes_free(disp->u.s_custom.data_raw);
@@ -1631,10 +1631,10 @@ static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn
   }
 }
 
-static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t *delivery, bool settled, bool remote_data, bool type_init, uint64_t type, pn_bytes_t disp_data) {
+static int pni_do_delivery_disposition(pn_transport_t * transport, pn_delivery_t *delivery, bool settled, bool type_init, uint64_t type, pn_bytes_t disp_data) {
   pn_disposition_t *remote = &delivery->remote;
 
-  if (remote_data && type_init) {
+  if (type_init) {
     pni_amqp_decode_disposition(type, disp_data, remote);
   }
 
@@ -1652,8 +1652,10 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
   pn_sequence_t first, last;
   bool last_init, settled;
   pn_bytes_t disp_data;
-  pn_amqp_decode_DqEoIQIoRe(payload, &role, &first, &last_init,
-                            &last, &settled, &disp_data);
+  bool type_init;
+  uint64_t type;
+  pn_amqp_decode_DqEoIQIoDQLRe(payload, &role, &first, &last_init,
+                            &last, &settled, &type_init, &type, &disp_data);
   if (!last_init) last = first;
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
@@ -1672,12 +1674,6 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
     deliveries = &ssn->state.incoming;
   }
 
-  bool type_init;
-  uint64_t type;
-  bool remote_data;
-  pn_amqp_decode_DQLQq(disp_data, &type_init, &type, &remote_data);
-
-
   // Do some validation of received first and last values
   // TODO: We should really also clamp the first value here, but we're not keeping track of the earliest
   // unsettled delivery sequence no
@@ -1691,14 +1687,14 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
       pn_sequence_t key = pn_hash_key(dh, entry);
       if (sequence_lte(first, key) && sequence_lte(key, last)) {
         pn_delivery_t *delivery = (pn_delivery_t*) pn_hash_value(dh, entry);
-        pni_do_delivery_disposition(transport, delivery, settled, remote_data, type_init, type, disp_data);
+        pni_do_delivery_disposition(transport, delivery, settled, type_init, type, disp_data);
       }
     }
   } else {
     for (pn_sequence_t id = first; sequence_lte(id, last); ++id) {
       pn_delivery_t *delivery = pni_delivery_map_get(deliveries, id);
       if (delivery) {
-        pni_do_delivery_disposition(transport, delivery, settled, remote_data, type_init, type, disp_data);
+        pni_do_delivery_disposition(transport, delivery, settled, type_init, type, disp_data);
       }
     }
   }

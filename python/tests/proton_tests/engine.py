@@ -2320,7 +2320,7 @@ class ReceivedTester(DispositionTester):
         assert dlv.remote_state == self._type
         assert dlv.remote.type == self._type
         assert dlv.remote.section_number == self._section_number, (dlv.remote.section_number, self._section_number)
-        assert dlv.remote.section_offset == self._section_offset
+        assert dlv.remote.section_offset == self._section_offset, (dlv.remote.section_offset, self._section_offset)
 
 
 class NewReceivedTester(DispositionTester):
@@ -2356,8 +2356,8 @@ class ModifiedTester(DispositionTester):
     def check(self, dlv: Delivery):
         assert dlv.remote_state == self._type
         assert dlv.remote.type == self._type
-        assert dlv.remote.failed == self._failed
-        assert dlv.remote.undeliverable == self._undeliverable
+        assert dlv.remote.failed == self._failed, (dlv.remote.failed, self._failed)
+        assert dlv.remote.undeliverable == self._undeliverable, (dlv.remote.undeliverable, self._undeliverable)
         assert dlv.remote.annotations == self._annotations, (dlv.remote.annotations, self._annotations)
 
 
@@ -2375,8 +2375,8 @@ class NewModifiedTester(DispositionTester):
     def check(self, dlv: Delivery):
         assert dlv.remote_state == self._type
         assert dlv.remote.type == self._type
-        assert dlv.remote.failed == self._failed
-        assert dlv.remote.undeliverable == self._undeliverable
+        assert dlv.remote.failed == self._failed, (dlv.remote.failed, self._failed)
+        assert dlv.remote.undeliverable == self._undeliverable, (dlv.remote.undeliverable, self._undeliverable)
         assert dlv.remote.annotations == self._annotations, (dlv.remote.annotations, self._annotations)
 
 
@@ -2392,7 +2392,7 @@ class CustomTester(DispositionTester):
     def check(self, dlv: Delivery):
         assert dlv.remote_state == self._type
         assert dlv.remote.type == self._type
-        assert dlv.remote.data == self._data, (dlv.data, self._data)
+        assert dlv.remote.data == self._data, (dlv.remote.data, self._data)
 
 
 class NewCustomTester(DispositionTester):
@@ -2407,7 +2407,7 @@ class NewCustomTester(DispositionTester):
     def check(self, dlv: Delivery):
         assert dlv.remote_state == self._type
         assert dlv.remote.type == self._type, (dlv.remote.type, self._type)
-        assert dlv.remote.data == self._data, (dlv.data, self._data)
+        assert dlv.remote.data == self._data, (dlv.remote.data, self._data)
 
 
 class TransactionalTester(DispositionTester):
