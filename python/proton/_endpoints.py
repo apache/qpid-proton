@@ -54,7 +54,7 @@ from cproton import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN_DIST_MOD
     pn_terminus_is_dynamic, pn_terminus_outcomes, pn_terminus_properties, pn_terminus_set_address, \
     pn_terminus_set_distribution_mode, pn_terminus_set_durability, pn_terminus_set_dynamic, \
     pn_terminus_set_expiry_policy, pn_terminus_set_timeout, pn_terminus_set_type, \
-    pn_link_properties, pn_link_remote_properties
+    pn_link_properties, pn_link_remote_properties, pn_unsettled_head
 
 from ._condition import cond2obj, obj2cond
 from ._data import Data, dat2obj, obj2dat, PropertyDict, SymbolList
@@ -63,7 +63,7 @@ from ._exceptions import ConnectionException, EXCEPTIONS, LinkException, Session
 from ._handler import Handler
 from ._transport import Transport
 from ._wrapper import Wrapper
-from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Any, Dict, Generator, List, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._condition import Condition
@@ -887,6 +887,28 @@ class Link(Wrapper, Endpoint):
         The number of unsettled deliveries for this link.
         """
         return pn_link_unsettled(self._impl)
+
+    @property
+    def unsettled_head(self) -> Optional[Delivery]:
+        """
+        The first unsettled delivery for this link.
+
+        This operation will return the first unsettled delivery on the
+        link, or ``None`` if there are no unsettled deliveries.
+        """
+        return Delivery.wrap(pn_unsettled_head(self._impl))
+
+    @property
+    def unsettled_deliveries(self) -> Generator[Delivery]:
+        """
+        Returns a generator of unsettled deliveries for this link.
+
+        :return: Generator of unsettled deliveries.
+        """
+        delivery = self.unsettled_head
+        while delivery:
+            yield delivery
+            delivery = delivery.unsettled_next
 
     @property
     def credit(self) -> int:

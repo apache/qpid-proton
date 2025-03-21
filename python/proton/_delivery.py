@@ -48,7 +48,8 @@ from cproton import (PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELE
                      pn_transactional_disposition_get_id,
                      pn_transactional_disposition_set_id,
                      pn_transactional_disposition_get_outcome_type,
-                     pn_transactional_disposition_set_outcome_type)
+                     pn_transactional_disposition_set_outcome_type,
+                     pn_unsettled_next)
 
 from ._condition import cond2obj, obj2cond, Condition
 from ._data import dat2obj, obj2dat
@@ -658,6 +659,14 @@ class Delivery(Wrapper):
         further events about it. Every delivery should be settled locally.
         """
         pn_delivery_settle(self._impl)
+
+    @property
+    def unsettled_next(self) -> Optional['Delivery']:
+        """
+        The next unsettled delivery on the link or ``None`` if there are
+        no more unsettled deliveries.
+        """
+        return Delivery.wrap(pn_unsettled_next(self._impl))
 
     @property
     def aborted(self) -> bool:
