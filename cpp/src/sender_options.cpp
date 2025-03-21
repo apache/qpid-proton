@@ -66,6 +66,7 @@ class sender_options::impl {
     option<bool> auto_settle;
     option<source_options> source;
     option<target_options> target;
+    option<coordinator_options> coordinator;
     option<std::string> name;
     option<std::map<symbol, value> > properties;
 
@@ -81,6 +82,10 @@ class sender_options::impl {
             if (target.set) {
                 proton::target local_t(make_wrapper<proton::target>(pn_link_target(unwrap(s))));
                 target.value.apply(local_t);
+            }
+            if (coordinator.set) {
+                proton::coordinator local_t(make_wrapper<proton::coordinator>(pn_link_target(unwrap(s))));
+                coordinator.value.apply(local_t);
             }
             if (properties.set) {
                 value(pn_link_properties(unwrap(s))) = properties.value;
@@ -118,6 +123,7 @@ sender_options& sender_options::delivery_mode(proton::delivery_mode m) {impl_->d
 sender_options& sender_options::auto_settle(bool b) {impl_->auto_settle = b; return *this; }
 sender_options& sender_options::source(const source_options &s) {impl_->source = s; return *this; }
 sender_options& sender_options::target(const target_options &s) {impl_->target = s; return *this; }
+sender_options& sender_options::coordinator(const coordinator_options &s) {impl_->coordinator = s; return *this; }
 sender_options& sender_options::name(const std::string &s) {impl_->name = s; return *this; }
 sender_options& sender_options::properties(const std::map<symbol, value> &props) { impl_->properties = props; return *this; }
 
