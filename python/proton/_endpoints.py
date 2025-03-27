@@ -63,7 +63,9 @@ from ._exceptions import ConnectionException, EXCEPTIONS, LinkException, Session
 from ._handler import Handler
 from ._transport import Transport
 from ._wrapper import Wrapper
-from typing import Any, Dict, Generator, List, Optional, Union, TYPE_CHECKING
+
+from collections.abc import Iterator
+from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._condition import Condition
@@ -899,7 +901,7 @@ class Link(Wrapper, Endpoint):
         return Delivery.wrap(pn_unsettled_head(self._impl))
 
     @property
-    def unsettled_deliveries(self) -> Generator[Delivery]:
+    def unsettled_deliveries(self) -> Iterator[Delivery]:
         """
         Returns a generator of unsettled deliveries for this link.
 
