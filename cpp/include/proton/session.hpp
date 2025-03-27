@@ -131,7 +131,7 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
 };
 
 /// @cond INTERNAL
-    
+
 /// An iterator of sessions.
 class session_iterator : public internal::iter_base<session, session_iterator> {
  public:
@@ -145,7 +145,7 @@ class session_iterator : public internal::iter_base<session, session_iterator> {
 typedef internal::iter_range<session_iterator> session_range;
 
 /// @endcond
-    
+
 } // proton
 
 #endif // PROTON_SESSION_HPP

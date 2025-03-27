@@ -60,6 +60,10 @@ class target_options {
     /// address is ignored if dynamic() is true.
     PN_CPP_EXTERN target_options& address(const std::string& addr);
 
+    /// Set the target be of type coordinator.
+    /// This immediately override the currently assigned type.
+    PN_CPP_EXTERN target_options& mark_coordinator();
+
     /// Request that a node be dynamically created by the remote peer.
     /// The default is false.  Any specified target address() is
     /// ignored if true.
@@ -98,39 +102,6 @@ class target_options {
 
     /// @cond INTERNAL
   friend class target;
-  friend class sender_options;
-  friend class receiver_options;
-    /// @endcond
-};
-
-class coordinator_options {
-  public:
-    /// Create an empty set of options.
-    PN_CPP_EXTERN coordinator_options();
-
-    /// Copy options.
-    PN_CPP_EXTERN coordinator_options(const coordinator_options&);
-
-    PN_CPP_EXTERN ~coordinator_options();
-
-    /// Copy options.
-    PN_CPP_EXTERN coordinator_options& operator=(const coordinator_options&);
-
-    /// Set the address for the coordinator.  It is unset by default.  The
-    /// address is ignored if dynamic() is true.
-    PN_CPP_EXTERN coordinator_options& address(const std::string& addr);
-
-    /// **Unsettled API** Extension capabilities that are supported/requested
-    PN_CPP_EXTERN coordinator_options& capabilities(const std::vector<symbol>&);
-
-  private:
-    void apply(coordinator&) const;
-
-    class impl;
-    std::unique_ptr<impl> impl_;
-
-    /// @cond INTERNAL
-  friend class coordinator;
   friend class sender_options;
   friend class receiver_options;
     /// @endcond
