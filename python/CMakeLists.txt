@@ -197,13 +197,14 @@ if (BUILD_TESTING)
   set (py_tests "${py_src}/tests")
   set (tests_py "${py_src}/../tests/py")
 
-  set (py_path $<TARGET_FILE_DIR:msgr-recv> ${py_bld} $ENV{PATH})
+  set (py_path $<$<TARGET_EXISTS:msgr-recv>:$<TARGET_FILE_DIR:msgr-recv>> ${py_bld} $ENV{PATH})
   set (py_pythonpath ${py_tests} ${py_src} ${py_bin} ${tests_py} $ENV{PYTHONPATH})
   to_native_path ("${py_pythonpath}" py_pythonpath)
   to_native_path ("${py_path}" py_path)
 
   if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-    set (python_coverage_options -m coverage run --parallel-mode)
+    set (python_coverage_module "coverage")
+    set (python_coverage_options -m ${python_coverage_module} run --parallel-mode)
   endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
   if (ENABLE_PYTHON_ISOLATED)
@@ -221,7 +222,7 @@ if (BUILD_TESTING)
     add_custom_command(
       OUTPUT .timestamp.test_env
       COMMAND ${Python_EXECUTABLE} -m venv ${pytest_venv}
-      COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi
+      COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi "${python_coverage_module}"
       COMMAND ${CMAKE_COMMAND} -E env
         "CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}"
         "QPID_PROTON_CORE_TARGET_DIR=$<TARGET_FILE_DIR:qpid-proton-core>"
@@ -231,7 +232,7 @@ if (BUILD_TESTING)
       COMMAND ${CMAKE_COMMAND} -E touch .timestamp.test_env
       BYPRODUCTS ${pytest_executable}
     )
-  add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
+    add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
   elseif(CFFI_MODULE_FOUND)
     set(pytest_executable "${Python_EXECUTABLE}")
     set(pytest_venv "${py_bin}")
@@ -245,7 +246,7 @@ if (BUILD_TESTING)
       COMMAND ${CMAKE_COMMAND} -E touch .timestamp.test_env
       DEPENDS pysrc_copied qpid-proton-core
     )
-  add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
+    add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
   endif()
 
 

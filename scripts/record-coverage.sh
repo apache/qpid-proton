@@ -51,8 +51,8 @@ lcov -c -d $BLDPATH -o proton-ctest.info
 # Total them up
 lcov --add proton-base.info --add proton-ctest.info > proton-total-raw.info
 
-# Snip out stuff in /usr (we don't care about coverage in system code)
-lcov --remove proton-total-raw.info "/usr/include*" "/usr/share*" > proton-total.info
+# Snip out stuff in /usr (we don't care about coverage in system code) & in unit test framework
+lcov --ignore-errors unused --remove proton-total-raw.info "/usr/include*" "/usr/share*" "tests/include/*"> proton-total.info
 
 # Generate report
 rm -rf html

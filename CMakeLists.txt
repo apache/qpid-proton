@@ -105,8 +105,8 @@ else (CMAKE_CONFIGURATION_TYPES)
 
   # Set up extra coverage analysis options for gcc and clang
   if (CMAKE_COMPILER_IS_GNUCC)
-    set (CMAKE_C_FLAGS_COVERAGE "-g -O0 --coverage")
-    set (CMAKE_CXX_FLAGS_COVERAGE "-g -O0 --coverage")
+    set (CMAKE_C_FLAGS_COVERAGE "-g -O0 --coverage -fprofile-update=atomic")
+    set (CMAKE_CXX_FLAGS_COVERAGE "-g -O0 --coverage -fprofile-update=atomic ")
     set (CMAKE_EXE_LINKER_FLAGS_COVERAGE "--coverage")
     set (CMAKE_MODULE_LINKER_FLAGS_COVERAGE "--coverage")
     set (CMAKE_SHARED_LINKER_FLAGS_COVERAGE "--coverage")
