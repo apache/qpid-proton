@@ -57,7 +57,7 @@ from ._transport import Transport
 from ._wrapper import Wrapper
 
 from enum import IntEnum
-from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Any, Optional, Union, TYPE_CHECKING
 
 
 if TYPE_CHECKING:
@@ -164,7 +164,7 @@ class RemoteCustomDisposition(RemoteDisposition):
         return self._type
 
     @property
-    def data(self) -> Optional[List[Any]]:
+    def data(self) -> Optional[Any]:
         """Access the disposition as a :class:`Data` object.
 
         Dispositions are an extension point in the AMQP protocol. The
@@ -245,7 +245,7 @@ class RemoteModifiedDisposition(RemoteDisposition):
         return self._undeliverable
 
     @property
-    def annotations(self) -> Optional[Dict['symbol', 'PythonAMQPData']]:
+    def annotations(self) -> Optional[dict['symbol', 'PythonAMQPData']]:
         return self._annotations
 
     def apply_to(self, local_disposition: 'LocalDisposition'):
@@ -299,11 +299,11 @@ class LocalDisposition(Disposition):
         return DispositionType.or_int(pn_disposition_type(self._impl))
 
     @property
-    def data(self) -> Optional[List[int]]:
+    def data(self) -> Optional[Any]:
         return self._data
 
     @data.setter
-    def data(self, obj: List[int]) -> None:
+    def data(self, obj: Any) -> None:
         self._data = obj
 
     @property
@@ -347,11 +347,11 @@ class LocalDisposition(Disposition):
         pn_disposition_set_undeliverable(self._impl, b)
 
     @property
-    def annotations(self) -> Optional[Dict['symbol', 'PythonAMQPData']]:
+    def annotations(self) -> Optional[dict['symbol', 'PythonAMQPData']]:
         return self._annotations
 
     @annotations.setter
-    def annotations(self, obj: Dict['symbol', 'PythonAMQPData']) -> None:
+    def annotations(self, obj: dict['symbol', 'PythonAMQPData']) -> None:
         self._annotations = obj
 
 
@@ -426,7 +426,7 @@ class RejectedDisposition(LocalDisposition):
 class ModifiedDisposition(LocalDisposition):
 
     def __init__(self, failed: bool = None, undeliverable: bool = None,
-                 annotations: Optional[Dict['symbol', 'PythonAMQPData']] = None):
+                 annotations: Optional[dict['symbol', 'PythonAMQPData']] = None):
         self._failed = failed
         self._undeliverable = undeliverable
         self._annotations = annotations
@@ -452,11 +452,11 @@ class ModifiedDisposition(LocalDisposition):
         self._undelivered = b
 
     @property
-    def annotations(self) -> Optional[Dict['symbol', 'PythonAMQPData']]:
+    def annotations(self) -> Optional[dict['symbol', 'PythonAMQPData']]:
         return self._annotations
 
     @annotations.setter
-    def annotations(self, obj: Dict['symbol', 'PythonAMQPData']) -> None:
+    def annotations(self, obj: dict['symbol', 'PythonAMQPData']) -> None:
         self._annotations = obj
 
     def apply_to(self, local_disposition: LocalDisposition):

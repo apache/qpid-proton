@@ -36,7 +36,7 @@ from ._data import char, Data, symbol, ulong, AnnotationDict
 from ._endpoints import Link
 from ._exceptions import EXCEPTIONS, MessageException
 from uuid import UUID
-from typing import Dict, Optional, Union, TYPE_CHECKING, overload
+from typing import Optional, Union, TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
     from proton._delivery import Delivery
@@ -447,7 +447,7 @@ class Message(object):
         return self.instruction_dict
 
     @instructions.setter
-    def instructions(self, instructions: Optional[Dict[Union[str, int], 'PythonAMQPData']]) -> None:
+    def instructions(self, instructions: Optional[dict[Union[str, int], 'PythonAMQPData']]) -> None:
         if isinstance(instructions, dict):
             self.instruction_dict = AnnotationDict(instructions, raise_on_error=False)
         else:
@@ -468,7 +468,7 @@ class Message(object):
         return self.annotation_dict
 
     @annotations.setter
-    def annotations(self, annotations: Optional[Dict[Union[str, int], 'PythonAMQPData']]) -> None:
+    def annotations(self, annotations: Optional[dict[Union[str, int], 'PythonAMQPData']]) -> None:
         if isinstance(annotations, dict):
             self.annotation_dict = AnnotationDict(annotations, raise_on_error=False)
         else:

@@ -23,8 +23,9 @@ import logging
 import re
 import os
 import queue
-from typing import Any, Callable, Dict, Iterator, List, Literal, Optional, Union, TYPE_CHECKING, Tuple, Type
-
+from collections.abc import Iterator
+from types import TracebackType
+from typing import Any, Callable, Literal, Optional, Union, TYPE_CHECKING
 import time
 import traceback
 import uuid
@@ -50,14 +51,12 @@ if TYPE_CHECKING:
     from ._data import PythonAMQPData
     from ._handlers import TransactionHandler
     from socket import socket
-    from types import TracebackType
-    from uuid import UUID
 
 
 _logger = logging.getLogger("proton")
 
 
-def _generate_uuid() -> 'UUID':
+def _generate_uuid() -> uuid.UUID:
     return uuid.uuid4()
 
 
@@ -121,11 +120,11 @@ class Reactor(object):
         self._handler = Handler()
         self._timerheap = []
         self._timers = 0
-        self.errors: List[Tuple[Type[BaseException], BaseException, 'TracebackType']] = []
+        self.errors: list[tuple[type[BaseException], BaseException, TracebackType]] = []
         for h in handlers:
             self.handler.add(h, on_error=self.on_error)
 
-    def on_error(self, info: Tuple[Type[BaseException], BaseException, 'TracebackType']) -> None:
+    def on_error(self, info: tuple[type[BaseException], BaseException, TracebackType]) -> None:
         self.errors.append(info)
         self.yield_()
 
@@ -765,7 +764,7 @@ class Filter(ReceiverOption):
         containing the filter name, and the value a filter string.
     """
 
-    def __init__(self, filter_set: Dict[symbol, Described] = {}) -> None:
+    def __init__(self, filter_set: dict[symbol, Described] = {}) -> None:
         self.filter_set = filter_set
 
     def apply(self, receiver: 'Receiver') -> None:
@@ -843,7 +842,7 @@ class Copy(ReceiverOption):
 
 
 def _apply_link_options(
-        options: Optional[Union[LinkOption, List[LinkOption]]],
+        options: Optional[Union[LinkOption, list[LinkOption]]],
         link: Union['Sender', 'Receiver']
 ) -> None:
     if options:
@@ -978,8 +977,8 @@ class Backoff(object):
 
 
 def make_backoff_wrapper(
-        backoff: Optional[Union[List[Union[float, int]], bool, Backoff]]
-) -> Optional[Union[List[Union[float, int]], bool, Backoff]]:
+        backoff: Optional[Union[list[Union[float, int]], bool, Backoff]]
+) -> Optional[Union[list[Union[float, int]], bool, Backoff]]:
     """
     Make a wrapper for a backoff object:
     If the object conforms to the old protocol (has reset and next methods) then
@@ -1003,7 +1002,7 @@ def make_backoff_wrapper(
 
 
 class Urls(object):
-    def __init__(self, values: List[Union[Url, str]]) -> None:
+    def __init__(self, values: list[Union[Url, str]]) -> None:
         self.values = [Url(v) for v in values]
 
     def __iter__(self) -> Iterator[Url]:
@@ -1142,7 +1141,7 @@ def _find_config_file() -> Optional[str]:
     return None
 
 
-def _get_default_config() -> Dict[str, Any]:
+def _get_default_config() -> dict[str, Any]:
     conf = os.environ.get('MESSAGING_CONNECT_FILE') or _find_config_file()
     if conf and os.path.isfile(conf):
         with open(conf, 'r') as f:
@@ -1201,7 +1200,7 @@ class Container(Reactor):
     def connect(
             self,
             url: Optional[Union[str, Url]] = None,
-            urls: Optional[List[str]] = None,
+            urls: Optional[list[str]] = None,
             address: Optional[str] = None,
             handler: Optional[Handler] = None,
             reconnect: Union[None, Literal[False], Backoff] = None,
@@ -1343,9 +1342,9 @@ class Container(Reactor):
     def _connect(
             self,
             url: Optional[Union[str, Url]] = None,
-            urls: Optional[List[str]] = None,
+            urls: Optional[list[str]] = None,
             handler: Optional['Handler'] = None,
-            reconnect: Optional[Union[List[Union[float, int]], bool, Backoff]] = None,
+            reconnect: Optional[Union[list[Union[float, int]], bool, Backoff]] = None,
             heartbeat: None = None,
             ssl_domain: Optional[SSLDomain] = None,
             **kwargs
@@ -1419,7 +1418,7 @@ class Container(Reactor):
             name: Optional[str] = None,
             handler: Optional[Handler] = None,
             tags: Optional[Callable[[], bytes]] = None,
-            options: Optional[Union['SenderOption', List['SenderOption'], 'LinkOption', List['LinkOption']]] = None
+            options: Optional[Union['SenderOption', list['SenderOption'], 'LinkOption', list['LinkOption']]] = None
     ) -> 'Sender':
         """
         Initiates the establishment of a link over which messages can
@@ -1481,7 +1480,7 @@ class Container(Reactor):
             name: Optional[str] = None,
             dynamic: bool = False,
             handler: Optional[Handler] = None,
-            options: Optional[Union[ReceiverOption, List[ReceiverOption], LinkOption, List[LinkOption]]] = None
+            options: Optional[Union[ReceiverOption, list[ReceiverOption], LinkOption, list[LinkOption]]] = None
     ) -> 'Receiver':
         """
         Initiates the establishment of a link over which messages can

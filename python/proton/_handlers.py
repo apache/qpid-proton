@@ -34,7 +34,7 @@ from ._message import Message
 from ._selectable import Selectable
 from ._transport import Transport
 from ._url import Url
-from typing import Any, List, Optional, Union, TYPE_CHECKING
+from typing import Any, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._delivery import DispositionType
@@ -1345,7 +1345,7 @@ class ConnectSelectable(Selectable):
             self,
             sock: socket.socket,
             reactor: 'Container',
-            addrs: List[Any],
+            addrs: list[Any],
             transport: Transport,
             iohandler: IOHandler
     ) -> None:

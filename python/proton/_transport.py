@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from typing import Callable, Optional, Type, Union, TYPE_CHECKING, List
+from typing import Callable, Optional, Union, TYPE_CHECKING
 
 from cproton import PN_EOS, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM, PN_SASL_SYS, PN_SASL_TEMP, \
     PN_SSL_ANONYMOUS_PEER, PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY, PN_SSL_CERT_SUBJECT_COMMON_NAME, \
@@ -634,7 +634,7 @@ class SASL:
         else:
             return outcome
 
-    def allowed_mechs(self, mechs: Union[str, List[str]]) -> None:
+    def allowed_mechs(self, mechs: Union[str, list[str]]) -> None:
         """
         SASL mechanisms that are to be considered for authentication.
 
@@ -862,7 +862,7 @@ class SSL(object):
             return err
 
     def __new__(
-            cls: Type['SSL'],
+            cls: type['SSL'],
             transport: Transport,
             domain: SSLDomain,
             session_details: Optional['SSLSessionDetails'] = None

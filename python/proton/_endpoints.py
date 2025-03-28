@@ -65,7 +65,7 @@ from ._transport import Transport
 from ._wrapper import Wrapper
 
 from collections.abc import Iterator
-from typing import Any, Dict, List, Optional, Union, TYPE_CHECKING
+from typing import Any, Optional, Union, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ._condition import Condition
@@ -500,7 +500,7 @@ class Connection(Wrapper, Endpoint):
     @offered_capabilities.setter
     def offered_capabilities(
             self,
-            offered_capability_list: Optional[Union['Array', List['symbol'], SymbolList, List[str]]]
+            offered_capability_list: Optional[Union['Array', list['symbol'], SymbolList, list[str]]]
     ) -> None:
         self.offered_capabilities_list = SymbolList(offered_capability_list)
 
@@ -517,7 +517,7 @@ class Connection(Wrapper, Endpoint):
     @desired_capabilities.setter
     def desired_capabilities(
             self,
-            desired_capability_list: Optional[Union['Array', List['symbol'], SymbolList, List[str]]]
+            desired_capability_list: Optional[Union['Array', list['symbol'], SymbolList, list[str]]]
     ) -> None:
         self.desired_capabilities_list = SymbolList(desired_capability_list)
 
@@ -533,7 +533,7 @@ class Connection(Wrapper, Endpoint):
         return self.properties_dict
 
     @properties.setter
-    def properties(self, properties_dict: Optional[Union[PropertyDict, Dict[str, 'PythonAMQPData']]]) -> None:
+    def properties(self, properties_dict: Optional[Union[PropertyDict, dict[str, 'PythonAMQPData']]]) -> None:
         if isinstance(properties_dict, dict):
             self.properties_dict = PropertyDict(properties_dict, raise_on_error=False)
         else:
@@ -1141,7 +1141,7 @@ class Link(Wrapper, Endpoint):
         return self._properties_dict
 
     @properties.setter
-    def properties(self, properties_dict: Optional[Dict['symbol', 'PythonAMQPData']]) -> None:
+    def properties(self, properties_dict: Optional[dict['symbol', 'PythonAMQPData']]) -> None:
         if isinstance(properties_dict, dict):
             self._properties_dict = PropertyDict(properties_dict, raise_on_error=False)
         else:

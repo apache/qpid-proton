@@ -30,7 +30,7 @@ from ._url import Url
 from ._reactor import Container
 from ._handlers import MessagingHandler, IncomingMessageHandler
 
-from typing import Callable, Optional, Literal, Union, TYPE_CHECKING, List, Any
+from typing import Callable, Optional, Literal, Union, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ._delivery import DispositionType
@@ -111,7 +111,7 @@ class BlockingSender(BlockingLink):
             self,
             msg: 'Message',
             timeout: Union[None, Literal[False], float] = False,
-            error_states: Optional[List['DispositionType']] = None,
+            error_states: Optional[list['DispositionType']] = None,
     ) -> Delivery:
         """
         Blocking send which will return only when the send is complete
@@ -361,7 +361,7 @@ class BlockingConnection(Handler):
             container: Optional[Container] = None,
             ssl_domain: Optional['SSLDomain'] = None,
             heartbeat: Optional[float] = None,
-            urls: Optional[List[str]] = None,
+            urls: Optional[list[str]] = None,
             reconnect: Union[None, Literal[False], 'Backoff'] = None,
             **kwargs
     ) -> None:
@@ -392,7 +392,7 @@ class BlockingConnection(Handler):
             address: Optional[str],
             handler: Optional[Handler] = None,
             name: Optional[str] = None,
-            options: Optional[Union['SenderOption', List['SenderOption'], 'LinkOption', List['LinkOption']]] = None
+            options: Optional[Union['SenderOption', list['SenderOption'], 'LinkOption', list['LinkOption']]] = None
     ) -> BlockingSender:
         """
         Create a blocking sender.
@@ -413,7 +413,7 @@ class BlockingConnection(Handler):
             dynamic: bool = False,
             handler: Optional[Handler] = None,
             name: Optional[str] = None,
-            options: Optional[Union['ReceiverOption', List['ReceiverOption'], 'LinkOption', List['LinkOption']]] = None
+            options: Optional[Union['ReceiverOption', list['ReceiverOption'], 'LinkOption', list['LinkOption']]] = None
     ) -> BlockingReceiver:
         """
         Create a blocking receiver.

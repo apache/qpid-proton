@@ -18,12 +18,12 @@
 #
 
 
-from typing import Any, Callable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Optional, Union
 from types import TracebackType
 
 
 class LazyHandlers(object):
-    def __get__(self, obj: 'Handler', clazz: Any) -> Union['LazyHandlers', List[Any]]:
+    def __get__(self, obj: 'Handler', clazz: Any) -> Union['LazyHandlers', list[Any]]:
         if obj is None:
             return self
         ret = []
@@ -41,7 +41,7 @@ class Handler(object):
     def add(
             self,
             handler: Any,
-            on_error: Optional[Callable[[Tuple[Type[BaseException], BaseException, 'TracebackType']], None]] = None,
+            on_error: Optional[Callable[[tuple[type[BaseException], BaseException, TracebackType]], None]] = None,
     ) -> None:
         """
         Add a child handler

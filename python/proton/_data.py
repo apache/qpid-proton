@@ -18,7 +18,8 @@
 #
 
 import uuid
-from typing import Callable, List, Tuple, Union, Optional, Any, Dict, Iterable, TypeVar
+from collections.abc import Iterable
+from typing import Callable, Union, Optional, Any, TypeVar
 
 from cproton import PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE, PN_CHAR, PN_DECIMAL128, PN_DECIMAL32, PN_DECIMAL64, \
     PN_DESCRIBED, PN_DOUBLE, PN_FLOAT, PN_INT, PN_LIST, PN_LONG, PN_MAP, PN_NULL, PN_OVERFLOW, PN_SHORT, PN_STRING, \
@@ -45,8 +46,8 @@ unicode = str
 _T = TypeVar('_T')
 
 PythonAMQPData = Union[
-    Dict['PythonAMQPData', 'PythonAMQPData'],
-    List['PythonAMQPData'],
+    dict['PythonAMQPData', 'PythonAMQPData'],
+    list['PythonAMQPData'],
     'Described', 'Array', int, str, 'symbol', bytes, float, None]
 """This type annotation represents Python data structures that can be encoded as AMQP Data"""
 
@@ -453,7 +454,7 @@ class AnnotationDict(RestrictedKeyDict):
 
     def __init__(
             self,
-            e: Optional[Union[Dict, List, Tuple, Iterable]] = None,
+            e: Optional[Union[dict, list, tuple, Iterable]] = None,
             raise_on_error: bool = True,
             **kwargs
     ) -> None:
@@ -495,7 +496,7 @@ class SymbolList(list):
 
     def __init__(
             self,
-            t: Optional[List[Any]] = None,
+            t: Optional[list[Any]] = None,
             raise_on_error: bool = True
     ) -> None:
         super(SymbolList, self).__init__()
@@ -505,7 +506,7 @@ class SymbolList(list):
         else:
             self.extend(t)
 
-    def _check_list(self, t: Iterable[Any]) -> List[Any]:
+    def _check_list(self, t: Iterable[Any]) -> list[Any]:
         """ Check all items in list are :class:`symbol`s (or are converted to symbols). """
         item = []
         if t:
@@ -1144,7 +1145,7 @@ class Data:
         """
         return pn_data_get_map(self._data)
 
-    def get_array(self) -> Tuple[int, bool, Optional[int]]:
+    def get_array(self) -> tuple[int, bool, Optional[int]]:
         """
         If the current node is an array, return a tuple of the element
         count, a boolean indicating whether the array is described, and
@@ -1399,7 +1400,7 @@ class Data:
         """
         pn_data_dump(self._data)
 
-    def put_dict(self, d: Dict[Any, Any]) -> None:
+    def put_dict(self, d: dict[Any, Any]) -> None:
         """
         A convenience method for encoding the contents of a Python ``dict``
         as an AMQP map.
@@ -1416,7 +1417,7 @@ class Data:
         finally:
             self.exit()
 
-    def get_dict(self) -> Dict[Any, Any]:
+    def get_dict(self) -> dict[Any, Any]:
         """
         A convenience method for decoding an AMQP map as a Python ``dict``.
 
@@ -1436,7 +1437,7 @@ class Data:
                 self.exit()
             return result
 
-    def put_sequence(self, s: List[Any]) -> None:
+    def put_sequence(self, s: list[Any]) -> None:
         """
         A convenience method for encoding a Python ``list`` as an
         AMQP list.
@@ -1452,7 +1453,7 @@ class Data:
         finally:
             self.exit()
 
-    def get_sequence(self) -> List[Any]:
+    def get_sequence(self) -> list[Any]:
         """
         A convenience method for decoding an AMQP list as a Python ``list``.
 
