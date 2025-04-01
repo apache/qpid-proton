@@ -48,13 +48,13 @@ lcov -c -i -d $BLDPATH -o proton-base.info
 # Get actual coverage data
 lcov -c -d $BLDPATH -o proton-ctest.info
 
-# Total them up
-lcov --add proton-base.info --add proton-ctest.info > proton-total-raw.info
+# Total them up (ignore empty files in case we don't have any python info)
+lcov --ignore-errors empty --add proton-base.info --add proton-ctest.info --add python.info -o proton-total-raw.info
 
 # Snip out stuff in /usr (we don't care about coverage in system code) & in unit test framework
-lcov --ignore-errors unused --remove proton-total-raw.info "/usr/include*" "/usr/share*" "tests/include/*"> proton-total.info
+lcov --ignore-errors unused --remove proton-total-raw.info "/usr/include*" "/usr/share*" "tests/include/*" -o proton-total.info
 
 # Generate report
 rm -rf html
-genhtml -p $SRCPATH -p $BLDPATH proton-total.info --title "Proton CTest Coverage" --demangle-cpp -o html
+genhtml -p $SRCPATH -p $(dirname $BLDPATH) --source-directory $SRCPATH/python proton-total.info --title "Proton CTest Coverage" --demangle-cpp -o html
 

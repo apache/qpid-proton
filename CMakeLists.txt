@@ -103,18 +103,26 @@ else (CMAKE_CONFIGURATION_TYPES)
        "Build type: Debug, Release, RelWithDebInfo, MinSizeRel or Coverage (default RelWithDebInfo)" FORCE)
   endif ()
 
-  # Set up extra coverage analysis options for gcc and clang
-  if (CMAKE_COMPILER_IS_GNUCC)
-    set (CMAKE_C_FLAGS_COVERAGE "-g -O0 --coverage -fprofile-update=atomic")
-    set (CMAKE_CXX_FLAGS_COVERAGE "-g -O0 --coverage -fprofile-update=atomic ")
-    set (CMAKE_EXE_LINKER_FLAGS_COVERAGE "--coverage")
-    set (CMAKE_MODULE_LINKER_FLAGS_COVERAGE "--coverage")
-    set (CMAKE_SHARED_LINKER_FLAGS_COVERAGE "--coverage")
-    mark_as_advanced(
-      CMAKE_C_FLAGS_COVERAGE CMAKE_CXX_FLAGS_COVERAGE
-      CMAKE_EXE_LINKER_FLAGS_COVERAGE CMAKE_MODULE_LINKER_FLAGS_COVERAGE
-      CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
-  endif()
+  # Set up extra coverage analysis options for gcc (-Og is now the recommended optimization level for debugging)
+  # See https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html
+  set (COVERAGE_COMPILE_FLAGS_GNU "-g -Og --coverage -fprofile-update=atomic")
+  set (COVERAGE_LINK_FLAGS_GNU "--coverage")
+
+  set (CMAKE_C_FLAGS_COVERAGE "${COVERAGE_COMPILE_FLAGS_${CMAKE_C_COMPILER_ID}}" CACHE STRING
+       "Flags used by the C compiler during COVERAGE builds." FORCE)
+  set (CMAKE_CXX_FLAGS_COVERAGE "${COVERAGE_COMPILE_FLAGS_${CMAKE_CXX_COMPILER_ID}}" CACHE STRING
+       "Flags used by the CXX compiler during COVERAGE builds." FORCE)
+  set (CMAKE_EXE_LINKER_FLAGS_COVERAGE "${COVERAGE_LINK_FLAGS_${CMAKE_C_COMPILER_ID}}" CACHE STRING
+       "Flags used by the linker during COVERAGE builds." FORCE)
+  set (CMAKE_MODULE_LINKER_FLAGS_COVERAGE "${COVERAGE_LINK_FLAGS_${CMAKE_C_COMPILER_ID}}" CACHE STRING
+       "Flags used by the linker during the creation of modules during COVERAGE builds." FORCE)
+  set (CMAKE_SHARED_LINKER_FLAGS_COVERAGE "${COVERAGE_LINK_FLAGS_${CMAKE_C_COMPILER_ID}}" CACHE STRING
+       "Flags used by the linker during the creation of shared libraries during COVERAGE builds." FORCE)
+
+  mark_as_advanced(
+    CMAKE_C_FLAGS_COVERAGE CMAKE_CXX_FLAGS_COVERAGE
+    CMAKE_EXE_LINKER_FLAGS_COVERAGE CMAKE_MODULE_LINKER_FLAGS_COVERAGE
+    CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
 
   if (CMAKE_BUILD_TYPE MATCHES "Deb")
     set (has_debug_symbols " (has debug symbols)")
@@ -128,6 +136,9 @@ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
   add_custom_target(coverage
     WORKING_DIRECTORY ./coverage_results
     COMMAND ${PROJECT_SOURCE_DIR}/scripts/record-coverage.sh ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
+  if (BUILD_PYTHON)
+    add_dependencies(coverage python-coverage)
+  endif()
 endif()
 
 # Try to keep any platform specific overrides together here:

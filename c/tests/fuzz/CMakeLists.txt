@@ -17,6 +17,7 @@
 # under the License.
 #
 
+set(C_SOURCE_DIR "${PROJECT_SOURCE_DIR}/c/src")
 add_definitions(${C_STANDARD_FLAGS} ${COMPILE_WARNING_FLAGS})
 
 option(FUZZ_REGRESSION_TESTS "Run fuzz tests with regression test driver" ON)
@@ -83,11 +84,11 @@ target_link_libraries (fuzz-message-decode ${FUZZING_QPID_PROTON_CORE_LIBRARY})
 # pn_url_parse is not in proton core and is only used by messenger so compile specially
 pn_add_fuzz_test (fuzz-url
   fuzz-url.c
-  ${PN_C_SOURCE_DIR}/extra/url.c
-  ${PN_C_SOURCE_DIR}/core/object/object.c
-  ${PN_C_SOURCE_DIR}/core/object/string.c
-  ${PN_C_SOURCE_DIR}/core/util.c
-  ${PN_C_SOURCE_DIR}/core/memory.c)
+  ${C_SOURCE_DIR}/extra/url.c
+  ${C_SOURCE_DIR}/core/object/object.c
+  ${C_SOURCE_DIR}/core/object/string.c
+  ${C_SOURCE_DIR}/core/util.c
+  ${C_SOURCE_DIR}/core/memory.c)
 target_compile_definitions(fuzz-url PRIVATE PROTON_DECLARE_STATIC)
 
 # This regression test can take a very long time so don't run by default
@@ -99,4 +100,4 @@ endif()
 # Fuzz tests of internals
 
 # pni_sniff_header is internal so it has to be compiled specially
-pn_add_fuzz_test (fuzz-sniff-header fuzz-sniff-header.c ${PN_C_SOURCE_DIR}/core/autodetect.c)
+pn_add_fuzz_test (fuzz-sniff-header fuzz-sniff-header.c ${C_SOURCE_DIR}/core/autodetect.c)

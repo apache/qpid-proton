@@ -204,7 +204,7 @@ if (BUILD_TESTING)
 
   if (CMAKE_BUILD_TYPE MATCHES "Coverage")
     set (python_coverage_module "coverage")
-    set (python_coverage_options -m ${python_coverage_module} run --parallel-mode)
+    set (python_coverage_options -m ${python_coverage_module} run --branch --parallel-mode)
   endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
   if (ENABLE_PYTHON_ISOLATED)
@@ -249,7 +249,18 @@ if (BUILD_TESTING)
     add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
   endif()
 
-
+  # If we are doing coverage, then post process the python coverage data before running the coverage target
+  if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+    add_custom_command(
+      OUTPUT ../coverage_results/python.info
+      DEPENDS pytest_cffi
+      COMMAND ${pytest_executable} -m coverage combine --append
+      COMMAND ${pytest_executable} -m coverage lcov -o ../coverage_results/python.info
+    )
+    add_custom_target(python-coverage
+      DEPENDS ../coverage_results/python.info
+    )
+  endif()
 
   if (TARGET pytest_cffi)
     # If we are on windows copy the qpid-proton-core dll to the test directory so we can find it easily

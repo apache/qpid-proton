@@ -103,7 +103,7 @@ if (result EQUAL 0)  # Have minitest
     "PATH=${PATH}"
     "RUBYLIB=${RUBYLIB}"
     "${COVERAGE}"
-    "COVERAGE_DIR=${CMAKE_CURRENT_BINARY_DIR}/coverage"
+    "COVERAGE_DIR=${PROJECT_BINARY_DIR}/coverage_results/ruby"
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}")
 
   macro(add_ruby_test script)
