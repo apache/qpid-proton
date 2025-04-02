@@ -29,7 +29,7 @@ sudo apt-get install libgtest-dev libgmock-dev libbenchmark-dev \
 
 # Clone OpenTelemetry-cpp
 
-git clone -b v1.9.1 --recurse-submodules https://github.com/open-telemetry/opentelemetry-cpp
+git clone -b v1.19.0 --recurse-submodules https://github.com/open-telemetry/opentelemetry-cpp
 
 # Build/Install OpenTelemetry-cpp
 
