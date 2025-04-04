@@ -34,7 +34,7 @@ from functools import total_ordering
 from cproton import PN_ACCEPTED, PN_EVENT_NONE
 
 from ._data import Described, symbol, ulong
-from ._delivery import Delivery, TransactionalDisposition
+from ._delivery import Delivery, Disposition, TransactionalDisposition
 from ._endpoints import Connection, Endpoint, Link, Session, Terminus
 from ._events import Collector, EventType, EventBase, Event
 from ._exceptions import SSLUnavailable
@@ -615,8 +615,8 @@ class Transaction(object):
 
     def handle_outcome(self, event):
         if event.delivery == self._declare:
-            if event.delivery.remote.data:
-                self.id = event.delivery.remote.data[0]
+            if event.delivery.remote_state == Disposition.TRANSACTIONAL_STATE:
+                self.id = event.delivery.remote.id
                 self.handler.on_transaction_declared(event)
             elif event.delivery.remote_state == Delivery.REJECTED:
                 self.handler.on_transaction_declare_failed(event)
