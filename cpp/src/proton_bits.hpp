@@ -20,6 +20,7 @@
  */
 #include <proton/link.h>
 #include <proton/session.h>
+#include <proton/tracker.hpp>
 
 #include <string>
 #include <iosfwd>
@@ -41,6 +42,7 @@ struct pn_connection_t;
 struct pn_session_t;
 struct pn_link_t;
 struct pn_delivery_t;
+struct pn_disposition_t;
 struct pn_condition_t;
 struct pn_acceptor_t;
 struct pn_terminus_t;
@@ -60,12 +62,14 @@ class sender;
 class receiver;
 class transfer;
 class tracker;
+class disposition;
 class delivery;
 class error_condition;
 class acceptor;
 class terminus;
 class source;
 class target;
+class coordinator;
 class reactor;
 class messaging_handler;
 
@@ -98,11 +102,15 @@ template <> struct wrapped<sender> { typedef pn_link_t type; };
 template <> struct wrapped<receiver> { typedef pn_link_t type; };
 template <> struct wrapped<transfer> { typedef pn_delivery_t type; };
 template <> struct wrapped<tracker> { typedef pn_delivery_t type; };
+template <> struct wrapped<disposition> {
+    typedef pn_disposition_t type;
+};
 template <> struct wrapped<delivery> { typedef pn_delivery_t type; };
 template <> struct wrapped<error_condition> { typedef pn_condition_t type; };
 template <> struct wrapped<terminus> { typedef pn_terminus_t type; };
 template <> struct wrapped<source> { typedef pn_terminus_t type; };
 template <> struct wrapped<target> { typedef pn_terminus_t type; };
+template <> struct wrapped<coordinator> { typedef pn_terminus_t type; };
 
 template <class T> struct wrapper {};
 template <> struct wrapper<pn_data_t> { typedef internal::data type; };
@@ -111,6 +119,9 @@ template <> struct wrapper<pn_connection_t> { typedef connection type; };
 template <> struct wrapper<pn_session_t> { typedef session type; };
 template <> struct wrapper<pn_link_t> { typedef link type; };
 template <> struct wrapper<pn_delivery_t> { typedef transfer type; };
+template <> struct wrapper<pn_disposition_t> {
+    typedef disposition type;
+};
 template <> struct wrapper<pn_condition_t> { typedef error_condition type; };
 template <> struct wrapper<pn_terminus_t> { typedef terminus type; };
 

@@ -94,6 +94,9 @@ class sender_options {
     /// Options for the receiver node of the receiver.
     PN_CPP_EXTERN sender_options& target(const target_options&);
 
+    /// Options for the coordinator node of the receiver.
+    PN_CPP_EXTERN sender_options& coordinator(const coordinator_options&);
+
     /// Set the link name. If not set a unique name is generated.
     PN_CPP_EXTERN sender_options& name(const std::string& name);
 
