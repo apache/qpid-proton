@@ -26,9 +26,11 @@ from proton.reactor import Container
 
 class Client(MessagingHandler):
     def __init__(self, url, requests):
-        super(Client, self).__init__()
+        super(Client, self).__init__(auto_accept=False)
         self.url = url
         self.requests = requests
+        self.outstanding = {}
+        self.msgs = 0
 
     def on_start(self, event):
         self.sender = event.container.create_sender(self.url)
@@ -36,7 +38,10 @@ class Client(MessagingHandler):
 
     def next_request(self):
         if self.receiver.remote_source.address:
-            req = Message(reply_to=self.receiver.remote_source.address, body=self.requests[0])
+            request = self.requests.pop(0)
+            req = Message(reply_to=self.receiver.remote_source.address, correlation_id=self.msgs, body=request)
+            self.outstanding[req.correlation_id] = request
+            self.msgs += 1
             self.sender.send(req)
 
     def on_link_opened(self, event):
@@ -44,10 +49,21 @@ class Client(MessagingHandler):
             self.next_request()
 
     def on_message(self, event):
-        print("%s => %s" % (self.requests.pop(0), event.message.body))
         if self.requests:
             self.next_request()
+
+        message = event.message
+        delivery = event.delivery
+        correlation_id = message.correlation_id
+        request = self.outstanding.pop(correlation_id, None)
+
+        if request:
+            print(f"{request}({correlation_id}) => {message.body}")
+            self.accept(delivery)
         else:
+            print(f"Unexpected response - unknown correlation_id({correlation_id}): {message.body}")
+            self.reject(delivery)
+        if not self.outstanding:
             event.connection.close()
 
 
