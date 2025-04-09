@@ -59,4 +59,12 @@ PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const binary&);
 
 } // proton
 
+/// Specialize std::hash so we can use proton::binary as a key for unordered datastructures
+template <> struct std::hash<proton::binary> {
+  std::size_t operator()(const proton::binary& k) const {
+      std::string s{k};
+      return std::hash<std::string>{}(s);
+  }
+};
+
 #endif // PROTON_BINARY_HPP

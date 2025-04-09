@@ -92,4 +92,23 @@ template<class T> T coerce(const message_id& x) { return internal::coerce<T>(x);
 
 } // proton
 
+/// Specialize std::hash so we can use proton::message_id as a key for unordered datastructures
+template <> struct std::hash<proton::message_id> {
+  std::size_t operator()(const proton::message_id& s) const {
+    std::size_t h;
+    auto type = s.type();
+    switch(type) {
+      case proton::ULONG:  h = std::hash<uint64_t>{}(proton::internal::get<uint64_t>(s)); break;
+      case proton::UUID:   h = std::hash<proton::uuid>{}(proton::internal::get<proton::uuid>(s)); break;
+      case proton::BINARY: h = std::hash<proton::binary>{}(proton::internal::get<proton::binary>(s)); break;
+      case proton::STRING: h = std::hash<std::string>{}(proton::internal::get<std::string>(s)); break;
+      default: throw proton::conversion_error("invalid message_id type "+type_name(s.type()));
+    }
+    auto type_hash = std::hash<proton::type_id>{}(type);
+    // Combine the two hashes - see https://stackoverflow.com/a/5889238
+    return h ^ (type_hash + 0x9e3779b9 + (h << 6) + (h >> 2));
+}
+
+};
+
 #endif // PROTON_MESSAGE_ID_HPP

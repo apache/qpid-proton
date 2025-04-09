@@ -66,4 +66,12 @@ inline std::string to_string(const uuid& u) { return u.str(); }
 
 } // proton
 
+/// Specialize std::hash so we can use proton::uuid as a key for unordered datastructures
+template <> struct std::hash<proton::uuid> {
+  std::size_t operator()(const proton::uuid& k) const {
+      std::string s{k.begin(), k.end()};
+      return std::hash<std::string>{}(s);
+  };
+};
+
 #endif // PROTON_UUID_HPP

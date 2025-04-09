@@ -55,14 +55,6 @@
 #include <string>
 #include <unordered_map>
 
-// Custom specialization of std::hash injected in namespace std for proton::binary as a key in tag_span i.e. an unordered_map.
-template <> struct std::hash<proton::binary> {
-    std::size_t operator()(const proton::binary& k) const {
-        std::string s(k[0], k.size());
-        return std::hash<std::string>{}(s);
-    }
-};
-
 namespace proton
 {
 namespace nostd = opentelemetry::nostd;
