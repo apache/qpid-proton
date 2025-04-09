@@ -2380,6 +2380,25 @@ class NewModifiedTester(DispositionTester):
         assert dlv.remote.annotations == self._annotations, (dlv.remote.annotations, self._annotations)
 
 
+class NewDefaultModifiedTester(DispositionTester):
+    def __init__(self):
+        self._failed = True
+        self._undeliverable = False
+        self._annotations = None
+        super().__init__(Disposition.MODIFIED)
+
+    def apply(self, dlv: Delivery):
+        dlv.local = ModifiedDisposition()
+        dlv.update()
+
+    def check(self, dlv: Delivery):
+        assert dlv.remote_state == self._type
+        assert dlv.remote.type == self._type
+        assert dlv.remote.failed == self._failed, (dlv.remote.failed, self._failed)
+        assert dlv.remote.undeliverable == self._undeliverable, (dlv.remote.undeliverable, self._undeliverable)
+        assert dlv.remote.annotations == self._annotations, (dlv.remote.annotations, self._annotations)
+
+
 class CustomTester(DispositionTester):
     def __init__(self, type, data):
         self._data = data
@@ -2504,6 +2523,9 @@ class DeliveryTest(Test):
     def testNewModified(self):
         self._testDisposition(NewModifiedTester(failed=True, undeliverable=True,
                                                 annotations={"key": "value"}))
+
+    def testNewDefaultModified(self):
+        self._testDisposition(NewDefaultModifiedTester())
 
     def testTransactional(self):
         self._testDisposition(TransactionalTester(id=b'1324xxx', outcome_type=Disposition.ACCEPTED))

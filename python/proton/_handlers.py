@@ -24,7 +24,7 @@ import time
 import weakref
 
 from ._condition import Condition
-from ._delivery import Delivery
+from ._delivery import Delivery, ModifiedDisposition
 from ._endpoints import Endpoint
 from ._events import Event, _dispatch
 from ._exceptions import ProtonException
@@ -187,7 +187,7 @@ class Acking(object):
         """
         self.settle(delivery, Delivery.REJECTED)
 
-    def release(self, delivery: Delivery, delivered: bool = True) -> None:
+    def release(self, delivery: Delivery, delivered: bool = True, failed: bool = True, undeliverable: bool = False) -> None:
         """
         Releases a received message, making it available at the source
         for any (other) interested receiver. The ``delivered``
@@ -206,7 +206,8 @@ class Acking(object):
             delivery flag :const:`proton.Delivery.RELEASED`
         """
         if delivered:
-            self.settle(delivery, Delivery.MODIFIED)
+            delivery.local = ModifiedDisposition(failed=failed, undeliverable=undeliverable)
+            self.settle(delivery)
         else:
             self.settle(delivery, Delivery.RELEASED)
 

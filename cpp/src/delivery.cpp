@@ -49,6 +49,6 @@ delivery::~delivery() = default;
 void delivery::accept() { settle_delivery(pn_object(), ACCEPTED); }
 void delivery::reject() { settle_delivery(pn_object(), REJECTED); }
 void delivery::release() { settle_delivery(pn_object(), RELEASED); }
-void delivery::modify() { settle_delivery(pn_object(), MODIFIED); }
+void delivery::modify() { pn_disposition_set_failed(pn_delivery_local(pn_object()), true); settle_delivery(pn_object(), MODIFIED); }
 
 }

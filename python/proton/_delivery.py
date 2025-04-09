@@ -425,7 +425,7 @@ class RejectedDisposition(LocalDisposition):
 
 class ModifiedDisposition(LocalDisposition):
 
-    def __init__(self, failed: bool = None, undeliverable: bool = None,
+    def __init__(self, failed: bool = True, undeliverable: bool = None,
                  annotations: Optional[dict['symbol', 'PythonAMQPData']] = None):
         self._failed = failed
         self._undeliverable = undeliverable
