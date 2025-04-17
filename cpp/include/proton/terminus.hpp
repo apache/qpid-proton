@@ -122,6 +122,7 @@ class terminus {
   friend class internal::factory<terminus>;
   friend class source;
   friend class target;
+  friend class coordinator;
     /// @endcond
 };
 
