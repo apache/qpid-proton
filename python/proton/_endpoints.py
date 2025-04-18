@@ -65,7 +65,7 @@ from ._transport import Transport
 from ._wrapper import Wrapper
 
 from collections.abc import Iterator
-from typing import Any, Optional, Union, TYPE_CHECKING
+from typing import Any, Optional, Union, TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
     from ._condition import Condition
@@ -1169,6 +1169,11 @@ class Sender(Link):
         :param data: Data to send
         """
         return self._check(pn_link_send(self._impl, data))
+
+    @overload
+    def send(self, obj: bytes) -> int: ...
+    @overload
+    def send(self, obj: 'Message', tag: Optional[str] = None) -> Delivery: ...
 
     def send(self, obj: Union[bytes, 'Message'], tag: Optional[str] = None) -> Union[int, Delivery]:
         """

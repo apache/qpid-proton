@@ -556,7 +556,7 @@ class Event(EventBase):
         return self._session
 
     @property
-    def link(self) -> Optional[Union['Receiver', 'Sender']]:
+    def link(self) -> Optional[Link]:
         """
         The link associated with the event, or ``None`` if none
         is associated with it.

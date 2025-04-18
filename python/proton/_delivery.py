@@ -133,6 +133,9 @@ class Disposition:
     MODIFIED = DispositionType.MODIFIED
     TRANSACTIONAL_STATE = DispositionType.TRANSACTIONAL_STATE
 
+    @property
+    def type(self) -> Union[int, DispositionType]: ...
+
 
 class RemoteDisposition(Disposition):
 
