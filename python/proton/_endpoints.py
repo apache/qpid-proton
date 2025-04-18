@@ -65,7 +65,7 @@ from ._transport import Transport
 from ._wrapper import Wrapper
 
 from collections.abc import Iterator
-from typing import Any, Optional, Union, TYPE_CHECKING, overload
+from typing import Any, Callable, ClassVar, Optional, Union, TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
     from ._condition import Condition
@@ -74,7 +74,7 @@ if TYPE_CHECKING:
     from ._message import Message
 
 
-class Endpoint(object):
+class Endpoint(Wrapper):
     """
     Abstract class from which :class:`Connection`, :class:`Session`
     and :class:`Link` are derived, and which defines the state
@@ -113,12 +113,16 @@ class Endpoint(object):
     REMOTE_CLOSED = PN_REMOTE_CLOSED
     """ The remote endpoint state is closed. """
 
+    get_condition: ClassVar[Callable[[Any], Any]]
+    get_remote_condition: ClassVar[Callable[[Any], Any]]
+    get_state: ClassVar[Callable[[Any], int]]
+
     def __init__(self) -> None:
         self.condition: Optional['Condition'] = None
         self._handler: Optional[Handler] = None
 
     def _update_cond(self) -> None:
-        obj2cond(self.condition, self._get_cond_impl())
+        obj2cond(self.condition, type(self).get_condition(self._impl))
 
     @property
     def remote_condition(self) -> Optional['Condition']:
@@ -126,14 +130,18 @@ class Endpoint(object):
         The remote condition associated with the connection endpoint.
         See :class:`Condition` for more information.
         """
-        return cond2obj(self._get_remote_cond_impl())
+        return cond2obj(type(self).get_remote_condition(self._impl))
 
-    # the following must be provided by subclasses
-    def _get_cond_impl(self):
-        assert False, "Subclass must override this!"
-
-    def _get_remote_cond_impl(self):
-        assert False, "Subclass must override this!"
+    @property
+    def state(self) -> int:
+        """
+        The state of the endpoint as a bit field. The state has a local
+        and a remote component. Each of these can be in one of three
+        states: ``UNINIT``, ``ACTIVE`` or ``CLOSED``. These can be tested by masking
+        against :const:`LOCAL_UNINIT`, :const:`LOCAL_ACTIVE`, :const:`LOCAL_CLOSED`, :const:`REMOTE_UNINIT`,
+        :const:`REMOTE_ACTIVE` and :const:`REMOTE_CLOSED`.
+        """
+        return type(self).get_state(self._impl)
 
     @property
     def handler(self) -> Optional[Handler]:
@@ -155,13 +163,16 @@ class Endpoint(object):
             self._handler.add(handler)
 
 
-class Connection(Wrapper, Endpoint):
+class Connection(Endpoint):
     """
     A representation of an AMQP connection.
     """
 
     constructor = pn_connection
     get_context = pn_connection_attachments
+    get_condition = pn_connection_condition
+    get_remote_condition = pn_connection_remote_condition
+    get_state = pn_connection_state
 
     def __init__(self, impl: Any = None) -> None:
         if self.Uninitialized():
@@ -171,9 +182,6 @@ class Connection(Wrapper, Endpoint):
             self.properties = None
             self.url = None
             self._acceptor = None
-
-    def _get_attachments(self):
-        return pn_connection_attachments(self._impl)
 
     @property
     def connection(self) -> 'Connection':
@@ -196,12 +204,6 @@ class Connection(Wrapper, Endpoint):
             raise exc("[%s]: %s" % (err, pn_connection_error(self._impl)))
         else:
             return err
-
-    def _get_cond_impl(self):
-        return pn_connection_condition(self._impl)
-
-    def _get_remote_cond_impl(self):
-        return pn_connection_remote_condition(self._impl)
 
     # TODO: Blacklisted API call
     def collect(self, collector: 'Collector') -> None:
@@ -403,17 +405,6 @@ class Connection(Wrapper, Endpoint):
             s.terminate()
             s.update()
 
-    @property
-    def state(self) -> int:
-        """
-        The state of the connection as a bit field. The state has a local
-        and a remote component. Each of these can be in one of three
-        states: ``UNINIT``, ``ACTIVE`` or ``CLOSED``. These can be tested by masking
-        against :const:`LOCAL_UNINIT`, :const:`LOCAL_ACTIVE`, :const:`LOCAL_CLOSED`, :const:`REMOTE_UNINIT`,
-        :const:`REMOTE_ACTIVE` and :const:`REMOTE_CLOSED`.
-        """
-        return pn_connection_state(self._impl)
-
     def session(self) -> 'Session':
         """
         Returns a new session on this connection.
@@ -540,23 +531,17 @@ class Connection(Wrapper, Endpoint):
             self.properties_dict = properties_dict
 
 
-class Session(Wrapper, Endpoint):
+class Session(Endpoint):
     """A container of links"""
 
     get_context = pn_session_attachments
+    get_condition = pn_session_condition
+    get_remote_condition = pn_session_remote_condition
+    get_state = pn_session_state
 
     def __init__(self, impl):
         if self.Uninitialized():
             Endpoint.__init__(self)
-
-    def _get_attachments(self):
-        return pn_session_attachments(self._impl)
-
-    def _get_cond_impl(self):
-        return pn_session_condition(self._impl)
-
-    def _get_remote_cond_impl(self):
-        return pn_session_remote_condition(self._impl)
 
     @property
     def incoming_capacity(self) -> int:
@@ -636,14 +621,6 @@ class Session(Wrapper, Endpoint):
         return Session.wrap(pn_session_next(self._impl, mask))
 
     @property
-    def state(self) -> int:
-        """
-        The endpoint state flags for this session. See :class:`Endpoint` for
-        details of the flags.
-        """
-        return pn_session_state(self._impl)
-
-    @property
     def connection(self) -> Connection:
         """
         The parent connection for this session.
@@ -684,7 +661,7 @@ class Session(Wrapper, Endpoint):
         pn_session_free(self._impl)
 
 
-class Link(Wrapper, Endpoint):
+class Link(Endpoint):
     """
     A representation of an AMQP link (a unidirectional channel for
     transferring messages), of which there are two concrete
@@ -704,6 +681,9 @@ class Link(Wrapper, Endpoint):
     """The receiver will only settle deliveries after the sender settles."""
 
     get_context = pn_link_attachments
+    get_condition = pn_link_condition
+    get_remote_condition = pn_link_remote_condition
+    get_state = pn_link_state
 
     def __new__(cls, impl) -> 'Link':
         if pn_link_is_sender(impl):
@@ -716,21 +696,12 @@ class Link(Wrapper, Endpoint):
             Endpoint.__init__(self)
             self.properties = None
 
-    def _get_attachments(self):
-        return pn_link_attachments(self._impl)
-
     def _check(self, err: int) -> int:
         if err < 0:
             exc = EXCEPTIONS.get(err, LinkException)
             raise exc("[%s]: %s" % (err, pn_error_text(pn_link_error(self._impl))))
         else:
             return err
-
-    def _get_cond_impl(self):
-        return pn_link_condition(self._impl)
-
-    def _get_remote_cond_impl(self):
-        return pn_link_remote_condition(self._impl)
 
     def open(self) -> None:
         """
@@ -758,19 +729,6 @@ class Link(Wrapper, Endpoint):
         """
         self._update_cond()
         pn_link_close(self._impl)
-
-    @property
-    def state(self) -> int:
-        """
-        The state of the link as a bit field. The state has a local
-        and a remote component. Each of these can be in one of three
-        states: ``UNINIT``, ``ACTIVE`` or ``CLOSED``. These can be
-        tested by masking against :const:`LOCAL_UNINIT`,
-        :const:`LOCAL_ACTIVE`, :const:`LOCAL_CLOSED`,
-        :const:`REMOTE_UNINIT`, :const:`REMOTE_ACTIVE` and
-        :const:`REMOTE_CLOSED`.
-        """
-        return pn_link_state(self._impl)
 
     @property
     def source(self) -> 'Terminus':

@@ -43,7 +43,7 @@ class Wrapper:
     """
 
     constructor: ClassVar[Optional[Callable[[], Any]]] = None
-    get_context: ClassVar[Optional[Callable[[Any], dict[str, Any]]]] = None
+    get_context: ClassVar[Callable[[Any], Any]]
 
     __slots__ = ["_impl", "_attrs"]
 
