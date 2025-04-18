@@ -29,16 +29,20 @@ class Recv(MessagingHandler):
         self.url = url
         self.expected = count
         self.received = 0
+        self.dedup_ids = set()
 
     def on_start(self, event):
         event.container.create_receiver(self.url)
 
     def on_message(self, event):
-        if event.message.id and event.message.id < self.received:
+        message = event.message
+        if message.id in self.dedup_ids:
             # ignore duplicate message
+            print(f"duplicate message ignored {message.id}")
             return
+        self.dedup_ids.add(message.id)
         if self.expected == 0 or self.received < self.expected:
-            print(event.message.body)
+            print(f"{message}")
             self.received += 1
             if self.received == self.expected:
                 event.receiver.close()
