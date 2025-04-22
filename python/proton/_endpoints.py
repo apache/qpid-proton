@@ -65,6 +65,7 @@ from ._transport import Transport
 from ._wrapper import Wrapper
 
 from collections.abc import Iterator
+from enum import IntFlag
 from typing import Any, Callable, ClassVar, Optional, Union, TYPE_CHECKING, overload
 
 if TYPE_CHECKING:
@@ -72,6 +73,32 @@ if TYPE_CHECKING:
     from ._data import Array, PythonAMQPData, symbol
     from ._events import Collector
     from ._message import Message
+
+
+class EndpointState(IntFlag):
+    """
+    The state of an AMQP endpoint. This is a bit field with flags that
+    encode both the local and remote state of an AMQP Endpoint
+    (:class:`Connection`, :class:`Link`, or :class:`Session`).
+    """
+
+    LOCAL_UNINIT = PN_LOCAL_UNINIT
+    """ The local  endpoint state is uninitialized. """
+
+    REMOTE_UNINIT = PN_REMOTE_UNINIT
+    """ The local endpoint state is active. """
+
+    LOCAL_ACTIVE = PN_LOCAL_ACTIVE
+    """ The local endpoint state is closed. """
+
+    REMOTE_ACTIVE = PN_REMOTE_ACTIVE
+    """ The remote endpoint state is uninitialized. """
+
+    LOCAL_CLOSED = PN_LOCAL_CLOSED
+    """ The remote endpoint state is active. """
+
+    REMOTE_CLOSED = PN_REMOTE_CLOSED
+    """ The remote endpoint state is closed. """
 
 
 class Endpoint(Wrapper):
@@ -95,27 +122,16 @@ class Endpoint(Wrapper):
     but also the last known state of the remote endpoint.
     """
 
-    LOCAL_UNINIT = PN_LOCAL_UNINIT
-    """ The local  endpoint state is uninitialized. """
-
-    REMOTE_UNINIT = PN_REMOTE_UNINIT
-    """ The local endpoint state is active. """
-
-    LOCAL_ACTIVE = PN_LOCAL_ACTIVE
-    """ The local endpoint state is closed. """
-
-    REMOTE_ACTIVE = PN_REMOTE_ACTIVE
-    """ The remote endpoint state is uninitialized. """
-
-    LOCAL_CLOSED = PN_LOCAL_CLOSED
-    """ The remote endpoint state is active. """
-
-    REMOTE_CLOSED = PN_REMOTE_CLOSED
-    """ The remote endpoint state is closed. """
+    LOCAL_UNINIT = EndpointState.LOCAL_UNINIT
+    REMOTE_UNINIT = EndpointState.REMOTE_UNINIT
+    LOCAL_ACTIVE = EndpointState.LOCAL_ACTIVE
+    REMOTE_ACTIVE = EndpointState.REMOTE_ACTIVE
+    LOCAL_CLOSED = EndpointState.LOCAL_CLOSED
+    REMOTE_CLOSED = EndpointState.REMOTE_CLOSED
 
     get_condition: ClassVar[Callable[[Any], Any]]
     get_remote_condition: ClassVar[Callable[[Any], Any]]
-    get_state: ClassVar[Callable[[Any], int]]
+    get_state: ClassVar[Callable[[Any], EndpointState]]
 
     def __init__(self) -> None:
         self.condition: Optional['Condition'] = None
@@ -133,7 +149,7 @@ class Endpoint(Wrapper):
         return cond2obj(type(self).get_remote_condition(self._impl))
 
     @property
-    def state(self) -> int:
+    def state(self) -> EndpointState:
         """
         The state of the endpoint as a bit field. The state has a local
         and a remote component. Each of these can be in one of three
