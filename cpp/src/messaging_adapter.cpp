@@ -30,6 +30,7 @@
 #include "proton/receiver_options.hpp"
 #include "proton/sender.hpp"
 #include "proton/sender_options.hpp"
+#include "proton/target_options.hpp"
 #include "proton/session.hpp"
 #include "proton/tracker.hpp"
 #include "proton/transport.hpp"
@@ -40,6 +41,7 @@
 
 #include <proton/connection.h>
 #include <proton/delivery.h>
+#include <proton/disposition.h>
 #include <proton/handlers.h>
 #include <proton/link.h>
 #include <proton/message.h>
@@ -69,7 +71,8 @@ void on_link_flow(messaging_handler& handler, pn_event_t* event) {
     // TODO: process session flow data, if no link-specific data, just return.
     if (!lnk) return;
     int state = pn_link_state(lnk);
-    if ((state&PN_LOCAL_ACTIVE) && (state&PN_REMOTE_ACTIVE)) {
+    if (pn_terminus_get_type(pn_link_remote_target(lnk)) == PN_COORDINATOR ||
+        ((state & PN_LOCAL_ACTIVE) && (state & PN_REMOTE_ACTIVE))) {
         link_context& lctx = link_context::get(lnk);
         if (pn_link_is_sender(lnk)) {
             if (pn_link_credit(lnk) > 0) {
@@ -116,7 +119,29 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
     link_context& lctx = link_context::get(lnk);
     Tracing& ot = Tracing::getTracing();
 
-    if (pn_link_is_receiver(lnk)) {
+    if (pn_terminus_get_type(pn_link_remote_target(lnk)) == PN_COORDINATOR) {
+        if (pn_delivery_updated(dlv)) {
+            tracker t(make_wrapper<tracker>(dlv));
+            ot.on_settled_span(t);
+            switch (pn_delivery_remote_state(dlv)) {
+            case PN_ACCEPTED:
+                handler.on_tracker_accept(t);
+                break;
+            case PN_REJECTED:
+                handler.on_tracker_reject(t);
+                break;
+            case PN_RELEASED:
+            case PN_MODIFIED:
+                handler.on_tracker_release(t);
+                break;
+            }
+            if (t.settled()) {
+                handler.on_tracker_settle(t);
+                if (lctx.auto_settle)
+                    t.settle();
+            }
+        }
+    } else if (pn_link_is_receiver(lnk)) {
         delivery d(make_wrapper<delivery>(dlv));
         if (pn_delivery_aborted(dlv)) {
             pn_delivery_settle(dlv);
@@ -274,11 +299,13 @@ void on_link_local_open(messaging_handler& handler, pn_event_t* event) {
 
 void on_link_remote_open(messaging_handler& handler, pn_event_t* event) {
     auto lnk = pn_event_link(event);
-    // Currently don't implement (transaction) coordinator
-    if (pn_terminus_get_type(pn_link_remote_target(lnk))==PN_COORDINATOR) {
-      auto error = pn_link_condition(lnk);
-      pn_condition_set_name(error, "amqp:not-implemented");
-      pn_link_close(lnk);
+    if (pn_terminus_get_type(pn_link_remote_target(lnk)) == PN_COORDINATOR) {
+      auto cond = pn_link_condition(lnk);
+      if (pn_condition_is_set(cond)) {
+            pn_condition_set_name(cond, "amqp:on_link_remote_open:FAILED");
+            pn_link_close(lnk);
+            return;
+        }
       return;
     }
     if (pn_link_state(lnk) & PN_LOCAL_UNINIT) { // Incoming link

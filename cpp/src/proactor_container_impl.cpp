@@ -26,6 +26,7 @@
 #include "proton/listener.hpp"
 #include "proton/reconnect_options.hpp"
 #include "proton/ssl.hpp"
+#include "proton/target_options.hpp"
 #include "proton/transport.hpp"
 #include "proton/url.hpp"
 
@@ -34,10 +35,14 @@
 #include "proton/proactor.h"
 #include "proton/transport.h"
 
+#include "proton/delivery.h"
+
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
 #include "reconnect_options_impl.hpp"
 #include "proton_bits.hpp"
+
+#include <proton/types.hpp>
 
 #include <assert.h>
 #include <string.h>

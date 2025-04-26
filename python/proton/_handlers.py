@@ -75,6 +75,8 @@ class OutgoingMessageHandler(Handler):
                 self.on_rejected(event)
             elif dlv.remote_state == Delivery.RELEASED or dlv.remote_state == Delivery.MODIFIED:
                 self.on_released(event)
+            else:
+                self.on_delivery_updated(event)
             if dlv.settled:
                 self.on_settled(event)
                 if self.auto_settle:
@@ -122,6 +124,17 @@ class OutgoingMessageHandler(Handler):
         """
         if self.delegate is not None:
             _dispatch(self.delegate, 'on_released', event)
+
+    def on_delivery_updated(self, event: Event):
+        """
+        Called when the remote peer updates the status of a delivery to any state that is not
+        'ACCEPT', 'REJECT', 'RELEASE' or 'MODIFY'
+
+        :param event: The underlying event object. Use this to obtain further
+            information on the event.
+        """
+        if self.delegate is not None:
+            _dispatch(self.delegate, 'on_delivery_updated', event)
 
     def on_settled(self, event: Event):
         """

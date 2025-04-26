@@ -36,6 +36,7 @@
 struct pn_session_t;
 
 namespace proton {
+  class transaction_impl;
 
 /// A container of senders and receivers.
 class
@@ -105,14 +106,30 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Get user data from this session.
     PN_CPP_EXTERN void* user_data() const;
 
+    PN_CPP_EXTERN void declare_transaction(proton::transaction_handler &handler, bool settle_before_discharge = false);
+
+    PN_CPP_EXTERN bool txn_is_empty();
+    PN_CPP_EXTERN bool txn_is_declared();
+    PN_CPP_EXTERN void txn_commit();
+    PN_CPP_EXTERN void txn_abort();
+    PN_CPP_EXTERN void txn_declare();
+    PN_CPP_EXTERN void txn_handle_outcome(proton::tracker);
+    PN_CPP_EXTERN proton::tracker txn_send(proton::sender s, proton::message msg);
+    PN_CPP_EXTERN void txn_accept(delivery &t);
+    PN_CPP_EXTERN proton::connection txn_connection() const;
+
     /// @cond INTERNAL
   friend class internal::factory<session>;
   friend class session_iterator;
+  friend class transaction_impl;
     /// @endcond
+
+    private:
+    // clean up txn internally
+    void txn_delete();
 };
 
 /// @cond INTERNAL
-    
 /// An iterator of sessions.
 class session_iterator : public internal::iter_base<session, session_iterator> {
  public:
@@ -126,7 +143,6 @@ class session_iterator : public internal::iter_base<session, session_iterator> {
 typedef internal::iter_range<session_iterator> session_range;
 
 /// @endcond
-    
 } // proton
 
 #endif // PROTON_SESSION_HPP
