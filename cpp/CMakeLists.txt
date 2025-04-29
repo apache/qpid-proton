@@ -49,7 +49,7 @@ else()
 endif()
 
 # Check for OPENTELEMETRY-CPP for distributed tracing
-find_package(opentelemetry-cpp)
+find_package(opentelemetry-cpp CONFIG)
 option(ENABLE_OPENTELEMETRYCPP "Use opentelemetry for distributed tracing" ${OPENTELEMETRY-CPP_FOUND})
 if (ENABLE_OPENTELEMETRYCPP)
   # This is a workaround because the otlp exporter requires protobuf but most packaged versions

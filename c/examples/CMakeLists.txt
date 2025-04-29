@@ -20,7 +20,7 @@ cmake_minimum_required (VERSION 3.16)
 
 project(ProtonCExamples C)
 
-find_package(Proton REQUIRED Core Proactor)
+find_package(Proton CONFIG REQUIRED Core Proactor)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 
