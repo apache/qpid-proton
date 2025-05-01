@@ -510,6 +510,62 @@ class SessionTest(Test):
         self.ssn.outgoing_window = 1024
         assert self.ssn.outgoing_window == 1024
 
+    def test_multiple_iterator(self):
+        ssn1 = self.ssn
+        ssn2 = self.c1.session()
+        ssn3 = self.c1.session()
+
+        # Check that the iterator gets all sessions for no mask
+        ssns = [ssn1, ssn2, ssn3]
+        for ssn in self.c1.sessions(0):
+            assert ssn in ssns, ssn
+            ssns.remove(ssn)
+        assert not ssns, ssns
+
+        # Check that every session starts uninitialized local and remote
+        ssns = [ssn1, ssn2, ssn3]
+        for ssn in self.c1.sessions(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT):
+            assert ssn in ssns, ssn
+            ssns.remove(ssn)
+        assert not ssns, ssns
+
+        for ssn in self.c1.sessions(0):
+            ssn.open()
+
+        self.pump()
+
+        ssns = [ssn1, ssn2, ssn3]
+        for ssn in self.c1.sessions(Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT):
+            assert ssn in ssns, ssn
+            ssns.remove(ssn)
+        assert not ssns, ssns
+
+        ssns = [ssn for ssn in self.c2.sessions(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)]
+        assert len(ssns) == 3, ssns
+
+        for ssn in self.c2.sessions(0):
+            ssn.open()
+
+        self.pump()
+
+        # Check that every session is now active local and remote
+        ssns = [ssn1, ssn2, ssn3]
+        for ssn in self.c1.sessions(Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE):
+            assert ssn in ssns, ssn
+            ssns.remove(ssn)
+        assert not ssns, ssns
+
+        for ssn in self.c2.sessions(0):
+            ssn.close()
+
+        self.pump()
+
+        # Check that every session is now closed local and remote
+        ssns = [ssn1, ssn2, ssn3]
+        for ssn in self.c1.sessions(Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED):
+            assert ssn in ssns, ssn
+            ssns.remove(ssn)
+
 
 class LinkTest(Test):
 
@@ -620,6 +676,72 @@ class LinkTest(Test):
         ssn.close()
         conn.close()
         self.pump()
+
+    def test_multiple_iterator(self):
+        snd1 = self.snd
+        sess1 = self.snd.session
+        snd2 = sess1.sender('sender2')
+        snd3 = sess1.sender('sender3')
+
+        # Check that the iterator gets all senders for no mask, and all senders
+        # are uninitialized local and remote
+        snds = [snd1, snd2, snd3]
+        for snd in sess1.connection.links(0):
+            assert snd.state == Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_UNINIT, snd.state
+            assert snd in snds, snd
+            snds.remove(snd)
+        assert not snds, snds
+
+        for snd in sess1.connection.links(0):
+            snd.open()
+
+        self.pump()
+
+        # Check that every sender starts uninitialized local and remote
+        snds = [snd1, snd2, snd3]
+        for snd in sess1.connection.links(Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_UNINIT):
+            assert snd in snds, f"{snd}, {snd.state} not in {snds}"
+            snds.remove(snd)
+        assert not snds, snds
+
+        rcvs = [rcv for rcv in self.rcv.connection.links(Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)]
+        assert len(rcvs) == 3, rcvs
+
+        for rcv in self.rcv.connection.links(0):
+            rcv.open()
+
+        self.pump()
+
+        # Check that every session is now active local and remote
+        snds = [snd1, snd2, snd3]
+        for snd in sess1.connection.links(Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE):
+            assert snd in snds, f"{snd}, {snd.state} not in {snds}"
+            snds.remove(snd)
+        assert not snds, snds
+
+        for snd in sess1.connection.links(0):
+            snd.close()
+
+        self.pump()
+
+        # Check that every session is now closed local and active remote
+        snds = [snd1, snd2, snd3]
+        for snd in sess1.connection.links(Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_ACTIVE):
+            assert snd in snds, f"{snd}, {snd.state} not in {snds}"
+            snds.remove(snd)
+        assert not snds, snds
+
+        for rcv in self.rcv.connection.links(0):
+            rcv.close()
+
+        self.pump()
+
+        # Check that every session is now closed local and remote
+        snds = [snd1, snd2, snd3]
+        for snd in sess1.connection.links(Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED):
+            assert snd in snds, f"{snd}, {snd.state} not in {snds}"
+            snds.remove(snd)
+        assert not snds, snds
 
     def test_closing_session(self):
         self.snd.open()

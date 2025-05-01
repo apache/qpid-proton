@@ -434,7 +434,7 @@ class Connection(Endpoint):
         else:
             return Session(ssn)
 
-    def session_head(self, mask: int) -> Optional['Session']:
+    def session_head(self, mask: EndpointState) -> Optional['Session']:
         """
         Retrieve the first session from a given connection that matches the
         specified state mask.
@@ -452,7 +452,19 @@ class Connection(Endpoint):
         """
         return Session.wrap(pn_session_head(self._impl, mask))
 
-    def link_head(self, mask: int) -> Optional[Union['Sender', 'Receiver']]:
+    def sessions(self, mask: EndpointState) -> Iterator['Session']:
+        """
+        Returns a generator of sessions owned by the connection with the
+        given state mask.
+
+        :return: Generator of sessions.
+        """
+        session = self.session_head(mask)
+        while session:
+            yield session
+            session = session.next(mask)
+
+    def link_head(self, mask: EndpointState) -> Optional['Link']:
         """
         Retrieve the first link that matches the given state mask.
 
@@ -468,6 +480,18 @@ class Connection(Endpoint):
             mask, else ``None`` if no link matches.
         """
         return Link.wrap(pn_link_head(self._impl, mask))
+
+    def links(self, mask: EndpointState) -> Iterator['Link']:
+        """
+        Returns a generator of links owned by this connection with the
+        given state mask.
+
+        :return: Generator of links.
+        """
+        link = self.link_head(mask)
+        while link:
+            yield link
+            link = link.next(mask)
 
     @property
     def error(self):
@@ -619,7 +643,7 @@ class Session(Endpoint):
         self._update_cond()
         pn_session_close(self._impl)
 
-    def next(self, mask):
+    def next(self, mask: EndpointState) -> Optional['Session']:
         """
         Retrieve the next session for this connection that matches the
         specified state mask.
@@ -935,7 +959,7 @@ class Link(Endpoint):
         """
         return pn_link_queued(self._impl)
 
-    def next(self, mask: int) -> Optional[Union['Sender', 'Receiver']]:
+    def next(self, mask: EndpointState) -> Optional['Link']:
         """
         Retrieve the next link that matches the given state mask.
 
