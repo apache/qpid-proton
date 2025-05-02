@@ -22,7 +22,7 @@ from typing import Any, Callable, Optional, Union
 from types import TracebackType
 
 
-class LazyHandlers(object):
+class LazyHandlers:
     def __get__(self, obj: 'Handler', clazz: Any) -> Union['LazyHandlers', list[Any]]:
         if obj is None:
             return self
@@ -31,7 +31,7 @@ class LazyHandlers(object):
         return ret
 
 
-class Handler(object):
+class Handler:
     """
     An abstract handler for events which supports child handlers.
     """

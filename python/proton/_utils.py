@@ -99,7 +99,7 @@ class BlockingSender(BlockingLink):
     """
 
     def __init__(self, connection: 'BlockingConnection', sender: 'Sender') -> None:
-        super(BlockingSender, self).__init__(connection, sender)
+        super().__init__(connection, sender)
         if self.link.target and self.link.target.address and self.link.target.address != self.link.remote_target.address:
             # this may be followed by a detach, which may contain an error condition, so wait a little...
             self._waitForClose()
@@ -144,7 +144,7 @@ class Fetcher(MessagingHandler):
     """
 
     def __init__(self, connection: 'Connection', prefetch: int):
-        super(Fetcher, self).__init__(prefetch=prefetch, auto_accept=False)
+        super().__init__(prefetch=prefetch, auto_accept=False)
         self.connection = connection
         self.incoming = collections.deque([])
         self.unsettled = collections.deque([])
@@ -208,7 +208,7 @@ class BlockingReceiver(BlockingLink):
             fetcher: Optional[Fetcher],
             credit: int = 1
     ) -> None:
-        super(BlockingReceiver, self).__init__(connection, receiver)
+        super().__init__(connection, receiver)
         if self.link.source and self.link.source.address and self.link.source.address != self.link.remote_source.address:
             # this may be followed by a detach, which may contain an error condition, so wait a little...
             self._waitForClose()
@@ -310,7 +310,7 @@ class LinkDetached(LinkException):
         else:
             txt += " by peer"
             self.condition = None
-        super(LinkDetached, self).__init__(txt)
+        super().__init__(txt)
 
 
 class ConnectionClosed(ConnectionException):
@@ -330,7 +330,7 @@ class ConnectionClosed(ConnectionException):
         else:
             txt += " by peer"
             self.condition = None
-        super(ConnectionClosed, self).__init__(txt)
+        super().__init__(txt)
 
 
 class BlockingConnection(Handler):
@@ -581,7 +581,7 @@ class SyncRequestResponse(IncomingMessageHandler):
     correlation_id = AtomicCount()
 
     def __init__(self, connection: BlockingConnection, address: Optional[str] = None) -> None:
-        super(SyncRequestResponse, self).__init__()
+        super().__init__()
         self.connection = connection
         self.address = address
         self.sender = self.connection.create_sender(self.address)

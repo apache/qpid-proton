@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 PN_INVALID_SOCKET = -1
 
 
-class IO(object):
+class IO:
 
     @staticmethod
     def _setupsocket(s: socket.socket) -> None:
@@ -76,7 +76,7 @@ class IO(object):
         time.sleep(t)
         return
 
-    class Selector(object):
+    class Selector:
 
         def __init__(self) -> None:
             self._selectables = set()

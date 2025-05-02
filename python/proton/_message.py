@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from proton._data import Described, PythonAMQPData
 
 
-class Message(object):
+class Message:
     """The :py:class:`Message` class is a mutable holder of message content.
 
     :ivar instructions: delivery instructions for the message ("Delivery Annotations" in the AMQP 1.0 spec)

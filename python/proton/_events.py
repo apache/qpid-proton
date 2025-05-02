@@ -79,7 +79,7 @@ if "TypeExtender" not in globals():
                 self.number += 1
 
 
-class EventType(object):
+class EventType:
     """
     Connects an event number to an event name, and is used
     internally by :class:`Event` to represent all known
@@ -129,7 +129,7 @@ def _dispatch(handler: Any, method: str, *args) -> None:
         handler.on_unhandled(method, *args)
 
 
-class EventBase(object):
+class EventBase:
 
     def __init__(self, type: EventType) -> None:
         self._type = type

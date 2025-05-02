@@ -709,7 +709,7 @@ class SASL:
         pn_sasl_config_path(self._sasl, path)
 
 
-class SSLDomain(object):
+class SSLDomain:
     """
     An SSL configuration domain, used to hold the SSL configuration
     for one or more SSL sessions.
@@ -839,7 +839,7 @@ class SSLDomain(object):
         pn_ssl_domain_free(self._domain)
 
 
-class SSL(object):
+class SSL:
     """
     An SSL session associated with a transport. A transport must have
     an SSL object in order to "speak" SSL over its connection.
@@ -878,7 +878,7 @@ class SSL(object):
             if different_domain or different_session_details:
                 raise SSLException("Cannot re-configure existing SSL object!")
         else:
-            obj = super(SSL, cls).__new__(cls)
+            obj = super().__new__(cls)
             obj._domain = domain
             obj._session_details = session_details
             session_id = None
@@ -1161,7 +1161,7 @@ class SSL(object):
         self._check(pn_ssl_set_peer_hostname(self._ssl, hostname))
 
 
-class SSLSessionDetails(object):
+class SSLSessionDetails:
     """
     Unique identifier for the SSL session.  Used to resume previous
     session on a new SSL connection.

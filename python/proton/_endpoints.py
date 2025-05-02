@@ -1262,7 +1262,7 @@ class Receiver(Link):
         return pn_link_draining(self._impl)
 
 
-class Terminus(object):
+class Terminus:
     """
     A source or target for messages.
     """

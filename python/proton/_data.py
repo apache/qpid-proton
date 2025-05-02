@@ -71,7 +71,7 @@ class ulong(long):
     def __init__(self, u64: int) -> None:
         if u64 < 0:
             raise AssertionError("initializing ulong with negative value")
-        super(ulong, self).__new__(ulong, u64)
+        super().__new__(ulong, u64)
 
     def __repr__(self) -> str:
         return "ulong(%s)" % long.__repr__(self)
@@ -156,7 +156,7 @@ class ubyte(int):
     def __init__(self, i: int) -> None:
         if i < 0:
             raise AssertionError("initializing ubyte with negative value")
-        super(ubyte, self).__new__(ubyte, i)
+        super().__new__(ubyte, i)
 
     def __repr__(self) -> str:
         return "ubyte(%s)" % int.__repr__(self)
@@ -172,7 +172,7 @@ class ushort(int):
     def __init__(self, i: int) -> None:
         if i < 0:
             raise AssertionError("initializing ushort with negative value")
-        super(ushort, self).__new__(ushort, i)
+        super().__new__(ushort, i)
 
     def __repr__(self) -> str:
         return "ushort(%s)" % int.__repr__(self)
@@ -188,7 +188,7 @@ class uint(long):
     def __init__(self, u32: int) -> None:
         if u32 < 0:
             raise AssertionError("initializing uint with negative value")
-        super(uint, self).__new__(uint, u32)
+        super().__new__(uint, u32)
 
     def __repr__(self) -> str:
         return "uint(%s)" % long.__repr__(self)
@@ -238,7 +238,7 @@ class decimal128(bytes):
         return "decimal128(%s)" % bytes.__repr__(self)
 
 
-class Described(object):
+class Described:
     """
     A described AMQP type.
 
@@ -267,7 +267,7 @@ class Described(object):
 UNDESCRIBED = Constant("UNDESCRIBED")
 
 
-class Array(object):
+class Array:
     """
     An AMQP array, a sequence of AMQP values of a single type.
 
@@ -343,7 +343,7 @@ class RestrictedKeyDict(dict):
             raise_on_error: bool = True,
             **kwargs
     ) -> None:
-        super(RestrictedKeyDict, self).__init__()
+        super().__init__()
         self.validation_fn = validation_fn
         self.raise_on_error = raise_on_error
         self.update(e, **kwargs)
@@ -351,7 +351,7 @@ class RestrictedKeyDict(dict):
     def __setitem__(self, key: Union[symbol, str], value: Any) -> None:
         """Checks if the key is a :class:`symbol` type before setting the value"""
         try:
-            return super(RestrictedKeyDict, self).__setitem__(self.validation_fn(key, self.raise_on_error), value)
+            return super().__setitem__(self.validation_fn(key, self.raise_on_error), value)
         except TypeError:
             pass
         # __setitem__() must raise a KeyError, not TypeError
@@ -410,11 +410,11 @@ class PropertyDict(RestrictedKeyDict):
     """
 
     def __init__(self, e: Optional[Any] = None, raise_on_error: bool = True, **kwargs) -> None:
-        super(PropertyDict, self).__init__(_check_is_symbol, e, raise_on_error, **kwargs)
+        super().__init__(_check_is_symbol, e, raise_on_error, **kwargs)
 
     def __repr__(self):
         """ Representation of PropertyDict """
-        return 'PropertyDict(%s)' % super(PropertyDict, self).__repr__()
+        return 'PropertyDict(%s)' % super().__repr__()
 
 
 class AnnotationDict(RestrictedKeyDict):
@@ -458,11 +458,11 @@ class AnnotationDict(RestrictedKeyDict):
             raise_on_error: bool = True,
             **kwargs
     ) -> None:
-        super(AnnotationDict, self).__init__(_check_is_symbol_or_ulong, e, raise_on_error, **kwargs)
+        super().__init__(_check_is_symbol_or_ulong, e, raise_on_error, **kwargs)
 
     def __repr__(self):
         """ Representation of AnnotationDict """
-        return 'AnnotationDict(%s)' % super(AnnotationDict, self).__repr__()
+        return 'AnnotationDict(%s)' % super().__repr__()
 
 
 class SymbolList(list):
@@ -499,7 +499,7 @@ class SymbolList(list):
             t: Optional[list[Any]] = None,
             raise_on_error: bool = True
     ) -> None:
-        super(SymbolList, self).__init__()
+        super().__init__()
         self.raise_on_error = raise_on_error
         if isinstance(t, (str, symbol)):
             self.append(t)
@@ -519,23 +519,23 @@ class SymbolList(list):
 
     def append(self, v: str) -> None:
         """ Add a single value v to the end of the list """
-        return super(SymbolList, self).append(_check_is_symbol(v, self.raise_on_error))
+        return super().append(_check_is_symbol(v, self.raise_on_error))
 
     def extend(self, t: Iterable[str]) -> None:
         """ Add all elements of an iterable t to the end of the list """
-        return super(SymbolList, self).extend(self._check_list(t))
+        return super().extend(self._check_list(t))
 
     def insert(self, i: int, v: str) -> None:
         """ Insert a value v at index i """
-        return super(SymbolList, self).insert(i, _check_is_symbol(v, self.raise_on_error))
+        return super().insert(i, _check_is_symbol(v, self.raise_on_error))
 
     def __add__(self, t: Iterable[Any]) -> 'SymbolList':
         """ Handles list1 + list2 """
-        return SymbolList(super(SymbolList, self).__add__(self._check_list(t)), raise_on_error=self.raise_on_error)
+        return SymbolList(super().__add__(self._check_list(t)), raise_on_error=self.raise_on_error)
 
     def __iadd__(self, t):
         """ Handles list1 += list2 """
-        return super(SymbolList, self).__iadd__(self._check_list(t))
+        return super().__iadd__(self._check_list(t))
 
     def __eq__(self, other):
         """ Handles list1 == list2 """
@@ -543,11 +543,11 @@ class SymbolList(list):
 
     def __setitem__(self, i: int, t: Any) -> None:
         """ Handles list[i] = v """
-        return super(SymbolList, self).__setitem__(i, _check_is_symbol(t, self.raise_on_error))
+        return super().__setitem__(i, _check_is_symbol(t, self.raise_on_error))
 
     def __repr__(self) -> str:
         """ Representation of SymbolList """
-        return 'SymbolList(%s)' % super(SymbolList, self).__repr__()
+        return 'SymbolList(%s)' % super().__repr__()
 
 
 class Data:

@@ -22,7 +22,7 @@ import socket
 from urllib.parse import urlparse, urlunparse, quote, unquote
 
 
-class Url(object):
+class Url:
     """
     **DEPRECATED** Simple URL parser/constructor.
 
@@ -71,7 +71,7 @@ class Url(object):
             """
             :param value: integer port number or string service name.
             """
-            port = super(Url.Port, cls).__new__(cls, cls._port_int(value))
+            port = super().__new__(cls, cls._port_int(value))
             setattr(port, 'name', str(value))
             return port
 

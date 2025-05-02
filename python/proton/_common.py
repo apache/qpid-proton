@@ -20,7 +20,7 @@
 from typing import Union
 
 
-class Constant(object):
+class Constant:
 
     def __init__(self, name: str) -> None:
         self.name = name

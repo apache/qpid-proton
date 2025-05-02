@@ -65,7 +65,7 @@ def _now() -> float:
 
 
 @total_ordering
-class Task(object):
+class Task:
 
     def __init__(self, reactor: 'Container', deadline: float, handler: Handler) -> None:
         self._deadline = deadline
@@ -91,7 +91,7 @@ class Task(object):
 class TimerSelectable(Selectable):
 
     def __init__(self, reactor: 'Container') -> None:
-        super(TimerSelectable, self).__init__(None, reactor)
+        super().__init__(None, reactor)
 
     def readable(self) -> None:
         pass
@@ -105,7 +105,7 @@ class TimerSelectable(Selectable):
         self.update()
 
 
-class Reactor(object):
+class Reactor:
 
     def __init__(self, *handlers, **kwargs) -> None:
         self._previous = PN_EVENT_NONE
@@ -395,7 +395,7 @@ class Reactor(object):
         self._collector.put(obj, etype)
 
 
-class EventInjector(object):
+class EventInjector:
     """
     Can be added to a :class:`Container` to allow events to be triggered by an
     external thread but handled on the event thread associated with
@@ -484,7 +484,7 @@ class ApplicationEvent(EventBase):
             except KeyError:
                 eventtype = EventType(typename)
                 self.TYPES[typename] = eventtype
-        super(ApplicationEvent, self).__init__(eventtype)
+        super().__init__(eventtype)
         self.connection = connection
         self.session = session
         self.link = link
@@ -509,7 +509,7 @@ class ApplicationEvent(EventBase):
         return "%s(%s)" % (self.type, ", ".join([str(o) for o in objects if o is not None]))
 
 
-class Transaction(object):
+class Transaction:
     """
     Tracks the state of an AMQP 1.0 local transaction. In typical usage, this
     object is not created directly, but is obtained through the event returned
@@ -637,7 +637,7 @@ class Transaction(object):
             self._clear_pending()
 
 
-class LinkOption(object):
+class LinkOption:
     """
     Abstract interface for link configuration options
     """
@@ -785,7 +785,7 @@ class Selector(Filter):
     """
 
     def __init__(self, value: str, name: str = 'selector') -> None:
-        super(Selector, self).__init__({symbol(name): Described(
+        super().__init__({symbol(name): Described(
             symbol('apache.org:selector-filter:string'), value)})
 
 
@@ -868,7 +868,7 @@ def _get_attr(target: Any, name: str) -> Optional[Any]:
         return None
 
 
-class SessionPerConnection(object):
+class SessionPerConnection:
     def __init__(self) -> None:
         self._default_session = None
 
@@ -960,7 +960,7 @@ def delay_iter(
         delay = min(max_delay, factor * delay)
 
 
-class Backoff(object):
+class Backoff:
     """
     A reconnect strategy involving an increasing delay between
     retries, up to a maximum or 10 seconds. Repeated calls
@@ -985,7 +985,7 @@ def make_backoff_wrapper(
     wrap it in an iterable that returns an iterator suitable for the new backoff approach
     otherwise assume it is fine as it is!
     """
-    class WrappedBackoff(object):
+    class WrappedBackoff:
         def __init__(self, backoff):
             self.backoff = backoff
 
@@ -1001,7 +1001,7 @@ def make_backoff_wrapper(
         return backoff
 
 
-class Urls(object):
+class Urls:
     def __init__(self, values: list[Union[Url, str]]) -> None:
         self.values = [Url(v) for v in values]
 
@@ -1117,7 +1117,7 @@ class _Connector(Handler):
             self._next_url = None
 
 
-class SSLConfig(object):
+class SSLConfig:
     def __init__(self) -> None:
         self.client = SSLDomain(SSLDomain.MODE_CLIENT)
         self.server = SSLDomain(SSLDomain.MODE_SERVER)
@@ -1182,7 +1182,7 @@ class Container(Reactor):
     """
 
     def __init__(self, *handlers, **kwargs) -> None:
-        super(Container, self).__init__(*handlers, **kwargs)
+        super().__init__(*handlers, **kwargs)
         if "impl" not in kwargs:
             try:
                 self.ssl = SSLConfig()
@@ -1550,7 +1550,7 @@ class Container(Reactor):
         if not _get_attr(context, '_txn_ctrl'):
             class InternalTransactionHandler(OutgoingMessageHandler):
                 def __init__(self):
-                    super(InternalTransactionHandler, self).__init__(auto_settle=True)
+                    super().__init__(auto_settle=True)
 
                 def on_settled(self, event):
                     if hasattr(event.delivery, "transaction"):

@@ -210,7 +210,7 @@ class Release(ProtonException):
     pass
 
 
-class Acking(object):
+class Acking:
     """
     A class containing methods for handling received messages.
     """
@@ -967,7 +967,7 @@ class MessagingHandler(Handler, Acking):
         pass
 
 
-class TransactionHandler(object):
+class TransactionHandler:
     """
     The interface for transaction handlers - ie objects that want to
     be notified of state changes related to a transaction.
@@ -1048,7 +1048,7 @@ class TransactionalClientHandler(MessagingHandler, TransactionHandler):
             auto_settle: bool = True,
             peer_close_is_error: bool = False
     ) -> None:
-        super(TransactionalClientHandler, self).__init__(prefetch, auto_accept, auto_settle, peer_close_is_error)
+        super().__init__(prefetch, auto_accept, auto_settle, peer_close_is_error)
 
     def accept(self, delivery: Delivery, transaction: Optional['Transaction'] = None):
         """
@@ -1064,7 +1064,7 @@ class TransactionalClientHandler(MessagingHandler, TransactionHandler):
         if transaction:
             transaction.accept(delivery)
         else:
-            super(TransactionalClientHandler, self).accept(delivery)
+            super().accept(delivery)
 
 
 class FlowController(Handler):
@@ -1414,7 +1414,7 @@ class ConnectSelectable(Selectable):
             transport: Transport,
             iohandler: IOHandler
     ) -> None:
-        super(ConnectSelectable, self).__init__(sock, reactor)
+        super().__init__(sock, reactor)
         self.writing = True
         self._addrs = addrs
         self._transport = transport

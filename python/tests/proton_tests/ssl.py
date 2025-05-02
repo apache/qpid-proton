@@ -55,7 +55,7 @@ class SslTest(common.Test):
         self.server_domain = None
         self.client_domain = None
 
-    class SslTestConnection(object):
+    class SslTestConnection:
         """ Represents a single SSL connection.
         """
 

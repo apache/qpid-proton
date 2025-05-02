@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from socket import socket
 
 
-class Selectable(object):
+class Selectable:
 
     def __init__(
             self,

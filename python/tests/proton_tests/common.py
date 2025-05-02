@@ -190,7 +190,7 @@ class Skipped(SkipTest):
     skipped = True
 
 
-class TestServer(object):
+class TestServer:
     """ Base class for creating test-specific message servers.
     """
 
@@ -256,7 +256,7 @@ class TestServer(object):
 #
 
 
-class MessengerApp(object):
+class MessengerApp:
     """ Interface to control a MessengerApp """
 
     def __init__(self):
