@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from __future__ import annotations
+
 from typing import Optional, Union, TYPE_CHECKING, Any
 
 from ._events import Event
@@ -32,8 +34,8 @@ class Selectable:
 
     def __init__(
             self,
-            delegate: Optional[Union['EventInjector', 'socket']],
-            reactor: 'Container',
+            delegate: Optional[Union[EventInjector, socket]],
+            reactor: Container,
     ) -> None:
         self._delegate = delegate
         self.reading = False
@@ -75,8 +77,8 @@ class Selectable:
 
     def push_event(
             self,
-            context: 'Selectable',
-            etype: 'EventType',
+            context: Selectable,
+            etype: EventType,
     ) -> None:
         self._reactor.push_event(context, etype)
 

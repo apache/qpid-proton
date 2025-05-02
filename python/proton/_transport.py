@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from __future__ import annotations
+
 from typing import Callable, Optional, Union, TYPE_CHECKING
 
 from cproton import PN_EOS, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM, PN_SASL_SYS, PN_SASL_TEMP, \
@@ -99,7 +101,7 @@ class Transport(Wrapper):
             cls,
             mode: Optional[int] = None,
             impl=None,
-    ) -> 'Transport':
+    ) -> Transport:
         return super().__new__(cls, impl)
 
     def __init__(
@@ -220,7 +222,7 @@ class Transport(Wrapper):
         """
         return pn_transport_get_user(self._impl)
 
-    def bind(self, connection: 'Connection') -> None:
+    def bind(self, connection: Connection) -> None:
         """
         Assign a connection to the transport.
 
@@ -229,7 +231,7 @@ class Transport(Wrapper):
         """
         self._check(pn_transport_bind(self._impl, connection._impl))
 
-    def bind_nothrow(self, connection: 'Connection') -> None:
+    def bind_nothrow(self, connection: Connection) -> None:
         """
         Assign a connection to the transport. Any failure is
         ignored rather than thrown.
@@ -467,7 +469,7 @@ class Transport(Wrapper):
         """
         return pn_transport_get_frames_input(self._impl)
 
-    def sasl(self) -> 'SASL':
+    def sasl(self) -> SASL:
         """
         Get the :class:`SASL` object associated with this transport.
 
@@ -477,7 +479,7 @@ class Transport(Wrapper):
             self._sasl = SASL(self)
         return self._sasl
 
-    def ssl(self, domain: Optional['SSLDomain'] = None, session_details: Optional['SSLSessionDetails'] = None) -> 'SSL':
+    def ssl(self, domain: Optional['SSLDomain'] = None, session_details: Optional['SSLSessionDetails'] = None) -> SSL:
         """
         Get the :class:`SSL` session associated with this transport. If
         not set, then a new session will be created using ``domain`` and
@@ -504,12 +506,12 @@ class Transport(Wrapper):
         return cond2obj(pn_transport_condition(self._impl))
 
     @condition.setter
-    def condition(self, cond: 'Condition') -> None:
+    def condition(self, cond: Condition) -> None:
         pn_cond = pn_transport_condition(self._impl)
         obj2cond(cond, pn_cond)
 
     @property
-    def connection(self) -> 'Connection':
+    def connection(self) -> Connection:
         """The connection bound to this transport."""
         from . import _endpoints
         return _endpoints.Connection.wrap(pn_transport_connection(self._impl))
@@ -549,7 +551,7 @@ class SASL:
         """
         return pn_sasl_extended()
 
-    def __new__(cls, transport: Transport) -> 'SASL':
+    def __new__(cls, transport: Transport) -> SASL:
         if not transport._sasl:
             sasl = super().__new__(cls)
             sasl._sasl = pn_sasl(transport._impl)
@@ -866,7 +868,7 @@ class SSL:
             transport: Transport,
             domain: SSLDomain,
             session_details: Optional['SSLSessionDetails'] = None
-    ) -> 'SSL':
+    ) -> SSL:
         """Enforce a singleton SSL object per Transport"""
         if transport._ssl:
             # unfortunately, we've combined the allocation and the configuration in a

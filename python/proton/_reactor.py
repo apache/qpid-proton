@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from __future__ import annotations
+
 import heapq
 import json
 import logging
@@ -67,13 +69,13 @@ def _now() -> float:
 @total_ordering
 class Task:
 
-    def __init__(self, reactor: 'Container', deadline: float, handler: Handler) -> None:
+    def __init__(self, reactor: Container, deadline: float, handler: Handler) -> None:
         self._deadline = deadline
         self._handler = handler
         self._reactor = reactor
         self._cancelled = False
 
-    def __lt__(self, rhs: 'Task') -> bool:
+    def __lt__(self, rhs: Task) -> bool:
         return self._deadline < rhs._deadline
 
     def cancel(self) -> None:
@@ -84,13 +86,13 @@ class Task:
         return self._handler
 
     @property
-    def container(self) -> 'Container':
+    def container(self) -> Container:
         return self._reactor
 
 
 class TimerSelectable(Selectable):
 
-    def __init__(self, reactor: 'Container') -> None:
+    def __init__(self, reactor: Container) -> None:
         super().__init__(None, reactor)
 
     def readable(self) -> None:
@@ -321,7 +323,7 @@ class Reactor:
             host: str,
             port: Union[str, Url.Port],
             handler: Optional[Handler] = None,
-    ) -> 'Acceptor':
+    ) -> Acceptor:
         impl = self._make_handler(handler)
         a = Acceptor(self, host, int(port), impl)
         if a:
@@ -411,7 +413,7 @@ class EventInjector:
         self._transport = None
         self._closed = False
 
-    def trigger(self, event: 'ApplicationEvent') -> None:
+    def trigger(self, event: ApplicationEvent) -> None:
         """
         Request that the given event be dispatched on the event thread
         of the container to which this EventInjector was added.
@@ -498,7 +500,7 @@ class ApplicationEvent(EventBase):
         self.subject = subject
 
     @property
-    def context(self) -> 'ApplicationEvent':
+    def context(self) -> ApplicationEvent:
         """
         A reference to this event.
         """
@@ -528,8 +530,8 @@ class Transaction:
 
     def __init__(
             self,
-            txn_ctrl: 'Sender',
-            handler: 'TransactionHandler',
+            txn_ctrl: Sender,
+            handler: TransactionHandler,
             settle_before_discharge: bool = False,
     ) -> None:
         self.txn_ctrl = txn_ctrl
@@ -563,14 +565,14 @@ class Transaction:
         self.failed = failed
         self._discharge = self._send_ctrl(symbol('amqp:discharge:list'), [self.id, failed])
 
-    def _send_ctrl(self, descriptor: 'PythonAMQPData', value: 'PythonAMQPData') -> Delivery:
+    def _send_ctrl(self, descriptor: PythonAMQPData, value: PythonAMQPData) -> Delivery:
         delivery = self.txn_ctrl.send(Message(body=Described(descriptor, value)))
         delivery.transaction = self
         return delivery
 
     def send(
             self,
-            sender: 'Sender',
+            sender: Sender,
             msg: Message,
             tag: Optional[str] = None,
     ) -> Delivery:
@@ -698,7 +700,7 @@ class SenderOption(LinkOption):
     Abstract class for sender options.
     """
 
-    def apply(self, sender: 'Sender') -> None:
+    def apply(self, sender: Sender) -> None:
         """
         Set the option on the sender.
 
@@ -715,7 +717,7 @@ class ReceiverOption(LinkOption):
     Abstract class for receiver options
     """
 
-    def apply(self, receiver: 'Receiver') -> None:
+    def apply(self, receiver: Receiver) -> None:
         """
         Set the option on the receiver.
 
@@ -767,7 +769,7 @@ class Filter(ReceiverOption):
     def __init__(self, filter_set: dict[symbol, Described] = {}) -> None:
         self.filter_set = filter_set
 
-    def apply(self, receiver: 'Receiver') -> None:
+    def apply(self, receiver: Receiver) -> None:
         """
         Set the filter on the specified receiver.
 
@@ -797,7 +799,7 @@ class DurableSubscription(ReceiverOption):
     :const:`proton.Terminus.EXPIRE_NEVER`.
     """
 
-    def apply(self, receiver: 'Receiver'):
+    def apply(self, receiver: Receiver):
         """
         Set durability on the specified receiver.
 
@@ -815,7 +817,7 @@ class Move(ReceiverOption):
     mode to :const:`proton.Terminus.DIST_MODE_MOVE`.
     """
 
-    def apply(self, receiver: 'Receiver'):
+    def apply(self, receiver: Receiver):
         """
         Set message move semantics on the specified receiver.
 
@@ -832,7 +834,7 @@ class Copy(ReceiverOption):
     :const:`proton.Terminus.DIST_MODE_COPY`.
     """
 
-    def apply(self, receiver: 'Receiver'):
+    def apply(self, receiver: Receiver):
         """
         Set message copy semantics on the specified receiver.
 
@@ -843,7 +845,7 @@ class Copy(ReceiverOption):
 
 def _apply_link_options(
         options: Optional[Union[LinkOption, list[LinkOption]]],
-        link: Union['Sender', 'Receiver']
+        link: Union['Sender', Receiver]
 ) -> None:
     if options:
         if isinstance(options, list):
@@ -898,7 +900,7 @@ class GlobalOverrides(Handler):
 
 class Acceptor(Handler):
 
-    def __init__(self, reactor: 'Container', host: str, port: int, handler: Optional[Handler] = None) -> None:
+    def __init__(self, reactor: Container, host: str, port: int, handler: Optional[Handler] = None) -> None:
         self._ssl_domain = None
         self._reactor = reactor
         self._handler = handler
@@ -1419,7 +1421,7 @@ class Container(Reactor):
             handler: Optional[Handler] = None,
             tags: Optional[Callable[[], bytes]] = None,
             options: Optional[Union['SenderOption', list['SenderOption'], 'LinkOption', list['LinkOption']]] = None
-    ) -> 'Sender':
+    ) -> Sender:
         """
         Initiates the establishment of a link over which messages can
         be sent.
@@ -1481,7 +1483,7 @@ class Container(Reactor):
             dynamic: bool = False,
             handler: Optional[Handler] = None,
             options: Optional[Union[ReceiverOption, list[ReceiverOption], LinkOption, list[LinkOption]]] = None
-    ) -> 'Receiver':
+    ) -> Receiver:
         """
         Initiates the establishment of a link over which messages can
         be received (aka a subscription).

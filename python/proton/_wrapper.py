@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from __future__ import annotations
+
 from typing import Any, Callable, ClassVar, Optional
 
 from cproton import addressof, isnull, pn_incref, pn_decref, \
@@ -48,13 +50,13 @@ class Wrapper:
     __slots__ = ["_impl", "_attrs"]
 
     @classmethod
-    def wrap(cls, impl: Any) -> Optional['Wrapper']:
+    def wrap(cls, impl: Any) -> Optional[Wrapper]:
         if isnull(impl):
             return None
         else:
             return cls(impl)
 
-    def __new__(cls, impl: Any = None) -> 'Wrapper':
+    def __new__(cls, impl: Any = None) -> Wrapper:
         attrs = None
         try:
             if impl is None:

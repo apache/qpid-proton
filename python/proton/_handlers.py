@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from __future__ import annotations
+
 import errno
 import logging
 import socket
@@ -1409,7 +1411,7 @@ class ConnectSelectable(Selectable):
     def __init__(
             self,
             sock: socket.socket,
-            reactor: 'Container',
+            reactor: Container,
             addrs: list[Any],
             transport: Transport,
             iohandler: IOHandler

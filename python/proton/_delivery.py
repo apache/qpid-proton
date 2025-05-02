@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from __future__ import annotations
+
 from cproton import (PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEASED, PN_TRANSACTIONAL_STATE,
                      pn_delivery_abort, pn_delivery_aborted, pn_delivery_attachments, pn_delivery_link,
                      pn_delivery_local, pn_delivery_local_state,
@@ -182,7 +184,7 @@ class RemoteCustomDisposition(RemoteDisposition):
         r = self._data
         return r if r != [] else None
 
-    def apply_to(self, local_disposition: 'LocalDisposition'):
+    def apply_to(self, local_disposition: LocalDisposition):
         CustomDisposition(self._type, self._data).apply_to(local_disposition)
 
 
@@ -205,7 +207,7 @@ class RemoteReceivedDisposition(RemoteDisposition):
     def section_offset(self) -> int:
         return self._section_offset
 
-    def apply_to(self, local_disposition: 'LocalDisposition'):
+    def apply_to(self, local_disposition: LocalDisposition):
         ReceivedDisposition(self._section_number, self._section_offset).apply_to(local_disposition)
 
 
@@ -223,7 +225,7 @@ class RemoteRejectedDisposition(RemoteDisposition):
     def condition(self) -> Optional[Condition]:
         return self._condition
 
-    def apply_to(self, local_disposition: 'LocalDisposition'):
+    def apply_to(self, local_disposition: LocalDisposition):
         RejectedDisposition(self._condition).apply_to(local_disposition)
 
 
@@ -251,7 +253,7 @@ class RemoteModifiedDisposition(RemoteDisposition):
     def annotations(self) -> Optional[dict['symbol', 'PythonAMQPData']]:
         return self._annotations
 
-    def apply_to(self, local_disposition: 'LocalDisposition'):
+    def apply_to(self, local_disposition: LocalDisposition):
         ModifiedDisposition(self._failed, self._undeliverable, self._annotations).apply_to(local_disposition)
 
 
@@ -274,7 +276,7 @@ class RemoteTransactionalDisposition(RemoteDisposition):
     def outcome_type(self):
         return self._outcome_type
 
-    def apply_to(self, local_disposition: 'LocalDisposition'):
+    def apply_to(self, local_disposition: LocalDisposition):
         TransactionalDisposition(self._id, self._outcome_type).apply_to(local_disposition)
 
 
@@ -695,14 +697,14 @@ class Delivery(Wrapper):
         return _endpoints.Link.wrap(pn_delivery_link(self._impl))
 
     @property
-    def session(self) -> 'Session':
+    def session(self) -> Session:
         """
         The :class:`Session` over which the delivery was sent or received.
         """
         return self.link.session
 
     @property
-    def connection(self) -> 'Connection':
+    def connection(self) -> Connection:
         """
         The :class:`Connection` over which the delivery was sent or received.
         """

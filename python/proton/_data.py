@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from __future__ import annotations
+
 import uuid
 from collections.abc import Iterable
 from typing import Callable, Union, Optional, Any, TypeVar
@@ -42,14 +44,7 @@ from ._exceptions import DataException, EXCEPTIONS
 
 long = int
 unicode = str
-
 _T = TypeVar('_T')
-
-PythonAMQPData = Union[
-    dict['PythonAMQPData', 'PythonAMQPData'],
-    list['PythonAMQPData'],
-    'Described', 'Array', int, str, 'symbol', bytes, float, None]
-"""This type annotation represents Python data structures that can be encoded as AMQP Data"""
 
 
 class UnmappedType:
@@ -309,11 +304,18 @@ class Array:
             return False
 
 
+PythonAMQPData = Union[
+    dict['PythonAMQPData', 'PythonAMQPData'],
+    list['PythonAMQPData'],
+    Described, Array, int, str, symbol, bytes, float, None]
+"""This type annotation represents Python data structures that can be encoded as AMQP Data"""
+
+
 def _check_type(
         s: _T,
         allow_ulong: bool = False,
         raise_on_error: bool = True
-) -> Union[symbol, ulong, _T]:
+) -> Union[symbol, _T]:
     if isinstance(s, symbol):
         return s
     if allow_ulong and isinstance(s, ulong):
@@ -325,11 +327,11 @@ def _check_type(
     return s
 
 
-def _check_is_symbol(s: _T, raise_on_error: bool = True) -> Union[symbol, ulong, _T]:
+def _check_is_symbol(s: _T, raise_on_error: bool = True) -> Union[symbol, _T]:
     return _check_type(s, allow_ulong=False, raise_on_error=raise_on_error)
 
 
-def _check_is_symbol_or_ulong(s: _T, raise_on_error: bool = True) -> Union[symbol, ulong, _T]:
+def _check_is_symbol_or_ulong(s: _T, raise_on_error: bool = True) -> Union[symbol, _T]:
     return _check_type(s, allow_ulong=True, raise_on_error=raise_on_error)
 
 
@@ -454,7 +456,7 @@ class AnnotationDict(RestrictedKeyDict):
 
     def __init__(
             self,
-            e: Optional[Union[dict, list, tuple, Iterable]] = None,
+            e: Union[dict, list, tuple, Iterable, None] = None,
             raise_on_error: bool = True,
             **kwargs
     ) -> None:
@@ -529,7 +531,7 @@ class SymbolList(list):
         """ Insert a value v at index i """
         return super().insert(i, _check_is_symbol(v, self.raise_on_error))
 
-    def __add__(self, t: Iterable[Any]) -> 'SymbolList':
+    def __add__(self, t: Iterable[Any]) -> SymbolList:
         """ Handles list1 + list2 """
         return SymbolList(super().__add__(self._check_list(t)), raise_on_error=self.raise_on_error)
 
@@ -1365,7 +1367,7 @@ class Data:
         """
         return symbol(pn_data_get_symbol(self._data))
 
-    def copy(self, src: 'Data') -> None:
+    def copy(self, src: Data) -> None:
         """
         Copy the contents of another pn_data_t object. Any values in the
         data object will be lost.

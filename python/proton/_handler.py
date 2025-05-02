@@ -17,13 +17,14 @@
 # under the License.
 #
 
+from __future__ import annotations
 
 from typing import Any, Callable, Optional, Union
 from types import TracebackType
 
 
 class LazyHandlers:
-    def __get__(self, obj: 'Handler', clazz: Any) -> Union['LazyHandlers', list[Any]]:
+    def __get__(self, obj: Handler, clazz: Any) -> Union[LazyHandlers, list[Any]]:
         if obj is None:
             return self
         ret = []

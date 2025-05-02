@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from __future__ import annotations
+
 from cproton import PN_DEFAULT_PRIORITY, PN_UUID, PN_OVERFLOW, pn_error_text, pn_message, \
     pn_message_annotations, pn_message_body, pn_message_clear, pn_message_decode, \
     pn_message_encode, pn_message_error, pn_message_free, pn_message_get_address, pn_message_get_content_encoding, \
@@ -490,7 +492,7 @@ class Message:
         self._check(pn_message_decode(self._msg, data))
         self._post_decode()
 
-    def send(self, sender: 'Sender', tag: Optional[str] = None) -> 'Delivery':
+    def send(self, sender: Sender, tag: Optional[str] = None) -> Delivery:
         """
         Encodes and sends the message content using the specified sender,
         and, if present, using the specified tag. Upon success, will
@@ -509,10 +511,10 @@ class Message:
         return dlv
 
     @overload
-    def recv(self, link: 'Sender') -> None:
+    def recv(self, link: Sender) -> None:
         ...
 
-    def recv(self, link: 'Receiver') -> Optional['Delivery']:
+    def recv(self, link: Receiver) -> Optional[Delivery]:
         """
         Receives and decodes the message content for the current :class:`Delivery`
         from the link. Upon success it will return the current delivery

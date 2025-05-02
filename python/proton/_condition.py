@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from __future__ import annotations
+
 from typing import Optional, TYPE_CHECKING
 
 from cproton import pn_condition_clear, pn_condition_set_name, pn_condition_set_description, pn_condition_info, \
@@ -61,7 +63,7 @@ class Condition:
             self,
             name: str,
             description: Optional[str] = None,
-            info: Optional['PythonAMQPData'] = None
+            info: Optional[PythonAMQPData] = None
     ) -> None:
         self.name = name
         self.description = description
@@ -72,7 +74,7 @@ class Condition:
                                             (self.name, self.description, self.info)
                                             if x])
 
-    def __eq__(self, o: 'Condition') -> bool:
+    def __eq__(self, o: Condition) -> bool:
         if not isinstance(o, Condition):
             return False
         return self.name == o.name and \

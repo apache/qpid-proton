@@ -21,6 +21,8 @@
 The proton.endpoints module
 """
 
+from __future__ import annotations
+
 import weakref
 
 from cproton import PN_CONFIGURATION, PN_COORDINATOR, PN_DELIVERIES, PN_DIST_MODE_COPY, PN_DIST_MODE_MOVE, \
@@ -200,7 +202,7 @@ class Connection(Endpoint):
             self._acceptor = None
 
     @property
-    def connection(self) -> 'Connection':
+    def connection(self) -> Connection:
         """
         Get this connection.
         """
@@ -222,7 +224,7 @@ class Connection(Endpoint):
             return err
 
     # TODO: Blacklisted API call
-    def collect(self, collector: 'Collector') -> None:
+    def collect(self, collector: Collector) -> None:
         if collector is None:
             pn_connection_collect(self._impl, None)
         else:
@@ -421,7 +423,7 @@ class Connection(Endpoint):
             s.terminate()
             s.update()
 
-    def session(self) -> 'Session':
+    def session(self) -> Session:
         """
         Returns a new session on this connection.
 
@@ -674,7 +676,7 @@ class Session(Endpoint):
         """
         return self.connection.transport
 
-    def sender(self, name: str) -> 'Sender':
+    def sender(self, name: str) -> Sender:
         """
         Create a new :class:`Sender` on this session.
 
@@ -682,7 +684,7 @@ class Session(Endpoint):
         """
         return Sender(pn_sender(self._impl, name))
 
-    def receiver(self, name: str) -> 'Receiver':
+    def receiver(self, name: str) -> Receiver:
         """
         Create a new :class:`Receiver` on this session.
 
@@ -725,7 +727,7 @@ class Link(Endpoint):
     get_remote_condition = pn_link_remote_condition
     get_state = pn_link_state
 
-    def __new__(cls, impl) -> 'Link':
+    def __new__(cls, impl) -> Link:
         if pn_link_is_sender(impl):
             return super().__new__(Sender, impl)
         else:
@@ -771,7 +773,7 @@ class Link(Endpoint):
         pn_link_close(self._impl)
 
     @property
-    def source(self) -> 'Terminus':
+    def source(self) -> Terminus:
         """
         The source of the link as described by the local peer. The
         returned object is valid until the link is freed.
@@ -779,7 +781,7 @@ class Link(Endpoint):
         return Terminus(pn_link_source(self._impl))
 
     @property
-    def target(self) -> 'Terminus':
+    def target(self) -> Terminus:
         """
         The target of the link as described by the local peer. The
         returned object is valid until the link is freed.
@@ -787,7 +789,7 @@ class Link(Endpoint):
         return Terminus(pn_link_target(self._impl))
 
     @property
-    def remote_source(self) -> 'Terminus':
+    def remote_source(self) -> Terminus:
         """
         The source of the link as described by the remote peer. The
         returned object is valid until the link is freed. The remote
@@ -798,7 +800,7 @@ class Link(Endpoint):
         return Terminus(pn_link_remote_source(self._impl))
 
     @property
-    def remote_target(self) -> 'Terminus':
+    def remote_target(self) -> Terminus:
         """
         The target of the link as described by the remote peer. The
         returned object is valid until the link is freed. The remote
@@ -1171,9 +1173,9 @@ class Sender(Link):
     @overload
     def send(self, obj: bytes) -> int: ...
     @overload
-    def send(self, obj: 'Message', tag: Optional[str] = None) -> Delivery: ...
+    def send(self, obj: Message, tag: Optional[str] = None) -> Delivery: ...
 
-    def send(self, obj: Union[bytes, 'Message'], tag: Optional[str] = None) -> Union[int, Delivery]:
+    def send(self, obj: Union[bytes, Message], tag: Optional[str] = None) -> Union[int, Delivery]:
         """
         A convenience method to send objects as message content.
 
@@ -1419,7 +1421,7 @@ class Terminus:
         """
         return Data(pn_terminus_filter(self._impl))
 
-    def copy(self, src: 'Terminus') -> None:
+    def copy(self, src: Terminus) -> None:
         """
         Copy another terminus object.
 
