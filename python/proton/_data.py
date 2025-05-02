@@ -63,10 +63,10 @@ class ulong(long):
     An unsigned 64 bit integer in the range :math:`0` to :math:`2^{64} - 1` inclusive.
     """
 
-    def __init__(self, u64: int) -> None:
+    def __new__(self, u64: int) -> ulong:
         if u64 < 0:
-            raise AssertionError("initializing ulong with negative value")
-        super().__new__(ulong, u64)
+            raise ValueError("initializing ulong with negative value")
+        return super().__new__(ulong, u64)
 
     def __repr__(self) -> str:
         return "ulong(%s)" % long.__repr__(self)
@@ -148,10 +148,10 @@ class ubyte(int):
     An 8 bit unsigned integer in the range :math:`0` to :math:`2^8 - 1` inclusive.
     """
 
-    def __init__(self, i: int) -> None:
+    def __new__(self, i: int) -> ubyte:
         if i < 0:
-            raise AssertionError("initializing ubyte with negative value")
-        super().__new__(ubyte, i)
+            raise ValueError("initializing ubyte with negative value")
+        return super().__new__(ubyte, i)
 
     def __repr__(self) -> str:
         return "ubyte(%s)" % int.__repr__(self)
@@ -164,10 +164,10 @@ class ushort(int):
     A 16 bit unsigned integer in the range :math:`0` to :math:`2^{16} - 1` inclusive.
     """
 
-    def __init__(self, i: int) -> None:
+    def __new__(self, i: int) -> ushort:
         if i < 0:
-            raise AssertionError("initializing ushort with negative value")
-        super().__new__(ushort, i)
+            raise ValueError("initializing ushort with negative value")
+        return super().__new__(ushort, i)
 
     def __repr__(self) -> str:
         return "ushort(%s)" % int.__repr__(self)
@@ -180,10 +180,10 @@ class uint(long):
     A 32 bit unsigned integer in the range :math:`0` to :math:`2^{32} - 1` inclusive.
     """
 
-    def __init__(self, u32: int) -> None:
+    def __new__(self, u32: int) -> uint:
         if u32 < 0:
-            raise AssertionError("initializing uint with negative value")
-        super().__new__(uint, u32)
+            raise ValueError("initializing uint with negative value")
+        return super().__new__(uint, u32)
 
     def __repr__(self) -> str:
         return "uint(%s)" % long.__repr__(self)
