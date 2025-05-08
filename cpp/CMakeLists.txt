@@ -156,6 +156,7 @@ set_target_properties (
   SOVERSION "${PN_LIB_CPP_MAJOR_VERSION}"
   LINK_FLAGS "${CATCH_UNDEFINED}"
   EXPORT_NAME cpp
+  INSTALL_RPATH "$ORIGIN"
   )
 
 ## Install
