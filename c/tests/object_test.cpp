@@ -43,6 +43,7 @@ static pn_list_t *build_list(size_t capacity, ...) {
   // No information about list types assume everything is PN_OBJECT
   if (last) {
     result = pn_list(PN_OBJECT, capacity);
+    va_end(ap);
     return result;
   }
   result = pn_list(pn_class(arg), capacity);
@@ -70,6 +71,7 @@ static pn_map_t *build_map(float load_factor, size_t capacity, ...) {
   // No information about map types assume everything is PN_OBJECT
   if (last) {
     result = pn_map(PN_OBJECT, PN_OBJECT, capacity, load_factor);
+    va_end(ap);
     return result;
   }
   void *arg = va_arg(ap, void *);
@@ -79,6 +81,7 @@ static pn_map_t *build_map(float load_factor, size_t capacity, ...) {
     result = pn_map(pn_class(prev), PN_OBJECT, capacity, load_factor);
     pn_map_put(result, prev, NULL);
     pn_decref(prev);
+    va_end(ap);
     return result;
   }
   result = pn_map(pn_class(prev), pn_class(arg), capacity, load_factor);
@@ -108,8 +111,8 @@ static pn_map_t *build_map(float load_factor, size_t capacity, ...) {
   return result;
 }
 
-static void noop(void *o) {}
-static uintptr_t zero(void *o) { return 0; }
+static void noop(void *) {}
+static uintptr_t zero(void *) { return 0; }
 static intptr_t delta(void *a, void *b) { return (uintptr_t)b - (uintptr_t)a; }
 
 #define CID_noop CID_pn_object
@@ -556,7 +559,7 @@ static intptr_t collider_compare(void *a, void *b) {
   return (a > b) ? 1 : -1;
 }
 
-static uintptr_t collider_hashcode(void *obj) { return 23; }
+static uintptr_t collider_hashcode(void *) { return 23; }
 
 #define CID_collider CID_pn_object
 #define collider_initialize NULL
