@@ -151,7 +151,8 @@ class Queue {
             if (credit>0) {
                 DOUT(std::cerr << sender << " ";);
                 auto msg = messages_.front();
-                sender->add([=]{sender->sendMsg(msg);});
+                auto& s = sender; // C++17 doesn't allow lambda capture of structured bindings
+                sender->add([=]{s->sendMsg(msg);});
                 messages_.pop_front();
                 --credit;
                 ++current_;
@@ -226,7 +227,8 @@ void Sender::on_tracker_settle(proton::tracker& tracker) {
                 auto delivery_count = msg.delivery_count();
                 if (delivery_count<redelivery_limit) {
                     msg.delivery_count(delivery_count + 1);
-                    queue_->add([=] {queue_->queueMsg(msg);});
+                    auto& m = msg; // C++17 doesn't allow lambda capture of structured bindings
+                    queue_->add([=] {queue_->queueMsg(m);});
                 } else {
                     DOUT(std::cerr << "Sender:   " << this << " on_tracker_settle: " << tag << ": Too many redeliveries: " << delivery_count << "\n";);
                 }
@@ -234,7 +236,7 @@ void Sender::on_tracker_settle(proton::tracker& tracker) {
         }
         unsettled_messages_.erase(i);
     }
-};
+}
 
 void Sender::boundQueue(Queue* q, std::string qn) {
     DOUT(std::cerr << "Sender:   " << this << " bound to Queue: " << q <<"(" << qn << ")\n";);
