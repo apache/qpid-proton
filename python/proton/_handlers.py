@@ -1314,7 +1314,8 @@ class IOHandler(Handler):
         t = s._transport
         r = s._reactor
 
-        self.update(t, s, r.now)
+        if not s.is_terminal and t:
+            self.update(t, s, r.now)
 
     def on_connection_local_open(self, event: ConnectionEvent) -> None:
         c = event.connection
