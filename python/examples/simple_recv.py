@@ -42,7 +42,7 @@ class Recv(MessagingHandler):
             return
         self.dedup_ids.add(message.id)
         if self.expected == 0 or self.received < self.expected:
-            print(f"{message}")
+            print(f"{message.body}")
             self.received += 1
             if self.received == self.expected:
                 event.receiver.close()

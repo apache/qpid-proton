@@ -58,7 +58,7 @@ class Client(MessagingHandler):
         request = self.outstanding.pop(correlation_id, None)
 
         if request:
-            print(f"{request}({correlation_id}) => {message.body}")
+            print(f"{request} => {message.body}")
             self.accept(delivery)
         else:
             print(f"Unexpected response - unknown correlation_id({correlation_id}): {message.body}")
