@@ -27,7 +27,7 @@ import uuid
 from typing import Optional, Union
 
 from proton import (Condition, Delivery, Described, Disposition, DispositionType,
-                    Endpoint, Link, Sender, Message, Terminus, TransactionalDisposition)
+                    Endpoint, Link, Sender, Message, Terminus, DeclaredDisposition)
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
@@ -231,13 +231,13 @@ class Broker(MessagingHandler):
         if isinstance(body, Described):
             link = delivery.link
             d = body.descriptor
-            if d == "amqp:declare:list" or d == 0x31:
+            if d == "amqp:declare:list":
                 # Allocate transaction id
                 tid = self._declare_txn()
                 self._verbose_print(f"{tid=}: Declare")
-                delivery.local = TransactionalDisposition(tid)
+                delivery.local = DeclaredDisposition(tid)
                 link._txns.add(tid)
-            elif d == "amqp:discharge:list" or d == 0x32:
+            elif d == "amqp:discharge:list":
                 # Always accept commit/abort!
                 value = body.value
                 tid = bytes(value[0])

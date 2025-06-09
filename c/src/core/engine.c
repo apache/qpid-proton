@@ -2013,6 +2013,13 @@ pn_modified_disposition_t *pn_modified_disposition(pn_disposition_t *disposition
   return &disposition->u.s_modified;
 }
 
+pn_declared_disposition_t *pn_declared_disposition(pn_disposition_t *disposition)
+{
+  if (disposition->type==PN_DISP_EMPTY) disposition->type = PN_DISP_DECLARED;
+  else if (disposition->type!=PN_DISP_DECLARED) return NULL;
+  return &disposition->u.s_declared;
+}
+
 pn_transactional_disposition_t *pn_transactional_disposition(pn_disposition_t *disposition)
 {
   if (disposition->type==PN_DISP_EMPTY) disposition->type = PN_DISP_TRANSACTIONAL;
@@ -2097,6 +2104,19 @@ pn_data_t *pn_modified_disposition_annotations(pn_modified_disposition_t *dispos
   assert(disposition);
   pni_switch_to_data(&disposition->annotations_raw, &disposition->annotations);
   return disposition->annotations;
+}
+
+pn_bytes_t pn_declared_disposition_get_id(pn_declared_disposition_t *disposition)
+{
+  assert(disposition);
+  return disposition->id;
+}
+
+void pn_declared_disposition_set_id(pn_declared_disposition_t *disposition, pn_bytes_t id)
+{
+  assert(disposition);
+  pn_bytes_free(disposition->id);
+  disposition->id = pn_bytes_dup(id);
 }
 
 pn_bytes_t pn_transactional_disposition_get_id(pn_transactional_disposition_t *disposition)
@@ -2473,6 +2493,7 @@ void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
       case PN_RECEIVED:
       case PN_MODIFIED:
       case PN_RELEASED:
+      case PN_DECLARED:
       case PN_TRANSACTIONAL_STATE:
         break;
       default:
@@ -2488,6 +2509,7 @@ void pn_delivery_update(pn_delivery_t *delivery, uint64_t state)
     case PN_RECEIVED:
     case PN_MODIFIED:
     case PN_RELEASED:
+    case PN_DECLARED:
     case PN_TRANSACTIONAL_STATE:
       delivery->local.type = state;
       break;
@@ -2859,6 +2881,7 @@ const char *pn_disposition_type_name(uint64_t d) {
    case PN_REJECTED: return "rejected";
    case PN_RELEASED: return "released";
    case PN_MODIFIED: return "modified";
+   case PN_DECLARED: return "transaction_declared";
    case PN_TRANSACTIONAL_STATE: return "transactional_state";
    default: return "unknown";
   }

@@ -341,6 +341,7 @@ typedef enum pn_disposition_type_t {
   PN_DISP_REJECTED = PN_REJECTED,
   PN_DISP_RELEASED = PN_RELEASED,
   PN_DISP_MODIFIED = PN_MODIFIED,
+  PN_DISP_DECLARED = PN_DECLARED,
   PN_DISP_TRANSACTIONAL = PN_TRANSACTIONAL_STATE,
 } pn_disposition_type_t;
 
@@ -360,6 +361,10 @@ struct pn_modified_disposition_t {
   bool undeliverable;
 };
 
+struct pn_declared_disposition_t {
+  pn_bytes_t id;
+};
+
 struct pn_transactional_disposition_t {
   pn_bytes_t id;
   pn_bytes_t outcome_raw;
@@ -376,6 +381,7 @@ struct pn_disposition_t {
     struct pn_received_disposition_t s_received;
     struct pn_rejected_disposition_t s_rejected;
     struct pn_modified_disposition_t s_modified;
+    struct pn_declared_disposition_t s_declared;
     struct pn_transactional_disposition_t s_transactional;
     struct pn_custom_disposition_t   s_custom;
   } u;

@@ -410,12 +410,14 @@ typedef struct pn_custom_disposition_t pn_custom_disposition_t;
 typedef struct pn_received_disposition_t pn_received_disposition_t;
 typedef struct pn_rejected_disposition_t pn_rejected_disposition_t;
 typedef struct pn_modified_disposition_t pn_modified_disposition_t;
+typedef struct pn_declared_disposition_t pn_declared_disposition_t;
 typedef struct pn_transactional_disposition_t pn_transactional_disposition_t;
 
 pn_custom_disposition_t *pn_custom_disposition(pn_disposition_t *disposition);
 pn_received_disposition_t *pn_received_disposition(pn_disposition_t *disposition);
 pn_rejected_disposition_t *pn_rejected_disposition(pn_disposition_t *disposition);
 pn_modified_disposition_t *pn_modified_disposition(pn_disposition_t *disposition);
+pn_declared_disposition_t *pn_declared_disposition(pn_disposition_t *disposition);
 pn_transactional_disposition_t *pn_transactional_disposition(pn_disposition_t *disposition);
 
 void pn_custom_disposition_set_type(pn_custom_disposition_t *disposition, uint64_t type);
@@ -431,6 +433,8 @@ void pn_modified_disposition_set_failed(pn_modified_disposition_t *disposition, 
 _Bool pn_modified_disposition_is_undeliverable(pn_modified_disposition_t *disposition);
 void pn_modified_disposition_set_undeliverable(pn_modified_disposition_t *disposition, _Bool undeliverable);
 pn_data_t *pn_modified_disposition_annotations(pn_modified_disposition_t *disposition);
+pn_bytes_t pn_declared_disposition_get_id(pn_declared_disposition_t *disposition);
+void pn_declared_disposition_set_id(pn_declared_disposition_t *disposition, pn_bytes_t id);
 pn_bytes_t pn_transactional_disposition_get_id(pn_transactional_disposition_t *disposition);
 void pn_transactional_disposition_set_id(pn_transactional_disposition_t *disposition, pn_bytes_t id);
 uint64_t pn_transactional_disposition_get_outcome_type(pn_transactional_disposition_t *disposition);
@@ -664,6 +668,7 @@ int pn_transport_unbind(pn_transport_t *transport);
 #define PN_REJECTED ...
 #define PN_RELEASED ...
 #define PN_MODIFIED ...
+#define PN_DECLARED ...
 #define PN_TRANSACTIONAL_STATE ...
 
 // Default message priority

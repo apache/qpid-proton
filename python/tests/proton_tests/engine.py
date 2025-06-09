@@ -22,9 +22,10 @@ import gc
 from time import time, sleep
 from typing import Union
 
-from proton import Array, Condition, Collector, Connection, Data, Delivery, Disposition, DispositionType, Endpoint, \
-    Event, CustomDisposition, Link, ModifiedDisposition, PropertyDict, ReceivedDisposition, RejectedDisposition, \
-    SASL, SessionException, SymbolList, Terminus, TransactionalDisposition, Transport, UNDESCRIBED, symbol
+from proton import Array, Condition, Collector, Connection, Data, DeclaredDisposition, Delivery, Disposition, \
+    DispositionType, Endpoint, Event, CustomDisposition, Link, ModifiedDisposition, PropertyDict, ReceivedDisposition, \
+    RejectedDisposition, SASL, SessionException, SymbolList, Terminus, TransactionalDisposition, Transport, \
+    UNDESCRIBED, symbol
 from proton.reactor import Container
 
 from . import common
@@ -2551,6 +2552,21 @@ class NewCustomTester(DispositionTester):
         assert dlv.remote.data == self._data, (dlv.remote.data, self._data)
 
 
+class DeclaredTester(DispositionTester):
+    def __init__(self, id):
+        self._id = id
+        super().__init__(Disposition.DECLARED)
+
+    def apply(self, dlv: Delivery):
+        dlv.local = DeclaredDisposition(self._id)
+        dlv.update()
+
+    def check(self, dlv: Delivery):
+        assert dlv.remote_state == self._type
+        assert dlv.remote.type == self._type
+        assert dlv.remote.id == self._id
+
+
 class TransactionalTester(DispositionTester):
     def __init__(self, id, outcome_type):
         self._id = id
@@ -2648,6 +2664,9 @@ class DeliveryTest(Test):
 
     def testNewDefaultModified(self):
         self._testDisposition(NewDefaultModifiedTester())
+
+    def testDeclared(self):
+        self._testDisposition(DeclaredTester(id=b'1324xxx'))
 
     def testTransactional(self):
         self._testDisposition(TransactionalTester(id=b'1324xxx', outcome_type=Disposition.ACCEPTED))

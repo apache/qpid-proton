@@ -617,7 +617,7 @@ class Transaction:
 
     def handle_outcome(self, event):
         if event.delivery == self._declare:
-            if event.delivery.remote_state == Disposition.TRANSACTIONAL_STATE:
+            if event.delivery.remote_state == Disposition.DECLARED:
                 self.id = event.delivery.remote.id
                 self.handler.on_transaction_declared(event)
             elif event.delivery.remote_state == Delivery.REJECTED:

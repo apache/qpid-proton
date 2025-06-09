@@ -19,7 +19,8 @@
 
 from __future__ import annotations
 
-from cproton import (PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEASED, PN_TRANSACTIONAL_STATE,
+from cproton import (PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELEASED, PN_DECLARED,
+                     PN_TRANSACTIONAL_STATE,
                      pn_delivery_abort, pn_delivery_aborted, pn_delivery_attachments, pn_delivery_link,
                      pn_delivery_local, pn_delivery_local_state,
                      pn_delivery_partial, pn_delivery_pending, pn_delivery_readable, pn_delivery_remote,
@@ -46,6 +47,9 @@ from cproton import (PN_ACCEPTED, PN_MODIFIED, PN_RECEIVED, PN_REJECTED, PN_RELE
                      pn_modified_disposition_is_undeliverable,
                      pn_modified_disposition_set_undeliverable,
                      pn_modified_disposition_annotations,
+                     pn_declared_disposition,
+                     pn_declared_disposition_get_id,
+                     pn_declared_disposition_set_id,
                      pn_transactional_disposition,
                      pn_transactional_disposition_get_id,
                      pn_transactional_disposition_set_id,
@@ -106,6 +110,12 @@ class DispositionType(IntEnum):
     delivery being settled.
     """
 
+    TRANSACTION_DECLARED = PN_DECLARED
+    """
+    A terminal state indicating that a transaction has been
+    declared and contsaining the transaction id.
+    """
+
     TRANSACTIONAL_STATE = PN_TRANSACTIONAL_STATE
     """
     A non-terminal delivery state indicating the transactional
@@ -133,6 +143,7 @@ class Disposition:
     REJECTED = DispositionType.REJECTED
     RELEASED = DispositionType.RELEASED
     MODIFIED = DispositionType.MODIFIED
+    DECLARED = DispositionType.TRANSACTION_DECLARED
     TRANSACTIONAL_STATE = DispositionType.TRANSACTIONAL_STATE
 
     @property
@@ -151,6 +162,8 @@ class RemoteDisposition(Disposition):
             return super().__new__(RemoteRejectedDisposition)
         elif state == cls.MODIFIED:
             return super().__new__(RemoteModifiedDisposition)
+        elif state == cls.DECLARED:
+            return super().__new__(RemoteDeclaredDisposition)
         elif state == cls.TRANSACTIONAL_STATE:
             return super().__new__(RemoteTransactionalDisposition)
         else:
@@ -255,6 +268,24 @@ class RemoteModifiedDisposition(RemoteDisposition):
 
     def apply_to(self, local_disposition: LocalDisposition):
         ModifiedDisposition(self._failed, self._undeliverable, self._annotations).apply_to(local_disposition)
+
+
+class RemoteDeclaredDisposition(RemoteDisposition):
+
+    def __init__(self, delivery_impl):
+        impl = pn_declared_disposition(pn_delivery_remote(delivery_impl))
+        self._id = pn_declared_disposition_get_id(impl)
+
+    @property
+    def type(self) -> Union[int, DispositionType]:
+        return Disposition.DECLARED
+
+    @property
+    def id(self):
+        return self._id
+
+    def apply_to(self, local_disposition: LocalDisposition):
+        DeclaredDisposition(self._id).apply_to(local_disposition)
 
 
 class RemoteTransactionalDisposition(RemoteDisposition):
@@ -471,6 +502,28 @@ class ModifiedDisposition(LocalDisposition):
         if self._undeliverable:
             pn_modified_disposition_set_undeliverable(disp, self._undeliverable)
         obj2dat(self._annotations, pn_modified_disposition_annotations(disp))
+
+
+class DeclaredDisposition(LocalDisposition):
+
+    def __init__(self, id):
+        self._id = id
+
+    @property
+    def type(self) -> Union[int, DispositionType]:
+        return Disposition.DECLARED
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, id):
+        self._id = id
+
+    def apply_to(self, local_disposition: LocalDisposition):
+        disp = pn_declared_disposition(local_disposition._impl)
+        pn_declared_disposition_set_id(disp, self._id)
 
 
 class TransactionalDisposition(LocalDisposition):

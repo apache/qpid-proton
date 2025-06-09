@@ -1605,6 +1605,14 @@ static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn
       }
       break;
     }
+    case AMQP_DESC_DECLARED: {
+      pn_bytes_t id;
+      pn_amqp_decode_Eze(disp_data, &id);
+      disp->type = PN_DISP_DECLARED;
+      pn_bytes_free(disp->u.s_declared.id);
+      disp->u.s_declared.id = pn_bytes_dup(id);
+      break;
+    }
     case AMQP_DESC_TRANSACTIONAL_STATE: {
       pn_bytes_t id;
       bool qoutcome;

@@ -91,6 +91,13 @@ typedef struct pn_disposition_t pn_disposition_t;
 #define PN_MODIFIED (0x0000000000000027)
 
 /**
+ * The PN_DECLARED delivery state is a terminal state
+ * indicating that a transaction has been declared and indicating its
+ * transaction identifier.
+ */
+#define PN_DECLARED (0x0000000000000033)
+
+/**
  * The PN_TRANSACTIONAL_STATE delivery state is a non terminal state
  * indicating the transactional state of a delivery.
  */
@@ -255,6 +262,13 @@ typedef struct pn_rejected_disposition_t pn_rejected_disposition_t;
 typedef struct pn_modified_disposition_t pn_modified_disposition_t;
 
 /**
+ * A transaction declared delivery disposition
+ *
+ * This represents a transaction declared disposition.
+ */
+typedef struct pn_declared_disposition_t pn_declared_disposition_t;
+
+/**
  * A transactional delivery disposition
  *
  * This represents transactional delivery state.
@@ -303,6 +317,15 @@ PN_EXTERN pn_rejected_disposition_t *pn_rejected_disposition(pn_disposition_t *d
  * if the disposition is not that type
  */
 PN_EXTERN pn_modified_disposition_t *pn_modified_disposition(pn_disposition_t *disposition);
+
+/**
+ * Convert a delivery disposition to a transaction declared disposition
+ *
+ * @param[in] disposition delivery disposition object
+ * @return a pointer to the transaction declared disposition or NULL
+ * if the disposition is not that type
+ */
+PN_EXTERN pn_declared_disposition_t *pn_declared_disposition(pn_disposition_t *disposition);
 
 /**
  * Convert a delivery disposition to a transactional disposition
@@ -441,9 +464,24 @@ PN_EXTERN void pn_modified_disposition_set_undeliverable(pn_modified_disposition
  */
 PN_EXTERN pn_data_t *pn_modified_disposition_annotations(pn_modified_disposition_t *disposition);
 
+/**
+ * Get the transaction id for a transaction declared disposition
+ *
+ * @param[in] disposition a transaction declared disposition object
+ * @return the transaction id
+ */
+PN_EXTERN pn_bytes_t pn_declared_disposition_get_id(pn_declared_disposition_t *disposition);
 
 /**
- * Get the transaction id for a transactional disposition
+ * Set the transaction id for a transaction declared disposition
+ *
+ * @param[in] disposition a transactional disposition object
+ * @param[in] id the transaction id
+ */
+PN_EXTERN void pn_declared_disposition_set_id(pn_declared_disposition_t *disposition, pn_bytes_t id);
+
+/**
+ * Get the transaction id for a transaction declared disposition
  *
  * @param[in] disposition a transactional disposition object
  * @return the transaction id

@@ -54,7 +54,8 @@ from cproton_ffi.lib import (PN_ACCEPTED, PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE,
                              PN_SSL_RESUME_UNKNOWN, PN_SSL_SHA1, PN_SSL_SHA256, PN_SSL_SHA512,
                              PN_SSL_VERIFY_PEER, PN_SSL_VERIFY_PEER_NAME, PN_STRING, PN_SYMBOL,
                              PN_TARGET, PN_TIMEOUT, PN_TIMER_TASK, PN_TIMESTAMP, PN_TRACE_DRV,
-                             PN_TRACE_FRM, PN_TRACE_OFF, PN_TRACE_RAW, PN_TRANSACTIONAL_STATE, PN_TRANSPORT,
+                             PN_TRACE_FRM, PN_TRACE_OFF, PN_TRACE_RAW, PN_DECLARED,
+                             PN_TRANSACTIONAL_STATE, PN_TRANSPORT,
                              PN_TRANSPORT_CLOSED, PN_TRANSPORT_ERROR, PN_TRANSPORT_HEAD_CLOSED,
                              PN_TRANSPORT_TAIL_CLOSED, PN_UBYTE, PN_UINT, PN_ULONG, PN_UNSPECIFIED,
                              PN_USHORT, PN_UUID, PN_VERSION_MAJOR, PN_VERSION_MINOR,
@@ -178,7 +179,8 @@ from cproton_ffi.lib import (PN_ACCEPTED, PN_ARRAY, PN_BINARY, PN_BOOL, PN_BYTE,
                              pn_modified_disposition_set_failed,
                              pn_modified_disposition_is_undeliverable,
                              pn_modified_disposition_set_undeliverable,
-                             pn_modified_disposition_annotations)
+                             pn_modified_disposition_annotations,
+                             pn_declared_disposition)
 
 
 def isnull(obj):
@@ -774,3 +776,11 @@ def pn_transactional_disposition_get_id(disp):
 
 def pn_transactional_disposition_set_id(disp, id):
     return lib.pn_transactional_disposition_set_id(disp, py2bytes(id))
+
+
+def pn_declared_disposition_get_id(disp):
+    return bytes2pybytes(lib.pn_declared_disposition_get_id(disp))
+
+
+def pn_declared_disposition_set_id(disp, id):
+    return lib.pn_declared_disposition_set_id(disp, py2bytes(id))
