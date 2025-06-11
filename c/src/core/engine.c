@@ -1602,6 +1602,9 @@ static void pn_disposition_finalize(pn_disposition_t *ds)
       pn_bytes_free(ds->u.s_transactional.id);
       pn_bytes_free(ds->u.s_transactional.outcome_raw);
       break;
+    case PN_DISP_DECLARED:
+      pn_bytes_free(ds->u.s_declared.id);
+      break;
   }
 }
 
