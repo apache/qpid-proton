@@ -34,6 +34,7 @@
 #include <proton/message.h>
 #include <proton/netaddr.h>
 #include <proton/proactor.h>
+#include <proton/proactor_ext.h>
 #include <proton/raw_connection.h>
 #include <proton/transport.h>
 
@@ -1192,6 +1193,27 @@ void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *
   add_active(p);
   pn_connection_open(pc->driver.connection);   /* Auto-open */
   parse_addr(&pc->addr, addr);
+  work_start(&pc->work);
+}
+
+void pn_proactor_import_socket(pn_proactor_t* p, pn_connection_t* c, pn_transport_t* t, pn_socket_t fd) {
+  pconnection_t* pc = pconnection(p, c, t, false);
+  assert(pc);
+  add_active(p);
+  pn_connection_open(pc->driver.connection);
+  int err = pconnection_init(pc);
+  if (err) goto error;
+
+  err = uv_tcp_open(&pc->tcp, fd);
+  if (err) {
+    pconnection_error(pc, err, "uv_tcp_open");
+    goto error;
+  }
+
+  pc->connected = 1;
+  pconnection_addresses(pc);
+
+error:
   work_start(&pc->work);
 }
 

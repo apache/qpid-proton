@@ -327,6 +327,7 @@ set (qpid-proton-include
   include/proton/netaddr.h
   include/proton/object.h
   include/proton/proactor.h
+  include/proton/proactor_ext.h
   include/proton/raw_connection.h
   include/proton/sasl.h
   include/proton/sasl_plugin.h

@@ -27,9 +27,9 @@
 #include <proton/netaddr.h>
 #include <proton/object.h>
 #include <proton/proactor.h>
+#include <proton/proactor_ext.h>
 #include <proton/transport.h>
 #include <proton/listener.h>
-#include <proton/proactor.h>
 #include <proton/raw_connection.h>
 
 #include <assert.h>
@@ -209,9 +209,6 @@ iocpdesc_t *pni_deadline_desc(iocp_t *);
 void pni_iocpdesc_start(iocpdesc_t *iocpd);
 void pni_iocp_drain_completions(iocp_t *);
 int pni_iocp_wait_one(iocp_t *, int timeout, pn_error_t *);
-void pni_iocp_start_accepting(iocpdesc_t *iocpd);
-pn_socket_t pni_iocp_end_accept(iocpdesc_t *ld, sockaddr *addr, socklen_t *addrlen, bool *would_block, pn_error_t *error);
-pn_socket_t pni_iocp_begin_connect(iocp_t *, pn_socket_t sock, struct addrinfo *addr, pn_error_t *error);
 ssize_t pni_iocp_begin_write(iocpdesc_t *, const void *, size_t, bool *, pn_error_t *);
 ssize_t pni_iocp_recv(iocpdesc_t *iocpd, void *buf, size_t size, bool *would_block, pn_error_t *error);
 void pni_iocp_begin_close(iocpdesc_t *iocpd);
@@ -2746,6 +2743,53 @@ void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *
   if (p->reaper->add(pc->psocket.iocpd)) {
     pc->psocket.iocpd = NULL;
   }
+}
+
+void pn_proactor_import_socket(pn_proactor_t* proactor, pn_connection_t* connection, pn_transport_t* transport, pn_socket_t fd)
+{
+    // Step 1: Setup the pconnection_t structure
+    pconnection_t* pc = (pconnection_t*)pn_class_new(&pconnection_class, sizeof(pconnection_t));
+    if (!pc) {
+        // Handle allocation failure
+        PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_proactor_import_socket: allocation failure");
+        return;
+    }
+    const char* err = pconnection_setup(pc, proactor, connection, transport, false, "");
+    if (err) {
+        PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_proactor_import_socket: %s", err);
+        return;
+    }
+
+    // Step 2: Initialize the context and add to proactor
+    csguard g(&pc->context.cslock);
+    proactor_add(&pc->context);
+    pc->started = true; // Mark as started, since the socket is already connected
+
+    // Step 3: Wrap the socket in an iocpdesc_t and bind to IOCP
+    pni_configure_sock_2(fd); // Set non-blocking, TCP_NODELAY, etc.
+    pc->psocket.iocpd = pni_iocpdesc_create(proactor->iocp, fd);
+    if (!pc->psocket.iocpd) {
+        PN_LOG_DEFAULT(PN_SUBSYSTEM_EVENT, PN_LEVEL_ERROR, "pn_proactor_import_socket: failed to create iocpdesc");
+        return;
+    }
+    pc->psocket.iocpd->active_completer = &pc->psocket;
+    wakeup(&pc->psocket);
+    // Mark as not closing, not connecting
+    pc->psocket.iocpd->write_closed = false;
+    pc->psocket.iocpd->read_closed = false;
+    pc->connecting = false;
+
+    // Step 4: Bind the socket to the IOCP completion port and start IO
+    pni_iocpdesc_start(pc->psocket.iocpd);
+
+    // Step 5: Set local/remote addresses for the connection
+    socklen_t len = sizeof(pc->local.ss);
+    getsockname(fd, (struct sockaddr*)&pc->local.ss, &len);
+    len = sizeof(pc->remote.ss);
+    getpeername(fd, (struct sockaddr*)&pc->remote.ss, &len);
+
+    // Step 6: Auto-open the connection
+    pn_connection_open(pc->driver.connection);
 }
 
 void pn_proactor_release_connection(pn_connection_t *c) {
