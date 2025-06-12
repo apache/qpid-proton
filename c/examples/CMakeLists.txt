@@ -30,3 +30,11 @@ foreach (name broker send receive direct send-abort send-ssl raw_echo raw_connec
   set_target_properties(c-${name} PROPERTIES
     OUTPUT_NAME ${name})
 endforeach()
+
+foreach (name send-fd direct-fd)
+  add_executable(c-${name} ${name}.c)
+  target_link_libraries(c-${name} Proton::core Proton::proactor Threads::Threads ${PLATFORM_LIBS})
+  set_target_properties(c-${name} PROPERTIES
+    OUTPUT_NAME ${name}
+    C_EXTENSIONS ON)
+endforeach()
