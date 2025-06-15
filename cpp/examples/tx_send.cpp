@@ -26,6 +26,7 @@
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
+#include <proton/sender_options.hpp>
 #include <proton/types.hpp>
 #include <proton/transaction_handler.hpp>
 
@@ -54,16 +55,14 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
         conn_url_(u), addr_(a), total(c), batch_size(b), sent(0) {}
 
     void on_container_start(proton::container &c) override {
-        // sender = c.open_sender(url);
         c.connect(conn_url_);
     }
 
     void on_connection_open(proton::connection& c) override {
-        c.open_session();
+        sender = c.open_sender(addr_);
     }
 
     void on_session_open(proton::session &s) override {
-        s.open_sender(addr_);
         std::cout << "New session is open, declaring transaction now..." << std::endl;
         s.declare_transaction(*this);
     }
