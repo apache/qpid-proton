@@ -65,7 +65,7 @@ class IO:
         try:
             s.connect(addr[4])
         except socket.error as e:
-            if e.errno not in (errno.EINPROGRESS, errno.EWOULDBLOCK, errno.EAGAIN):
+            if e.errno not in (errno.EINPROGRESS, errno.EWOULDBLOCK, errno.EAGAIN, errno.ENETUNREACH):
                 raise
         return s
 
