@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 
 #ifndef CYRUS_SASL_MAX_BUFFSIZE
 # define CYRUS_SASL_MAX_BUFFSIZE (32768) /* bytes */
@@ -196,12 +195,94 @@ static const sasl_callback_t pni_server_callbacks[] = {
 };
 PN_POP_WARNING
 
+static void pni_cyrus_client_start(void);
+static void pni_cyrus_server_start(void);
+static void pni_cyrus_client_once(void);
+static void pni_cyrus_server_once(void);
+static void pni_cyrus_finish(void);
+
+#ifdef _WIN32
+    #ifndef _WIN32_WINNT
+        #define _WIN32_WINNT 0x0600
+    #endif
+    #if _WIN32_WINNT < 0x0600
+        #error "Proton requires Windows API support for 7 or later."
+    #endif
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+    #include <synchapi.h>
+
+    typedef CRITICAL_SECTION pni_mutex_t;
+    static inline void pni_mutex_lock(pni_mutex_t *m) { EnterCriticalSection(m); }
+    static inline void pni_mutex_unlock(pni_mutex_t *m) { LeaveCriticalSection(m); }
+    static pni_mutex_t pni_cyrus_mutex;
+
+    // not sure if we realy need to do any explicitly cleanup at program exit
+    INIT_ONCE at_exit_cleanup_once_flag = INIT_ONCE_STATIC_INIT;
+    static BOOL CALLBACK AtExitHandlerFnc(PINIT_ONCE, PVOID, PVOID*)
+    {
+        atexit(pni_cyrus_finish);
+        return TRUE;
+    }
+
+    static inline void set_at_exit_handler(void) {
+        void* dummy;
+        InitOnceExecuteOnce(&at_exit_cleanup_once_flag, &AtExitHandlerFnc, NULL, &dummy);
+    }
+
+    // helper wraper for client initializetion
+    static BOOL CALLBACK InitClientFnc(PINIT_ONCE, PVOID, PVOID*)
+    {
+        pni_cyrus_client_once();
+        return TRUE;
+    }
+
+    INIT_ONCE pni_cyrus_client_init = INIT_ONCE_STATIC_INIT;
+    static inline void pni_cyrus_client_start(void) {
+        void* dummy;
+        InitOnceExecuteOnce(&pni_cyrus_client_init, &InitClientFnc, NULL, &dummy);
+        set_at_exit_handler();
+    }
+
+    // helper wraper for server
+    static BOOL CALLBACK InitServerFnc(PINIT_ONCE, PVOID, PVOID*)
+    {
+        pni_cyrus_server_once();
+        return TRUE;
+    }
+
+    INIT_ONCE pni_cyrus_server_init = INIT_ONCE_STATIC_INIT;
+    static inline void pni_cyrus_server_start(void) {
+        void* dummy;
+        InitOnceExecuteOnce(&pni_cyrus_server_init, &InitServerFnc, NULL, &dummy);
+        set_at_exit_handler();
+    }
+
+#else  /* POSIX */
+
+    #include <pthread.h>
+
+    typedef pthread_mutex_t pni_mutex_t;
+    static inline int pni_mutex_lock(pni_mutex_t *m) { return pthread_mutex_lock(m); }
+    static inline int pni_mutex_unlock(pni_mutex_t *m) { return pthread_mutex_unlock(m); }
+    static pni_mutex_t pni_cyrus_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+    static pthread_once_t pni_cyrus_client_init = PTHREAD_ONCE_INIT;
+    static inline void pni_cyrus_client_start(void) {
+        pthread_once(&pni_cyrus_client_init, pni_cyrus_client_once);
+    }
+
+    static pthread_once_t pni_cyrus_server_init = PTHREAD_ONCE_INIT;
+    static inline void pni_cyrus_server_start(void) {
+        pthread_once(&pni_cyrus_server_init, &pni_cyrus_server_once);
+    }
+
+#endif
 // Machinery to initialise the cyrus library only once even in a multithreaded environment
 // Relies on pthreads.
 static const char default_config_name[] = "proton-server";
 static char *pni_cyrus_config_dir = NULL;
 static char *pni_cyrus_config_name = NULL;
-static pthread_mutex_t pni_cyrus_mutex = PTHREAD_MUTEX_INITIALIZER;
 static bool pni_cyrus_client_started = false;
 static bool pni_cyrus_server_started = false;
 
@@ -224,19 +305,21 @@ void pn_sasl_config_path(pn_sasl_t *sasl0, const char *dir)
   }
 }
 
+#ifndef _WIN32
 __attribute__((destructor))
+#endif
 static void pni_cyrus_finish(void) {
-  pthread_mutex_lock(&pni_cyrus_mutex);
+  pni_mutex_lock(&pni_cyrus_mutex);
   if (pni_cyrus_client_started) sasl_client_done();
   if (pni_cyrus_server_started) sasl_server_done();
   free(pni_cyrus_config_dir);
   free(pni_cyrus_config_name);
-  pthread_mutex_unlock(&pni_cyrus_mutex);
+  pni_mutex_unlock(&pni_cyrus_mutex);
 }
 
 static int pni_cyrus_client_init_rc = SASL_OK;
 static void pni_cyrus_client_once(void) {
-  pthread_mutex_lock(&pni_cyrus_mutex);
+  pni_mutex_lock(&pni_cyrus_mutex);
   int result = SASL_OK;
   if (pni_cyrus_config_dir) {
     result = sasl_set_path(SASL_PATH_TYPE_CONFIG, pni_cyrus_config_dir);
@@ -251,12 +334,12 @@ static void pni_cyrus_client_once(void) {
   }
   pni_cyrus_client_started = true;
   pni_cyrus_client_init_rc = result;
-  pthread_mutex_unlock(&pni_cyrus_mutex);
+  pni_mutex_unlock(&pni_cyrus_mutex);
 }
 
 static int pni_cyrus_server_init_rc = SASL_OK;
 static void pni_cyrus_server_once(void) {
-  pthread_mutex_lock(&pni_cyrus_mutex);
+  pni_mutex_lock(&pni_cyrus_mutex);
   int result = SASL_OK;
   if (pni_cyrus_config_dir) {
     result = sasl_set_path(SASL_PATH_TYPE_CONFIG, pni_cyrus_config_dir);
@@ -271,16 +354,7 @@ static void pni_cyrus_server_once(void) {
   }
   pni_cyrus_server_started = true;
   pni_cyrus_server_init_rc = result;
-  pthread_mutex_unlock(&pni_cyrus_mutex);
-}
-
-static pthread_once_t pni_cyrus_client_init = PTHREAD_ONCE_INIT;
-static void pni_cyrus_client_start(void) {
-  pthread_once(&pni_cyrus_client_init, pni_cyrus_client_once);
-}
-static pthread_once_t pni_cyrus_server_init = PTHREAD_ONCE_INIT;
-static void pni_cyrus_server_start(void) {
-  pthread_once(&pni_cyrus_server_init, pni_cyrus_server_once);
+  pni_mutex_unlock(&pni_cyrus_mutex);
 }
 
 void cyrus_sasl_prepare(pn_transport_t* transport)
