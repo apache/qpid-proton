@@ -178,7 +178,7 @@ class transaction_impl {
     void commit();
     void abort();
     void declare();
-    proton::tracker send(proton::sender s, proton::message msg);
+    void send(proton::tracker t);
 
     void discharge(bool failed);
     void release_pending();
@@ -236,8 +236,8 @@ void session::transaction_declare() { session_context::get(pn_object())._txn_imp
 bool session::transaction_is_empty() { return session_context::get(pn_object())._txn_impl == NULL; }
 bool session::transaction_is_declared() { return (!transaction_is_empty()) && session_context::get(pn_object())._txn_impl->state == transaction_impl::State::DECLARED; }
 void session::transaction_accept(delivery &t) { return session_context::get(pn_object())._txn_impl->accept(t); }
-proton::tracker session::transaction_send(proton::sender s, proton::message msg) {
-    return session_context::get(pn_object())._txn_impl->send(s, msg);
+void session::transaction_send(proton::tracker t) {
+    session_context::get(pn_object())._txn_impl->send(t);
 }
 void session::transaction_handle_outcome(proton::tracker t) {
     session_context::get(pn_object())._txn_impl->handle_outcome(t);
@@ -299,12 +299,11 @@ proton::tracker transaction_impl::send_ctrl(proton::symbol descriptor, proton::v
     return delivery;
 }
 
-proton::tracker transaction_impl::send(proton::sender s, proton::message msg) {
+void transaction_impl::send(proton::tracker t) {
+    // This method is expected to be called by sender::send() for transaction messages.
     if (state != transaction_impl::State::DECLARED)
         throw proton::error("Only a declared transaction can send a message");
-    proton::tracker tracker = s.send(msg);
-    update(tracker, 0x34);
-    return tracker;
+    update(t, 0x34);
 }
 
 void transaction_impl::accept(delivery &t) {

@@ -52,7 +52,6 @@ class tx_recv : public proton::messaging_handler, proton::transaction_handler {
         conn_url_(u), addr_(a), expected(c), batch_size(b) {}
 
     void on_container_start(proton::container &c) override {
-        // receiver = c.open_receiver(url);
         c.connect(conn_url_);
     }
 

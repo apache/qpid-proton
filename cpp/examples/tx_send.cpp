@@ -100,7 +100,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
             msg.id(std::atomic_fetch_add(&unique_id, 1));
             msg.body(m);
             std::cout << "Sending: " << msg << std::endl;
-            session.transaction_send(sender, msg);
+            sender.send(msg);
             current_batch += 1;
             if(current_batch == batch_size)
             {

@@ -114,7 +114,7 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN void transaction_abort();
     PN_CPP_EXTERN void transaction_declare();
     PN_CPP_EXTERN void transaction_handle_outcome(proton::tracker);
-    PN_CPP_EXTERN proton::tracker transaction_send(proton::sender s, proton::message msg);
+    PN_CPP_EXTERN void transaction_send(proton::tracker t);
     PN_CPP_EXTERN void transaction_accept(delivery &t);
     PN_CPP_EXTERN proton::connection transaction_connection() const;
 

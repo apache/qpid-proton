@@ -30,6 +30,7 @@
 #include <proton/delivery.h>
 #include <proton/link.h>
 #include <proton/types.h>
+#include <proton/session.hpp>
 
 #include "proton_bits.hpp"
 #include "contexts.hpp"
@@ -84,6 +85,12 @@ tracker sender::send(const message &message, const binary &tag) {
         pn_delivery_settle(dlv);
     if (!pn_link_credit(pn_object()))
         link_context::get(pn_object()).draining = false;
+
+    // If transaction is declared
+    if (session().transaction_is_declared()) {
+        session().transaction_send(track);
+    }
+
     return track;
 }
 
