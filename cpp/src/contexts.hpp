@@ -25,6 +25,7 @@
 #include "reconnect_options_impl.hpp"
 
 #include "proton/work_queue.hpp"
+#include "proton/session.hpp"
 #include "proton/message.hpp"
 
 #include "proton/object.h"
@@ -152,6 +153,7 @@ class session_context : public context {
     session_context() : handler(0), user_data_(nullptr) {}
     static session_context& get(pn_session_t* s);
 
+    transaction_impl* _txn_impl;
     messaging_handler* handler;
     void* user_data_;
 };

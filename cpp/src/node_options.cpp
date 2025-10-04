@@ -162,6 +162,7 @@ class target_options::impl {
     option<enum target::expiry_policy> expiry_policy;
     option<std::vector<symbol> > capabilities;
     option<target::dynamic_property_map> dynamic_properties;
+    option<bool> is_coordinator;
 
     void apply(target& t) {
         node_address(t, address, dynamic, anonymous);
@@ -174,6 +175,9 @@ class target_options::impl {
             map<symbol, value> target_map;
             get(dynamic_properties.value, target_map);
             value(pn_terminus_properties(unwrap(t))) = target_map;
+        }
+        if (is_coordinator.set && is_coordinator.value) {
+            pn_terminus_set_type(unwrap(t), pn_terminus_type_t(PN_COORDINATOR));
         }
     }
 };
@@ -201,8 +205,8 @@ target_options& target_options::dynamic_properties(const target::dynamic_propert
     return *this;
 }
 
+target_options& target_options::make_coordinator() { impl_->is_coordinator = true; return *this; }
+
 void target_options::apply(target& s) const { impl_->apply(s); }
-
-
 
 } // namespace proton
