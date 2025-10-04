@@ -39,19 +39,22 @@
 #include <chrono>
 #include <thread>
 
-class tx_recv : public proton::messaging_handler {
+class tx_recv : public proton::messaging_handler, proton::transaction_handler {
   private:
     proton::sender sender;
     proton::receiver receiver;
+    proton::session session;
     std::string conn_url_;
     std::string addr_;
-    int expected;
+    int total;
+    int batch_size;
     int received = 0;
-    std::atomic<int> unique_msg_id;
+    int current_batch = 0;
+    int batch_index = 0;
 
   public:
-    tx_recv(const std::string& u, const std::string &a, int c):
-        conn_url_(u), addr_(a), expected(c), unique_msg_id(20000) {}
+    tx_recv(const std::string& u, const std::string &a, int c, int b):
+        conn_url_(u), addr_(a), total(c), batch_size(b) {}
 
     void on_container_start(proton::container &c) override {
         c.connect(conn_url_);
@@ -59,27 +62,60 @@ class tx_recv : public proton::messaging_handler {
 
    void on_connection_open(proton::connection& c) override {
         receiver = c.open_receiver(addr_);
-        sender = c.open_sender(addr_);
+        // sender = c.open_sender(addr_);
     }
 
     void on_session_open(proton::session &s) override {
         std::cout << "New session is open" << std::endl;
+        s.transaction_declare(*this);
+        session = s;
+    }
+
+    void on_transaction_declare_failed(proton::session s) override {
+        std::cout << "Transaction declarion failed" << std::endl;
+        s.connection().close();
+        exit(-1);
+    }
+
+    void on_transaction_declared(proton::session s) override {
+        std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
+    }
+
+    void on_transaction_committed(proton::session s) override {
+        std::cout << "Transaction commited" << std::endl;
+        received += batch_size;
+        if (received == total) {
+            std::cout << "All received messages committed, closing connection." << std::endl;
+            s.connection().close();
+        }
+        else {
+            std::cout << "Re-declaring transaction now... to receive next batch." << std::endl;
+            s.transaction_declare(*this);
+        }
+    }
+
+    void on_transaction_aborted(proton::session s) override {
+        std::cout << "Transaction aborted!" << std::endl;
+        std::cout << "Re-delaring transaction now..." << std::endl;
+        current_batch = 0;
+        s.transaction_declare(*this);
     }
 
     void on_message(proton::delivery &d, proton::message &msg) override {
         std::cout<<"# MESSAGE: " << msg.id() <<": "  << msg.body() << std::endl;
         d.accept();
-        proton::message reply_message;
-
-        reply_message.id(std::atomic_fetch_add(&unique_msg_id, 1));
-        reply_message.body(msg.body());
-        reply_message.reply_to(receiver.source().address());
-
-        sender.send(reply_message);
-
-        received += 1;
-        if (received == expected) {
-            receiver.connection().close();
+        current_batch += 1;
+        if (current_batch == batch_size) {
+            // Batch complete
+            std::cout << "In this example we abort even batch index and commit otherwise." << std::endl;
+            if (batch_index % 2 == 1) {
+                std::cout << "Commiting transaction..." << std::endl;
+                session.transaction_commit();
+            } else {
+                std::cout << "Aborting transaction..." << std::endl;
+                session.transaction_abort();
+            }
+            batch_index++;
         }
     }
 };
@@ -88,16 +124,18 @@ int main(int argc, char **argv) {
     std::string conn_url = argc > 1 ? argv[1] : "//127.0.0.1:5672";
     std::string addr = argc > 2 ? argv[2] : "examples";
     int message_count = 6;
+    int batch_size = 3;
     example::options opts(argc, argv);
 
     opts.add_value(conn_url, 'u', "url", "connect and send to URL", "URL");
     opts.add_value(addr, 'a', "address", "connect and send to address", "URL");
     opts.add_value(message_count, 'm', "messages", "number of messages to send", "COUNT");
+    opts.add_value(batch_size, 'b', "batch_size", "number of messages in each transaction", "BATCH_SIZE");
 
     try {
         opts.parse();
 
-        tx_recv recv(conn_url, addr, message_count);
+        tx_recv recv(conn_url, addr, message_count, batch_size);
         proton::container(recv).run();
 
         return 0;
