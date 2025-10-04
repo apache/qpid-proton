@@ -65,6 +65,16 @@ void messaging_handler::on_session_open(session &s) {
         pn_session_open(unwrap(s));
     }
 }
+
+void messaging_handler::on_session_transaction_declared(session &) {}
+void messaging_handler::on_session_transaction_committed(session &) {}
+void messaging_handler::on_session_transaction_aborted(session &) {}
+void messaging_handler::on_session_transaction_error(session &s) { on_session_error(s); }
+
+void messaging_handler::on_transactional_accept(tracker &) {}
+void messaging_handler::on_transactional_reject(tracker &) {}
+void messaging_handler::on_transactional_release(tracker &) {}
+
 void messaging_handler::on_receiver_close(receiver &) {}
 void messaging_handler::on_receiver_error(receiver &l) { on_error(l.error()); }
 void messaging_handler::on_receiver_open(receiver &l) {
