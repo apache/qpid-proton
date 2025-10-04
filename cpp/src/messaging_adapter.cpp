@@ -30,6 +30,7 @@
 #include "proton/receiver_options.hpp"
 #include "proton/sender.hpp"
 #include "proton/sender_options.hpp"
+#include "proton/target_options.hpp"
 #include "proton/session.hpp"
 #include "proton/tracker.hpp"
 #include "proton/transport.hpp"
@@ -37,6 +38,7 @@
 #include "contexts.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
+#include "types_internal.hpp"
 
 #include <proton/connection.h>
 #include <proton/delivery.h>
@@ -69,7 +71,7 @@ void on_link_flow(messaging_handler& handler, pn_event_t* event) {
     // TODO: process session flow data, if no link-specific data, just return.
     if (!lnk) return;
     int state = pn_link_state(lnk);
-    if ((state&PN_LOCAL_ACTIVE) && (state&PN_REMOTE_ACTIVE)) {
+    if (((state & PN_LOCAL_ACTIVE) && (state & PN_REMOTE_ACTIVE))) {
         link_context& lctx = link_context::get(lnk);
         if (pn_link_is_sender(lnk)) {
             if (pn_link_credit(lnk) > 0) {
@@ -108,6 +110,81 @@ void message_decode(message& msg, proton::delivery delivery) {
     msg.clear();
     msg.decode(buf);
     pn_link_advance(unwrap(link));
+}
+
+bool transaction_coordinator_sender(const sender& s) {
+    auto& txn_context = session_context::get(unwrap(s.session())).transaction_context_;
+    return txn_context && (txn_context->coordinator == unwrap(s));
+}
+
+void handle_transaction_coordinator_outcome(messaging_handler& handler, tracker t) {
+    auto session = t.session();
+    auto& session_context = session_context::get(unwrap(session));
+    auto& transaction_context = session_context.transaction_context_;
+    auto state = transaction_context->state;
+    auto disposition = pn_delivery_remote(unwrap(t));
+    if (auto *declared_disp = pn_declared_disposition(disposition); declared_disp) {
+        switch (state) {
+          case transaction_context::State::DECLARING: {
+            pn_bytes_t txn_id = pn_declared_disposition_get_id(declared_disp);
+            transaction_context->transaction_id = proton::bin(txn_id);
+            transaction_context->state = transaction_context::State::DECLARED;
+            handler.on_session_transaction_declared(session);
+            return;
+          }
+          case transaction_context::State::NO_TRANSACTION:
+          case transaction_context::State::DECLARED:
+          case transaction_context::State::DISCHARGING:
+            // Don't throw error here, instead close link with error
+            make_wrapper(transaction_context->coordinator).close(error_condition{"amqp:not-allowed", "Received transaction declared disposition in invalid state"});
+            transaction_context.release();
+        }
+    } else if (pn_disposition_type(disposition) == PN_ACCEPTED) {
+        switch (state) {
+          case transaction_context::State::DISCHARGING: {
+            if (transaction_context->failed) {
+                // Transaction abort is successful
+                transaction_context->state = transaction_context::State::NO_TRANSACTION;
+                handler.on_session_transaction_aborted(session);
+                return;
+            } else {
+                // Transaction commit is successful
+                transaction_context->state = transaction_context::State::NO_TRANSACTION;
+                handler.on_session_transaction_committed(session);
+                return;
+            }
+          }
+          case transaction_context::State::NO_TRANSACTION:
+          case transaction_context::State::DECLARING:
+          case transaction_context::State::DECLARED:
+            // TODO: Don't throw error here, instead detach link or close session?
+            make_wrapper(transaction_context->coordinator).close(error_condition{"amqp:not-allowed", "Received transaction accepted disposition in invalid state"});
+            transaction_context.release();
+        }
+    } else if (auto rejected_disp = pn_rejected_disposition(disposition); rejected_disp) {
+        switch (state) {
+          case transaction_context::State::DECLARING:
+            transaction_context->state = transaction_context::State::NO_TRANSACTION;
+            transaction_context->error = pn_rejected_disposition_condition(rejected_disp);
+            handler.on_session_transaction_error(session);
+            return;
+          case transaction_context::State::DISCHARGING:
+            // Note that rollback cannot fail in AMQP as the outcome would be the same,
+            // so don't count rejected discharge as an error (although it is a protocol error).
+            if (!transaction_context->failed) {
+                transaction_context->state = transaction_context::State::NO_TRANSACTION;
+                transaction_context->error = pn_rejected_disposition_condition(rejected_disp);
+                handler.on_session_transaction_error(session);
+                return;
+            }
+          case transaction_context::State::NO_TRANSACTION:
+          case transaction_context::State::DECLARED:
+            // TODO: Don't throw error here, instead detach link or close session?
+            make_wrapper(transaction_context->coordinator).close(error_condition{"amqp:not-allowed", "Received transaction rejected disposition in invalid state"});
+            transaction_context.release();
+        }
+    }
+    // TODO: Don't ignore unexpected disposition here, instead detach link or close session?
 }
 
 void on_delivery(messaging_handler& handler, pn_event_t* event) {
@@ -165,6 +242,12 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
         // sender
         if (pn_delivery_updated(dlv)) {
             tracker t(make_wrapper<tracker>(dlv));
+            // Check for outcome from a transaction coordinator
+            if (transaction_coordinator_sender(t.sender())) {
+                handle_transaction_coordinator_outcome(handler, t);
+                t.settle();
+                return;
+            }
             ot.on_settled_span(t);
             switch(pn_delivery_remote_state(dlv)) {
             case PN_ACCEPTED:
@@ -274,13 +357,6 @@ void on_link_local_open(messaging_handler& handler, pn_event_t* event) {
 
 void on_link_remote_open(messaging_handler& handler, pn_event_t* event) {
     auto lnk = pn_event_link(event);
-    // Currently don't implement (transaction) coordinator
-    if (pn_terminus_get_type(pn_link_remote_target(lnk))==PN_COORDINATOR) {
-      auto error = pn_link_condition(lnk);
-      pn_condition_set_name(error, "amqp:not-implemented");
-      pn_link_close(lnk);
-      return;
-    }
     if (pn_link_state(lnk) & PN_LOCAL_UNINIT) { // Incoming link
         // Copy source and target from remote end.
         pn_terminus_copy(pn_link_source(lnk), pn_link_remote_source(lnk));
@@ -320,9 +396,23 @@ void on_connection_wake(messaging_handler& handler, pn_event_t* event) {
 
 }
 
-void messaging_adapter::dispatch(messaging_handler& handler, pn_event_t* event)
+void messaging_adapter::dispatch(messaging_handler& h, pn_event_t* event)
 {
     pn_event_type_t type = pn_event_type(event);
+
+    // If this is an event for an (internal) transaction coordinator link set the handler to a null handler
+    // Unless its a delivery event which we need to process for transaction outcomes
+    messaging_handler& handler = [&]() -> messaging_handler& {
+        if (pn_link_t *lnk = pn_event_link(event);
+            type != PN_DELIVERY &&
+            lnk && pn_link_is_sender(lnk) &&
+            transaction_coordinator_sender(sender(make_wrapper<sender>(lnk)))) {
+            static messaging_handler null_handler;
+            return null_handler;
+        } else {
+            return h;
+        }
+    }();
 
     // Only handle events we are interested in
     switch(type) {

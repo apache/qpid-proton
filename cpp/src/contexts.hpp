@@ -28,6 +28,7 @@
 #include "proton/message.hpp"
 
 #include "proton/object.h"
+#include "proton/condition.h"
 
 #include <memory>
 
@@ -147,13 +148,33 @@ class link_context : public context {
     void* user_data_;
 };
 
+class transaction_context;
+
 class session_context : public context {
   public:
-    session_context() : handler(0), user_data_(nullptr) {}
+    session_context();
     static session_context& get(pn_session_t* s);
 
     messaging_handler* handler;
+    std::unique_ptr<transaction_context> transaction_context_;
     void* user_data_;
+};
+
+// This is not a context object on its own, but an optional part of session
+class transaction_context {
+  public:
+    transaction_context(pn_link_t* coordinator, bool settle_before_discharge);
+    pn_link_t* coordinator;
+    pn_condition_t* error = nullptr;
+    binary transaction_id;
+    bool failed = false;
+    enum class State {
+      NO_TRANSACTION,
+      DECLARING,
+      DECLARED,
+      DISCHARGING,
+    };
+    State state = State::NO_TRANSACTION;
 };
 
 class transfer_context : public context {
