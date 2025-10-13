@@ -60,6 +60,7 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
     }
 
     void on_connection_open(proton::connection& c) override {
+        std::cout << "In this example we abort/commit transaction alternatively." << std::endl;
         sender = c.open_sender(addr_);
     }
 
@@ -104,7 +105,6 @@ class tx_send : public proton::messaging_handler, proton::transaction_handler {
             current_batch += 1;
             if(current_batch == batch_size)
             {
-                std::cout << "In this example we commit even batch index and abort otherwise." << std::endl;
                 if (batch_index % 2 == 0) {
                     std::cout << "Commiting transaction..." << std::endl;
                     session.transaction_commit();

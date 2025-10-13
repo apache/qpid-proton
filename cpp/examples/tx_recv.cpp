@@ -24,12 +24,13 @@
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
 #include <proton/delivery.hpp>
-#include <proton/source.hpp>
-#include <proton/message.hpp>
 #include <proton/message_id.hpp>
+#include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
-#include <proton/types.hpp>
+#include <proton/receiver_options.hpp>
+#include <proton/source.hpp>
 #include <proton/transaction_handler.hpp>
+#include <proton/types.hpp>
 
 #include <iostream>
 #include <map>
@@ -41,7 +42,6 @@
 
 class tx_recv : public proton::messaging_handler, proton::transaction_handler {
   private:
-    proton::sender sender;
     proton::receiver receiver;
     proton::session session;
     std::string conn_url_;
@@ -61,8 +61,10 @@ class tx_recv : public proton::messaging_handler, proton::transaction_handler {
     }
 
    void on_connection_open(proton::connection& c) override {
-        receiver = c.open_receiver(addr_);
-        // sender = c.open_sender(addr_);
+        // NOTE:credit_window(0) disables automatic flow control.
+        // We will use flow control to receive batches of messages in a transaction.
+        std::cout << "In this example we abort/commit transaction alternatively." << std::endl;
+        receiver = c.open_receiver(addr_, proton::receiver_options().credit_window(0));
     }
 
     void on_session_open(proton::session &s) override {
@@ -79,11 +81,13 @@ class tx_recv : public proton::messaging_handler, proton::transaction_handler {
 
     void on_transaction_declared(proton::session s) override {
         std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
+        receiver.add_credit(batch_size);
     }
 
     void on_transaction_committed(proton::session s) override {
         std::cout << "Transaction commited" << std::endl;
-        received += batch_size;
+        received += current_batch;
+        current_batch = 0;
         if (received == total) {
             std::cout << "All received messages committed, closing connection." << std::endl;
             s.connection().close();
@@ -107,7 +111,6 @@ class tx_recv : public proton::messaging_handler, proton::transaction_handler {
         current_batch += 1;
         if (current_batch == batch_size) {
             // Batch complete
-            std::cout << "In this example we abort even batch index and commit otherwise." << std::endl;
             if (batch_index % 2 == 1) {
                 std::cout << "Commiting transaction..." << std::endl;
                 session.transaction_commit();
