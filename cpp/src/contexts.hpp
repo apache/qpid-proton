@@ -42,6 +42,7 @@ namespace proton {
 
 class proton_handler;
 class connector;
+class transaction_impl;
 
 namespace io {class link_namer;}
 

@@ -36,12 +36,12 @@ namespace {
 void settle_delivery(pn_delivery_t* o, uint64_t state) {
     proton::session session = proton::make_wrapper(o).session();
     if(session.transaction_is_declared()) {
-       // Transactional disposition
+        // Transactional disposition
         auto disp = pn_transactional_disposition(pn_delivery_local(o));
         pn_transactional_disposition_set_id(disp, pn_bytes(session.transaction_id()));
         pn_transactional_disposition_set_outcome_type(disp, state);
     } else {
-    pn_delivery_update(o, state);
+        pn_delivery_update(o, state);
     }
     pn_delivery_settle(o);
 }

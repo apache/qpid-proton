@@ -55,7 +55,6 @@ class source_options;
 class ssl;
 class target_options;
 class tracker;
-class transaction_handler;
 class transport;
 class url;
 class void_function0;

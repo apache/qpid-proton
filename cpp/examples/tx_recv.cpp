@@ -29,7 +29,6 @@
 #include <proton/messaging_handler.hpp>
 #include <proton/receiver_options.hpp>
 #include <proton/source.hpp>
-#include <proton/transaction_handler.hpp>
 #include <proton/types.hpp>
 
 #include <iostream>
@@ -40,7 +39,7 @@
 #include <chrono>
 #include <thread>
 
-class tx_recv : public proton::messaging_handler, proton::transaction_handler {
+class tx_recv : public proton::messaging_handler {
   private:
     proton::receiver receiver;
     proton::session session;
@@ -68,23 +67,23 @@ class tx_recv : public proton::messaging_handler, proton::transaction_handler {
     }
 
     void on_session_open(proton::session &s) override {
-        std::cout << "New session is open" << std::endl;
-        s.transaction_declare(*this);
-        session = s;
+        if(!s.transaction_is_declared()) {
+            std::cout << "New session is open" << std::endl;
+            s.transaction_declare(*this);
+            session = s;
+        } else {
+            std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
+            receiver.add_credit(batch_size);
+        }
     }
 
-    void on_transaction_declare_failed(proton::session s) override {
-        std::cout << "Transaction declarion failed" << std::endl;
+    void on_session_error(proton::session &s) override {
+        std::cout << "Session error: " << s.error().what() << std::endl;
         s.connection().close();
         exit(-1);
     }
 
-    void on_transaction_declared(proton::session s) override {
-        std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
-        receiver.add_credit(batch_size);
-    }
-
-    void on_transaction_committed(proton::session s) override {
+    void on_session_transaction_committed(proton::session &s) override {
         std::cout << "Transaction commited" << std::endl;
         received += current_batch;
         current_batch = 0;
@@ -98,7 +97,7 @@ class tx_recv : public proton::messaging_handler, proton::transaction_handler {
         }
     }
 
-    void on_transaction_aborted(proton::session s) override {
+    void on_session_transaction_aborted(proton::session &s) override {
         std::cout << "Transaction aborted!" << std::endl;
         std::cout << "Re-delaring transaction now..." << std::endl;
         current_batch = 0;

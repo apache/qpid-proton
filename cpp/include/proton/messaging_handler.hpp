@@ -172,6 +172,15 @@ PN_CPP_CLASS_EXTERN messaging_handler {
     /// The remote peer closed the session with an error condition.
     PN_CPP_EXTERN virtual void on_session_error(session&);
 
+    /// Called when a local transaction is discharged successfully.
+    PN_CPP_EXTERN virtual void on_session_transaction_committed(session&);
+
+    /// Called when the commit of a local transaction fails.
+    PN_CPP_EXTERN virtual void on_session_transaction_commit_failed(session&);
+
+    /// Called when a local transaction is discharged unsuccessfully (aborted).
+    PN_CPP_EXTERN virtual void on_session_transaction_aborted(session&);
+
     /// The remote peer opened the link.
     PN_CPP_EXTERN virtual void on_receiver_open(receiver&);
 

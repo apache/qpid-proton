@@ -37,10 +37,6 @@ struct pn_session_t;
 
 namespace proton {
 
-/// @cond INTERNAL
-class transaction_impl;
-/// @endcond
-
 /// A container of senders and receivers.
 class
 PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endpoint {
@@ -109,7 +105,7 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Get user data from this session.
     PN_CPP_EXTERN void* user_data() const;
 
-    PN_CPP_EXTERN void transaction_declare(proton::transaction_handler &handler, bool settle_before_discharge = false);
+    PN_CPP_EXTERN void transaction_declare(proton::messaging_handler &handler, bool settle_before_discharge = false);
     PN_CPP_EXTERN bool transaction_is_declared();
     PN_CPP_EXTERN proton::binary transaction_id() const;
     PN_CPP_EXTERN void transaction_commit();
@@ -121,7 +117,6 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     friend class internal::factory<session>;
     friend class sender;
     friend class session_iterator;
-    friend class transaction_impl;
     /// @endcond
 };
 
