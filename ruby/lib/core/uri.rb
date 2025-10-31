@@ -47,7 +47,7 @@ module Qpid::Proton
   private
   # Make sure to allow empty hostnames, Ruby 2.0.0 does not.
   DEFAULT_URI_PARSER =
-    if RUBY_VERSION >= '3.4'
+    if defined?(URI::RFC3986_Parser) && URI::DEFAULT_PARSER.is_a?(URI::RFC3986_Parser)
       URI::RFC2396_Parser.new(:HOSTNAME => /(?:#{URI::PATTERN::HOSTNAME})|/)
     else
       URI::Parser.new(:HOSTNAME => /(?:#{URI::PATTERN::HOSTNAME})|/)
