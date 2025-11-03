@@ -309,26 +309,21 @@ void transaction_impl::release_pending() {
 
 void transaction_impl::handle_outcome(proton::tracker t) {
     pn_disposition_t *disposition = pn_delivery_remote(unwrap(t));
+    pn_declared_disposition_t *declared_disp = pn_declared_disposition(disposition);
     proton::session session = t.session();
     if (state == State::DECLARING) {
         // Attempting to declare transaction
-        proton::value val(pn_disposition_data(disposition));
-        auto vd = get<std::vector<proton::binary>>(val);
-        if (vd.size() > 0) {
-            transaction_id = vd[0];
-            state = State::DECLARED;
-            handler->on_session_open(session);
-            return;
-        } else if (pn_disposition_is_failed(disposition)) {
+        if (pn_disposition_is_failed(disposition)) {
             state = State::FREE;
             transaction_delete(session);
             // on_transaction_declare_failed
             handler->on_session_error(session);
             return;
         } else {
-            state = State::FREE;
-            transaction_delete(session);
-            handler->on_session_error(session);
+            pn_bytes_t txn_id = pn_declared_disposition_get_id(declared_disp);
+            transaction_id = proton::bin(txn_id);
+            state = State::DECLARED;
+            handler->on_session_open(session);
             return;
         }
     } else if (state == State::DISCHARGING) {

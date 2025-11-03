@@ -136,15 +136,12 @@ class FakeBroker : public proton::messaging_handler {
        }
 
        if (descriptor == "amqp:declare:list") {
+           pn_bytes_t txn_id = pn_bytes(fake_txn_id.size(), reinterpret_cast<const char*>(&fake_txn_id[0]));
+
            pn_delivery_t* pd = proton::unwrap(d);
            pn_disposition_t* disp = pn_delivery_local(pd);
-           pn_custom_disposition_t *custom_disp = pn_custom_disposition(disp);
-           pn_custom_disposition_set_type(custom_disp, 0x33);
-           pn_data_t* pn_data = pn_custom_disposition_data(custom_disp);
-           pn_data_put_list(pn_data);
-           pn_data_enter(pn_data);
-           pn_data_put_binary(pn_data, pn_bytes(fake_txn_id.size(), reinterpret_cast<const char*>(&fake_txn_id[0])));
-           pn_data_exit(pn_data);
+           pn_declared_disposition_t* declared_disp = pn_declared_disposition(disp);
+           pn_declared_disposition_set_id(declared_disp, txn_id);
            pn_delivery_settle(pd);
 
            std::cout << "[BROKER] transaction declared: " << fake_txn_id << std::endl;
@@ -304,7 +301,6 @@ int main(int argc, char** argv) {
    std::thread client_thread([&client_container]() -> void { client_container.run(); });
 
    RUN_ARGV_TEST(tests_failed, test_transaction_commit(broker, client));
-   // RUN_ARGV_TEST(tests_failed, test_transaction_abort(broker, client));
 
    broker_thread.join();
    client_thread.join();
