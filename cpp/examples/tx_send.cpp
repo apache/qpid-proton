@@ -66,7 +66,7 @@ class tx_send : public proton::messaging_handler {
     void on_session_open(proton::session& s) override {
         if(!s.transaction_is_declared()) {
             std::cout << "New session is open, declaring transaction now..." << std::endl;
-            s.transaction_declare(*this);
+            s.transaction_declare();
         } else {
             std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
             send();
@@ -126,7 +126,7 @@ class tx_send : public proton::messaging_handler {
         }
         else {
             std::cout << "Re-declaring transaction now..." << std::endl;
-            s.transaction_declare(*this);
+            s.transaction_declare();
         }
     }
 
@@ -134,7 +134,7 @@ class tx_send : public proton::messaging_handler {
         std::cout << "Transaction aborted!" << std::endl;
         std::cout << "Re-delaring transaction now..." << std::endl;
         current_batch = 0;
-        s.transaction_declare(*this);
+        s.transaction_declare();
     }
 
     void on_sender_close(proton::sender &s) override {

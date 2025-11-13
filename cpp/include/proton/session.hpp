@@ -105,13 +105,11 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Get user data from this session.
     PN_CPP_EXTERN void* user_data() const;
 
-    PN_CPP_EXTERN void transaction_declare(proton::messaging_handler &handler, bool settle_before_discharge = false);
-    PN_CPP_EXTERN bool transaction_is_declared();
-    PN_CPP_EXTERN proton::binary transaction_id() const;
+    PN_CPP_EXTERN void transaction_declare(bool settle_before_discharge = false);
     PN_CPP_EXTERN void transaction_commit();
     PN_CPP_EXTERN void transaction_abort();
-
-
+    PN_CPP_EXTERN bool transaction_is_declared() const;
+    PN_CPP_EXTERN binary transaction_id() const;
 
     /// @cond INTERNAL
     friend class internal::factory<session>;

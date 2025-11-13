@@ -27,6 +27,7 @@
 
 #include "proton/connection_options.hpp"
 #include "proton/error.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/reconnect_options.hpp"
 
 #include <proton/connection.h>
@@ -86,6 +87,12 @@ listener_context& listener_context::get(pn_listener_t* l) {
 link_context& link_context::get(pn_link_t* l) {
     return ref<link_context>(id(pn_link_attachments(l), LINK_CONTEXT));
 }
+
+transaction_context::transaction_context(sender& txn_ctrl, std::unique_ptr<messaging_handler> ihandler, bool settle_before_discharge) :
+  coordinator(txn_ctrl), internal_handler(std::move(ihandler))
+{}
+
+session_context::session_context() : handler(nullptr), user_data_(nullptr) {}
 
 session_context& session_context::get(pn_session_t* s) {
     return ref<session_context>(id(pn_session_attachments(s), SESSION_CONTEXT));

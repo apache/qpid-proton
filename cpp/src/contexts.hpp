@@ -42,7 +42,6 @@ namespace proton {
 
 class proton_handler;
 class connector;
-class transaction_impl;
 
 namespace io {class link_namer;}
 
@@ -149,14 +148,33 @@ class link_context : public context {
     void* user_data_;
 };
 
+class transaction_context;
+
 class session_context : public context {
   public:
-    session_context() : handler(0), user_data_(nullptr) {}
+    session_context();
     static session_context& get(pn_session_t* s);
 
-    transaction_impl* _txn_impl;
     messaging_handler* handler;
+    std::unique_ptr<transaction_context> transaction_context_;
     void* user_data_;
+};
+
+// This is not a context object on its own, but an optional part of session
+class transaction_context {
+  public:
+    transaction_context(sender& txn_ctrl, std::unique_ptr<messaging_handler> ihandler, bool settle_before_discharge);
+    sender coordinator;
+    std::unique_ptr<messaging_handler> internal_handler;
+    binary transaction_id;
+    bool failed = false;
+    enum class State {
+      FREE,
+      DECLARING,
+      DECLARED,
+      DISCHARGING,
+    };
+    State state = State::FREE;
 };
 
 class transfer_context : public context {

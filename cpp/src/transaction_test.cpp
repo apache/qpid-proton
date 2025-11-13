@@ -201,7 +201,7 @@ class test_client : public proton::messaging_handler {
    void on_session_open(proton::session& s) override {
        if (!s.transaction_is_declared()) {
            wait_for_promise_or_fail(block_declare_transaction_on_session, "waiting on test to be ready");
-           s.transaction_declare(*this);
+           s.transaction_declare();
        } else {
            last_txn_id = s.transaction_id();
            std::cout << "Client: Transaction declared successfully: " << last_txn_id << std::endl;

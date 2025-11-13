@@ -69,7 +69,7 @@ class tx_recv : public proton::messaging_handler {
     void on_session_open(proton::session &s) override {
         if(!s.transaction_is_declared()) {
             std::cout << "New session is open" << std::endl;
-            s.transaction_declare(*this);
+            s.transaction_declare();
             session = s;
         } else {
             std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
@@ -93,7 +93,7 @@ class tx_recv : public proton::messaging_handler {
         }
         else {
             std::cout << "Re-declaring transaction now... to receive next batch." << std::endl;
-            s.transaction_declare(*this);
+            s.transaction_declare();
         }
     }
 
@@ -101,7 +101,7 @@ class tx_recv : public proton::messaging_handler {
         std::cout << "Transaction aborted!" << std::endl;
         std::cout << "Re-delaring transaction now..." << std::endl;
         current_batch = 0;
-        s.transaction_declare(*this);
+        s.transaction_declare();
     }
 
     void on_message(proton::delivery &d, proton::message &msg) override {

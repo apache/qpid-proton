@@ -150,6 +150,7 @@ class container::impl {
     bool auto_stop_;
     bool stopping_;
     friend class connector;
+    friend messaging_handler* get_handler(const session& s);
 };
 
 template <class T>

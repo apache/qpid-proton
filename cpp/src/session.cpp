@@ -21,6 +21,7 @@
 #include "proton/session.hpp"
 
 #include "proton/connection.hpp"
+#include "proton/container.hpp"
 #include "proton/delivery.h"
 #include "proton/delivery.hpp"
 #include "proton/error.hpp"
@@ -31,12 +32,13 @@
 #include "proton/messaging_handler.hpp"
 #include "proton/tracker.hpp"
 #include "proton/transfer.hpp"
-#include "types_internal.hpp"
+#include <proton/types.hpp>
 
 #include "contexts.hpp"
 #include "link_namer.hpp"
+#include "proactor_container_impl.hpp"
 #include "proton_bits.hpp"
-#include <proton/types.hpp>
+#include "types_internal.hpp"
 
 #include <proton/connection.h>
 #include <proton/session.h>
@@ -158,55 +160,27 @@ void* session::user_data() const {
     return sctx.user_data_;
 }
 
-class transaction_impl {
-  public:
-    proton::sender txn_ctrl;
-    proton::messaging_handler *handler = nullptr;
-    proton::binary transaction_id;
-    bool failed = false;
-    enum State {
-      FREE,
-      DECLARING,
-      DECLARED,
-      DISCHARGING,
-    };
-    enum State state = State::FREE;
-    std::vector<proton::tracker> pending;
-
-    void commit();
-    void abort();
-    void declare();
-
-    void discharge(bool failed);
-    void release_pending();
-
-    proton::tracker send_ctrl(proton::symbol descriptor, proton::value _value);
-    void handle_outcome(proton::tracker t);
-    transaction_impl(proton::sender &_txn_ctrl,
-                     proton::messaging_handler &_handler,
-                     bool _settle_before_discharge);
-    ~transaction_impl();
-};
-
-
 namespace {
 
-bool transaction_is_empty(const session& s) { return session_context::get(unwrap(s))._txn_impl == NULL; }
+void transaction_discharge(const session& s, bool failed);
 
-void transaction_handle_outcome(const session& s, proton::tracker t) {
-    session_context::get(unwrap(s))._txn_impl->handle_outcome(t);
+proton::tracker transaction_send_ctrl(sender& coordinator, const symbol& descriptor, const value& value);
+void transaction_handle_outcome(const session& s, proton::tracker t);
+
+std::unique_ptr<transaction_context>& get_transaction_context(const session& s) {
+    return session_context::get(unwrap(s)).transaction_context_;
+}
+bool transaction_is_empty(const session& s) { return get_transaction_context(s) == nullptr; }
+
+void transaction_delete(const session& s) { get_transaction_context(s).release(); }
+
 }
 
-void transaction_delete(const session& s) { auto &_txn_impl = session_context::get(unwrap(s))._txn_impl; delete _txn_impl; _txn_impl = nullptr;}
-
-}
-
-void session::transaction_declare(proton::messaging_handler &handler, bool settle_before_discharge) {
-    auto &txn_impl = session_context::get(pn_object())._txn_impl;
-    if (txn_impl == nullptr) {
+void session::transaction_declare(bool settle_before_discharge) {
+    auto& txn_context = session_context::get(pn_object()).transaction_context_;
+    if (!txn_context) {
         // Create _txn_impl
-        proton::connection conn = this->connection();
-        class InternalTransactionHandler : public proton::messaging_handler {
+        class InternalTransactionHandler : public messaging_handler {
 
             void on_tracker_settle(proton::tracker &t) override {
                 if (!transaction_is_empty(t.session())) {
@@ -214,153 +188,122 @@ void session::transaction_declare(proton::messaging_handler &handler, bool settl
                 }
             }
         };
+        auto internal_handler = new InternalTransactionHandler;
+        sender_options so;
+        so.name("txn-ctrl")
+            .handler(*internal_handler)
+            .target(
+                target_options{}
+                    .capabilities(std::vector<symbol>{"amqp:local-transactions"})
+                    .make_coordinator());
 
-        proton::target_options opts;
-        std::vector<symbol> cap = {proton::symbol("amqp:local-transactions")};
-        opts.capabilities(cap);
-        opts.make_coordinator();
+        auto s = connection().open_sender("txn coordinator", so);
 
-        proton::sender_options so;
-        so.name("txn-ctrl");
-        so.target(opts);
-
-        static InternalTransactionHandler internal_handler; // internal_handler going out of scope. Fix it
-        so.handler(internal_handler);
-
-        static proton::sender s = conn.open_sender("does not matter", so);
-
-        settle_before_discharge = false;
-
-        txn_impl = new transaction_impl(s, handler, settle_before_discharge);
+        txn_context = std::make_unique<transaction_context>(s, std::unique_ptr<messaging_handler>{internal_handler}, settle_before_discharge);
     }
+
     // Declare txn
-    txn_impl->declare();
-}
-
-
-proton::binary session::transaction_id() const { return session_context::get(pn_object())._txn_impl->transaction_id; }
-void session::transaction_commit() { session_context::get(pn_object())._txn_impl->commit(); }
-void session::transaction_abort() { session_context::get(pn_object())._txn_impl->abort(); }
-bool session::transaction_is_declared() { return (!transaction_is_empty(*this)) && session_context::get(pn_object())._txn_impl->state == transaction_impl::State::DECLARED; }
-
-transaction_impl::transaction_impl(proton::sender &_txn_ctrl,
-                                   proton::messaging_handler &_handler,
-                                   bool _settle_before_discharge)
-    : txn_ctrl(_txn_ctrl), handler(&_handler) {
-}
-transaction_impl::~transaction_impl() {}
-
-void transaction_impl::commit() {
-    discharge(false);
-}
-
-void transaction_impl::abort() {
-    discharge(true);
-}
-
-void transaction_impl::declare() {
-    if (state != transaction_impl::State::FREE)
+    if (txn_context->state != transaction_context::State::FREE)
         throw proton::error("This session has some associcated transaction already");
-    state = State::DECLARING;
+    txn_context->state = transaction_context::State::DECLARING;
 
-    proton::symbol descriptor("amqp:declare:list");
-    std::list<proton::value> vd;
-    proton::value i_am_null;
-    vd.push_back(i_am_null);
-    proton::value _value = vd;
-    send_ctrl(descriptor, _value);
+    transaction_send_ctrl(txn_context->coordinator, "amqp:declare:list", std::list<proton::value>{});
 }
 
-void transaction_impl::discharge(bool _failed) {
-    if (state != transaction_impl::State::DECLARED)
+
+proton::binary session::transaction_id() const { return get_transaction_context(*this)->transaction_id; }
+void session::transaction_commit() { transaction_discharge(*this, false); }
+void session::transaction_abort() { transaction_discharge(*this, true); }
+bool session::transaction_is_declared() const { return (!transaction_is_empty(*this)) && get_transaction_context(*this)->state == transaction_context::State::DECLARED; }
+
+messaging_handler* get_handler(const session& s) {
+    pn_session_t *session = unwrap(s);
+    messaging_handler *mh = internal::get_messaging_handler(session);
+
+    // Try for connection handler if none of the above
+    pn_connection_t *connection = pn_session_connection(session);
+    if (connection && !mh) mh = internal::get_messaging_handler(connection);
+
+    // Use container handler if nothing more specific (must be a container handler)
+    return mh ? mh : connection_context::get(connection).container->impl_->handler_;
+}
+
+namespace {
+
+void transaction_discharge(const session& s, bool failed) {
+    auto& transaction_context = get_transaction_context(s);
+    if (transaction_context->state != transaction_context::State::DECLARED)
         throw proton::error("Only a declared txn can be discharged.");
-    state = State::DISCHARGING;
+    transaction_context->state = transaction_context::State::DISCHARGING;
 
-    failed = _failed;
-    proton::symbol descriptor("amqp:discharge:list");
-    std::list<proton::value> vd;
-    vd.push_back(transaction_id);
-    vd.push_back(failed);
-    proton::value _value = vd;
-    send_ctrl(descriptor, _value);
+    transaction_context->failed = failed;
+    transaction_send_ctrl(
+        transaction_context->coordinator,
+        "amqp:discharge:list", std::list<proton::value>{transaction_context->transaction_id, failed});
 }
 
-proton::tracker transaction_impl::send_ctrl(proton::symbol descriptor, proton::value _value) {
+proton::tracker transaction_send_ctrl(sender& coordinator, const symbol& descriptor, const value& value) {
     proton::value msg_value;
     proton::codec::encoder enc(msg_value);
     enc << proton::codec::start::described()
         << descriptor
-        << _value
+        << value
         << proton::codec::finish();
 
-
-    proton::message msg = msg_value;
-    proton::tracker delivery = txn_ctrl.send(msg);
-    return delivery;
+    return coordinator.send(msg_value);
 }
 
-void transaction_impl::release_pending() {
-    for (auto d : pending) {
-        delivery d2(make_wrapper<delivery>(unwrap(d)));
-        d2.release();
-    }
-    pending.clear();
-}
-
-void transaction_impl::handle_outcome(proton::tracker t) {
+void transaction_handle_outcome(const session& s, proton::tracker t) {
+    auto& session_context = session_context::get(unwrap(s));
+    auto handler = get_handler(s);
+    auto& transaction_context = session_context.transaction_context_;
     pn_disposition_t *disposition = pn_delivery_remote(unwrap(t));
     pn_declared_disposition_t *declared_disp = pn_declared_disposition(disposition);
     proton::session session = t.session();
-    if (state == State::DECLARING) {
+    if (transaction_context->state == transaction_context::State::DECLARING) {
         // Attempting to declare transaction
         if (pn_disposition_is_failed(disposition)) {
-            state = State::FREE;
-            transaction_delete(session);
             // on_transaction_declare_failed
             handler->on_session_error(session);
+            transaction_delete(session);
             return;
         } else {
             pn_bytes_t txn_id = pn_declared_disposition_get_id(declared_disp);
-            transaction_id = proton::bin(txn_id);
-            state = State::DECLARED;
+            transaction_context->transaction_id = proton::bin(txn_id);
+            transaction_context->state = transaction_context::State::DECLARED;
             handler->on_session_open(session);
             return;
         }
-    } else if (state == State::DISCHARGING) {
+    } else if (transaction_context->state == transaction_context::State::DISCHARGING) {
         // Attempting to commit/abort transaction
         if (pn_disposition_is_failed(disposition)) {
-            if (!failed) {
-                state = State::FREE;
-                transaction_delete(session);
+            if (!transaction_context->failed) {
                 handler->on_session_transaction_commit_failed(session);
-                release_pending();
+                transaction_delete(session);
                 return;
             } else {
-                state = State::FREE;
                 transaction_delete(session);
                 // Transaction abort failed.
                 return;
             }
         } else {
-            if (failed) {
+            if (transaction_context->failed) {
                 // Transaction abort is successful
-                state = State::FREE;
-                transaction_delete(session);
                 handler->on_session_transaction_aborted(session);
-                release_pending();
+                transaction_delete(session);
                 return;
             } else {
                 // Transaction commit is successful
-                state = State::FREE;
-                transaction_delete(session);
                 handler->on_session_transaction_committed(session);
+                transaction_delete(session);
                 return;
             }
         }
-        pending.clear();
         return;
     }
     throw proton::error("reached unintended state in local transaction handler");
+}
+
 }
 
 } // namespace proton
