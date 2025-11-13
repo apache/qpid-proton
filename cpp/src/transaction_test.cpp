@@ -259,6 +259,7 @@ void test_transaction_commit(FakeBroker &broker, test_client &client) {
 
    wait_for_promise_or_fail(broker.declare_promise, "declare in broker");
    wait_for_promise_or_fail(broker.commit_promise, "commit in broker");
+   wait_for_promise_or_fail(client.transaction_finished_promise, "commit in client");
 
    // Only one transaction
    ASSERT_EQUAL(broker.transactions_messages.size(), 1u);
@@ -301,6 +302,7 @@ int main(int argc, char** argv) {
    std::thread client_thread([&client_container]() -> void { client_container.run(); });
 
    RUN_ARGV_TEST(tests_failed, test_transaction_commit(broker, client));
+//    RUN_ARGV_TEST(tests_failed, test_transaction_abort(broker, client));
 
    broker_thread.join();
    client_thread.join();
