@@ -181,14 +181,13 @@ void session::transaction_declare(bool settle_before_discharge) {
     if (!txn_context) {
         // Create _txn_impl
         class InternalTransactionHandler : public messaging_handler {
-
             void on_tracker_settle(proton::tracker &t) override {
                 if (!transaction_is_empty(t.session())) {
                     transaction_handle_outcome(t.session(), t);
                 }
             }
         };
-        auto internal_handler = new InternalTransactionHandler;
+        auto internal_handler = std::make_unique<InternalTransactionHandler>();
         sender_options so;
         so.name("txn-ctrl")
             .handler(*internal_handler)
@@ -198,8 +197,7 @@ void session::transaction_declare(bool settle_before_discharge) {
                     .make_coordinator());
 
         auto s = connection().open_sender("txn coordinator", so);
-
-        txn_context = std::make_unique<transaction_context>(s, std::unique_ptr<messaging_handler>{internal_handler}, settle_before_discharge);
+        txn_context = std::make_unique<transaction_context>(s, std::move(internal_handler), settle_before_discharge);
     }
 
     // Declare txn
