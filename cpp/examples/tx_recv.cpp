@@ -67,20 +67,20 @@ class tx_recv : public proton::messaging_handler {
     }
 
     void on_session_open(proton::session &s) override {
-        if(!s.transaction_is_declared()) {
-            std::cout << "New session is open" << std::endl;
-            s.transaction_declare();
-            session = s;
-        } else {
-            std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
-            receiver.add_credit(batch_size);
-        }
+        std::cout << "New session is open" << std::endl;
+        s.transaction_declare();
+        session = s;
     }
 
     void on_session_error(proton::session &s) override {
         std::cout << "Session error: " << s.error().what() << std::endl;
         s.connection().close();
         exit(-1);
+    }
+
+    void on_session_transaction_declared(proton::session &s) override {
+        std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
+        receiver.add_credit(batch_size);
     }
 
     void on_session_transaction_committed(proton::session &s) override {

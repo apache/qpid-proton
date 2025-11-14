@@ -262,26 +262,28 @@ void transaction_handle_outcome(const session& s, proton::tracker t) {
         // Attempting to declare transaction
         if (pn_disposition_is_failed(disposition)) {
             // on_transaction_declare_failed
-            handler->on_session_error(session);
+            handler->on_session_transaction_error(session);
             transaction_delete(session);
             return;
         } else {
             pn_bytes_t txn_id = pn_declared_disposition_get_id(declared_disp);
             transaction_context->transaction_id = proton::bin(txn_id);
             transaction_context->state = transaction_context::State::DECLARED;
-            handler->on_session_open(session);
+            handler->on_session_transaction_declared(session);
             return;
         }
     } else if (transaction_context->state == transaction_context::State::DISCHARGING) {
         // Attempting to commit/abort transaction
         if (pn_disposition_is_failed(disposition)) {
             if (!transaction_context->failed) {
-                handler->on_session_transaction_commit_failed(session);
+                // Transaction commit failed.
+                handler->on_session_transaction_error(session);
                 transaction_delete(session);
                 return;
             } else {
-                transaction_delete(session);
                 // Transaction abort failed.
+                handler->on_session_transaction_error(session);
+                transaction_delete(session);
                 return;
             }
         } else {

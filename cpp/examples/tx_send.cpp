@@ -64,13 +64,13 @@ class tx_send : public proton::messaging_handler {
     }
 
     void on_session_open(proton::session& s) override {
-        if(!s.transaction_is_declared()) {
-            std::cout << "New session is open, declaring transaction now..." << std::endl;
-            s.transaction_declare();
-        } else {
-            std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
-            send();
-        }
+        std::cout << "New session is open, declaring transaction now..." << std::endl;
+        s.transaction_declare();
+    }
+
+    void on_session_transaction_declared(proton::session& s) override {
+        std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
+        send();
     }
 
     void on_session_error(proton::session &s) override {
@@ -79,8 +79,8 @@ class tx_send : public proton::messaging_handler {
         exit(-1);
     }
 
-    void on_session_transaction_commit_failed(proton::session &s) override {
-        std::cout << "Transaction commit failed!" << std::endl;
+    void on_session_transaction_error(proton::session &s) override {
+        std::cout << "Transaction error!" << std::endl;
         s.connection().close();
         exit(-1);
     }

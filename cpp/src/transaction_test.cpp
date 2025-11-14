@@ -199,14 +199,8 @@ class test_client : public proton::messaging_handler {
    }
 
    void on_session_open(proton::session& s) override {
-       if (!s.transaction_is_declared()) {
-           wait_for_promise_or_fail(block_declare_transaction_on_session, "waiting on test to be ready");
-           s.transaction_declare();
-       } else {
-           last_txn_id = s.transaction_id();
-           std::cout << "Client: Transaction declared successfully: " << last_txn_id << std::endl;
-           send();
-       }
+        wait_for_promise_or_fail(block_declare_transaction_on_session, "waiting on test to be ready");
+        s.transaction_declare();
    }
 
    void schedule_messages_in_transaction(int count, bool is_commit) {
@@ -235,6 +229,12 @@ class test_client : public proton::messaging_handler {
                }
            }
        }
+   }
+
+   void on_session_transaction_declared(proton::session &s) override {
+       last_txn_id = s.transaction_id();
+       std::cout << "Client: Transaction declared successfully: " << last_txn_id << std::endl;
+       send();
    }
 
    void on_session_transaction_committed(proton::session &s) override {
