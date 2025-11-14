@@ -110,6 +110,7 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN void transaction_abort();
     PN_CPP_EXTERN bool transaction_is_declared() const;
     PN_CPP_EXTERN binary transaction_id() const;
+    PN_CPP_EXTERN error_condition transaction_error() const;
 
     /// @cond INTERNAL
     friend class internal::factory<session>;

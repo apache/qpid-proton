@@ -209,10 +209,25 @@ void session::transaction_declare(bool settle_before_discharge) {
 }
 
 
-proton::binary session::transaction_id() const { return get_transaction_context(*this)->transaction_id; }
+binary session::transaction_id() const { 
+    auto& txn_context = get_transaction_context(*this);
+    if (txn_context) {
+        return txn_context->transaction_id;
+    } else {
+        return binary();
+    }
+}
 void session::transaction_commit() { transaction_discharge(*this, false); }
 void session::transaction_abort() { transaction_discharge(*this, true); }
 bool session::transaction_is_declared() const { return (!transaction_is_empty(*this)) && get_transaction_context(*this)->state == transaction_context::State::DECLARED; }
+error_condition session::transaction_error() const {
+    auto& txn_context = get_transaction_context(*this);
+    if (txn_context) {
+        return make_wrapper(txn_context->error);
+    } else {
+        return error_condition();
+    }
+}
 
 messaging_handler* get_handler(const session& s) {
     pn_session_t *session = unwrap(s);
@@ -251,42 +266,22 @@ proton::tracker transaction_send_ctrl(sender& coordinator, const symbol& descrip
     return coordinator.send(msg_value);
 }
 
-void transaction_handle_outcome(const session& s, proton::tracker t) {
-    auto& session_context = session_context::get(unwrap(s));
-    auto handler = get_handler(s);
-    auto& transaction_context = session_context.transaction_context_;
-    pn_disposition_t *disposition = pn_delivery_remote(unwrap(t));
-    pn_declared_disposition_t *declared_disp = pn_declared_disposition(disposition);
+void transaction_handle_outcome(const session&, proton::tracker t) {
     proton::session session = t.session();
-    if (transaction_context->state == transaction_context::State::DECLARING) {
-        // Attempting to declare transaction
-        if (pn_disposition_is_failed(disposition)) {
-            // on_transaction_declare_failed
-            handler->on_session_transaction_error(session);
-            transaction_delete(session);
-            return;
-        } else {
+    auto& session_context = session_context::get(unwrap(session));
+    auto& transaction_context = session_context.transaction_context_;
+    auto handler = get_handler(session);
+    auto disposition = pn_delivery_remote(unwrap(t));
+    if (auto *declared_disp = pn_declared_disposition(disposition); declared_disp) {
+        switch (transaction_context->state) {
+          case transaction_context::State::DECLARING: {
             pn_bytes_t txn_id = pn_declared_disposition_get_id(declared_disp);
             transaction_context->transaction_id = proton::bin(txn_id);
             transaction_context->state = transaction_context::State::DECLARED;
             handler->on_session_transaction_declared(session);
             return;
-        }
-    } else if (transaction_context->state == transaction_context::State::DISCHARGING) {
-        // Attempting to commit/abort transaction
-        if (pn_disposition_is_failed(disposition)) {
-            if (!transaction_context->failed) {
-                // Transaction commit failed.
-                handler->on_session_transaction_error(session);
-                transaction_delete(session);
-                return;
-            } else {
-                // Transaction abort failed.
-                handler->on_session_transaction_error(session);
-                transaction_delete(session);
-                return;
-            }
-        } else {
+          }
+          case transaction_context::State::DISCHARGING: {
             if (transaction_context->failed) {
                 // Transaction abort is successful
                 handler->on_session_transaction_aborted(session);
@@ -298,9 +293,25 @@ void transaction_handle_outcome(const session& s, proton::tracker t) {
                 transaction_delete(session);
                 return;
             }
+          }
+          default:
+            ;
         }
-        return;
+    } else if (auto rejected_disp = pn_rejected_disposition(disposition); rejected_disp) {
+        switch (transaction_context->state) {
+          case transaction_context::State::DECLARING:
+          case transaction_context::State::DISCHARGING:
+            // Currently same handling for both declare and commit failures
+            // Note that rollback cannot fail in AMQP as the outcome would be the same
+            transaction_context->error = pn_rejected_disposition_condition(rejected_disp);
+            handler->on_session_transaction_error(session);
+            transaction_delete(session);
+            return;
+          default:
+            ;
+        }
     }
+    // TODO: Don't throw error here, instead detach link or close session?
     throw proton::error("reached unintended state in local transaction handler");
 }
 

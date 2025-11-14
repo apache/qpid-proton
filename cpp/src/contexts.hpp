@@ -166,6 +166,7 @@ class transaction_context {
     transaction_context(sender& txn_ctrl, std::unique_ptr<messaging_handler> ihandler, bool settle_before_discharge);
     sender coordinator;
     std::unique_ptr<messaging_handler> internal_handler;
+    pn_condition_t* error = nullptr;
     binary transaction_id;
     bool failed = false;
     enum class State {
