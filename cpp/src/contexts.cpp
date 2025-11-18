@@ -88,8 +88,8 @@ link_context& link_context::get(pn_link_t* l) {
     return ref<link_context>(id(pn_link_attachments(l), LINK_CONTEXT));
 }
 
-transaction_context::transaction_context(sender& txn_ctrl, std::unique_ptr<messaging_handler> ihandler, bool settle_before_discharge) :
-  coordinator(txn_ctrl), internal_handler(std::move(ihandler))
+transaction_context::transaction_context(sender& txn_ctrl, bool settle_before_discharge) :
+  coordinator(txn_ctrl)
 {}
 
 session_context::session_context() : handler(nullptr), user_data_(nullptr) {}

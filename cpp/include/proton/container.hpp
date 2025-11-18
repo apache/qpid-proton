@@ -326,7 +326,6 @@ class PN_CPP_CLASS_EXTERN container {
   friend class receiver_options;
   friend class sender_options;
   friend class work_queue;
-  friend messaging_handler* get_handler(const session& s);
     /// @endcond
 };
 

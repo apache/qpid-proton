@@ -162,47 +162,59 @@ void* session::user_data() const {
 
 namespace {
 
-void transaction_discharge(const session& s, bool failed);
-
-proton::tracker transaction_send_ctrl(sender& coordinator, const symbol& descriptor, const value& value);
-void transaction_handle_outcome(const session& s, proton::tracker t);
-
 std::unique_ptr<transaction_context>& get_transaction_context(const session& s) {
     return session_context::get(unwrap(s)).transaction_context_;
 }
-bool transaction_is_empty(const session& s) { return get_transaction_context(s) == nullptr; }
 
-void transaction_delete(const session& s) { get_transaction_context(s).release(); }
+bool transaction_is_empty(const session& s) {
+    auto& txn = get_transaction_context(s);
+    return !txn || txn->state == transaction_context::State::NO_TRANSACTION;
+}
+
+proton::tracker transaction_send_ctrl(sender& coordinator, const symbol& descriptor, const value& value) {
+    proton::value msg_value;
+    proton::codec::encoder enc(msg_value);
+    enc << proton::codec::start::described()
+        << descriptor
+        << value
+        << proton::codec::finish();
+
+    return coordinator.send(msg_value);
+}
+
+void transaction_discharge(const session& s, bool failed) {
+    auto& transaction_context = get_transaction_context(s);
+    if (transaction_context->state != transaction_context::State::DECLARED)
+        throw proton::error("Only a declared txn can be discharged.");
+    transaction_context->state = transaction_context::State::DISCHARGING;
+
+    transaction_context->failed = failed;
+    transaction_send_ctrl(
+        transaction_context->coordinator,
+        "amqp:discharge:list", std::list<proton::value>{transaction_context->transaction_id, failed});
+}
 
 }
 
 void session::transaction_declare(bool settle_before_discharge) {
-    auto& txn_context = session_context::get(pn_object()).transaction_context_;
-    if (!txn_context) {
-        // Create _txn_impl
-        class InternalTransactionHandler : public messaging_handler {
-            void on_tracker_settle(proton::tracker &t) override {
-                if (!transaction_is_empty(t.session())) {
-                    transaction_handle_outcome(t.session(), t);
-                }
-            }
-        };
-        auto internal_handler = std::make_unique<InternalTransactionHandler>();
-        sender_options so;
-        so.name("txn-ctrl")
-            .handler(*internal_handler)
-            .target(
-                target_options{}
-                    .capabilities(std::vector<symbol>{"amqp:local-transactions"})
-                    .make_coordinator());
+    if (!transaction_is_empty(*this))
+        throw proton::error("Session already declared transaction");
 
-        auto s = connection().open_sender("txn coordinator", so);
-        txn_context = std::make_unique<transaction_context>(s, std::move(internal_handler), settle_before_discharge);
+    auto& txn_context = get_transaction_context(*this);
+    if (!txn_context) {
+        auto s =
+            connection().open_sender(
+                "txn coordinator",
+                sender_options{}
+                    .name("txn-ctrl")
+                    .target(
+                        target_options{}
+                            .capabilities(std::vector<symbol>{"amqp:local-transactions"})
+                            .make_coordinator()));
+        txn_context = std::make_unique<transaction_context>(s, settle_before_discharge);
     }
 
     // Declare txn
-    if (txn_context->state != transaction_context::State::FREE)
-        throw proton::error("This session has some associcated transaction already");
     txn_context->state = transaction_context::State::DECLARING;
 
     transaction_send_ctrl(txn_context->coordinator, "amqp:declare:list", std::list<proton::value>{});
@@ -227,94 +239,6 @@ error_condition session::transaction_error() const {
     } else {
         return error_condition();
     }
-}
-
-messaging_handler* get_handler(const session& s) {
-    pn_session_t *session = unwrap(s);
-    messaging_handler *mh = internal::get_messaging_handler(session);
-
-    // Try for connection handler if none of the above
-    pn_connection_t *connection = pn_session_connection(session);
-    if (connection && !mh) mh = internal::get_messaging_handler(connection);
-
-    // Use container handler if nothing more specific (must be a container handler)
-    return mh ? mh : connection_context::get(connection).container->impl_->handler_;
-}
-
-namespace {
-
-void transaction_discharge(const session& s, bool failed) {
-    auto& transaction_context = get_transaction_context(s);
-    if (transaction_context->state != transaction_context::State::DECLARED)
-        throw proton::error("Only a declared txn can be discharged.");
-    transaction_context->state = transaction_context::State::DISCHARGING;
-
-    transaction_context->failed = failed;
-    transaction_send_ctrl(
-        transaction_context->coordinator,
-        "amqp:discharge:list", std::list<proton::value>{transaction_context->transaction_id, failed});
-}
-
-proton::tracker transaction_send_ctrl(sender& coordinator, const symbol& descriptor, const value& value) {
-    proton::value msg_value;
-    proton::codec::encoder enc(msg_value);
-    enc << proton::codec::start::described()
-        << descriptor
-        << value
-        << proton::codec::finish();
-
-    return coordinator.send(msg_value);
-}
-
-void transaction_handle_outcome(const session&, proton::tracker t) {
-    proton::session session = t.session();
-    auto& session_context = session_context::get(unwrap(session));
-    auto& transaction_context = session_context.transaction_context_;
-    auto handler = get_handler(session);
-    auto disposition = pn_delivery_remote(unwrap(t));
-    if (auto *declared_disp = pn_declared_disposition(disposition); declared_disp) {
-        switch (transaction_context->state) {
-          case transaction_context::State::DECLARING: {
-            pn_bytes_t txn_id = pn_declared_disposition_get_id(declared_disp);
-            transaction_context->transaction_id = proton::bin(txn_id);
-            transaction_context->state = transaction_context::State::DECLARED;
-            handler->on_session_transaction_declared(session);
-            return;
-          }
-          case transaction_context::State::DISCHARGING: {
-            if (transaction_context->failed) {
-                // Transaction abort is successful
-                handler->on_session_transaction_aborted(session);
-                transaction_delete(session);
-                return;
-            } else {
-                // Transaction commit is successful
-                handler->on_session_transaction_committed(session);
-                transaction_delete(session);
-                return;
-            }
-          }
-          default:
-            ;
-        }
-    } else if (auto rejected_disp = pn_rejected_disposition(disposition); rejected_disp) {
-        switch (transaction_context->state) {
-          case transaction_context::State::DECLARING:
-          case transaction_context::State::DISCHARGING:
-            // Currently same handling for both declare and commit failures
-            // Note that rollback cannot fail in AMQP as the outcome would be the same
-            transaction_context->error = pn_rejected_disposition_condition(rejected_disp);
-            handler->on_session_transaction_error(session);
-            transaction_delete(session);
-            return;
-          default:
-            ;
-        }
-    }
-    // TODO: Don't throw error here, instead detach link or close session?
-    throw proton::error("reached unintended state in local transaction handler");
-}
-
 }
 
 } // namespace proton

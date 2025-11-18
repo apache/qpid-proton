@@ -163,19 +163,18 @@ class session_context : public context {
 // This is not a context object on its own, but an optional part of session
 class transaction_context {
   public:
-    transaction_context(sender& txn_ctrl, std::unique_ptr<messaging_handler> ihandler, bool settle_before_discharge);
+    transaction_context(sender& txn_ctrl, bool settle_before_discharge);
     sender coordinator;
-    std::unique_ptr<messaging_handler> internal_handler;
     pn_condition_t* error = nullptr;
     binary transaction_id;
     bool failed = false;
     enum class State {
-      FREE,
+      NO_TRANSACTION,
       DECLARING,
       DECLARED,
       DISCHARGING,
     };
-    State state = State::FREE;
+    State state = State::NO_TRANSACTION;
 };
 
 class transfer_context : public context {
