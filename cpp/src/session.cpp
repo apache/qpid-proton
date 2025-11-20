@@ -171,7 +171,7 @@ bool transaction_is_empty(const session& s) {
     return !txn || txn->state == transaction_context::State::NO_TRANSACTION;
 }
 
-proton::tracker transaction_send_ctrl(sender& coordinator, const symbol& descriptor, const value& value) {
+proton::tracker transaction_send_ctrl(sender&& coordinator, const symbol& descriptor, const value& value) {
     proton::value msg_value;
     proton::codec::encoder enc(msg_value);
     enc << proton::codec::start::described()
@@ -190,7 +190,7 @@ void transaction_discharge(const session& s, bool failed) {
 
     transaction_context->failed = failed;
     transaction_send_ctrl(
-        transaction_context->coordinator,
+        make_wrapper<sender>(transaction_context->coordinator),
         "amqp:discharge:list", std::list<proton::value>{transaction_context->transaction_id, failed});
 }
 
@@ -203,10 +203,9 @@ void session::transaction_declare(bool settle_before_discharge) {
     auto& txn_context = get_transaction_context(*this);
     if (!txn_context) {
         auto s =
-            connection().open_sender(
-                "txn coordinator",
+            open_sender(
+                "",
                 sender_options{}
-                    .name("txn-ctrl")
                     .target(
                         target_options{}
                             .capabilities(std::vector<symbol>{"amqp:local-transactions"})
@@ -217,7 +216,7 @@ void session::transaction_declare(bool settle_before_discharge) {
     // Declare txn
     txn_context->state = transaction_context::State::DECLARING;
 
-    transaction_send_ctrl(txn_context->coordinator, "amqp:declare:list", std::list<proton::value>{});
+    transaction_send_ctrl(make_wrapper<sender>(txn_context->coordinator), "amqp:declare:list", std::list<proton::value>{});
 }
 
 

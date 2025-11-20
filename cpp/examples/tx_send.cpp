@@ -39,7 +39,6 @@
 
 class tx_send : public proton::messaging_handler {
   private:
-    proton::sender sender;
     std::string conn_url_;
     std::string addr_;
     int total;
@@ -60,7 +59,7 @@ class tx_send : public proton::messaging_handler {
 
     void on_connection_open(proton::connection& c) override {
         std::cout << "In this example we abort/commit transaction alternatively." << std::endl;
-        sender = c.open_sender(addr_);
+        c.open_session();
     }
 
     void on_session_open(proton::session& s) override {
@@ -70,7 +69,7 @@ class tx_send : public proton::messaging_handler {
 
     void on_session_transaction_declared(proton::session& s) override {
         std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
-        send();
+        s.open_sender(addr_);
     }
 
     void on_session_error(proton::session &s) override {
@@ -85,20 +84,14 @@ class tx_send : public proton::messaging_handler {
         exit(-1);
     }
 
-    void on_sendable(proton::sender&) override {
-        send();
-    }
-
-    void send() {
+    void on_sendable(proton::sender& sender) override {
         proton::session session = sender.session();
         while (session.transaction_is_declared() && sender.credit() &&
                (committed + current_batch) < total) {
             proton::message msg;
-            std::map<std::string, int> m;
-            m["sequence"] = committed + current_batch;
 
             msg.id(std::atomic_fetch_add(&unique_msg_id, 1));
-            msg.body(m);
+            msg.body(std::map<std::string, int>{{"sequence", committed + current_batch}});
             std::cout << "Sending [sender batch " << batch_index << "]: " << msg << std::endl;
             sender.send(msg);
             current_batch += 1;

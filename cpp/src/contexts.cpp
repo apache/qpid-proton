@@ -89,7 +89,7 @@ link_context& link_context::get(pn_link_t* l) {
 }
 
 transaction_context::transaction_context(sender& txn_ctrl, bool settle_before_discharge) :
-  coordinator(txn_ctrl)
+  coordinator(unwrap(txn_ctrl))
 {}
 
 session_context::session_context() : handler(nullptr), user_data_(nullptr) {}

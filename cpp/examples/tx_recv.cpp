@@ -42,7 +42,6 @@
 class tx_recv : public proton::messaging_handler {
   private:
     proton::receiver receiver;
-    proton::session session;
     std::string conn_url_;
     std::string addr_;
     int total;
@@ -69,7 +68,6 @@ class tx_recv : public proton::messaging_handler {
     void on_session_open(proton::session &s) override {
         std::cout << "New session is open" << std::endl;
         s.transaction_declare();
-        session = s;
     }
 
     void on_session_error(proton::session &s) override {
@@ -99,13 +97,14 @@ class tx_recv : public proton::messaging_handler {
 
     void on_session_transaction_aborted(proton::session &s) override {
         std::cout << "Transaction aborted!" << std::endl;
-        std::cout << "Re-delaring transaction now..." << std::endl;
+        std::cout << "Re-declaring transaction now..." << std::endl;
         current_batch = 0;
         s.transaction_declare();
     }
 
     void on_message(proton::delivery &d, proton::message &msg) override {
         std::cout<<"# MESSAGE: " << msg.id() <<": "  << msg.body() << std::endl;
+        auto session = d.session();
         d.accept();
         current_batch += 1;
         if (current_batch == batch_size) {
