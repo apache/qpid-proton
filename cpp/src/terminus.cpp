@@ -58,7 +58,7 @@ value terminus::node_properties() const {
 
 std::vector<symbol> terminus::capabilities() const {
     value caps(pn_terminus_capabilities(object_));
-    return caps.empty() ? std::vector<symbol>() : caps.get<std::vector<symbol> >();
+    return get_multiple<std::vector<symbol>>(caps);
 }
 
 terminus::dynamic_property_map terminus::dynamic_properties() const {
