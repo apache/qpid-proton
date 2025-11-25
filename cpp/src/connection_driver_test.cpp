@@ -39,8 +39,12 @@
 #include "proton/types_fwd.hpp"
 #include "proton/uuid.hpp"
 
-#include <deque>
+#include <proton/codec.h>
+#include <proton/terminus.h>
+
 #include <algorithm>
+#include <cstring>
+#include <deque>
 
 namespace {
 
@@ -466,6 +470,25 @@ void test_link_capability_filter() {
     ASSERT_EQUAL(value("22"), f.get("2"));
 }
 
+void test_terminus_capabilities_single_symbol() {
+    // Test that capabilities() correctly handles a single symbol (not an array)
+    // Capabilities can be encoded as either a single AMQP symbol or an array of symbols.
+    record_handler ha, hb;
+    driver_pair d(ha, hb);
+
+    // Annoyingly, we have to use the C API to set capabilities as a single symbol
+    // because the C++ API only supports setting arrays of symbols.
+    auto s = d.a.connection().open_sender("test-address");
+    auto caps_data = pn_terminus_capabilities(unwrap(s.target()));
+    auto cap_str = "single-capability";
+    pn_data_put_symbol(caps_data, pn_bytes(strlen(cap_str), cap_str));
+
+    // Verify that capabilities() returns a vector with the single symbol
+    auto caps = s.target().capabilities();
+    ASSERT_EQUAL(1U, caps.size());
+    ASSERT_EQUAL(proton::symbol("single-capability"), caps[0]);
+}
+
 void test_message() {
     // Verify a message arrives intact
     record_handler ha, hb;
@@ -544,6 +567,7 @@ int main(int argc, char** argv) {
     RUN_ARGV_TEST(failed, test_link_address());
     RUN_ARGV_TEST(failed, test_link_anonymous_dynamic());
     RUN_ARGV_TEST(failed, test_link_capability_filter());
+    RUN_ARGV_TEST(failed, test_terminus_capabilities_single_symbol());
     RUN_ARGV_TEST(failed, test_message());
     RUN_ARGV_TEST(failed, test_message_timeout_succeed());
     RUN_ARGV_TEST(failed, test_message_timeout_fail());

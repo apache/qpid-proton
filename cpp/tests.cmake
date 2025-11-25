@@ -52,6 +52,7 @@ endmacro(add_cpp_test)
 
 add_cpp_test(codec_test)
 add_cpp_test(connection_driver_test)
+target_link_libraries(connection_driver_test qpid-proton-core)
 add_cpp_test(interop_test ${PROJECT_SOURCE_DIR}/tests)
 add_cpp_test(message_test)
 add_cpp_test(map_test)
