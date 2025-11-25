@@ -60,10 +60,6 @@ class target_options {
     /// address is ignored if dynamic() is true.
     PN_CPP_EXTERN target_options& address(const std::string& addr);
 
-    /// Set the target be of type coordinator.
-    /// This immediately override the currently assigned type.
-    PN_CPP_EXTERN target_options& make_coordinator();
-
     /// Request that a node be dynamically created by the remote peer.
     /// The default is false.  Any specified target address() is
     /// ignored if true.

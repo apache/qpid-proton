@@ -163,7 +163,7 @@ class session_context : public context {
 // This is not a context object on its own, but an optional part of session
 class transaction_context {
   public:
-    transaction_context(sender& txn_ctrl, bool settle_before_discharge);
+    transaction_context(pn_link_t* coordinator, bool settle_before_discharge);
     pn_link_t* coordinator;
     pn_condition_t* error = nullptr;
     binary transaction_id;

@@ -194,6 +194,17 @@ void transaction_discharge(const session& s, bool failed) {
         "amqp:discharge:list", std::list<proton::value>{transaction_context->transaction_id, failed});
 }
 
+pn_link_t* open_coordinator_sender(session& s) {
+    auto l = pn_sender(unwrap(s), next_link_name(s.connection()).c_str());
+    auto t = pn_link_target(l);
+    pn_terminus_set_type(t, PN_COORDINATOR);
+    auto caps = pn_terminus_capabilities(t);
+    // As we only have a single symbol in the capabilities we don't have to create an array
+    pn_data_put_symbol(caps, pn_bytes("amqp:local-transactions"));
+    pn_link_open(l);
+    return l;
+}
+
 }
 
 void session::transaction_declare(bool settle_before_discharge) {
@@ -202,15 +213,7 @@ void session::transaction_declare(bool settle_before_discharge) {
 
     auto& txn_context = get_transaction_context(*this);
     if (!txn_context) {
-        auto s =
-            open_sender(
-                "",
-                sender_options{}
-                    .target(
-                        target_options{}
-                            .capabilities(std::vector<symbol>{"amqp:local-transactions"})
-                            .make_coordinator()));
-        txn_context = std::make_unique<transaction_context>(s, settle_before_discharge);
+        txn_context = std::make_unique<transaction_context>(open_coordinator_sender(*this), settle_before_discharge);
     }
 
     // Declare txn
