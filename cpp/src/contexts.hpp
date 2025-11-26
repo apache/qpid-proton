@@ -25,10 +25,10 @@
 #include "reconnect_options_impl.hpp"
 
 #include "proton/work_queue.hpp"
-#include "proton/session.hpp"
 #include "proton/message.hpp"
 
 #include "proton/object.h"
+#include "proton/condition.h"
 
 #include <memory>
 

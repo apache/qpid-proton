@@ -43,11 +43,10 @@ class simple_recv : public proton::messaging_handler {
     proton::receiver receiver;
     int expected;
     int received;
-    bool verbose;
 
   public:
-    simple_recv(const std::string &s, const std::string &u, const std::string &p, int c, bool verbose) :
-        url(s), user(u), password(p), expected(c), received(0), verbose(verbose) {}
+    simple_recv(const std::string &s, const std::string &u, const std::string &p, int c) :
+        url(s), user(u), password(p), expected(c), received(0) {}
 
     void on_container_start(proton::container &c) override {
         proton::connection_options co;
@@ -62,9 +61,6 @@ class simple_recv : public proton::messaging_handler {
         }
 
         if (expected == 0 || received < expected) {
-            if (verbose) {
-                std::cout << msg << ": ";
-            }
             std::cout << msg.body() << std::endl;
             received++;
 
@@ -81,20 +77,18 @@ int main(int argc, char **argv) {
     std::string user;
     std::string password;
     int message_count = 100;
-    bool verbose;
     example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "connect to and receive from URL", "URL");
     opts.add_value(message_count, 'm', "messages", "receive COUNT messages", "COUNT");
     opts.add_value(user, 'u', "user", "authenticate as USER", "USER");
     opts.add_value(password, 'p', "password", "authenticate with PASSWORD", "PASSWORD");
-    opts.add_flag(verbose, 'v', "verbose", "show whole message contents");
 
 
     try {
         opts.parse();
 
-        simple_recv recv(address, user, password, message_count, verbose);
+        simple_recv recv(address, user, password, message_count);
         proton::container(recv).run();
 
         return 0;

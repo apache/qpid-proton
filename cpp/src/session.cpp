@@ -22,17 +22,16 @@
 
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/delivery.h"
 #include "proton/delivery.hpp"
 #include "proton/error.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/session_options.hpp"
 #include "proton/target_options.hpp"
-#include "proton/messaging_handler.hpp"
 #include "proton/tracker.hpp"
 #include "proton/transfer.hpp"
-#include <proton/types.hpp>
+#include "proton/types.hpp"
 
 #include "contexts.hpp"
 #include "link_namer.hpp"
@@ -41,6 +40,7 @@
 #include "types_internal.hpp"
 
 #include <proton/connection.h>
+#include "proton/delivery.h"
 #include <proton/session.h>
 
 #include <string>
@@ -81,7 +81,6 @@ std::string next_link_name(const connection& c) {
 
     return ln ? ln->link_name() : uuid::random().str();
 }
-
 }
 
 sender session::open_sender(const std::string &addr) {

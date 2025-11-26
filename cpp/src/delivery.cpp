@@ -31,6 +31,8 @@
 
 #include "proton/binary.hpp"
 
+#include <proton/session.hpp>
+
 namespace {
 
 void settle_delivery(pn_delivery_t* o, uint64_t state) {

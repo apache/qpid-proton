@@ -42,7 +42,6 @@
 
 #include <proton/connection.h>
 #include <proton/delivery.h>
-#include <proton/disposition.h>
 #include <proton/handlers.h>
 #include <proton/link.h>
 #include <proton/message.h>
@@ -72,8 +71,7 @@ void on_link_flow(messaging_handler& handler, pn_event_t* event) {
     // TODO: process session flow data, if no link-specific data, just return.
     if (!lnk) return;
     int state = pn_link_state(lnk);
-    if (pn_terminus_get_type(pn_link_remote_target(lnk)) == PN_COORDINATOR ||
-        ((state & PN_LOCAL_ACTIVE) && (state & PN_REMOTE_ACTIVE))) {
+    if (((state & PN_LOCAL_ACTIVE) && (state & PN_REMOTE_ACTIVE))) {
         link_context& lctx = link_context::get(lnk);
         if (pn_link_is_sender(lnk)) {
             if (pn_link_credit(lnk) > 0) {

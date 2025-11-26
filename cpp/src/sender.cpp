@@ -23,19 +23,19 @@
 
 #include "proton/link.hpp"
 #include "proton/sender_options.hpp"
+#include "proton/session.hpp"
 #include "proton/source.hpp"
 #include "proton/target.hpp"
 #include "proton/tracker.hpp"
-#include "types_internal.hpp"
 
 #include <proton/delivery.h>
 #include <proton/link.h>
 #include <proton/types.h>
-#include <proton/session.hpp>
 
 #include "proton_bits.hpp"
 #include "contexts.hpp"
 #include "tracing_private.hpp"
+#include "types_internal.hpp"
 
 #include <assert.h>
 
