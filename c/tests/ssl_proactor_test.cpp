@@ -37,6 +37,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <filesystem>
+
 typedef struct app_data_t {
   const char *amqp_address;
   const char *container_id;
@@ -47,19 +49,27 @@ typedef struct app_data_t {
   bool transport_error;
 } app_data_t;
 
-/* Note must be run in the current directory to find certificate files */
-#define SSL_FILE(NAME) "ssl-certs/" NAME
+static std::string ssl_file_path(const std::string &name) {
+  auto env = getenv("TEST_CERT_DIR");
+  const char* cert_dir = env ? env : "ssl-certs";
+  auto p = std::filesystem::path(cert_dir) / name;
+  return p.string();
+}
+
+#define SSL_FILE(NAME) ssl_file_path(NAME)
 #define SSL_PW(NAME) NAME "pw"
 /* Windows vs. OpenSSL certificates */
 #if defined(_WIN32)
-#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
-#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, SSL_FILE(NAME "-full.p12"), "", SSL_PW(NAME))
+#define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12").c_str()
+#define SSL_CRED1(NAME) SSL_FILE(NAME "-full.p12").c_str()
+#define SSL_CRED2(NAME) (NAME)
 #else
-#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem")
-#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME), SSL_FILE(NAME "-private-key.pem"), SSL_PW(NAME))
+#define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem").c_str()
+#define SSL_CRED1(NAME) CERTIFICATE(NAME)
+#define SSL_CRED2(NAME) SSL_FILE(NAME "-private-key.pem").c_str()
 #endif
+
+#define SET_CREDENTIALS(DOMAIN, NAME) pn_ssl_domain_set_credentials(DOMAIN, SSL_CRED1(NAME), SSL_CRED2(NAME), SSL_PW(NAME))
 
 
 /* Returns true to continue, false if finished */

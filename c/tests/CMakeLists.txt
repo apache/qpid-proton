@@ -17,12 +17,11 @@
 # under the License.
 #
 
-configure_file(test_config.h.in test_config.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/tests/include)
+include_directories(${PROJECT_SOURCE_DIR}/tests/include)
 if (WIN32)
-  set(test_env "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
+  set(test_env "PATH=$<TARGET_FILE_DIR:qpid-proton-core>;TEST_CERT_DIR=${TEST_CERT_DIR}")
 else()
-  set(test_env "")
+  set(test_env "TEST_CERT_DIR=${TEST_CERT_DIR}")
   set(platform_test_src ssl_test.cpp)
 endif()
 

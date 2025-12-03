@@ -185,7 +185,7 @@ class ContainerExampleSSLTest(unittest.TestCase):
 
     def ssl_certs_dir(self):
         """Absolute path to the test SSL certificates"""
-        return os.path.join(dirname(sys.argv[0]), "ssl-certs")
+        return os.getenv('TEST_CERT_DIR') or os.path.join(dirname(sys.argv[0]), "ssl-certs")
 
     def test_ssl(self):
         # SSL without SASL, VERIFY_PEER_NAME

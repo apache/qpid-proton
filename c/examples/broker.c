@@ -32,19 +32,37 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* The ssl-certs subdir must be in the current directory for an ssl-enabled broker */
-#define SSL_FILE(NAME) "ssl-certs/" NAME
-#define SSL_PW "tserverpw"
+static char* ssl_file_path(const char *name) {
+  char *env = getenv("SSL_CERT_DIR");
+  const char* cert_dir = env ? env : "ssl-certs";
+  char *r = (char*)malloc(strlen(cert_dir) + strlen(name) + 2);
+  sprintf(r, "%s/%s", cert_dir, name);
+  return r;
+}
+
+#define SSL_FILE(NAME) ssl_file_path(NAME)
+#define SSL_PW(NAME) NAME "pw"
 /* Windows vs. OpenSSL certificates */
 #if defined(_WIN32)
-#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
-#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, SSL_FILE(NAME "-full.p12"), "", SSL_PW)
+#define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
+#define SSL_CRED1(NAME) SSL_FILE(NAME "-full.p12")
+#define SSL_CRED2(NAME) strdup(NAME)
 #else
-#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem")
-#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
-  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME), SSL_FILE(NAME "-private-key.pem"), SSL_PW)
+#define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem")
+#define SSL_CRED1(NAME) CERTIFICATE(NAME)
+#define SSL_CRED2(NAME) SSL_FILE(NAME "-private-key.pem")
 #endif
+
+static void set_credentials(pn_ssl_domain_t *domain, char *cred1, char *cred2, const char *pwd) {
+  int err = pn_ssl_domain_set_credentials(domain, cred1, cred2, pwd);
+  if (err) {
+    printf("Failed to set up server certificate: %s, private key: %s\n", cred1, cred2);
+  }
+  free(cred1);
+  free(cred2);
+}
+
+#define SET_CREDENTIALS(DOMAIN, NAME) set_credentials(DOMAIN, SSL_CRED1(NAME), SSL_CRED2(NAME), SSL_PW(NAME))
 
 /* Simple re-sizable vector that acts as a queue */
 #define VEC(T) struct { T* data; size_t len, cap; }
@@ -457,10 +475,7 @@ int main(int argc, char **argv) {
   b.container_id = argv[0];
   b.threads = 4;
   b.ssl_domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
-  err = SET_CREDENTIALS(b.ssl_domain, "tserver");
-  if (err) {
-    printf("Failed to set up server certificate: %s, private key: %s\n", CERTIFICATE("tserver"), SSL_FILE("tserver-private-key.pem"));
-  }
+  SET_CREDENTIALS(b.ssl_domain, "tserver");
   {
   /* Listen on addr */
   char addr[PN_MAX_ADDR];

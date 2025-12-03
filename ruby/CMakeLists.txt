@@ -101,6 +101,7 @@ execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
 if (result EQUAL 0)  # Have minitest
   set(test_env
     "PATH=${PATH}"
+    "SSL_CERT_DIR=${TEST_CERT_DIR}"
     "RUBYLIB=${RUBYLIB}"
     "${COVERAGE}"
     "COVERAGE_DIR=${PROJECT_BINARY_DIR}/coverage_results/ruby"

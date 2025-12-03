@@ -19,7 +19,6 @@
 
 #include "../src/proactor/proactor-internal.h"
 #include "./pn_test_proactor.hpp"
-#include "./test_config.h"
 
 #include <proton/condition.h>
 #include <proton/connection.h>
@@ -35,7 +34,7 @@
 
 #include <string.h>
 
-#include <iostream>
+#include <filesystem>
 
 using namespace pn_test;
 using Catch::Matchers::Contains;
@@ -468,20 +467,6 @@ TEST_CASE("proactor_release_free") {
   pn_connection_free(pn_connection());
 }
 
-#define SSL_FILE(NAME) CMAKE_CURRENT_SOURCE_DIR "/ssl-certs/" NAME
-#define SSL_PW "tserverpw"
-/* Windows vs. OpenSSL certificates */
-#if defined(_WIN32)
-#define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
-#define SET_CREDENTIALS(DOMAIN, NAME)                                          \
-  pn_ssl_domain_set_credentials(DOMAIN, SSL_FILE(NAME "-full.p12"), "", SSL_PW)
-#else
-#define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem")
-#define SET_CREDENTIALS(DOMAIN, NAME)                                          \
-  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME),                     \
-                                SSL_FILE(NAME "-private-key.pem"), SSL_PW)
-#endif
-
 namespace {
 
 struct ssl_handler : public common_handler {
@@ -516,7 +501,28 @@ struct ssl_handler : public common_handler {
   }
 };
 
+std::string ssl_file_path(const std::string &name) {
+  auto env = getenv("TEST_CERT_DIR");
+  const char* cert_dir = env ? env : "ssl-certs";
+  auto p = std::filesystem::path(cert_dir) / name;
+  return p.string();
+}
 } // namespace
+
+#define SSL_FILE(NAME) ssl_file_path(NAME)
+#define SSL_PW(NAME) NAME "pw"
+/* Windows vs. OpenSSL certificates */
+#if defined(_WIN32)
+#define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12").c_str()
+#define SSL_CRED1(NAME) SSL_FILE(NAME "-full.p12").c_str()
+#define SSL_CRED2(NAME) (NAME)
+#else
+#define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem").c_str()
+#define SSL_CRED1(NAME) CERTIFICATE(NAME)
+#define SSL_CRED2(NAME) SSL_FILE(NAME "-private-key.pem").c_str()
+#endif
+
+#define SET_CREDENTIALS(DOMAIN, NAME) pn_ssl_domain_set_credentials(DOMAIN, SSL_CRED1(NAME), SSL_CRED2(NAME), SSL_PW(NAME))
 
 /* Test various SSL connections between proactors*/
 TEST_CASE("proactor_ssl") {

@@ -31,6 +31,7 @@ endif()
 
 set(c_test_env
   "PATH=${c_test_path}"
+  "SSL_CERT_DIR=${TEST_CERT_DIR}"
   "PYTHONPATH=${Proton_SOURCE_DIR}/tests/py")
 
 pn_add_test(
@@ -50,8 +51,8 @@ if (BUILD_CPP)
 
   set(cpp_test_env
     "PATH=${cpp_test_path}"
-    "PYTHONPATH=${Proton_SOURCE_DIR}/tests/py"
-    "HAS_CPP11=$<$<BOOL:${HAS_ENOUGH_CPP11}>:1>")
+    "TEST_CERT_DIR=${TEST_CERT_DIR}"
+    "PYTHONPATH=${Proton_SOURCE_DIR}/tests/py")
 
   pn_add_test(
     UNWRAPPED

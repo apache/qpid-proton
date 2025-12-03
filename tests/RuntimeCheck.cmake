@@ -27,7 +27,11 @@
 set(TEST_EXE_PREFIX "" CACHE STRING "Prefix for test executable command line")
 set(TEST_WRAP_PREFIX "" CACHE STRING "Prefix for interpreter tests (e.g. python, ruby) that load proton as an extension")
 set(TEST_ENV "" CACHE STRING "Extra environment for tests: name1=value1;name2=value2")
-mark_as_advanced(TEST_EXE_PREFIX TEST_WRAP_PREFIX TEST_ENV)
+
+# Set here to group with other TEST_ options
+set(TEST_CERT_DIR "${Proton_SOURCE_DIR}/tests/ssl-certs" CACHE PATH "Directory containing test SSL certificates")
+
+mark_as_advanced(FORCE TEST_EXE_PREFIX TEST_WRAP_PREFIX TEST_ENV TEST_CERT_DIR)
 
 # Check for valgrind
 find_program(VALGRIND_EXECUTABLE valgrind DOC "location of valgrind program")
