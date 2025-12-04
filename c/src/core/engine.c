@@ -2141,7 +2141,7 @@ uint64_t pn_transactional_disposition_get_outcome_type(pn_transactional_disposit
   if (disposition->outcome_raw.size) {
     bool qtype = false;
     uint64_t type;
-    pn_amqp_decode_DQLq(disposition->outcome_raw, &qtype, &type);
+    pn_amqp_decode_described_type_anything(disposition->outcome_raw, &qtype, &type);
     if (qtype) {
       return type;
     }
@@ -2155,7 +2155,7 @@ void pn_transactional_disposition_set_outcome_type(pn_transactional_disposition_
   // Generate a described LIST0 directly - this needs a max of 11 bytes
   char outcome_scratch[11];
   pn_rwbytes_t scratch = {.size=sizeof(outcome_scratch), .start=outcome_scratch};
-  pn_bytes_t outcome_raw = pn_amqp_encode_DLEe(&scratch, type);
+  pn_bytes_t outcome_raw = pn_amqp_encode_described_empty_list(&scratch, type);
   pn_bytes_free(disposition->outcome_raw);
   disposition->outcome_raw = pn_bytes_dup(outcome_raw);
 }

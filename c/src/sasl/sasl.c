@@ -492,7 +492,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     switch (desired_state) {
     case SASL_POSTED_INIT: {
       /* GENERATE_CODEC_CODE: "DL[szS]" */
-      pn_bytes_t buf = pn_amqp_encode_DLEszSe(&transport->scratch_space, AMQP_DESC_SASL_INIT, pn_string_bytes(sasl->selected_mechanism), out.size, out.start, pn_string_bytes(sasl->local_fqdn));
+      pn_bytes_t buf = pn_amqp_encode_sasl_init(&transport->scratch_space, AMQP_DESC_SASL_INIT, pn_string_bytes(sasl->selected_mechanism), out.size, out.start, pn_string_bytes(sasl->local_fqdn));
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       break;
@@ -507,7 +507,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         pni_split_mechs(mechlist, sasl->included_mechanisms, mechs, &count);
       }
       /* GENERATE_CODEC_CODE: "DL[@T[*s]]" */
-      pn_bytes_t buf = pn_amqp_encode_DLEATEjsee(&transport->scratch_space, AMQP_DESC_SASL_MECHANISMS, PN_SYMBOL, count, mechs);
+      pn_bytes_t buf = pn_amqp_encode_sasl_mechanisms(&transport->scratch_space, AMQP_DESC_SASL_MECHANISMS, PN_SYMBOL, count, mechs);
       free(mechlist);
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
@@ -516,7 +516,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     case SASL_POSTED_RESPONSE:
       if (sasl->last_state != SASL_POSTED_RESPONSE) {
         /* "DL[Z]" */
-        pn_bytes_t buf = pn_amqp_encode_DLEZe(&transport->scratch_space, AMQP_DESC_SASL_RESPONSE, out.size, out.start);
+        pn_bytes_t buf = pn_amqp_encode_sasl_binary(&transport->scratch_space, AMQP_DESC_SASL_RESPONSE, out.size, out.start);
         pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
@@ -527,7 +527,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         continue;
       } else if (sasl->last_state != SASL_POSTED_CHALLENGE) {
         /* "DL[Z]" */
-        pn_bytes_t buf = pn_amqp_encode_DLEZe(&transport->scratch_space, AMQP_DESC_SASL_CHALLENGE, out.size, out.start);
+        pn_bytes_t buf = pn_amqp_encode_sasl_binary(&transport->scratch_space, AMQP_DESC_SASL_CHALLENGE, out.size, out.start);
         pn_framing_send_sasl(transport, buf);
         pni_emit(transport);
       }
@@ -538,7 +538,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         continue;
       }
       /* "DL[Bz]" */
-      pn_bytes_t buf = pn_amqp_encode_DLEBze(&transport->scratch_space, AMQP_DESC_SASL_OUTCOME, sasl->outcome, out.size, out.start);
+      pn_bytes_t buf = pn_amqp_encode_sasl_outcome(&transport->scratch_space, AMQP_DESC_SASL_OUTCOME, sasl->outcome, out.size, out.start);
       pn_framing_send_sasl(transport, buf);
       pni_emit(transport);
       if (sasl->outcome!=PN_SASL_OK) {
@@ -908,7 +908,7 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   pn_bytes_t mech;
   pn_bytes_t recv;
 
-  pn_amqp_decode_DqEsze(payload, &mech, &recv);
+  pn_amqp_decode_sasl_init(payload, &mech, &recv);
   sasl->selected_mechanism = pn_stringn(mech.start, mech.size);
 
   // We need to filter out a supplied mech in in the inclusion list
@@ -940,7 +940,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
   pn_string_t *mechs = pn_string("");
 
   pn_bytes_t subpayload;
-  pn_amqp_decode_DqERe(payload, &subpayload);
+  pn_amqp_decode_described_list_raw(payload, &subpayload);
   pni_consumer_t consumer = make_consumer_from_bytes(subpayload);
 
   uint8_t element_type;
@@ -975,7 +975,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
   } else {
     // If not then see if it is a single symbol
     pn_bytes_t symbol;
-    pn_amqp_decode_DqEse(payload, &symbol);
+    pn_amqp_decode_sasl_mechanism_symbol(payload, &symbol);
 
     if (pni_sasl_client_included_mech(sasl->included_mechanisms, symbol)) {
       pn_string_setn(mechs, symbol.start, symbol.size);
@@ -1007,7 +1007,7 @@ int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t chan
 
   pn_bytes_t recv;
 
-  pn_amqp_decode_DqEze(payload, &recv);
+  pn_amqp_decode_sasl_binary(payload, &recv);
 
   pni_sasl_impl_process_challenge(transport, &recv);
 
@@ -1028,7 +1028,7 @@ int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 
   pn_bytes_t recv;
 
-  pn_amqp_decode_DqEze(payload, &recv);
+  pn_amqp_decode_sasl_binary(payload, &recv);
 
   pni_sasl_impl_process_response(transport, &recv);
 
@@ -1050,7 +1050,7 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
   uint8_t outcome;
   pn_bytes_t recv;
 
-  pn_amqp_decode_DqEBze(payload, &outcome, &recv);
+  pn_amqp_decode_sasl_outcome(payload, &outcome, &recv);
 
   // Preset the outcome to what the server sent us - the plugin can alter this.
   // In practise the plugin processing here should only fail because it fails

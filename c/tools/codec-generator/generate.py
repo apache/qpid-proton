@@ -1,3 +1,77 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+"""
+AMQP Codec Generator
+
+Generates C code for encoding (fill/emit) and decoding (scan/consume) AMQP data
+based on format specification strings defined in specs.json.
+
+Format Specification Characters
+===============================
+
+Structural:
+    D       Described type marker (followed by type specifier)
+    L       Descriptor is uint64 type code (used after D)
+    .       Skip/ignore this position (anything), or unknown type (after D)
+    [       Start of list
+    ]       End of list
+    @T      Start of typed array (T = type marker)
+    ?       Optional field - followed by presence boolean, then the value
+    !       Suffix: omit entire described list if resulting list would be empty
+
+Primitive Types:
+    R       Raw bytes (pn_bytes_t)
+    S       String (pn_bytes_t, encoded as AMQP string)
+    s       Symbol (pn_bytes_t, encoded as AMQP symbol)
+    I       Unsigned 32-bit integer (uint32_t)
+    H       Unsigned 16-bit integer (uint16_t)
+    B       Unsigned 8-bit integer (uint8_t)
+    L       Unsigned 64-bit integer (uint64_t) - context dependent with DL
+    o       Boolean (bool)
+    t       Timestamp (pn_timestamp_t)
+    z       Binary or null (size_t + const char*, decodes to pn_bytes_t*)
+    Z       Binary, never null (size_t + const char*, decodes to pn_bytes_t*)
+    n       Null (no argument, emits AMQP null)
+
+Complex/Special:
+    a       Atom (pn_atom_t* - polymorphic AMQP value)
+    c       Condition (pn_condition_t* - AMQP error condition)
+    d       Disposition (pn_disposition_t* - delivery state)
+    M       Multiple (pn_bytes_t - array or single value as raw)
+    *s      Counted symbols (size_t count + char** array)
+    C       Copy from pn_data_t (used after D. or DL)
+
+Combined Patterns:
+    DL[...] Described list with uint64 descriptor, containing fields
+    D.[...] Described list, ignoring/skipping the descriptor type
+    DLR     Described type with raw value
+    D.R     Described value as raw (ignoring descriptor)
+    D?L.    Maybe described, with type, skip value
+    D?LR    Maybe described, with type, raw value
+
+Examples:
+    "DL[?HIIII]"     - Described list (BEGIN): optional ushort, 4 uints
+    "DL[SIoBB?DL[...]]" - Described list (ATTACH): string, uint, bool, ...
+    "D.[sSR]"        - Scan described list ignoring type: symbol, symbol, raw
+"""
+
 import argparse
 import itertools
 import json
@@ -396,10 +470,10 @@ def make_legal_identifier(s: str) -> str:
     return r
 
 
-def consume_function(name_prefix: str, scan_spec: str, prefix_args: List[Tuple[str, str]]) -> Tuple[str, List[str]]:
+def consume_function(name_prefix: str, scan_spec: str, func_name: str, prefix_args: List[Tuple[str, str]]) -> Tuple[str, List[str]]:
     p, _ = parse_item(scan_spec)
     params = p.gen_consume_params(0)
-    function_name = name_prefix + '_' + make_legal_identifier(scan_spec)
+    function_name = name_prefix + '_' + func_name
     param_list = ', '.join([t+' '+arg for arg, t in prefix_args+params])
     function_spec = f'size_t {function_name}({param_list})'
 
@@ -418,19 +492,19 @@ def consume_function(name_prefix: str, scan_spec: str, prefix_args: List[Tuple[s
     return function_decl, function_defn
 
 
-def emit_function(name_prefix: str, fill_spec: str, prefix_args: List[Tuple[str, str]]) -> Tuple[str, List[str]]:
+def emit_function(name_prefix: str, fill_spec: str, func_name: str, prefix_args: List[Tuple[str, str]]) -> Tuple[str, List[str]]:
     p, _ = parse_item(fill_spec)
     params = p.gen_params(0)
-    function_name = name_prefix + '_' + make_legal_identifier(fill_spec)
+    function_name = name_prefix + '_' + func_name
     param_list = ', '.join([t+' '+arg for arg, t in prefix_args+params])
     function_spec = f'pn_bytes_t {function_name}({param_list})'
 
     bytes_args = [('bytes', 'char*'), ('size', 'size_t')]
-    bytes_function_name = name_prefix + '_bytes_' + make_legal_identifier(fill_spec)
+    bytes_function_name = name_prefix + '_bytes_' + func_name
     bytes_param_list = ', '.join([t+' '+arg for arg, t in bytes_args+params])
     bytes_function_spec = f'size_t {bytes_function_name}({bytes_param_list})'
 
-    inner_function_name = name_prefix + '_inner_' + make_legal_identifier(fill_spec)
+    inner_function_name = name_prefix + '_inner_' + func_name
     inner_param_list = [('emitter', 'pni_emitter_t*')]+params
     inner_params = ', '.join([t+' '+arg for arg, t in inner_param_list])
     inner_function_spec = f'bool {inner_function_name}({inner_params})'
@@ -504,12 +578,12 @@ prefix_consume_header = """
 """
 
 
-def output_header(decls: Dict[str, str], prefix: str, file=None):
-    # Output declarations
+def output_header(decls: Dict[str, Tuple[str, str]], prefix: str, file=None):
+    # Output declarations sorted by function name
     print(prefix, file=file)
-    for fill_spec, decl in sorted(decls.items()):
+    for func_name, (spec, decl) in sorted(decls.items()):
         print(
-            f'/* {fill_spec} */\n'
+            f'/* {spec} */\n'
             f'{decl}',
             file=file
         )
@@ -524,28 +598,28 @@ prefix_consume_implementation = """
 """
 
 
-def output_implementation(defns: Dict[str, List[str]], prefix: str, header=None, file=None):
-    # Output implementations
+def output_implementation(defns: Dict[str, Tuple[str, List[str]]], prefix: str, header=None, file=None):
+    # Output implementations sorted by function name
     if header:
         print(f'#include "{header}"', file=file)
 
     print(prefix, file=file)
-    for fill_spec, defn in sorted(defns.items()):
+    for func_name, (spec, defn) in sorted(defns.items()):
         printable_defn = '\n'.join(defn)
         print(
-            f'/* {fill_spec} */\n'
+            f'/* {spec} */\n'
             f'{printable_defn}',
             file=file
         )
 
 
 def emit(fill_specs, decl_filename, impl_filename):
-    decls: Dict[str, str] = {}
-    defns: Dict[str, List[str]] = {}
-    for fill_spec in fill_specs:
-        decl, defn = emit_function('pn_amqp_encode', fill_spec, [('buffer', 'pn_rwbytes_t*')])
-        decls[fill_spec] = decl
-        defns[fill_spec] = defn
+    decls: Dict[str, Tuple[str, str]] = {}
+    defns: Dict[str, Tuple[str, List[str]]] = {}
+    for fill_spec, func_name in fill_specs:
+        decl, defn = emit_function('pn_amqp_encode', fill_spec, func_name, [('buffer', 'pn_rwbytes_t*')])
+        decls[func_name] = (fill_spec, decl)
+        defns[func_name] = (fill_spec, defn)
     if decl_filename and impl_filename:
         with open(decl_filename, 'w') as dfile:
             output_header(decls, prefix_emit_header, file=dfile)
@@ -558,12 +632,12 @@ def emit(fill_specs, decl_filename, impl_filename):
 
 def consume(scan_specs, decl_filename, impl_filename):
 
-    decls: Dict[str, str] = {}
-    defns: Dict[str, List[str]] = {}
-    for scan_spec in scan_specs:
-        decl, defn = consume_function('pn_amqp_decode', scan_spec, [('bytes', 'pn_bytes_t')])
-        decls[scan_spec] = decl
-        defns[scan_spec] = defn
+    decls: Dict[str, Tuple[str, str]] = {}
+    defns: Dict[str, Tuple[str, List[str]]] = {}
+    for scan_spec, func_name in scan_specs:
+        decl, defn = consume_function('pn_amqp_decode', scan_spec, func_name, [('bytes', 'pn_bytes_t')])
+        decls[func_name] = (scan_spec, decl)
+        defns[func_name] = (scan_spec, defn)
     if decl_filename and impl_filename:
         with open(decl_filename, 'w') as dfile:
             output_header(decls, prefix_consume_header, file=dfile)

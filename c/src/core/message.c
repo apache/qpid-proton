@@ -742,7 +742,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
   while (msg_bytes.size) {
     bool scanned;
     uint64_t desc;
-    size_t section_size = pn_amqp_decode_DQLq(msg_bytes, &scanned, &desc);
+    size_t section_size = pn_amqp_decode_described_type_anything(msg_bytes, &scanned, &desc);
     if (!scanned) {
       desc = 0;
     }
@@ -751,7 +751,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       case AMQP_DESC_HEADER: {
         bool priority_q;
         uint8_t priority;
-        pn_amqp_decode_DqEoQBIoIe(msg_bytes,
+        pn_amqp_decode_message_header(msg_bytes,
                                   &msg->durable,
                                   &priority_q, &priority,
                                   &msg->ttl,
@@ -765,7 +765,7 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
                    group_id, reply_to_group_id;
         pn_atom_t id;
         pn_atom_t correlation_id;
-        pn_amqp_decode_DqEazSSSassttSISe(msg_bytes,  &id,
+        pn_amqp_decode_message_properties(msg_bytes,  &id,
                            &user_id, &address, &subject, &reply_to,
                            &correlation_id, &ctype, &cencoding,
                            &msg->expiry_time, &msg->creation_time, &group_id,
@@ -795,32 +795,32 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
         break;
       }
       case AMQP_DESC_DELIVERY_ANNOTATIONS: {
-        pn_amqp_decode_DqR(msg_bytes, &instructions_bytes);
+        pn_amqp_decode_described_raw(msg_bytes, &instructions_bytes);
         break;
       }
       case AMQP_DESC_MESSAGE_ANNOTATIONS: {
-        pn_amqp_decode_DqR(msg_bytes, &annotations_bytes);
+        pn_amqp_decode_described_raw(msg_bytes, &annotations_bytes);
         break;
       }
       case AMQP_DESC_APPLICATION_PROPERTIES: {
-        pn_amqp_decode_DqR(msg_bytes, &properties_bytes);
+        pn_amqp_decode_described_raw(msg_bytes, &properties_bytes);
         break;
       }
       case AMQP_DESC_DATA:
       case AMQP_DESC_AMQP_SEQUENCE: {
         msg->inferred = true;
-        pn_amqp_decode_DqR(msg_bytes, &body_bytes);
+        pn_amqp_decode_described_raw(msg_bytes, &body_bytes);
         break;
       }
       case AMQP_DESC_AMQP_VALUE: {
         msg->inferred = false;
-        pn_amqp_decode_DqR(msg_bytes, &body_bytes);
+        pn_amqp_decode_described_raw(msg_bytes, &body_bytes);
         break;
       }
       case AMQP_DESC_FOOTER:
         break;
       default: {
-        pn_amqp_decode_R(msg_bytes, &unknown_section_bytes);
+        pn_amqp_decode_raw(msg_bytes, &unknown_section_bytes);
         break;
       }
     }
@@ -856,7 +856,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
   size_t total = 0;
 
   /* "DL[?o?B?I?o?I]!" */
-  size_t last_size = pn_amqp_encode_bytes_DLEQoQBQIQoQIeX(bytes, remaining, AMQP_DESC_HEADER,
+  size_t last_size = pn_amqp_encode_bytes_message_header(bytes, remaining, AMQP_DESC_HEADER,
                         msg->durable, msg->durable,
                          msg->priority!=AMQP_HEADER_PRIORITY_DEFAULT, msg->priority,
                          (bool)msg->ttl, msg->ttl,
@@ -870,7 +870,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
 
 
   if (msg->instructions_raw.size>0) {
-    last_size = pn_amqp_encode_bytes_DLR(bytes, remaining, AMQP_DESC_DELIVERY_ANNOTATIONS, msg->instructions_raw);
+    last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, AMQP_DESC_DELIVERY_ANNOTATIONS, msg->instructions_raw);
     if (last_size > remaining) return PN_OVERFLOW;
 
     remaining -= last_size;
@@ -879,7 +879,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
   }
 
   if (msg->annotations_raw.size>0) {
-    last_size = pn_amqp_encode_bytes_DLR(bytes, remaining, AMQP_DESC_MESSAGE_ANNOTATIONS, msg->annotations_raw);
+    last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, AMQP_DESC_MESSAGE_ANNOTATIONS, msg->annotations_raw);
     if (last_size > remaining) return PN_OVERFLOW;
 
     remaining -= last_size;
@@ -890,7 +890,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
   /* "DL[azSSSass?t?tS?IS]!" */
   pn_atom_t id = pn_message_get_id(msg);
   pn_atom_t correlation_id = pn_message_get_correlation_id(msg);
-  last_size = pn_amqp_encode_bytes_DLEazSSSassQtQtSQISeX(bytes, remaining, AMQP_DESC_PROPERTIES,
+  last_size = pn_amqp_encode_bytes_message_properties(bytes, remaining, AMQP_DESC_PROPERTIES,
                      &id,
                      pn_string_size(msg->user_id), pn_string_get(msg->user_id),
                      pn_string_bytes(msg->address),
@@ -916,7 +916,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
   total += last_size;
 
   if (msg->properties_raw.size>0) {
-    last_size = pn_amqp_encode_bytes_DLR(bytes, remaining, AMQP_DESC_APPLICATION_PROPERTIES, msg->properties_raw);
+    last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, AMQP_DESC_APPLICATION_PROPERTIES, msg->properties_raw);
     if (last_size > remaining) return PN_OVERFLOW;
 
     remaining -= last_size;
@@ -939,7 +939,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
         break;
       }
     }
-    last_size = pn_amqp_encode_bytes_DLR(bytes, remaining, descriptor, msg->body_raw);
+    last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, descriptor, msg->body_raw);
     if (last_size > remaining) return PN_OVERFLOW;
 
     remaining -= last_size;
