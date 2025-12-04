@@ -170,6 +170,31 @@ class DescListNode(ListNode):
         ]
 
 
+class DescListOmitIfEmptyNode(ListNode):
+    """Described list that is omitted entirely if all fields would be null (resulting in LIST0)"""
+    def __init__(self, l: List[ASTNode]):
+        super().__init__('described_list_omit_empty', l, ['uint64_t'])
+
+    def gen_emit_code(self, prefix: List[str], first_arg: int, indent: int) -> List[str]:
+        args = self.gen_args(first_arg)
+        return [
+            f'{self.mk_indent(indent)}size_t section_start = emitter->position;',
+            f'{self.mk_indent(indent)}emit_descriptor({", ".join(prefix+args)});',
+            f'{self.mk_indent(indent)}for (bool small_encoding = true; ; small_encoding = false) {{',
+            f'{self.mk_indent(indent+1)}pni_compound_context c = '
+            f'{self.mk_funcall("emit_list", prefix+["small_encoding", "true"])};',
+            f'{self.mk_indent(indent+1)}pni_compound_context compound = c;',
+            *(self.gen_emit_list_code(prefix, first_arg+len(args), indent + 1)),
+            f'{self.mk_indent(indent+1)}if (compound.count == 0) {{',
+            f'{self.mk_indent(indent+2)}emitter->position = section_start;',
+            f'{self.mk_indent(indent+2)}break;',
+            f'{self.mk_indent(indent+1)}}}',
+            f'{self.mk_indent(indent+1)}{self.mk_funcall("emit_end_list", prefix+["small_encoding"])};',
+            f'{self.mk_indent(indent+1)}if (encode_succeeded({", ".join(prefix)})) break;',
+            f'{self.mk_indent(indent)}}}',
+        ]
+
+
 class DescListIgnoreTypeNode(ListNode):
     def __init__(self, l: List[ASTNode]):
         super().__init__('described_unknown_list', l, [])
@@ -274,7 +299,11 @@ def parse_item(format: str) -> Tuple[ASTNode, str]:
         b, rest = expect_char(rest, ']')
         if not b:
             raise ParseError(format)
-        return DescListNode(l), rest
+        # Check for ! suffix - omit entire described list if empty
+        if rest.startswith('!'):
+            return DescListOmitIfEmptyNode(l), rest[1:]
+        else:
+            return DescListNode(l), rest
     elif format.startswith('D.['):
         l, rest = parse_list(format[3:])
         b, rest = expect_char(rest, ']')
@@ -354,10 +383,10 @@ def parse_item(format: str) -> Tuple[ASTNode, str]:
         raise ParseError(format)
 
 
-# Need to translate '@[]*?.' to legal identifier characters
+# Need to translate '@[]*?.!' to legal identifier characters
 # These will be fairly arbitrary and just need to avoid already used codes
 def make_legal_identifier(s: str) -> str:
-    subs = {'@': 'A', '[': 'E', ']': 'e', '*': 'j', '.': 'q', '?': 'Q'}
+    subs = {'@': 'A', '[': 'E', ']': 'e', '*': 'j', '.': 'q', '?': 'Q', '!': 'X'}
     r = ''
     for c in s:
         if c in subs:

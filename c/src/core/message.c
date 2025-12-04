@@ -855,8 +855,8 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
   size_t remaining = *isize;
   size_t total = 0;
 
-  /* "DL[?o?B?I?o?I]" */
-  size_t last_size = pn_amqp_encode_bytes_DLEQoQBQIQoQIe(bytes, remaining, AMQP_DESC_HEADER,
+  /* "DL[?o?B?I?o?I]!" */
+  size_t last_size = pn_amqp_encode_bytes_DLEQoQBQIQoQIeX(bytes, remaining, AMQP_DESC_HEADER,
                         msg->durable, msg->durable,
                          msg->priority!=AMQP_HEADER_PRIORITY_DEFAULT, msg->priority,
                          (bool)msg->ttl, msg->ttl,
@@ -887,10 +887,10 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
     total += last_size;
   }
 
-  /* "DL[CzSSSCss?t?tS?IS]" */
+  /* "DL[azSSSass?t?tS?IS]!" */
   pn_atom_t id = pn_message_get_id(msg);
   pn_atom_t correlation_id = pn_message_get_correlation_id(msg);
-  last_size = pn_amqp_encode_bytes_DLEazSSSassQtQtSQISe(bytes, remaining, AMQP_DESC_PROPERTIES,
+  last_size = pn_amqp_encode_bytes_DLEazSSSassQtQtSQISeX(bytes, remaining, AMQP_DESC_PROPERTIES,
                      &id,
                      pn_string_size(msg->user_id), pn_string_get(msg->user_id),
                      pn_string_bytes(msg->address),

@@ -29,12 +29,24 @@ using namespace pn_test;
 
 TEST_CASE("message_overflow_error") {
   pn_message_t *message = pn_message();
+  // Set a field so message is non-empty (empty messages encode to 0 bytes)
+  pn_message_set_durable(message, true);
   char buf[6];
   size_t size = 6;
 
   int err = pn_message_encode(message, buf, &size);
   CHECK(PN_OVERFLOW == err);
   CHECK(0 == pn_message_errno(message));
+  pn_message_free(message);
+}
+
+TEST_CASE("message_empty_encodes") {
+  pn_message_t *message = pn_message();
+  char buf[64];
+  size_t size = 64;
+
+  int err = pn_message_encode(message, buf, &size);
+  CHECK(0 == err);
   pn_message_free(message);
 }
 
