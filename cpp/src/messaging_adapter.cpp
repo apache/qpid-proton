@@ -137,7 +137,7 @@ void handle_transaction_coordinator_outcome(messaging_handler& handler, tracker 
           case transaction_context::State::DISCHARGING:
             // Don't throw error here, instead close link with error
             make_wrapper(transaction_context->coordinator).close(error_condition{"amqp:not-allowed", "Received transaction declared disposition in invalid state"});
-            transaction_context.release();
+            transaction_context.reset();
         }
     } else if (pn_disposition_type(disposition) == PN_ACCEPTED) {
         switch (state) {
@@ -159,7 +159,7 @@ void handle_transaction_coordinator_outcome(messaging_handler& handler, tracker 
           case transaction_context::State::DECLARED:
             // TODO: Don't throw error here, instead detach link or close session?
             make_wrapper(transaction_context->coordinator).close(error_condition{"amqp:not-allowed", "Received transaction accepted disposition in invalid state"});
-            transaction_context.release();
+            transaction_context.reset();
         }
     } else if (auto rejected_disp = pn_rejected_disposition(disposition); rejected_disp) {
         switch (state) {
@@ -181,7 +181,7 @@ void handle_transaction_coordinator_outcome(messaging_handler& handler, tracker 
           case transaction_context::State::DECLARED:
             // TODO: Don't throw error here, instead detach link or close session?
             make_wrapper(transaction_context->coordinator).close(error_condition{"amqp:not-allowed", "Received transaction rejected disposition in invalid state"});
-            transaction_context.release();
+            transaction_context.reset();
         }
     }
     // TODO: Don't ignore unexpected disposition here, instead detach link or close session?
