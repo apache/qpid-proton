@@ -62,6 +62,7 @@ from ._data import dat2obj, obj2dat
 from ._transport import Transport
 from ._wrapper import Wrapper
 
+from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import Any, Optional, Union, TYPE_CHECKING
 
@@ -127,7 +128,7 @@ class DispositionType(IntEnum):
         return cls(i) if i in cls._value2member_map_ else i
 
 
-class Disposition:
+class Disposition(ABC):
     """
     A delivery state.
 
@@ -147,6 +148,7 @@ class Disposition:
     TRANSACTIONAL_STATE = DispositionType.TRANSACTIONAL_STATE
 
     @property
+    @abstractmethod
     def type(self) -> Union[int, DispositionType]: ...
 
 
@@ -528,9 +530,13 @@ class DeclaredDisposition(LocalDisposition):
 
 class TransactionalDisposition(LocalDisposition):
 
-    def __init__(self, id, outcome_type=None):
+    def __init__(self, id, outcome=None):
         self._id = id
-        self._outcome_type = outcome_type
+        # Currently the transactional disposition C API can only hold the outcome type
+        if isinstance(outcome, Disposition):
+            self._outcome_type = outcome.type
+        else:
+            self._outcome_type = outcome
 
     @property
     def type(self) -> Union[int, DispositionType]:
@@ -658,7 +664,7 @@ class Delivery(Wrapper):
         """
         return pn_delivery_updated(self._impl)
 
-    def update(self, state: Union[int, DispositionType, None] = None) -> None:
+    def update(self, state: Union[LocalDisposition, int, DispositionType, None] = None) -> None:
         """
         Set the local state of the delivery e.g. :const:`ACCEPTED`,
         :const:`REJECTED`, :const:`RELEASED`.
@@ -667,7 +673,13 @@ class Delivery(Wrapper):
         by other means
         """
         if state:
-            if state == self.MODIFIED:
+            if isinstance(state, LocalDisposition):
+                if self._local is None:
+                    self._local = LocalDisposition(self._impl)
+                state.apply_to(self._local)
+                pn_delivery_update(self._impl, self.local_state)
+                return
+            elif state == self.MODIFIED:
                 obj2dat(self.local._annotations, pn_disposition_annotations(self.local._impl))
             elif state == self.REJECTED:
                 obj2cond(self.local._condition, pn_disposition_condition(self.local._impl))
