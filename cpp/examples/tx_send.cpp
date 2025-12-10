@@ -137,8 +137,8 @@ class tx_send : public proton::messaging_handler {
 };
 
 int main(int argc, char **argv) {
-    std::string conn_url = argc > 1 ? argv[1] : "//127.0.0.1:5672";
-    std::string addr = argc > 2 ? argv[2] : "examples";
+    std::string conn_url = "//127.0.0.1:5672";
+    std::string addr = "examples";
     int message_count = 6;
     int batch_size = 3;
     example::options opts(argc, argv);
