@@ -10,7 +10,7 @@ jobs:
       matrix:
         os:
         - ubuntu-24.04
-        - macOS-13
+        - macOS-latest
         - windows-latest
         buildType:
         - RelWithDebInfo
@@ -18,10 +18,8 @@ jobs:
         - python_version: '3.11'
         - os: windows-latest
           cmake_extra: '-A x64 -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake'
-        - os: macOS-13
-          pkg_config_path: '/usr/local/opt/openssl@1.1/lib/pkgconfig'
-          cmake_extra: '-DBUILD_RUBY=no -DTHREADERCISER=ON'
-          ctest_extra: '--exclude-regex c-threaderciser'
+        - os: macOS-latest
+          cmake_extra: '-DBUILD_RUBY=no'
     env:
       BuildType: ${{matrix.buildType}}
       BuildDir: ${{github.workspace}}/BLD

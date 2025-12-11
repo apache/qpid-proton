@@ -241,7 +241,7 @@ set (CXX_WARNING_MSVC "")
 
 set (CATCH_UNDEFINED_Linux "-Wl,--no-undefined")
 set (CATCH_UNDEFINED_FreeBSD "-Wl,--no-undefined")
-set (CATCH_UNDEFINED_Darwin "-Wl,-undefined,error")
+set (CATCH_UNDEFINED_Darwin "")
 set (CATCH_UNDEFINED_Windows "")
 
 set (HIDE_SYMBOLS_GNU "-fvisibility=hidden")
