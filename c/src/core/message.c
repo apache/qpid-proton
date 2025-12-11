@@ -730,7 +730,11 @@ int pn_message_set_reply_to_group_id(pn_message_t *msg, const char *reply_to_gro
 
 int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 {
-  assert(msg && bytes && size);
+  assert(msg);
+
+  if (!bytes || !size) {
+    return pn_error_format(msg->error, PN_ARG_ERR, "invalid message bytes");
+  }
 
   pn_bytes_t msg_bytes = {.size=size, .start=bytes};
   pn_bytes_t instructions_bytes = {0, 0};
@@ -852,6 +856,7 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
   if (!pni_switch_to_raw_bytes(scratch, &msg->body_deprecated, &msg->body_raw)) {
     return PN_OVERFLOW;
   }
+
   size_t remaining = *isize;
   size_t total = 0;
 
@@ -940,6 +945,15 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *isize)
       }
     }
     last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, descriptor, msg->body_raw);
+    if (last_size > remaining) return PN_OVERFLOW;
+
+    remaining -= last_size;
+    bytes += last_size;
+    total += last_size;
+  } else {
+    // AMQP requires a body, so encode a null body if none present
+    static const char null_byte = PNE_NULL;
+    last_size = pn_amqp_encode_bytes_described_type_raw(bytes, remaining, AMQP_DESC_AMQP_VALUE, (pn_bytes_t){.size=1, .start=&null_byte});
     if (last_size > remaining) return PN_OVERFLOW;
 
     remaining -= last_size;

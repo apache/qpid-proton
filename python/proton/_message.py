@@ -135,8 +135,9 @@ class Message:
             self._check_property_keys()
             props.put_object(self.properties)
         body.clear()
-        if self.body is not None:
-            body.put_object(self.body)
+        # Message body must be present for a valid AMQP message
+        # If it is None, encode as an explicit null
+        body.put_object(self.body)
 
     def _post_decode(self) -> None:
         inst = Data(pn_message_instructions(self._msg))
