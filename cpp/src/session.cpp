@@ -204,11 +204,35 @@ pn_link_t* open_coordinator_sender(session& s) {
     return l;
 }
 
+bool has_unsettled_outgoing_deliveries(const session& s) {
+    auto session = unwrap(s);
+    auto& transaction_context = get_transaction_context(s);
+    auto coordinator = transaction_context ? transaction_context->coordinator : nullptr;
+    auto link = pn_link_head(pn_session_connection(session), 0);
+    while (link) {
+        if (pn_link_is_sender(link) && pn_link_session(link) == session && link != coordinator) {
+            if (pn_link_unsettled(link) > 0)
+                return true;
+        }
+        link = pn_link_next(link, 0);
+    }
+    return false;
+}
+
 }
 
 void session::transaction_declare(bool settle_before_discharge) {
     if (!transaction_is_empty(*this))
-        throw proton::error("Session already declared transaction");
+        throw proton::error("Session has already declared transaction");
+
+    // Check to see if there are any unsettled deliveries for this session
+    // This is to simplify keeping track of the deliveries that are involved in the transaction:
+    // The simplification is that we will only allow transactioned messages to be sent on this session
+    // so that we can find all the transactioned outgoing deliveries for the session.
+    // If we want to allow multiple transactions on the session or allow untransactioned messages,
+    // we would need to keep track of the deliveries that are involved in the transaction separately.
+    if (has_unsettled_outgoing_deliveries(*this))
+        throw proton::error("Session has unsettled outgoing deliveries, cannot declare transaction");
 
     auto& txn_context = get_transaction_context(*this);
     if (!txn_context) {
@@ -235,11 +259,7 @@ void session::transaction_abort() { transaction_discharge(*this, true); }
 bool session::transaction_is_declared() const { return (!transaction_is_empty(*this)) && get_transaction_context(*this)->state == transaction_context::State::DECLARED; }
 error_condition session::transaction_error() const {
     auto& txn_context = get_transaction_context(*this);
-    if (txn_context) {
-        return make_wrapper(txn_context->error);
-    } else {
-        return error_condition();
-    }
+    return txn_context ? txn_context->error ? make_wrapper(txn_context->error) : error_condition() : error_condition();
 }
 
 } // namespace proton
