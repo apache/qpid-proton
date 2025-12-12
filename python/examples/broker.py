@@ -98,7 +98,7 @@ class QueueMessage(TransactionAction):
         self.delivery.settle()
 
     def rollback(self, broker):
-        self.delivery.settle()
+        pass
 
 
 @dataclass
@@ -109,7 +109,7 @@ class RejectDelivery(TransactionAction):
         self.delivery.settle()
 
     def rollback(self, broker):
-        self.delivery.settle()
+        pass
 
 
 @dataclass
