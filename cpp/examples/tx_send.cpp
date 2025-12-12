@@ -27,107 +27,145 @@
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/sender_options.hpp>
+#include <proton/target_options.hpp>
 #include <proton/types.hpp>
 
 #include <iostream>
 #include <map>
 #include <string>
 
-#include <atomic>
-#include <chrono>
-#include <thread>
-
 class tx_send : public proton::messaging_handler {
   private:
     std::string conn_url_;
     std::string addr_;
+    proton::sender sender;
     int total;
     int batch_size;
-    int sent;
+    int abort_message;
+    int accepted = 0;
+    int total_accepted = 0;
     int batch_index = 0;
     int current_batch = 0;
     int committed = 0;
-    std::atomic<int> unique_msg_id;
+    int msg_id = 10000;
+    int err_id;
 
   public:
-    tx_send(const std::string& u, const std::string& a, int c, int b):
-        conn_url_(u), addr_(a), total(c), batch_size(b), sent(0), unique_msg_id(10000) {}
+    tx_send(const std::string& u, const std::string& a, int t, int b, int c, int e):
+        conn_url_(u), addr_(a), total(t), batch_size(b), abort_message(c), err_id(e ? msg_id+e : 0) {}
 
     void on_container_start(proton::container &c) override {
         c.connect(conn_url_);
     }
 
     void on_connection_open(proton::connection& c) override {
-        std::cout << "In this example we abort/commit transaction alternatively." << std::endl;
         c.open_session();
     }
 
     void on_session_open(proton::session& s) override {
         std::cout << "New session is open, declaring transaction now..." << std::endl;
-        s.transaction_declare();
+        s.open_sender("", proton::sender_options{}.target(proton::target_options{}.anonymous(true)));
+    }
+
+    void on_sender_open(proton::sender& s) override {
+        sender = s;
+        s.session().transaction_declare();
     }
 
     void on_session_transaction_declared(proton::session& s) override {
         std::cout << "Transaction is declared: " << s.transaction_id() << std::endl;
-        s.open_sender(addr_);
+        send(sender);
     }
 
     void on_session_error(proton::session &s) override {
         std::cout << "Session error: " << s.error().what() << std::endl;
         s.connection().close();
-        exit(-1);
     }
 
     void on_session_transaction_error(proton::session &s) override {
-        std::cout << "Transaction error!" << std::endl;
+        std::cout << "Transaction error!" << s.transaction_error().what() << std::endl;
         s.connection().close();
-        exit(-1);
     }
 
     void on_sendable(proton::sender& sender) override {
         proton::session session = sender.session();
-        while (session.transaction_is_declared() && sender.credit() &&
-               (committed + current_batch) < total) {
+        send(sender);
+    }
+
+    void send(proton::sender& sender) {
+        while (sender.session().transaction_is_declared() && sender.credit() &&
+               current_batch < batch_size) {
             proton::message msg;
 
-            msg.id(std::atomic_fetch_add(&unique_msg_id, 1));
-            msg.body(std::map<std::string, int>{{"sequence", committed + current_batch}});
-            std::cout << "Sending [sender batch " << batch_index << "]: " << msg << std::endl;
+            msg.id(msg_id++);
+            if (msg_id != err_id) {
+                msg.to(addr_);
+            }
+            msg.body(std::map<std::string, int>{{"batch", batch_index}, {"index", current_batch}});
+            std::cout << "Sending [" << batch_index << ", " << current_batch << "]: " << msg << std::endl;
             sender.send(msg);
             current_batch += 1;
-            if(current_batch == batch_size)
-            {
-                if (batch_index % 2 == 0) {
-                    std::cout << "Commiting transaction..." << std::endl;
-                    session.transaction_commit();
-                } else {
-                    std::cout << "Aborting transaction..." << std::endl;
-                    session.transaction_abort();
-                }
-                batch_index++;
-            }
         }
     }
 
-    void on_session_transaction_committed(proton::session &s) override {
-        committed += current_batch;
-        current_batch = 0;
-        std::cout << "Transaction commited" << std::endl;
-        if(committed == total) {
-            std::cout << "All messages committed, closing connection." << std::endl;
-            s.connection().close();
+    void on_transactional_accept(proton::tracker &t) override {
+        accepted++;
+        total_accepted++;
+        if (total_accepted == abort_message) {
+            t.session().transaction_abort();
+        } else if (accepted == batch_size) {
+            t.session().transaction_commit();
         }
-        else {
+    }
+
+    void on_transactional_reject(proton::tracker &t) override {
+        std::cout << "Delivery rejected!" << std::endl;
+        t.session().transaction_abort();
+    }
+
+    void on_transactional_release(proton::tracker &t) override {
+        std::cout << "Delivery released!" << std::endl;
+        t.session().transaction_abort();
+    }
+
+    void on_session_transaction_committed(proton::session &s) override {
+        committed += accepted;
+        batch_index++;
+        std::cout << "Transaction committed" << std::endl;
+        if (committed >= total) {
+            std::cout << committed << " messages committed, closing connection." << std::endl;
+            s.connection().close();
+        } else {
+            current_batch = 0;
+            accepted = 0;
             std::cout << "Re-declaring transaction now..." << std::endl;
             s.transaction_declare();
         }
     }
 
+    // The committed messages will be settled by the broker, we should settle them too.
+    void on_tracker_settle(proton::tracker &t) override {
+        std::cout << "Broker settled tracker: " << t.tag() << std::endl;
+    }
+
     void on_session_transaction_aborted(proton::session &s) override {
         std::cout << "Transaction aborted!" << std::endl;
-        std::cout << "Re-delaring transaction now..." << std::endl;
-        current_batch = 0;
-        s.transaction_declare();
+        // Check if this was a failed commit
+        auto error = s.transaction_error();
+        if (error) {
+            std::cout << "Transaction error: " << error.what() << std::endl;
+            s.connection().close();
+        }
+
+        // Don't close the connection if we deliberately injected an abort
+        if (abort_message == 0) {
+            s.connection().close();
+        } else {
+            current_batch = 0;
+            accepted = 0;
+            std::cout << "Re-declaring transaction now..." << std::endl;
+            s.transaction_declare();
+        }
     }
 
     void on_sender_close(proton::sender &s) override {
@@ -141,17 +179,21 @@ int main(int argc, char **argv) {
     std::string addr = "examples";
     int message_count = 6;
     int batch_size = 3;
+    int abort_message = 0;
+    int error_message = 0;
     example::options opts(argc, argv);
 
     opts.add_value(conn_url, 'u', "url", "connect and send to URL", "URL");
-    opts.add_value(addr, 'a', "address", "connect and send to address", "URL");
+    opts.add_value(addr, 'a', "address", "connect and send to address", "ADDR");
     opts.add_value(message_count, 'm', "messages", "number of messages to send", "COUNT");
     opts.add_value(batch_size, 'b', "batch_size", "number of messages in each transaction", "BATCH_SIZE");
+    opts.add_value(abort_message, 'c', "abort_message", "message number to abort the transaction", "ABORT_MESSAGE");
+    opts.add_value(error_message, 'e', "error_message", "message number to send in error", "ERROR_MESSAGE");
 
     try {
         opts.parse();
 
-        tx_send send(conn_url, addr, message_count, batch_size);
+        tx_send send(conn_url, addr, message_count, batch_size, abort_message, error_message);
         proton::container(send).run();
 
         return 0;
