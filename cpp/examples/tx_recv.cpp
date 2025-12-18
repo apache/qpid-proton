@@ -32,12 +32,7 @@
 #include <proton/types.hpp>
 
 #include <iostream>
-#include <map>
 #include <string>
-
-#include <atomic>
-#include <chrono>
-#include <thread>
 
 class tx_recv : public proton::messaging_handler {
   private:
@@ -73,7 +68,6 @@ class tx_recv : public proton::messaging_handler {
     void on_session_error(proton::session &s) override {
         std::cout << "Session error: " << s.error().what() << std::endl;
         s.connection().close();
-        exit(-1);
     }
 
     void on_session_transaction_declared(proton::session &s) override {
@@ -122,15 +116,15 @@ class tx_recv : public proton::messaging_handler {
 };
 
 int main(int argc, char **argv) {
-    std::string conn_url = argc > 1 ? argv[1] : "//127.0.0.1:5672";
-    std::string addr = argc > 2 ? argv[2] : "examples";
+    std::string conn_url = "//127.0.0.1:5672";
+    std::string addr = "examples";
     int message_count = 6;
     int batch_size = 3;
     example::options opts(argc, argv);
 
-    opts.add_value(conn_url, 'u', "url", "connect and send to URL", "URL");
-    opts.add_value(addr, 'a', "address", "connect and send to address", "URL");
-    opts.add_value(message_count, 'm', "messages", "number of messages to send", "COUNT");
+    opts.add_value(conn_url, 'u', "url", "connection URL", "URL");
+    opts.add_value(addr, 'a', "address", "address to receive messages from", "ADDR");
+    opts.add_value(message_count, 'm', "messages", "number of messages to receive", "COUNT");
     opts.add_value(batch_size, 'b', "batch_size", "number of messages in each transaction", "BATCH_SIZE");
 
     try {
