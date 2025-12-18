@@ -21,15 +21,26 @@
 #include "proton/session.hpp"
 
 #include "proton/connection.hpp"
+#include "proton/container.hpp"
+#include "proton/delivery.hpp"
+#include "proton/error.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/session_options.hpp"
+#include "proton/target_options.hpp"
+#include "proton/tracker.hpp"
+#include "proton/transfer.hpp"
+#include "proton/types.hpp"
 
 #include "contexts.hpp"
 #include "link_namer.hpp"
+#include "proactor_container_impl.hpp"
 #include "proton_bits.hpp"
+#include "types_internal.hpp"
 
 #include <proton/connection.h>
+#include "proton/delivery.h"
 #include <proton/session.h>
 
 #include <string>
@@ -146,6 +157,109 @@ void* session::user_data() const {
     pn_session_t* ssn = pn_object();
     session_context& sctx = session_context::get(ssn);
     return sctx.user_data_;
+}
+
+namespace {
+
+std::unique_ptr<transaction_context>& get_transaction_context(const session& s) {
+    return session_context::get(unwrap(s)).transaction_context_;
+}
+
+bool transaction_is_empty(const session& s) {
+    auto& txn = get_transaction_context(s);
+    return !txn || txn->state == transaction_context::State::NO_TRANSACTION;
+}
+
+proton::tracker transaction_send_ctrl(sender&& coordinator, const symbol& descriptor, const value& value) {
+    proton::value msg_value;
+    proton::codec::encoder enc(msg_value);
+    enc << proton::codec::start::described()
+        << descriptor
+        << value
+        << proton::codec::finish();
+
+    return coordinator.send(msg_value);
+}
+
+void transaction_discharge(const session& s, bool failed) {
+    auto& transaction_context = get_transaction_context(s);
+    if (transaction_is_empty(s) || transaction_context->state != transaction_context::State::DECLARED)
+        throw proton::error("Only a declared txn can be discharged.");
+    transaction_context->state = transaction_context::State::DISCHARGING;
+
+    transaction_context->failed = failed;
+    transaction_send_ctrl(
+        make_wrapper<sender>(transaction_context->coordinator),
+        "amqp:discharge:list", std::list<proton::value>{transaction_context->transaction_id, failed});
+}
+
+pn_link_t* open_coordinator_sender(session& s) {
+    auto l = pn_sender(unwrap(s), next_link_name(s.connection()).c_str());
+    auto t = pn_link_target(l);
+    pn_terminus_set_type(t, PN_COORDINATOR);
+    auto caps = pn_terminus_capabilities(t);
+    // As we only have a single symbol in the capabilities we don't have to create an array
+    pn_data_put_symbol(caps, pn_bytes("amqp:local-transactions"));
+    pn_link_open(l);
+    return l;
+}
+
+bool has_unsettled_outgoing_deliveries(const session& s) {
+    auto session = unwrap(s);
+    auto& transaction_context = get_transaction_context(s);
+    auto coordinator = transaction_context ? transaction_context->coordinator : nullptr;
+    auto link = pn_link_head(pn_session_connection(session), 0);
+    while (link) {
+        if (pn_link_is_sender(link) && pn_link_session(link) == session && link != coordinator) {
+            if (pn_link_unsettled(link) > 0)
+                return true;
+        }
+        link = pn_link_next(link, 0);
+    }
+    return false;
+}
+
+}
+
+void session::transaction_declare(bool settle_before_discharge) {
+    if (!transaction_is_empty(*this))
+        throw proton::error("Session has already declared transaction");
+
+    // Check to see if there are any unsettled deliveries for this session
+    // This is to simplify keeping track of the deliveries that are involved in the transaction:
+    // The simplification is that we will only allow transactioned messages to be sent on this session
+    // so that we can find all the transactioned outgoing deliveries for the session.
+    // If we want to allow multiple transactions on the session or allow untransactioned messages,
+    // we would need to keep track of the deliveries that are involved in the transaction separately.
+    if (has_unsettled_outgoing_deliveries(*this))
+        throw proton::error("Session has unsettled outgoing deliveries, cannot declare transaction");
+
+    auto& txn_context = get_transaction_context(*this);
+    if (!txn_context) {
+        txn_context = std::make_unique<transaction_context>(open_coordinator_sender(*this), settle_before_discharge);
+    }
+
+    // Declare txn
+    txn_context->state = transaction_context::State::DECLARING;
+
+    transaction_send_ctrl(make_wrapper<sender>(txn_context->coordinator), "amqp:declare:list", std::list<proton::value>{});
+}
+
+
+binary session::transaction_id() const { 
+    auto& txn_context = get_transaction_context(*this);
+    if (txn_context) {
+        return txn_context->transaction_id;
+    } else {
+        return binary();
+    }
+}
+void session::transaction_commit() { transaction_discharge(*this, false); }
+void session::transaction_abort() { transaction_discharge(*this, true); }
+bool session::transaction_is_declared() const { return (!transaction_is_empty(*this)) && get_transaction_context(*this)->state == transaction_context::State::DECLARED; }
+error_condition session::transaction_error() const {
+    auto& txn_context = get_transaction_context(*this);
+    return txn_context ? txn_context->error ? make_wrapper(txn_context->error) : error_condition() : error_condition();
 }
 
 } // namespace proton

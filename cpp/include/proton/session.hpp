@@ -105,14 +105,32 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Get user data from this session.
     PN_CPP_EXTERN void* user_data() const;
 
+    /// **Unsettled API** - Declare a new local transaction on this session.
+    PN_CPP_EXTERN void transaction_declare(bool settle_before_discharge = false);
+
+    /// **Unsettled API** - Commit the currently declared transaction.
+    PN_CPP_EXTERN void transaction_commit();
+
+    /// **Unsettled API** - Abort the currently declared transaction.
+    PN_CPP_EXTERN void transaction_abort();
+
+    /// **Unsettled API** - Return true if a transaction is currently declared.
+    PN_CPP_EXTERN bool transaction_is_declared() const;
+
+    /// **Unsettled API** - Return the identifier of the current transaction.
+    PN_CPP_EXTERN binary transaction_id() const;
+
+    /// **Unsettled API** - Return the error condition associated with transaction.
+    PN_CPP_EXTERN error_condition transaction_error() const;
+
     /// @cond INTERNAL
-  friend class internal::factory<session>;
-  friend class session_iterator;
+    friend class internal::factory<session>;
+    friend class sender;
+    friend class session_iterator;
     /// @endcond
 };
 
 /// @cond INTERNAL
-    
 /// An iterator of sessions.
 class session_iterator : public internal::iter_base<session, session_iterator> {
  public:
@@ -126,7 +144,6 @@ class session_iterator : public internal::iter_base<session, session_iterator> {
 typedef internal::iter_range<session_iterator> session_range;
 
 /// @endcond
-    
 } // proton
 
 #endif // PROTON_SESSION_HPP

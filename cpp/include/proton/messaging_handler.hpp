@@ -172,6 +172,37 @@ PN_CPP_CLASS_EXTERN messaging_handler {
     /// The remote peer closed the session with an error condition.
     PN_CPP_EXTERN virtual void on_session_error(session&);
 
+    /// **Unsettled API** - Called when a local transaction is declared.
+    PN_CPP_EXTERN virtual void on_session_transaction_declared(session&);
+
+    /// **Unsettled API** - Called when a local transaction is discharged successfully.
+    PN_CPP_EXTERN virtual void on_session_transaction_committed(session&);
+
+    /// **Unsettled API** - Called when a local transaction is discharged unsuccessfully (aborted).
+    /// This is either due to an explicit abort or a failure during commit.
+    /// In either case any action taken under the transaction is as if it never
+    /// happened.
+    PN_CPP_EXTERN virtual void on_session_transaction_aborted(session&);
+
+    /// **Unsettled API** - Called when a local transaction operation fails.
+    PN_CPP_EXTERN virtual void on_session_transaction_error(session&);
+
+    /// **Unsettled API** - Called when a transactioned delivery is provisionally accepted.
+    /// This means that if the transaction successfully commits the delivery
+    /// will be accepted. If the transaction aborts the delivery will be
+    /// as if it never happened.
+    PN_CPP_EXTERN virtual void on_transactional_accept(tracker&);
+
+    /// **Unsettled API** - Called when a transactioned delivery is provisionally rejected.
+    /// This means that if the transaction successfully commits the delivery
+    /// will be rejected.
+    PN_CPP_EXTERN virtual void on_transactional_reject(tracker&);
+
+    /// **Unsettled API** - Called when a transactioned delivery is provisionally released.
+    /// This means that if the transaction successfully commits the delivery
+    /// will be released (including modifying the delivery count).
+    PN_CPP_EXTERN virtual void on_transactional_release(tracker&);
+
     /// The remote peer opened the link.
     PN_CPP_EXTERN virtual void on_receiver_open(receiver&);
 

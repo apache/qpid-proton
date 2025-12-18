@@ -23,6 +23,7 @@
 
 #include "proton/link.hpp"
 #include "proton/sender_options.hpp"
+#include "proton/session.hpp"
 #include "proton/source.hpp"
 #include "proton/target.hpp"
 #include "proton/tracker.hpp"
@@ -34,6 +35,7 @@
 #include "proton_bits.hpp"
 #include "contexts.hpp"
 #include "tracing_private.hpp"
+#include "types_internal.hpp"
 
 #include <assert.h>
 
@@ -84,6 +86,13 @@ tracker sender::send(const message &message, const binary &tag) {
         pn_delivery_settle(dlv);
     if (!pn_link_credit(pn_object()))
         link_context::get(pn_object()).draining = false;
+
+    // If transaction is declared
+    if (session().transaction_is_declared()) {
+        auto disp = pn_transactional_disposition(pn_delivery_local(unwrap(track)));
+        pn_transactional_disposition_set_id(disp, pn_bytes(session().transaction_id()));
+    }
+
     return track;
 }
 

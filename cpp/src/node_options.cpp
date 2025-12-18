@@ -203,6 +203,4 @@ target_options& target_options::dynamic_properties(const target::dynamic_propert
 
 void target_options::apply(target& s) const { impl_->apply(s); }
 
-
-
 } // namespace proton

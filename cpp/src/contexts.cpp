@@ -87,6 +87,12 @@ link_context& link_context::get(pn_link_t* l) {
     return ref<link_context>(id(pn_link_attachments(l), LINK_CONTEXT));
 }
 
+transaction_context::transaction_context(pn_link_t* coordinator_sender, bool settle_before_discharge) :
+  coordinator(coordinator_sender)
+{}
+
+session_context::session_context() : handler(nullptr), user_data_(nullptr) {}
+
 session_context& session_context::get(pn_session_t* s) {
     return ref<session_context>(id(pn_session_attachments(s), SESSION_CONTEXT));
 }
