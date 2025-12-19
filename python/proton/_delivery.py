@@ -74,6 +74,11 @@ if TYPE_CHECKING:
 
 
 class DispositionType(IntEnum):
+    EMPTY = 0
+    """
+    An empty disposition.
+    """
+
     RECEIVED = PN_RECEIVED
     """
     A non terminal state indicating how much (if any) message data
@@ -532,7 +537,7 @@ class TransactionalDisposition(LocalDisposition):
 
     def __init__(self, id, outcome=None):
         self._id = id
-        # Currently the transactional disposition C API can only hold the outcome type
+        # Currently the transactional disposition C API can only set the outcome type
         if isinstance(outcome, Disposition):
             self._outcome_type = outcome.type
         else:
@@ -612,13 +617,11 @@ class Delivery(Wrapper):
     def __init__(self, impl):
         if self.Uninitialized():
             self._local = None
-            self._remote = None
 
     @property
     def remote(self) -> RemoteDisposition:
-        if self._remote is None:
-            self._remote = RemoteDisposition(self._impl)
-        return self._remote
+        # Can't cache as there's no way to invalidate
+        return RemoteDisposition(self._impl)
 
     @property
     def local(self) -> LocalDisposition:
