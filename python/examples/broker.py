@@ -362,8 +362,8 @@ class Broker(MessagingHandler):
             ldisposition = Disposition.ACCEPTED
 
         # Is this a transactioned message?
-        rdisposition = delivery.remote
-        if rdisposition and rdisposition.type == Disposition.TRANSACTIONAL_STATE:
+        if delivery.remote_state == Disposition.TRANSACTIONAL_STATE:
+            rdisposition = delivery.remote
             tid = rdisposition.id
             if tid in self.txns:
                 if address:
@@ -398,9 +398,10 @@ class Broker(MessagingHandler):
     def on_delivery_updated(self, event):
         """Handle all delivery updates for the link."""
         delivery = event.delivery
-        disposition = delivery.remote
+        disposition_type = delivery.remote_state
         # Is this a transactioned delivery update?
-        if disposition.type == Disposition.TRANSACTIONAL_STATE:
+        if disposition_type == Disposition.TRANSACTIONAL_STATE:
+            disposition = delivery.remote
             tid = disposition.id
             outcome = disposition.outcome_type
             if tid in self.txns:
@@ -411,7 +412,7 @@ class Broker(MessagingHandler):
                 self._verbose_print(f"{tid=}: Delivery update: unknown txn-id")
                 delivery.update(RejectedDisposition(Condition('amqp:transaction:unknown-id')))
         else:
-            self.delivery_outcome(delivery, disposition.type)
+            self.delivery_outcome(delivery, disposition_type)
         # The delivery is settled in every case except a valid transaction
         # where the outcome is not yet known until the transaction is discharged.
         delivery.settle()
