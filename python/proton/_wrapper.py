@@ -77,7 +77,7 @@ class Wrapper:
             self = super().__new__(cls)
             self._impl = impl
             self._attrs = attrs
-            return self
+        return self
 
     def Uninitialized(self) -> bool:
         return self._attrs == {}
