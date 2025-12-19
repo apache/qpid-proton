@@ -11,6 +11,7 @@
 *.pyc
 *.pyo
 
+/.cache
 # Emacs, vim etc
 
 *~
