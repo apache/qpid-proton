@@ -47,6 +47,10 @@ class TxRecv(MessagingHandler, TransactionHandler):
         print("transaction committed")
         self.container.declare_transaction(self.conn, handler=self)
 
+    def on_transaction_commit_failed(self, event):
+        print("transaction commit failed")
+        self.container.declare_transaction(self.conn, handler=self)
+
     def on_transaction_aborted(self, event):
         print("transaction aborted")
         self.container.declare_transaction(self.conn, handler=self)
