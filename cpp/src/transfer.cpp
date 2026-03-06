@@ -19,10 +19,9 @@
  *
  */
 
-#include "proton/delivery.hpp"
+#include "proton/transfer.hpp"
 
 #include "proton/connection.hpp"
-#include "proton/link.hpp"
 #include "proton/session.hpp"
 
 #include <proton/delivery.h>

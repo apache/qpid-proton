@@ -23,6 +23,7 @@
  */
 
 #include "./binary.hpp"
+#include "./endpoint.hpp"
 #include "./internal/export.hpp"
 #include "./transfer.hpp"
 
@@ -55,8 +56,30 @@ class tracker : public transfer {
 
     /// @cond INTERNAL
   friend class internal::factory<tracker>;
+  friend class sender;
     /// @endcond
 };
+
+/// @cond INTERNAL
+
+/// An iterator of unsettled trackers on a sender.
+class tracker_iterator : public internal::iter_base<tracker, tracker_iterator> {
+  tracker_iterator(tracker t) :
+      internal::iter_base<tracker, tracker_iterator>(t) {}
+
+public:
+  explicit tracker_iterator() :
+      internal::iter_base<tracker, tracker_iterator>(tracker()) {}
+  /// Advance to the next unsettled tracker.
+  PN_CPP_EXTERN tracker_iterator operator++();
+
+  friend class sender;
+};
+
+/// A range of unsettled trackers.
+typedef internal::iter_range<tracker_iterator> tracker_range;
+
+/// @endcond
 
 } // proton
 

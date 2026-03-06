@@ -22,6 +22,7 @@
  *
  */
 
+#include "./delivery.hpp"
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./link.hpp"
@@ -76,6 +77,10 @@ PN_CPP_CLASS_EXTERN receiver : public link {
     /// outstanding drained credit reaches zero.
     PN_CPP_EXTERN void drain();
 
+    /// **Unsettled API** - Get a range of unsettled deliveries on this receiver.
+    /// Settled deliveries are not included.
+    PN_CPP_EXTERN delivery_range unsettled_deliveries() const;
+
     /// @cond INTERNAL
   friend class internal::factory<receiver>;
   friend class receiver_iterator;
@@ -86,13 +91,13 @@ PN_CPP_CLASS_EXTERN receiver : public link {
 
 /// An iterator of receivers.
 class receiver_iterator : public internal::iter_base<receiver, receiver_iterator> {
-    explicit receiver_iterator(receiver r, pn_session_t* s = 0) :
+    explicit receiver_iterator(receiver r, pn_session_t* s = nullptr) :
         internal::iter_base<receiver, receiver_iterator>(r), session_(s) {}
 
   public:
     /// Create an iterator of receivers.
     explicit receiver_iterator() :
-        internal::iter_base<receiver, receiver_iterator>(0), session_(0) {}
+        internal::iter_base<receiver, receiver_iterator>(nullptr), session_(nullptr) {}
 
     /// Advance to the next receiver.
     PN_CPP_EXTERN receiver_iterator operator++();

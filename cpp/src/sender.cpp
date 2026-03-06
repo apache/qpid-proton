@@ -87,6 +87,11 @@ tracker sender::send(const message &message, const binary &tag) {
     return track;
 }
 
+tracker_range sender::unsettled_trackers() const {
+    pn_delivery_t* d = pn_unsettled_head(pn_object());
+    return tracker_range(tracker_iterator(make_wrapper<tracker>(d)));
+}
+
 void sender::return_credit() {
     link_context &lctx = link_context::get(pn_object());
     lctx.draining = false;

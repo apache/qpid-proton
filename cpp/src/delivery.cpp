@@ -26,6 +26,8 @@
 #include "proton_bits.hpp"
 
 #include <proton/delivery.h>
+#include <proton/disposition.h>
+#include <proton/link.h>
 
 #include "types_internal.hpp"
 
@@ -50,5 +52,13 @@ void delivery::accept() { settle_delivery(pn_object(), ACCEPTED); }
 void delivery::reject() { settle_delivery(pn_object(), REJECTED); }
 void delivery::release() { settle_delivery(pn_object(), RELEASED); }
 void delivery::modify() { pn_disposition_set_failed(pn_delivery_local(pn_object()), true); settle_delivery(pn_object(), MODIFIED); }
+
+delivery_iterator delivery_iterator::operator++() {
+    if (!!obj_) {
+        pn_delivery_t* next = pn_unsettled_next(unwrap(obj_));
+        obj_ = make_wrapper<delivery>(next);
+    }
+    return *this;
+}
 
 }

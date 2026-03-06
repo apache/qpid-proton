@@ -23,6 +23,7 @@
  */
 
 #include "./binary.hpp"
+#include "./endpoint.hpp"
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./internal/object.hpp"
@@ -70,8 +71,30 @@ class delivery : public transfer {
 
     /// @cond INTERNAL
   friend class internal::factory<delivery>;
+  friend class receiver;
     /// @endcond
 };
+
+/// @cond INTERNAL
+
+/// An iterator of unsettled deliveries on a receiver.
+class delivery_iterator : public internal::iter_base<delivery, delivery_iterator> {
+  delivery_iterator(delivery d) :
+      internal::iter_base<delivery, delivery_iterator>(d) {}
+
+public:
+  explicit delivery_iterator() :
+      internal::iter_base<delivery, delivery_iterator>(delivery()) {}
+  /// Advance to the next unsettled delivery.
+  PN_CPP_EXTERN delivery_iterator operator++();
+
+  friend class receiver;
+};
+
+/// A range of unsettled deliveries.
+typedef internal::iter_range<delivery_iterator> delivery_range;
+
+/// @endcond
 
 } // proton
 

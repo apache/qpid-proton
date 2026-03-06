@@ -19,11 +19,8 @@
  *
  */
 
-#include "proton_bits.hpp"
-
 #include "proton/codec/map.hpp"
 #include "proton/link.hpp"
-#include "proton/error.hpp"
 #include "proton/connection.hpp"
 
 #include <proton/connection.h>
@@ -31,7 +28,6 @@
 #include <proton/link.h>
 
 #include "contexts.hpp"
-#include "msg.hpp"
 #include "proton_bits.hpp"
 
 namespace proton {

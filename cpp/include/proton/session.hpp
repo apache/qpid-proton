@@ -115,8 +115,8 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     
 /// An iterator of sessions.
 class session_iterator : public internal::iter_base<session, session_iterator> {
- public:
-    explicit session_iterator(session s = 0) : internal::iter_base<session, session_iterator>(s) {}
+  public:
+    explicit session_iterator(session s = nullptr) : internal::iter_base<session, session_iterator>(s) {}
 
     /// Advance to the next session.
     PN_CPP_EXTERN session_iterator operator++();

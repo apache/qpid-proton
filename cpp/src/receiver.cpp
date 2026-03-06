@@ -19,6 +19,7 @@
  *
  */
 #include "proton/receiver.hpp"
+#include "proton/delivery.hpp"
 
 #include "proton/error.hpp"
 #include "proton/link.hpp"
@@ -33,6 +34,7 @@
 #include <proton/connection.h>
 #include <proton/session.h>
 #include <proton/link.h>
+#include <proton/delivery.h>
 #include <proton/event.h>
 
 namespace proton {
@@ -81,6 +83,11 @@ void receiver::drain() {
             pn_collector_put_object(pn_connection_collector(pnc), pn_object(), PN_LINK_FLOW);
         }
     }
+}
+
+delivery_range receiver::unsettled_deliveries() const {
+    pn_delivery_t* d = pn_unsettled_head(pn_object());
+    return delivery_range(delivery_iterator(make_wrapper<delivery>(d)));
 }
 
 receiver_iterator receiver_iterator::operator++() {
