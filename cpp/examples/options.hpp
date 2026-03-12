@@ -53,6 +53,11 @@ class options {
         opts_.push_back(new option_value<T>(value, short_name, long_name, description, var));
     }
 
+    /** Overload for std::string: takes the full argument (including spaces). */
+    void add_value(std::string& value, char short_name, const std::string& long_name, const std::string& description, const std::string var) {
+        opts_.push_back(new option_string(value, short_name, long_name, description, var));
+    }
+
     /** Sets flag when parse() is called if option is present. */
     void add_flag(bool& flag, char short_name, const std::string& long_name, const std::string& description) {
         opts_.push_back(new option_flag(flag, short_name, long_name, description));
@@ -141,6 +146,34 @@ class options {
 
       private:
         T& value_;
+    };
+
+    class option_string : public option {
+      public:
+        option_string(std::string& value, char s, const std::string& l, const std::string& d, const std::string& v) :
+            option(s, l, d, v), value_(value) {}
+
+        bool parse(int argc, char const * const * argv, int &i) {
+            std::string arg(argv[i]);
+            if (arg == short_ || arg == long_) {
+                if (i < argc-1) {
+                    value_ = argv[++i];
+                    return true;
+                } else {
+                    throw bad_option("missing value for " + arg);
+                }
+            }
+            if (arg.compare(0, long_.size(), long_) == 0 && arg[long_.size()] == '=') {
+                value_ = arg.substr(long_.size() + 1);
+                return true;
+            }
+            return false;
+        }
+
+        virtual void print_default(std::ostream& os) const { if (!value_.empty()) os << " (default \"" << value_ << "\")"; }
+
+      private:
+        std::string& value_;
     };
 
     class option_flag: public option {
