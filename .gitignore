@@ -1,6 +1,7 @@
 # General
 
 /build*/
+/build*
 /bld*/
 /BLD*/
 /out
