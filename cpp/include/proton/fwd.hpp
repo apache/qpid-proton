@@ -54,6 +54,7 @@ class session_options;
 class source_options;
 class ssl;
 class target_options;
+class transaction_options;
 class tracker;
 class transport;
 class url;

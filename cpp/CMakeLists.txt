@@ -119,6 +119,7 @@ set(qpid-proton-cpp-source
   src/target.cpp
   src/terminus.cpp
   src/timestamp.cpp
+  src/transaction_options.cpp
   src/tracker.cpp
   src/transfer.cpp
   src/transport.cpp

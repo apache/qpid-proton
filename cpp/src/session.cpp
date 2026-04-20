@@ -28,6 +28,7 @@
 #include "proton/receiver_options.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/session_options.hpp"
+#include "proton/transaction_options.hpp"
 #include "proton/target_options.hpp"
 #include "proton/tracker.hpp"
 #include "proton/transfer.hpp"
@@ -221,7 +222,9 @@ bool has_unsettled_outgoing_deliveries(const session& s) {
 
 }
 
-void session::transaction_declare() {
+void session::transaction_declare() { transaction_declare(transaction_options()); }
+
+void session::transaction_declare(const transaction_options& opts) {
     if (!transaction_is_empty(*this))
         throw proton::error("Session has already declared transaction");
 
@@ -238,6 +241,8 @@ void session::transaction_declare() {
     if (!txn_context) {
         txn_context = std::make_unique<transaction_context>(open_coordinator_sender(*this));
     }
+
+    opts.apply(*this);
 
     // Declare txn
     txn_context->state = transaction_context::State::DECLARING;

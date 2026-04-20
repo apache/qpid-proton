@@ -168,6 +168,8 @@ class transaction_context {
     pn_condition_t* error = nullptr;
     binary transaction_id;
     bool failed = false;
+    /// When true, abort/fail paths in messaging_adapter modify unsettled incoming deliveries.
+    bool auto_modify_on_abort = true;
     enum class State {
       NO_TRANSACTION,
       DECLARING,

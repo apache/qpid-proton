@@ -23,6 +23,7 @@
 
 #include "proton/connection.hpp"
 #include "proton/delivery.hpp"
+#include "proton/disposition.h"
 #include "proton/error.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/receiver.hpp"
@@ -151,6 +152,28 @@ void settle_incoming_deliveries(session& s) {
     }
 }
 
+void modify_incoming_deliveries(session& s) {
+    // When the transaction aborts or errors, settle all incoming deliveries (on receiver links) with a modified
+    // disposition. Their delivery now definitively failed.
+    auto session = unwrap(s);
+    for (auto link = pn_link_head(pn_session_connection(session), 0);
+         link;
+         link = pn_link_next(link, 0)) {
+        if (pn_link_is_receiver(link) && pn_link_session(link) == session) {
+            for (auto delivery = pn_unsettled_head(link);
+                 delivery;
+                 delivery = pn_unsettled_next(delivery)) {
+                auto disposition = pn_delivery_local(delivery);
+                pn_disposition_clear(disposition);
+                auto modified_disp = pn_modified_disposition(disposition);
+                pn_modified_disposition_set_failed(modified_disp, true);
+                pn_delivery_update(delivery, PN_MODIFIED);
+                pn_delivery_settle(delivery);
+            }
+        }
+    }
+}
+
 void handle_transaction_coordinator_outcome(messaging_handler& handler, const tracker& t) {
     auto session = t.session();
     auto& session_context = session_context::get(unwrap(session));
@@ -180,6 +203,9 @@ void handle_transaction_coordinator_outcome(messaging_handler& handler, const tr
                 // Transaction abort is successful
                 transaction_context->state = transaction_context::State::NO_TRANSACTION;
                 settle_outgoing_deliveries(session);
+                if (transaction_context->auto_modify_on_abort) {
+                    modify_incoming_deliveries(session);
+                }
                 handler.on_session_transaction_aborted(session);
                 return;
             } else {
@@ -212,6 +238,9 @@ void handle_transaction_coordinator_outcome(messaging_handler& handler, const tr
                 transaction_context->state = transaction_context::State::NO_TRANSACTION;
                 settle_outgoing_deliveries(session);
                 transaction_context->error = pn_rejected_disposition_condition(rejected_disp);
+                if (transaction_context->auto_modify_on_abort) {
+                    modify_incoming_deliveries(session);
+                }
                 handler.on_session_transaction_aborted(session);
                 transaction_context->error = nullptr;
                 return;

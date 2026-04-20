@@ -91,12 +91,6 @@ class tx_recv : public proton::messaging_handler {
 
     void on_session_transaction_aborted(proton::session &s) override {
         std::cout << "Transaction aborted!" << std::endl;
-        std::cout << "Releasing all unsettled deliveries back to the broker..." << std::endl;
-        for (auto r: s.receivers()) {
-            for (auto d : r.unsettled_deliveries()) {
-                d.release();
-            }
-        }
         std::cout << "Re-declaring transaction now..." << std::endl;
         current_batch = 0;
         s.transaction_declare();
