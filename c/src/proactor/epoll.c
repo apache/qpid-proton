@@ -836,7 +836,7 @@ static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_con
 // Call with lock held and closing == true (i.e. pn_connection_driver_finished() == true), no pending timer.
 // Return true when all possible outstanding epoll events associated with this pconnection have been processed.
 static inline bool pconnection_is_final(pconnection_t *pc) {
-  return !pc->current_arm && !pc->task.ready && !pc->tick_pending;
+  return !pc->current_arm && !pc->task.ready && !pc->tick_pending && !pc->name_lookup_pending;
 }
 
 static void pconnection_final_free(pconnection_t *pc) {
@@ -1400,6 +1400,7 @@ static void pconnection_start(pconnection_t *pc, int fd) {
 }
 
 /* Called on initial connect, and if connection fails to try another address */
+/* May be called within the pconnection task or from an external name_lookup task */
 static void pconnection_maybe_connect_lh(pconnection_t *pc) {
   errno = 0;
   if (!pc->connected) {         /* Not yet connected */
@@ -1447,7 +1448,11 @@ bool schedule_if_inactive(pn_proactor_t *p) {
 static void connection_lookup_done_lh(pconnection_t *pc, struct addrinfo *ai, int gai_error) {
   pn_proactor_t *p = pc->task.proactor;
   bool notify = false;
-  if (gai_error) {
+
+  if (pconnection_rclosed(pc) && pconnection_wclosed(pc)) {
+    // Closed by application. Skip pending connect(). gai_error no longer of interest.
+    freeaddrinfo(ai);
+  } else if (gai_error) {
     psocket_gai_error(&pc->psocket, gai_error, "connect to ");
   } else if (ai) {
     pc->addrinfo = ai;
@@ -1464,6 +1469,7 @@ static void connection_lookup_done_lh(pconnection_t *pc, struct addrinfo *ai, in
 static void connection_done_cb(void *user_data, struct addrinfo *ai, int gai_error) {
   pconnection_t *pc = (pconnection_t *)user_data;
   lock(&pc->task.mutex);
+  pc->name_lookup_pending = false;
   connection_lookup_done_lh(pc, ai, gai_error);
   unlock(&pc->task.mutex);
 }
@@ -1472,10 +1478,28 @@ static void connection_done_cb(void *user_data, struct addrinfo *ai, int gai_err
 // Return true if the socket is connecting and there are no Proton events to deliver.
 static bool pconnection_first_connect_lh(pconnection_t *pc) {
   pn_proactor_t *p = pc->task.proactor;
+  pn_transport_t *tp = pc->driver.transport;
+  pc->name_lookup_pending = true;
+
   unlock(&pc->task.mutex);
   bool rc = pni_name_lookup_start(&p->name_lookup, pc->host, pc->port, pc, connection_done_cb);
   lock(&pc->task.mutex);
-  return rc;
+
+  if (!rc) {
+    // Either the callback was synchronous or no callback was possible
+    if (pc->name_lookup_pending) {
+      // Clean up since there will be no callback.
+      pc->name_lookup_pending = false;
+      psocket_error(&pc->psocket, EAI_FAIL, "internal error on connect");
+    }
+    return false;
+  }
+  if (!pc->name_lookup_pending) {
+    // connection_done_cb already completed
+    if (pn_condition_is_set(pn_transport_condition(tp)))
+      return false;
+  }
+  return !pc->queued_disconnect && !pni_task_wake_pending(&pc->task);
 }
 
 void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {

@@ -271,6 +271,7 @@ typedef struct pconnection_t {
   pmutex rearm_mutex;                /* protects pconnection_rearm from out of order arming*/
   bool io_doublecheck;               /* callbacks made and new IO may have arrived */
   uint64_t expected_timeout;
+  bool name_lookup_pending;
   char addr_buf[1];
 } pconnection_t;
 
