@@ -26,11 +26,13 @@
 
 #include "proton/work_queue.hpp"
 #include "proton/message.hpp"
+#include "proton/tracker.hpp"
 
 #include "proton/object.h"
 #include "proton/condition.h"
 
 #include <memory>
+#include <unordered_set>
 
 struct pn_record_t;
 struct pn_link_t;
@@ -164,6 +166,7 @@ class session_context : public context {
 class transaction_context {
   public:
     transaction_context(pn_link_t* coordinator);
+    std::unordered_set<tracker> provisional_outcomes;
     pn_link_t* coordinator;
     pn_condition_t* error = nullptr;
     binary transaction_id;
