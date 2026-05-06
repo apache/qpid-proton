@@ -239,7 +239,10 @@ PN_CPP_CLASS_EXTERN messaging_handler {
     /// Fallback error handling.
     PN_CPP_EXTERN virtual void on_error(const error_condition&);
 
-    /// **Unsettled API** - Called when a local transaction is declared.
+    /// **Unsettled API** - Transaction lifecycle and messaging callbacks.
+    /// @see transactions_page
+    ///
+    /// Called when a local transaction is declared.
     PN_CPP_EXTERN virtual void on_session_transaction_declared(session&);
 
     /// **Unsettled API** - Called when a local transaction is discharged successfully.

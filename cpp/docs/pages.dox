@@ -5,3 +5,4 @@
 /// @page mt_page Multi-threading
 /// @page io_page IO integration
 /// @page tracing Tracing
+/// @page transactions_page Transactions

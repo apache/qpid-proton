@@ -106,18 +106,33 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN void* user_data() const;
 
     /// **Unsettled API** - Declare a new local transaction on this session.
+    ///
+    /// When the transactions coordinator accepts, the application receives
+    /// messaging_handler::on_session_transaction_declared. A rejected declare is reported as
+    /// messaging_handler::on_session_transaction_error.
+    ///
+    /// @see transactions_page
     PN_CPP_EXTERN void transaction_declare();
 
     /// **Unsettled API** - Commit the currently declared transaction.
+    ///
+    /// Outcome is delivered asynchronously via messaging_handler::on_session_transaction_committed
+    /// or messaging_handler::on_session_transaction_aborted.
     PN_CPP_EXTERN void transaction_commit();
 
     /// **Unsettled API** - Abort the currently declared transaction.
+    ///
+    /// This completes with messaging_handler::on_session_transaction_aborted (see also
+    /// transaction_commit()).
     PN_CPP_EXTERN void transaction_abort();
 
     /// **Unsettled API** - Return true if a transaction is currently declared.
     PN_CPP_EXTERN bool transaction_is_declared() const;
 
     /// **Unsettled API** - Return the identifier of the current transaction.
+    ///
+    /// There will be a valid transaction id from the tranacrtion declared callback until after any transaction
+    /// dicharge callback.
     PN_CPP_EXTERN binary transaction_id() const;
 
     /// **Unsettled API** - Return the error condition associated with transaction.
