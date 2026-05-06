@@ -32,7 +32,7 @@ std::ostream& operator<<(std::ostream& o, const binary& x) {
     ios_guard restore_flags(o);
     o << std::hex << std::setfill('0') << "b\"";
     for (binary::const_iterator i = x.begin(); i != x.end(); ++i) {
-        if (!isprint(*i) && !isspace(*i)) { // Non-printables in hex.
+        if (!isprint(*i) || isspace(*i)) { // Non-printables and spaces in hex.
             o << "\\x" << std::setw(2) << printable_byte(*i);
         } else {
             o << char(*i);
