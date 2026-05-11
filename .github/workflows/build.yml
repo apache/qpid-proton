@@ -27,12 +27,12 @@ jobs:
       PKG_CONFIG_PATH: ${{matrix.pkg_config_path}}
       VCPKG_DEFAULT_TRIPLET: x64-windows
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Create Build and Install directories
       run: mkdir -p "${BuildDir}" "${InstallPrefix}"
       shell: bash
     - name: Setup python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         cache-dependency-path: python/ci_requirements.txt
         python-version: ${{matrix.python_version}}
@@ -73,17 +73,17 @@ jobs:
       run: cmake --build "${BuildDir}" --config ${BuildType} -t install
       shell: bash
     - name: Upload Install
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: qpid_proton_pkg_${{matrix.os}}_${{matrix.buildType}}
         path: ${{env.InstallPrefix}}
     - name: Upload python source
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: python-src_${{matrix.os}}
         path: ${{env.BuildDir}}/python/dist/*.tar.gz
     - name: Upload python wheel
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: python-wheel_${{matrix.os}}
         path: ${{env.BuildDir}}/python/dist/*.whl
@@ -100,12 +100,12 @@ jobs:
       shell: bash
     - name: Upload Test results
       if: always() && (steps.ctest.outcome == 'failure' || steps.ctest.outcome == 'success')
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Test_Results_${{matrix.os}}_${{matrix.buildType}}
         path: ${{env.BuildDir}}/Testing/**/*.xml
     - name: Upload Python & C build directories on failure
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       if: failure()
       with:
         name: Debug-python-C-BLD_${{matrix.os}}_${{matrix.buildType}}
