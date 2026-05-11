@@ -60,7 +60,7 @@ connection handlers.
 
  * Each connection has an associated `proton::work_queue`.
 
- * The work queue is thread-safe (C++11 or greater).  Any thread can
+ * The work queue is thread-safe.  Any thread can
    add *work*.
 
  * *Work* is a `std::function`, and bound arguments will be
@@ -69,6 +69,10 @@ connection handlers.
 When the work function is called by Proton, it will be serialized
 safely so that you can treat the work function like an event callback
 and safely access the handler and Proton objects stored on it.
+
+It is possible to create free standing `proton::work_queue`s which are
+backed by  a container, in this case the *work* will be serialised with
+other container callbacks, but not with connection callbacks.
 
 The examples @ref multithreaded_client.cpp and @ref
 multithreaded_client_flow_control.cpp show how you can send and

@@ -313,13 +313,15 @@ using internal::v11::make_work;
 /// Event-handler functions associated with a single
 /// `proton::connection` are called in sequence.  The connection's
 /// `proton::work_queue` allows you to "inject" extra work from
-/// any thread and have it executed in the same sequence.
+/// any thread and have it executed in the same sequence in the
+/// serialized context of the connection. That is the event loop / driver thread
+/// that runs that connection's callbacks not on the calling thread.
 ///
 /// You may also create arbitrary `proton::work_queue` objects backed
 /// by a @ref container that allow other objects to have their own
-/// serialised work queues that can have work injected safely from
+/// serialized work queues that can have work injected safely from
 /// other threads. The @ref container ensures that the work is
-/// correctly serialised.
+/// correctly serialized and run on a thread that is running the container.
 ///
 /// The `proton::work` class represents the work to be queued and can
 /// be created from a function that takes no parameters and returns no
@@ -342,10 +344,16 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// **Unsettled API** - Add work `fn` to the work queue.
     ///
     /// Work `fn` will be called serially with other work in the queue.
-    /// The work may be deferred and executed in another thread.
+    /// The work will be deferred and executed on the connection thread associated
+    /// with the owner of the work queue. It will be executed serially with any
+    /// callbacks associated with that connection.
+    ///
+    /// If the work queue is backed by a container, the work will be executed on
+    /// a thread that is running the container, but there are no guarantees about how
+    /// it will be serialized with any connection callbacks in that container.
     ///
     /// @return true if `fn` has been or will be called; false if the
-    /// event loops is ended or `fn` cannot be injected for any other
+    /// event loops are ended or `fn` cannot be injected for any other
     /// reason.
     PN_CPP_EXTERN bool add(work fn);
 
