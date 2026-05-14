@@ -113,10 +113,10 @@ static void praw_connection_start(praw_connection_t *prc, int fd) {
 /* Called on initial connect, and if connection fails to try another address */
 /* May be called within the praw_connection task or from an external name_lookup task */
 static void praw_connection_maybe_connect_lh(praw_connection_t *prc) {
-  int err = 0;
   if (prc->task.closing) {
     return;
   }    
+  int err = 0;                 /* Initialized in case while loop has zero iterations */
   while (prc->ai) {            /* Have an address */
     err = 0;
     struct addrinfo *ai = prc->ai;
@@ -156,6 +156,8 @@ static void praw_connection_maybe_connect_lh(praw_connection_t *prc) {
 static void raw_connection_lookup_done_lh(praw_connection_t *prc, struct addrinfo *ai, int gai_error) {
   pn_proactor_t *p = prc->task.proactor;
   bool notify = false;
+
+  prc->name_lookup_pending = false;
   if (gai_error) {
     psocket_gai_error(prc, gai_error, "connect to ", prc->taddr);
   } else if (ai) {
@@ -173,7 +175,6 @@ static void raw_connection_lookup_done_lh(praw_connection_t *prc, struct addrinf
 static void raw_connection_done_cb(void *user_data, struct addrinfo *ai, int gai_error) {
   praw_connection_t *prc = (praw_connection_t *)user_data;
   lock(&prc->task.mutex);
-  prc->name_lookup_pending = false;
   raw_connection_lookup_done_lh(prc, ai, gai_error);
   unlock(&prc->task.mutex);
 }
@@ -224,9 +225,6 @@ static void praw_initiate_cleanup(praw_connection_t *prc) {
     shutdown(prc->psocket.epoll_io.fd, SHUT_RDWR);
     return;
   }
-  if (prc->name_lookup_pending) {
-    return;   // name lookup callback will reschedule
-  }
   pni_raw_finalize(&prc->raw_connection);
   praw_connection_cleanup(prc);
 }
@@ -243,17 +241,16 @@ pn_raw_connection_t *pn_raw_connection(void) {
 // Call from pconnection_process with no locks.
 // Callback may complete before pni_name_lookup_start returns.
 static void praw_connection_first_connect(praw_connection_t *prc) {
-  const char *host;
-  const char *port;
   pn_proactor_t *p = prc->task.proactor;
-  bool notify = false;
-
   size_t addrlen = strlen(prc->taddr);
   char *addr_buf = (char*) alloca(addrlen+1);
+  const char *host;
+  const char *port;
   pni_parse_addr(prc->taddr, addr_buf, addrlen+1, &host, &port);
   bool rc = pni_name_lookup_start(&p->name_lookup, host, port, prc, raw_connection_done_cb);
   if (!rc) {
     // Either the callback was synchronous or no callback was possible
+    bool notify = false;
     lock(&prc->task.mutex);
     if (prc->name_lookup_pending) {
       // Clean up since there will be no callback.
@@ -463,7 +460,8 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool
     rc->armed = false;
     rc->current_arm = 0;
   }
-  if (pni_raw_finished(&rc->raw_connection)) {
+  if (pni_raw_finished(&rc->raw_connection) && !rc->name_lookup_pending) {
+    t->working = false;
     unlock(&rc->task.mutex);
     praw_initiate_cleanup(rc);
     return NULL;
@@ -489,6 +487,7 @@ pn_event_batch_t *pni_raw_connection_process(task_t *t, uint32_t io_events, bool
     if (wake_event) {
       lock(&rc->task.mutex);
       t->working = true;
+      unlock(&rc->task.mutex);
       return &rc->batch;
     }
     return NULL;
@@ -563,9 +562,10 @@ void pni_raw_connection_done(praw_connection_t *rc) {
   // wakes outstanding because we dealt with it already in pni_raw_batch_next()
   notify = (wake_pending || have_event) && schedule(&rc->task);
   ready = rc->task.ready;  // No need to poll.  Already scheduled.
+  bool praw_finished = pni_raw_finished(&rc->raw_connection) && !rc->name_lookup_pending;
   unlock(&rc->task.mutex);
 
-  if (pni_raw_finished(raw) && !ready) {
+  if (praw_finished && !ready) {
     // If raw connection has no more work to do and safe to free resources, do so.
     praw_initiate_cleanup(rc);
   } else if (ready) {

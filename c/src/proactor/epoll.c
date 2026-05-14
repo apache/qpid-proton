@@ -1446,13 +1446,8 @@ bool schedule_if_inactive(pn_proactor_t *p) {
 
 /* Called when connection name lookup completes (from name_lookup done_cb). Call with task lock held. */
 static void connection_lookup_done_lh(pconnection_t *pc, struct addrinfo *ai, int gai_error) {
-  pn_proactor_t *p = pc->task.proactor;
-  bool notify = false;
-
-  if (pconnection_rclosed(pc) && pconnection_wclosed(pc)) {
-    // Closed by application. Skip pending connect(). gai_error no longer of interest.
-    freeaddrinfo(ai);
-  } else if (gai_error) {
+  pc->name_lookup_pending = false;
+  if (gai_error) {
     psocket_gai_error(&pc->psocket, gai_error, "connect to ");
   } else if (ai) {
     pc->addrinfo = ai;
@@ -1462,14 +1457,13 @@ static void connection_lookup_done_lh(pconnection_t *pc, struct addrinfo *ai, in
       return;
     }
   }
-  notify = schedule(&pc->task);
-  if (notify) notify_poller(p);
+  bool notify = schedule(&pc->task);
+  if (notify) notify_poller(pc->task.proactor);
 }
 
 static void connection_done_cb(void *user_data, struct addrinfo *ai, int gai_error) {
   pconnection_t *pc = (pconnection_t *)user_data;
   lock(&pc->task.mutex);
-  pc->name_lookup_pending = false;
   connection_lookup_done_lh(pc, ai, gai_error);
   unlock(&pc->task.mutex);
 }
@@ -1494,12 +1488,12 @@ static bool pconnection_first_connect_lh(pconnection_t *pc) {
     }
     return false;
   }
+  // Name lookup started.  Callback may have already completed and failed.
   if (!pc->name_lookup_pending) {
-    // connection_done_cb already completed
     if (pn_condition_is_set(pn_transport_condition(tp)))
       return false;
   }
-  return !pc->queued_disconnect && !pni_task_wake_pending(&pc->task);
+  return true;
 }
 
 void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
