@@ -270,6 +270,9 @@ PN_CPP_CLASS_EXTERN messaging_handler {
     /// This means that if the transaction successfully commits the delivery
     /// will be released (including modifying the delivery count).
     PN_CPP_EXTERN virtual void on_transactional_release(tracker&);
+
+    /// **Unsettled API** - Called when the container is quiescent.
+    PN_CPP_EXTERN virtual void on_container_quiescent(container&);
 };
 
 } // namespace proton

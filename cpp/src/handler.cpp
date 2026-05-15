@@ -43,8 +43,11 @@ messaging_handler::~messaging_handler() = default;
 
 void messaging_handler::on_container_start(container &) {}
 void messaging_handler::on_container_stop(container &) {}
+void messaging_handler::on_container_quiescent(container &) {}
+
 void messaging_handler::on_message(delivery &, message &) {}
 void messaging_handler::on_sendable(sender &) {}
+
 void messaging_handler::on_transport_close(transport &) {}
 void messaging_handler::on_transport_error(transport &t) { on_error(t.error()); }
 void messaging_handler::on_transport_open(transport &) {}
@@ -100,5 +103,4 @@ void messaging_handler::on_sender_drain_start(sender &) {}
 void messaging_handler::on_receiver_drain_finish(receiver &) {}
 
 void messaging_handler::on_error(const error_condition& c) { throw proton::error(c.what()); }
-
 }

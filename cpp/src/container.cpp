@@ -95,6 +95,8 @@ void container::run(int threads) { impl_->run(threads); }
 
 void container::auto_stop(bool set) { impl_->auto_stop(set); }
 
+void container::enable_quiescent_callback(bool set) { impl_->enable_quiescent_callback(set); }
+
 void container::stop(const error_condition& err) { impl_->stop(err); }
 
 returned<sender> container::open_sender(

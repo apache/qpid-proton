@@ -140,8 +140,7 @@ class work_queue::impl* container::impl::make_work_queue(container& c) {
 }
 
 container::impl::impl(container& c, const std::string& id, messaging_handler* mh)
-    : threads_(0), container_(c), proactor_(pn_proactor()), handler_(mh), id_(id),
-      reconnecting_(0), auto_stop_(true), stopping_(false)
+    : container_(c), proactor_(pn_proactor()), handler_(mh), id_(id)
 {}
 
 container::impl::~impl() {
@@ -771,7 +770,30 @@ void container::impl::thread() {
         finished = stopping_;
     }
     while (!finished) {
-        pn_event_batch_t *events = pn_proactor_wait(proactor_);
+        pn_event_batch_t* events = nullptr;
+        auto dispatching_threads = [this]() {
+            GUARD(lock_);
+            return dispatching_threads_;
+        } ();
+        if (dispatching_threads == 0) {
+            events = pn_proactor_get(proactor_);
+            if (!events) {
+                {
+                    GUARD(lock_);
+                    ++dispatching_threads_;
+                }
+                if (handler_ && quiescent_callback_) handler_->on_container_quiescent(container_);
+                {
+                    GUARD(lock_);
+                    --dispatching_threads_;
+                }
+            }
+        }
+        events = events ? events : pn_proactor_wait(proactor_);
+        {
+            GUARD(lock_);
+            ++dispatching_threads_;
+        }
         pn_event_t *e;
         error_condition error;
         try {
@@ -787,6 +809,10 @@ void container::impl::thread() {
             error = error_condition("exception", "container shut-down by unknown exception");
         }
         pn_proactor_done(proactor_, events);
+        {
+            GUARD(lock_);
+            --dispatching_threads_;
+        }
         if (!error.empty()) {
             finished = true;
             {
@@ -842,6 +868,11 @@ void container::impl::run(int threads) {
         GUARD(lock_);
         if (!disconnect_error_.empty()) throw proton::error(disconnect_error_.description());
     };
+}
+
+void container::impl::enable_quiescent_callback(bool set) {
+    GUARD(lock_);
+    quiescent_callback_ = set;
 }
 
 void container::impl::auto_stop(bool set) {

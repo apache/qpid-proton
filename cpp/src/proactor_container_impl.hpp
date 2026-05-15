@@ -62,7 +62,7 @@ class connector;
 
 class container::impl {
   public:
-    impl(container& c, const std::string& id, messaging_handler* = 0);
+    impl(container& c, const std::string& id, messaging_handler* = nullptr);
     ~impl();
     std::string id() const { return id_; }
     returned<connection> connect();
@@ -85,6 +85,7 @@ class container::impl {
     void run(int threads);
     void stop(const error_condition& err);
     void auto_stop(bool set);
+    void enable_quiescent_callback(bool set);
     work_handle schedule(duration, work);
     void cancel(work_handle);
     template <class T> static void set_handler(T s, messaging_handler* h);
@@ -109,7 +110,8 @@ class container::impl {
     dispatch_result dispatch(pn_event_t*);
     void run_timer_jobs();
 
-    int threads_;
+    int threads_ = 0;
+    int dispatching_threads_ = 0;
     container& container_;
     MUTEX(lock_)
 
@@ -146,9 +148,10 @@ class container::impl {
     proton::receiver_options receiver_options_;
     error_condition disconnect_error_;
 
-    unsigned reconnecting_;
-    bool auto_stop_;
-    bool stopping_;
+    unsigned reconnecting_ = 0;
+    bool auto_stop_ = true;
+    bool quiescent_callback_ = false;
+    bool stopping_ = false;
     friend class connector;
 };
 

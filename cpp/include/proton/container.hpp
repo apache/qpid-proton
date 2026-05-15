@@ -177,6 +177,13 @@ class PN_CPP_CLASS_EXTERN container {
     /// until `stop()` is called.
     PN_CPP_EXTERN void auto_stop(bool enabled);
 
+    /// Enable or disable the quiescent callback.  It is disabled by
+    /// default.
+    ///
+    /// If true, the container will call `messaging_handler::on_container_quiescent`
+    /// when the container is quiescent.
+    PN_CPP_EXTERN void enable_quiescent_callback(bool enabled);
+
     /// Stop the container with error condition `err`.
     ///
     /// @copydetails stop()
