@@ -473,6 +473,10 @@ work_handle container::impl::schedule(duration delay, work f) {
 void container::impl::cancel(work_handle work_handle) {
     GUARD(deferred_lock_);
     is_active_.erase(work_handle);
+    bool active_tasks = is_active_.size() > 0;
+    if (!active_tasks) {
+        pn_proactor_cancel_timeout(proactor_);
+    }
 }
 
 void container::impl::client_connection_options(const connection_options &opts) {
@@ -858,6 +862,11 @@ void container::impl::stop(const proton::error_condition& err) {
     set_error_condition(err, error_condition);
     pn_proactor_disconnect(proactor_, error_condition);
     pn_condition_free(error_condition);
+    GUARD(deferred_lock_);
+    bool active_tasks = is_active_.size() > 0;
+    if (!active_tasks) {
+        pn_proactor_cancel_timeout(proactor_);
+    }
 }
 
 }

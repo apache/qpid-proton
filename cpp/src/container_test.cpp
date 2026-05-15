@@ -332,6 +332,21 @@ int test_container_schedule_stop() {
     return 0;
 }
 
+struct cancel_schedule_tester : public proton::messaging_handler {
+    proton::work_handle timeout_handle;
+    void on_container_start(proton::container& c) override {
+        c.cancel(timeout_handle);
+    }
+};
+
+int test_container_cancel_schedule_autostop() {
+    cancel_schedule_tester tester;
+    proton::container c(tester);
+    tester.timeout_handle = c.schedule(proton::duration(10000), [&](){ c.stop(); });
+    c.run();
+    return 0;
+}
+
 class link_test_handler : public proton::messaging_handler {//, public proton::listen_handler {
   public:
     bool had_receiver;
@@ -706,6 +721,7 @@ int main(int argc, char** argv) {
     RUN_ARGV_TEST(failed, test_container_immediate_stop());
     RUN_ARGV_TEST(failed, test_container_pre_stop());
     RUN_ARGV_TEST(failed, test_container_schedule_stop());
+    RUN_ARGV_TEST(failed, test_container_cancel_schedule_autostop());
     RUN_ARGV_TEST(failed, test_container_links_no_properties());
     RUN_ARGV_TEST(failed, test_container_links_properties());
     RUN_ARGV_TEST(failed, test_container_mt_stop_empty());
