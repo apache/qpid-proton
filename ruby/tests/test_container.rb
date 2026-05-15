@@ -17,7 +17,7 @@
 
 
 require 'test_tools'
-require 'minitest/unit'
+require 'minitest/autorun'
 require 'socket'
 
 # Since ruby 2.5 the default is true, turn it off since we have tests that deliberately

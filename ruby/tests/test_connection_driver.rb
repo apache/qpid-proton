@@ -16,7 +16,7 @@
 
 
 require 'test_tools'
-require 'minitest/unit'
+require 'minitest/autorun'
 
 include Qpid::Proton
 

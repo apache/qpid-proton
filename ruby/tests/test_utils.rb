@@ -16,7 +16,7 @@
 # under the License.
 
 require 'test_tools'
-require 'minitest/unit'
+require 'minitest/autorun'
 
 class UtilsTest < Minitest::Test
   include Qpid::Proton

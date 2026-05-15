@@ -17,7 +17,7 @@
 
 
 require 'test_tools'
-require 'minitest/unit'
+require 'minitest/autorun'
 require 'socket'
 
 # Container that listens on a random port
