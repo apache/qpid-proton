@@ -114,9 +114,14 @@ bool transaction_coordinator_sender(const sender& s) {
     return txn_context && (txn_context->coordinator == unwrap(s));
 }
 
+void transaction_protocol_error(session_context& /*sctx*/, const char* /*message*/) {
+    // TODO: decide how to handle transactional protocol errors
+}
+
 void handle_outgoing_committed_deliveries(messaging_handler& handler, session &s) {
     auto session = unwrap(s);
     auto& transaction_context = session_context::get(session).transaction_context_;
+    assert(transaction_context);
     for (auto t : transaction_context->provisional_outcomes) {
         auto disposition = pn_delivery_remote(unwrap(t));
         auto trans_disp = pn_transactional_disposition(disposition);
@@ -151,6 +156,7 @@ void settle_outgoing_deliveries(session& s) {
     // scope our transactions to a session, we will settle all outgoing deliveries for the session.
     auto session = unwrap(s);
     auto& transaction_context = session_context::get(session).transaction_context_;
+    assert(transaction_context);
     auto coordinator = transaction_context->coordinator;
     for (auto link = pn_link_head(pn_session_connection(session), 0);
          link;
@@ -210,6 +216,7 @@ void handle_transaction_coordinator_outcome(messaging_handler& handler, const tr
     auto session = t.session();
     auto& session_context = session_context::get(unwrap(session));
     auto& transaction_context = session_context.transaction_context_;
+    assert(transaction_context);
     auto state = transaction_context->state;
     auto disposition = pn_delivery_remote(unwrap(t));
     if (auto *declared_disp = pn_declared_disposition(disposition); declared_disp) {
@@ -291,6 +298,20 @@ void handle_transaction_coordinator_outcome(messaging_handler& handler, const tr
 void handle_transacted_delivery_outcome(messaging_handler& handler, pn_delivery_t* d, tracker& t) {
     auto& session_context = session_context::get(unwrap(t.session()));
     auto& transaction_context = session_context.transaction_context_;
+    if (!transaction_context) {
+        transaction_protocol_error(session_context, "Received transactional disposition when not in a transaction");
+        return;
+    }
+
+    auto disposition = pn_transactional_disposition(pn_delivery_remote(d));
+    if (!disposition) {
+        transaction_protocol_error(session_context, "Received transactional disposition without transactional state");
+        return;
+    }
+    if (bin(pn_transactional_disposition_get_id(disposition)) != transaction_context->transaction_id) {
+        transaction_protocol_error(session_context, "Received transactional disposition with invalid transaction id");
+        return;
+    }
 
     // We should hold on to tracker here so that we can call the non transactional handlers if the transaction
     // commits without error. We can't do this triggered by the the incoming settlement later as it will happen before
@@ -304,7 +325,6 @@ void handle_transacted_delivery_outcome(messaging_handler& handler, pn_delivery_
         return;
     }
 
-    auto disposition = pn_transactional_disposition(pn_delivery_remote(d));
     auto outcome_type = pn_transactional_disposition_get_outcome_type(disposition);
     switch (outcome_type) {
         case PN_ACCEPTED:

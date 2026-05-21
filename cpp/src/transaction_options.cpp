@@ -26,6 +26,8 @@
 #include "contexts.hpp"
 #include "proton_bits.hpp"
 
+#include <assert.h>
+
 namespace proton {
 
 namespace {
@@ -48,7 +50,7 @@ class transaction_options::impl {
     void apply(session& s) {
         auto& session_context = session_context::get(unwrap(s));
         auto& transaction_context = session_context.transaction_context_;
-    
+        assert(transaction_context);
         if (auto_modify_on_abort.set) transaction_context->auto_modify_on_abort = auto_modify_on_abort.value;
     }
 
