@@ -1651,6 +1651,7 @@ static void pn_delivery_finalize(void *object)
     pn_bytes_free(delivery->tag);
     delivery->tag = (pn_delivery_tag_t){0, NULL};
     pn_buffer_clear(delivery->bytes);
+    delivery->bytes_offset = 0;
     pn_record_clear(delivery->context);
     delivery->settled = true;
     pn_connection_t *conn = link->session->connection;
@@ -1737,6 +1738,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->tpwork_prev = NULL;
   delivery->tpwork = false;
   pn_buffer_clear(delivery->bytes);
+  delivery->bytes_offset = 0;
   delivery->done = false;
   delivery->aborted = false;
   pn_record_clear(delivery->context);
@@ -1760,6 +1762,12 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   return delivery;
 }
 
+static uint32_t pni_delivery_buffer_size(pn_delivery_t *delivery)
+{
+  assert(pn_buffer_size(delivery->bytes) >= delivery->bytes_offset);
+  return pn_buffer_size(delivery->bytes) - delivery->bytes_offset;
+}
+
 bool pn_delivery_buffered(pn_delivery_t *delivery)
 {
   assert(delivery);
@@ -1769,7 +1777,7 @@ bool pn_delivery_buffered(pn_delivery_t *delivery)
     if (state->sent) {
       return false;
     } else {
-      return delivery->done || (pn_buffer_size(delivery->bytes) > 0);
+      return delivery->done || (pni_delivery_buffer_size(delivery) > 0);
     }
   } else {
     return false;
@@ -2321,6 +2329,22 @@ ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n)
   pn_delivery_t *current = pn_link_current(sender);
   if (!current) return PN_EOS;
   if (!bytes || !n) return 0;
+  // Performance optimization: if alternating several writes into and multiple reads
+  // from the bytes pn_buffer_t, only a single trim+defrag is necessary at transition
+  // from read to write.
+  if (current->bytes_offset) {
+    // Streaming message.  Update bytes buffer accounting.
+    pn_buffer_trim(current->bytes, current->bytes_offset, 0);
+    current->bytes_offset = 0;
+    // Expensive defrag/rotate is here.  Future calls to pn_buffer_bytes() are fast if no trim.
+    pn_buffer_bytes(current->bytes);
+    if (current->tpwork) {
+      // Some content was sent: bytes_offset > 0.  Give other senders a turn.
+      pn_connection_t *connection = current->link->session->connection;
+      LL_REMOVE(connection, tpwork, current);
+      current->tpwork = false;
+    }
+  }
   pn_buffer_append(current->bytes, bytes, n);
   sender->session->outgoing_bytes += n;
   pni_add_tpwork(current);
@@ -2549,7 +2573,7 @@ size_t pn_delivery_pending(pn_delivery_t *delivery)
      the PN_ABORTED error return code.
   */
   if (delivery->aborted) return 1;
-  return pn_buffer_size(delivery->bytes);
+  return pni_delivery_buffer_size(delivery);
 }
 
 bool pn_delivery_partial(pn_delivery_t *delivery)
@@ -2561,8 +2585,9 @@ void pn_delivery_abort(pn_delivery_t *delivery) {
   if (!delivery->local.settled) { /* Can't abort a settled delivery */
     delivery->aborted = true;
     pn_delivery_settle(delivery);
-    delivery->link->session->outgoing_bytes -= pn_buffer_size(delivery->bytes);
+    delivery->link->session->outgoing_bytes -= pni_delivery_buffer_size(delivery);
     pn_buffer_clear(delivery->bytes);
+    delivery->bytes_offset = 0;
   }
 }
 

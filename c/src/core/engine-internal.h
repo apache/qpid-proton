@@ -403,6 +403,7 @@ struct pn_delivery_t {
   pn_delivery_state_t state;
   pn_buffer_t *bytes;
   pn_record_t *context;
+  uint32_t bytes_offset; // start of content remaining to send on transport
   bool updated;
   bool settled; // tracks whether we're in the unsettled list or not
   bool work;
