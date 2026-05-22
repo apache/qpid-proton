@@ -247,6 +247,11 @@ void pni_logger_log_msg_frame(pn_logger_t *logger, pn_log_subsystem_t subsystem,
 
   size_t psize = pni_value_dump(frame, &output);
   pn_bytes_t payload = {.size=frame.size-psize, .start=frame.start+psize};
+  while (payload.size>0 && psize>0) {
+    pn_fixed_string_append(&output, pn_string_const(" ", 1));
+    psize = pni_value_dump(payload, &output);
+    payload = (pn_bytes_t){.size=payload.size-psize, .start=payload.start+psize};
+  }
   if (payload.size>0) {
     pn_fixed_string_addf(&output, " (%zu) ", payload.size);
     pn_fixed_string_quote(&output, payload.start, payload.size);
