@@ -229,8 +229,7 @@ class Url:
         if self.username:
             userpart += quote(self.username)
         if self.password:
-            userpart += ':'
-            userpart += quote(self.password)
+            userpart += ':***'
         if self.username or self.password:
             userpart += '@'
         return userpart + hostport

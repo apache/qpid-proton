@@ -35,24 +35,22 @@ class UrlTest(common.Test):
 
     def testUrl(self):
         url = Url('amqp://me:secret@myhost:1234/foobar')
-        self.assertEqual(str(url), "amqp://me:secret@myhost:1234/foobar")
+        self.assertEqual(str(url), "amqp://me:***@myhost:1234/foobar")
         self.assertUrl(url, 'amqp', 'me', 'secret', 'myhost', 1234, 'foobar')
-        self.assertEqual(str(url), "amqp://me:secret@myhost:1234/foobar")
 
     def testIpV6Url(self):
         url = Url('amqp://me:secret@[::1]:1234/foobar')
-        self.assertEqual(str(url), "amqp://me:secret@[::1]:1234/foobar")
+        self.assertEqual(str(url), "amqp://me:***@[::1]:1234/foobar")
         self.assertUrl(url, 'amqp', 'me', 'secret', '::1', 1234, 'foobar')
-        self.assertEqual(str(url), "amqp://me:secret@[::1]:1234/foobar")
 
     def testDefaults(self):
         # Check that we allow None for scheme, port
         url = Url(username='me', password='secret', host='myhost', path='foobar', defaults=False)
-        self.assertEqual(str(url), "//me:secret@myhost/foobar")
+        self.assertEqual(str(url), "//me:***@myhost/foobar")
         self.assertUrl(url, None, 'me', 'secret', 'myhost', None, 'foobar')
 
         self.assertEqual(str(Url("amqp://me:secret@myhost/foobar")),
-                         "amqp://me:secret@myhost:amqp/foobar")
+                         "amqp://me:***@myhost:amqp/foobar")
 
         # Empty string vs. None for path
         self.assertEqual(Url("myhost/").path, "")
@@ -118,7 +116,7 @@ class UrlTest(common.Test):
         for s, full in [
             ('amqp://', 'amqp://'),
             ('username@', '//username@'),
-            (':pass@', '//:pass@'),
+            (':pass@', '//:***@'),
             (':1234', '//:1234'),
             ('/path', '/path')
         ]:
@@ -127,7 +125,7 @@ class UrlTest(common.Test):
         for s, full in [
                 ('amqp://', 'amqp://0.0.0.0:amqp'),
                 ('username@', 'amqp://username@0.0.0.0:amqp'),
-                (':pass@', 'amqp://:pass@0.0.0.0:amqp'),
+                (':pass@', 'amqp://:***@0.0.0.0:amqp'),
                 (':1234', 'amqp://0.0.0.0:1234'),
                 ('/path', 'amqp://0.0.0.0:amqp/path'),
                 ('foo/path', 'amqp://foo:amqp/path'),
@@ -138,10 +136,10 @@ class UrlTest(common.Test):
     def testAmqps(self):
         # Scheme defaults
         self.assertEqual(str(Url("me:secret@myhost/foobar")),
-                         "amqp://me:secret@myhost:amqp/foobar")
+                         "amqp://me:***@myhost:amqp/foobar")
         # Correct port for amqps vs. amqps
         self.assertEqual(str(Url("amqps://me:secret@myhost/foobar")),
-                         "amqps://me:secret@myhost:amqps/foobar")
+                         "amqps://me:***@myhost:amqps/foobar")
 
         self.assertPort(Url.Port('amqps'), 5671, 'amqps')
         self.assertEqual(str(Url("host:amqps", defaults=False)), "//host:amqps")
