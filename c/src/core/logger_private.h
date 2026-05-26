@@ -38,7 +38,7 @@ struct pn_logger_t {
 void pni_init_default_logger(void);
 void pni_fini_default_logger(void);
 
-void pni_logger_init(pn_logger_t*);
+void pni_logger_default_init(pn_logger_t*);
 void pni_logger_fini(pn_logger_t*);
 
 void pni_logger_log(pn_logger_t *logger, pn_log_subsystem_t subsystem, pn_log_level_t severity, const char *message);

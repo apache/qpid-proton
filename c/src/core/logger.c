@@ -44,10 +44,12 @@ static pn_logger_t the_default_logger = {
   .sev_mask = PN_LEVEL_CRITICAL
 };
 
-void pni_logger_init(pn_logger_t *logger)
+void pni_logger_default_init(pn_logger_t *logger)
 {
   *logger = the_default_logger;
-  logger->sink_context = (intptr_t) logger;
+  if (logger->sink == pni_default_log_sink) {
+    logger->sink_context = (intptr_t) logger;
+  }
 }
 
 void pni_logger_fini(pn_logger_t *logger)

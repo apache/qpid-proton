@@ -407,7 +407,7 @@ static void pn_transport_initialize(void *object)
   transport->output_size = PN_TRANSPORT_INITIAL_BUFFER_SIZE;
   transport->input_buf = NULL;
   transport->input_size =  PN_TRANSPORT_INITIAL_BUFFER_SIZE;
-  pni_logger_init(&transport->logger);
+  pni_logger_default_init(&transport->logger);
   transport->tracer = NULL;
   transport->sasl = NULL;
   transport->ssl = NULL;
