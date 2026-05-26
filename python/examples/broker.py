@@ -269,7 +269,7 @@ class Broker(MessagingHandler):
             # Commit
             txn_time = time.monotonic() - txn.start_time
             if self.txn_timeout > 0 and txn_time > self.txn_timeout:
-                error = Condition('amqp:transaction:timeout', f"timeout: {self.txn_timeout}s time: {txn_time}s")
+                error = Condition('amqp:transaction:timeout', f"timeout: {self.txn_timeout:.1f}s time: {txn_time:.1f}s")
             else:
                 error = txn.commit(self)
             if error is not None:
