@@ -61,7 +61,6 @@ foreach(example
     service_bus
     multithreaded_client
     multithreaded_client_flow_control
-    tx_interactive
     tx_send
     tx_recv)
   add_executable(${example} ${example}.cpp)
