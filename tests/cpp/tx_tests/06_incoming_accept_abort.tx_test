@@ -1,0 +1,23 @@
+# AMQP 1.0 §4.6.3 — rollback of provisional accept; message remains available for delivery.
+declare
+wait declared
+fetch 1
+wait fetched 1
+accept
+expect 1 $unsettled_in
+abort
+wait discharged
+expect aborted $last_discharge
+expect 0 $unsettled_in
+expect @not @empty $callback_txn_id
+expect @empty $txn_id
+expect @empty $error
+declare
+wait declared
+expect @not @empty $txn_id
+expect @not @empty $callback_txn_id
+expect $callback_txn_id $txn_id
+fetch 1
+wait 5 fetched 1
+expect 1 $fetch
+quit

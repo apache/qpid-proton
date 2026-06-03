@@ -1,0 +1,6 @@
+# Proton API — transaction_commit() throws when no transaction is declared.
+commit
+expect @not @empty $error
+expect @empty $txn_id
+expect @empty $callback_txn_id
+quit

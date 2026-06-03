@@ -1,0 +1,13 @@
+# AMQP 1.0 §4.6.3 + amqp:transaction:timeout — broker rejects commit after txn age exceeds limit.
+declare
+wait declared
+wait 3
+reset_status
+commit
+wait discharged
+expect aborted $last_discharge
+expect @not @empty $error
+expect false $txn_declared
+expect @not @empty $callback_txn_id
+expect @empty $txn_id
+quit

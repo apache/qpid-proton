@@ -1,0 +1,24 @@
+# AMQP 1.0 §4.6.2 / §4.6.3 — declare, discharge, and re-declare a second transaction.
+declare
+wait declared
+commit
+wait discharged
+expect committed $last_discharge
+expect false $txn_declared
+expect @not @empty $callback_txn_id
+expect @empty $txn_id
+declare
+wait declared
+expect ok $last_declare
+expect true $txn_declared
+expect @not @empty $txn_id
+expect @not @empty $callback_txn_id
+expect $callback_txn_id $txn_id
+commit
+wait discharged
+expect committed $last_discharge
+expect false $txn_declared
+expect @not @empty $callback_txn_id
+expect @empty $txn_id
+expect @empty $error
+quit

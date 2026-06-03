@@ -1,0 +1,11 @@
+# Proton API — transaction_declare() rejects a second declare while a transaction is active.
+declare
+wait declared
+reset_status
+expect @empty $callback_txn_id
+expect @not @empty $txn_id
+declare
+expect @not @empty $error
+expect @not @empty $txn_id
+expect @empty $callback_txn_id
+quit

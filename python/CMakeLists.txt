@@ -249,6 +249,9 @@ if (BUILD_TESTING)
     add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
   endif()
 
+  # Export the pytest executable to the parent scope so it can be used by other tests
+  set(PYTHON_TEST_EXECUTABLE "${pytest_executable}" PARENT_SCOPE)
+  
   # If we are doing coverage, then post process the python coverage data before running the coverage target
   if (CMAKE_BUILD_TYPE MATCHES "Coverage")
     add_custom_command(

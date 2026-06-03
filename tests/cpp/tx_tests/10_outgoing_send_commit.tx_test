@@ -1,0 +1,15 @@
+# AMQP 1.0 §4.4 / amqp:transactional-state:list — outgoing send with provisional accept, final on commit.
+declare
+wait declared
+send 2
+wait sent
+wait 1
+expect 2 $provisional_accept
+commit
+wait discharged
+expect committed $last_discharge
+expect 2 $tracker_accept
+expect @not @empty $callback_txn_id
+expect @empty $txn_id
+expect @empty $error
+quit

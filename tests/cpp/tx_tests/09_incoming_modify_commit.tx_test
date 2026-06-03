@@ -1,0 +1,22 @@
+# AMQP 1.0 §4.4 / amqp:transactional-state:list — provisional modified finalized on commit (requeue).
+declare
+wait declared
+fetch 1
+wait fetched 1
+modify
+expect 1 $unsettled_in
+commit
+wait discharged
+expect committed $last_discharge
+expect 0 $unsettled_in
+expect @not @empty $callback_txn_id
+expect @empty $txn_id
+declare
+wait declared
+expect @not @empty $txn_id
+expect @not @empty $callback_txn_id
+expect $callback_txn_id $txn_id
+fetch 1
+wait 5 fetched 1
+expect 1 $fetch
+quit

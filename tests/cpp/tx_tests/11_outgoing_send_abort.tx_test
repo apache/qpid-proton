@@ -1,0 +1,14 @@
+# AMQP 1.0 §4.6.3 — outgoing transactional send rolled back on abort (not published).
+declare
+wait declared
+send 2
+wait sent
+wait 1
+expect 2 $provisional_accept
+abort
+wait discharged
+expect aborted $last_discharge
+expect @not @empty $callback_txn_id
+expect @empty $txn_id
+expect @empty $error
+quit

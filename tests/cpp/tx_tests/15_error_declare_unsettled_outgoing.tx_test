@@ -1,0 +1,7 @@
+# Proton API — transaction_declare() throws when the session has unsettled outgoing deliveries.
+send 1
+declare
+expect @not @empty $error
+expect @empty $txn_id
+expect @empty $callback_txn_id
+quit

@@ -1,0 +1,11 @@
+# AMQP 1.0 §4.6.2 — declare (amqp:declare:list) returns declared disposition with txn-id.
+expect @empty $txn_id
+expect @empty $callback_txn_id
+declare
+wait declared
+expect ok $last_declare
+expect true $txn_declared
+expect @not @empty $txn_id
+expect @not @empty $callback_txn_id
+expect $callback_txn_id $txn_id
+quit

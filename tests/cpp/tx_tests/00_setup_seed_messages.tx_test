@@ -1,0 +1,8 @@
+# Setup: seed the examples queue with messages for later receive tests.
+# (Not an AMQP transaction test; prepares broker state for the suite.)
+expect @empty $txn_id
+expect @empty $callback_txn_id
+send 25
+wait sent
+wait outgoing
+quit

@@ -1,0 +1,11 @@
+# AMQP 1.0 §4.6.3 — discharge with fail=false (commit) completes successfully.
+declare
+wait declared
+commit
+wait discharged
+expect committed $last_discharge
+expect false $txn_declared
+expect @not @empty $callback_txn_id
+expect @empty $txn_id
+expect @empty $error
+quit

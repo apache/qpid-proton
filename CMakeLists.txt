@@ -458,6 +458,6 @@ configure_file(${PROJECT_SOURCE_DIR}/misc/config.sh.in
 configure_file(${PROJECT_SOURCE_DIR}/misc/config.bat.in
                ${PROJECT_BINARY_DIR}/config.bat @ONLY)
 
-if (BUILD_EXAMPLES)
-  add_subdirectory(tests/examples)
-endif (BUILD_EXAMPLES)
+# Tests that aren't unit tests - typically they require a separate broker process               
+add_subdirectory(tests)
+

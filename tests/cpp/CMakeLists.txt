@@ -32,3 +32,26 @@ include_directories(
 add_executable(tx_tester tx_tester.cpp)
 target_link_libraries(tx_tester qpid-proton-cpp qpid-proton-core Threads::Threads)
 target_include_directories(tx_tester PRIVATE ${PROJECT_SOURCE_DIR}/cpp/examples)
+
+if(WIN32)
+  # NOTE: need to escape semicolons as cmake uses them as list separators.
+  set(test_path "$<TARGET_FILE_DIR:qpid-proton-cpp>\;$<TARGET_FILE_DIR:qpid-proton-core>")
+else()
+  set(test_path "$ENV{PATH}")
+endif()
+
+if (PYTHON_TEST_EXECUTABLE)
+  pn_add_test(
+    INTERPRETED
+    NAME cpp-tx-tests
+    PREPEND_ENVIRONMENT
+      "PATH=${test_path}"
+      "TX_TESTER=$<TARGET_FILE:tx_tester>"
+      "TX_TESTER_PYTHON=${PYTHON_TEST_EXECUTABLE}"
+      "TX_TESTER_BROKER=${PROJECT_SOURCE_DIR}/python/examples/broker.py"
+      "TX_TESTER_SCRIPTS=${CMAKE_CURRENT_SOURCE_DIR}/tx_tests"
+    COMMAND
+      ${PYTHON_TEST_EXECUTABLE}
+        -m unittest discover -v -s "${CMAKE_CURRENT_SOURCE_DIR}" -p "tx_tester.py")
+  set_tests_properties(cpp-tx-tests PROPERTIES RESOURCE_LOCK amqp_5672)
+endif()
