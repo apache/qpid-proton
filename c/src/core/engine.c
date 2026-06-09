@@ -2152,12 +2152,20 @@ uint64_t pn_transactional_disposition_get_outcome_type(pn_transactional_disposit
 void pn_transactional_disposition_set_outcome_type(pn_transactional_disposition_t *disposition, uint64_t type)
 {
   assert(disposition);
-  // Generate a described LIST0 directly - this needs a max of 11 bytes
-  char outcome_scratch[11];
-  pn_rwbytes_t scratch = {.size=sizeof(outcome_scratch), .start=outcome_scratch};
-  pn_bytes_t outcome_raw = pn_amqp_encode_described_empty_list(&scratch, type);
-  pn_bytes_free(disposition->outcome_raw);
-  disposition->outcome_raw = pn_bytes_dup(outcome_raw);
+  if (type == PN_MODIFIED) {
+    // Hack to make the transacted modified disposition failed so that delivery counter is increased
+    char outcome[] = {0x00, 0x53, 0x27, '\xc0', 0x03, 0x02, 0x41, 0x42}; // Can use a fixed byte stream here
+    pn_bytes_t outcome_raw = pn_bytes(sizeof(outcome), outcome);
+    pn_bytes_free(disposition->outcome_raw);
+    disposition->outcome_raw = pn_bytes_dup(outcome_raw);
+  } else {
+    // Generate a described LIST0 directly - this needs a max of 11 bytes
+    char outcome_scratch[11];
+    pn_rwbytes_t scratch = {.size=sizeof(outcome_scratch), .start=outcome_scratch};
+    pn_bytes_t outcome_raw = pn_amqp_encode_described_empty_list(&scratch, type);
+    pn_bytes_free(disposition->outcome_raw);
+    disposition->outcome_raw = pn_bytes_dup(outcome_raw);
+  }
 }
 
 pn_delivery_tag_t pn_delivery_tag(pn_delivery_t *delivery)

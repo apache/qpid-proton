@@ -47,6 +47,10 @@ void settle_delivery(pn_delivery_t* o, uint64_t state) {
         pn_delivery_update(o, PN_TRANSACTIONAL_STATE);
         return;
     }
+    if (state == proton::transfer::MODIFIED) {
+        pn_modified_disposition_t* md = pn_modified_disposition(pn_delivery_local(o));
+        if (md) pn_modified_disposition_set_failed(md, true);
+    }
     pn_delivery_update(o, state);
     pn_delivery_settle(o);
 }
@@ -62,7 +66,7 @@ delivery::~delivery() = default;
 void delivery::accept() { settle_delivery(pn_object(), ACCEPTED); }
 void delivery::reject() { settle_delivery(pn_object(), REJECTED); }
 void delivery::release() { settle_delivery(pn_object(), RELEASED); }
-void delivery::modify() { pn_disposition_set_failed(pn_delivery_local(pn_object()), true); settle_delivery(pn_object(), MODIFIED); }
+void delivery::modify() { settle_delivery(pn_object(), MODIFIED); }
 
 delivery_iterator delivery_iterator::operator++() {
     if (!!obj_) {

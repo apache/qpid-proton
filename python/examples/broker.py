@@ -210,15 +210,14 @@ class Broker(MessagingHandler):
                 del q
                 self._verbose_print(f"{address=}: Removed")
 
-    def _modify_delivery(self, delivery: Delivery, message: Message, address: str):
-        disposition = delivery.remote
+    def _modify_delivery(self, delivery: Delivery, undeliverable: bool, failed: bool, message: Message, address: str):
         # If not deliverable don't requeue
-        if disposition.undeliverable:
+        if undeliverable:
             self._verbose_print(f"{delivery.tag=}: Modified: Undeliverable: {message.id=}")
             # Don't requeue the message
             return
         # Check if we need to update the delivery count
-        if disposition.failed:
+        if failed:
             if message.delivery_count >= self.redelivery_limit:
                 self._verbose_print(f"{delivery.tag=}: Modified: Redelivery limit exceeded: {message.id=}")
                 # Don't requeue the message
@@ -244,7 +243,16 @@ class Broker(MessagingHandler):
             # Requeue the message from the delivery
             self._queue(address).publish(message)
         elif outcome == Disposition.MODIFIED:
-            self._modify_delivery(delivery, message, address)
+            disposition = delivery.remote
+            # This is a little hack which assumes that if the outcome is modified but the disposition is not,
+            # then the disposition was a transacted modified disposition and should be treated as failed delivery.
+            if disposition.type == Disposition.MODIFIED:
+                undeliverable = disposition.undeliverable
+                failed = disposition.failed
+            else:
+                undeliverable = False
+                failed = True
+            self._modify_delivery(delivery, undeliverable=undeliverable, failed=failed, message=message, address=address)
         delivery.settle()
         del unsettled_delivery
 
