@@ -246,6 +246,7 @@ void handle_transaction_coordinator_outcome(messaging_handler& handler, const tr
                     modify_incoming_deliveries(session);
                 }
                 handler.on_session_transaction_aborted(session);
+                transaction_context->transaction_id = proton::binary{};
                 return;
             } else {
                 // Transaction commit is successful
@@ -253,6 +254,7 @@ void handle_transaction_coordinator_outcome(messaging_handler& handler, const tr
                 settle_incoming_deliveries(session);
                 handle_outgoing_committed_deliveries(handler, session);
                 handler.on_session_transaction_committed(session);
+                transaction_context->transaction_id = proton::binary{};
                 return;
             }
           }
@@ -270,6 +272,7 @@ void handle_transaction_coordinator_outcome(messaging_handler& handler, const tr
             transaction_context->error = pn_rejected_disposition_condition(rejected_disp);
             handler.on_session_transaction_error(session);
             transaction_context->error = nullptr;
+            transaction_context->transaction_id = proton::binary{};
             return;
           case transaction_context::State::DISCHARGING:
             // Note that rollback cannot fail in AMQP as the outcome would be the same,
@@ -283,6 +286,7 @@ void handle_transaction_coordinator_outcome(messaging_handler& handler, const tr
                 }
                 handler.on_session_transaction_aborted(session);
                 transaction_context->error = nullptr;
+                transaction_context->transaction_id = proton::binary{};
                 return;
             }
           case transaction_context::State::NO_TRANSACTION:
