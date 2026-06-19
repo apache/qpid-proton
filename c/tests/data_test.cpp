@@ -30,10 +30,116 @@
 
 using namespace pn_test;
 
-// Make sure we can grow the capacity of a pn_data_t all the way to the max and
-// we stop there.
+// Check that pn_data_set_decode_limits() enforces a node-count cap.
+TEST_CASE("data_decode_node_limit") {
+  auto_free<pn_data_t, pn_data_free> data(pn_data(0));
+
+  // Tighten the limit to 4 nodes
+  pn_data_set_decode_limits(data, 4, 0);
+
+  // Build and encode a list of 4 ints (should fit exactly)
+  auto_free<pn_data_t, pn_data_free> src(pn_data(0));
+  pn_data_put_list(src);
+  pn_data_enter(src);
+  for (int i = 0; i < 4; i++) pn_data_put_int(src, i);
+  pn_data_exit(src);
+
+  char buf[256];
+  int enc = pn_data_encode(src, buf, sizeof(buf));
+  REQUIRE(enc > 0);
+
+  // Should decode successfully (4 nodes: 1 list + 4 ints, but list itself is 1
+  // node and the 4 ints are children — total 5 nodes needed; lower to 5)
+  pn_data_set_decode_limits(data, 5, 0);
+  ssize_t r = pn_data_decode(data, buf, enc);
+  CHECK(r == enc);
+  CHECK(pn_data_errno(data) == 0);
+
+  // Now tighten so the same data overflows
+  pn_data_clear(data);
+  pn_data_set_decode_limits(data, 3, 0);  // too few for list + 4 ints
+  r = pn_data_decode(data, buf, enc);
+  CHECK(r == PN_OUT_OF_MEMORY);
+  CHECK(pn_data_errno(data) == PN_OUT_OF_MEMORY);
+
+  // Limits survive pn_data_clear()
+  pn_data_clear(data);
+  CHECK(pn_data_errno(data) == 0); // error cleared
+  // limits still in effect: re-decode should still fail
+  r = pn_data_decode(data, buf, enc);
+  CHECK(r == PN_OUT_OF_MEMORY);
+}
+
+// Check that pn_data_set_decode_limits() shrinks the backing node allocation
+// when the new max_nid is lower than the current capacity.
+TEST_CASE("data_decode_limit_shrinks_capacity") {
+  // Pre-allocate a data object with a large capacity.
+  auto_free<pn_data_t, pn_data_free> data(pn_data(64));
+  pn_data_t *d = data;   // raw pointer for struct-field access
+  // capacity should now be 64 (or the pre-allocated hint).
+  CHECK(d->capacity == 64);
+
+  // Lower the limit to 8.  The backing array must shrink to 8.
+  pn_data_set_decode_limits(data, 8, 0);
+  CHECK(d->max_nid == 8);
+  CHECK(d->capacity == 8);   // realloc-to-smaller must have happened
+
+  // Lowering below the number of live nodes must clamp to size, not max_nid.
+  // Put 4 nodes in, then try to lower the limit to 2.
+  for (int i = 0; i < 4; i++) pn_data_put_int(data, i);
+  CHECK(pn_data_size(data) == 4);
+  pn_data_set_decode_limits(data, 2, 0);
+  CHECK(d->max_nid == 2);
+  // capacity must not have been reduced below the 4 live nodes.
+  CHECK(d->capacity >= 4);
+  // And the existing nodes must still be intact.
+  CHECK(pn_data_size(data) == 4);
+
+  // Setting max_nid = 0 (unlimited) must NOT shrink to zero nodes.
+  pn_data_set_decode_limits(data, 0, 0);
+  CHECK(d->capacity >= 4);   // live nodes still accessible
+  CHECK(pn_data_size(data) == 4);
+}
+
+// Check that pn_data_set_decode_limits() enforces a string-buffer cap.
+TEST_CASE("data_decode_buf_limit") {
+  auto_free<pn_data_t, pn_data_free> data(pn_data(0));
+
+  // Encode a symbol of 20 bytes
+  auto_free<pn_data_t, pn_data_free> src(pn_data(0));
+  pn_data_put_symbol(src, pn_bytes("12345678901234567890"));
+
+  char buf[256];
+  int enc = pn_data_encode(src, buf, sizeof(buf));
+  REQUIRE(enc > 0);
+
+  // Allow plenty of nodes but only 10 bytes of string buffer — should fail
+  pn_data_set_decode_limits(data, 0, 10);
+  ssize_t r = pn_data_decode(data, buf, enc);
+  CHECK(r == PN_OUT_OF_MEMORY);
+  CHECK(pn_data_errno(data) == PN_OUT_OF_MEMORY);
+
+  // Raise the buf limit enough — should succeed
+  pn_data_clear(data);
+  pn_data_set_decode_limits(data, 0, 64);
+  r = pn_data_decode(data, buf, enc);
+  CHECK(r == enc);
+  CHECK(pn_data_errno(data) == 0);
+
+  // Disable both limits (0 = no limit) — should always succeed
+  pn_data_clear(data);
+  pn_data_set_decode_limits(data, 0, 0);
+  r = pn_data_decode(data, buf, enc);
+  CHECK(r == enc);
+  CHECK(pn_data_errno(data) == 0);
+}
+
+// Make sure we can grow the capacity of a pn_data_t all the way to the hard
+// PNI_NID_MAX ceiling and we stop there (decode-limits disabled for this test).
 TEST_CASE("data_grow") {
   auto_free<pn_data_t, pn_data_free> data(pn_data(0));
+  // Disable the decode-limits so we can exercise the absolute uint16 ceiling.
+  pn_data_set_decode_limits(data, 0, 0);
   int code = 0;
   while (pn_data_size(data) < PNI_NID_MAX && !code) {
     code = pn_data_put_int(data, 1);

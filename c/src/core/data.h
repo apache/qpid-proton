@@ -52,6 +52,8 @@ struct pn_data_t {
   pni_node_t *nodes;
   pn_buffer_t *buf;
   pn_error_t *error;
+  size_t max_buf_size; /* intern buffer limit during decode; 0 = unlimited */
+  pni_nid_t max_nid;   /* node count limit during decode; 0 = unlimited */
   pni_nid_t capacity;
   pni_nid_t size;
   pni_nid_t parent;
@@ -60,7 +62,19 @@ struct pn_data_t {
   pni_nid_t base_current;
 };
 
-static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd) 
+/* Node-count limits for pni_switch_to_data().
+ * 0-width elements (e.g. PNE_NULL) consume a node but no bytes, so bytes->size
+ * alone does not bound node count — hence a separate constant is needed.
+ *
+ * DEFAULT (1024): performative fields (properties, capabilities, annotations,
+ *   condition info, disposition data).
+ * BODY (0 = unlimited): message body — application data whose node count is
+ *   only bounded by the uint16 hard ceiling of PNI_NID_MAX.
+ */
+#define PNI_DATA_DEFAULT_MAX_NODES 1024
+#define PNI_DATA_BODY_MAX_NODES    0
+
+static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd)
 {
   return nd ? (data->nodes + nd - 1) : NULL;
 }

@@ -412,6 +412,30 @@ PN_EXTERN int pn_data_errno(pn_data_t *data);
 PN_EXTERN pn_error_t *pn_data_error(pn_data_t *data);
 
 /**
+ * Set decode limits on a pn_data_t object.
+ *
+ * Limits the number of nodes and the size of the interned string buffer that
+ * pn_data_decode() may allocate into this object. When a limit is exceeded
+ * during decoding, ::pn_data_decode() returns ::PN_OUT_OF_MEMORY and the
+ * error is set on the object (readable via ::pn_data_error()).
+ *
+ * Set either limit to 0 to remove it entirely.
+ *
+ * A freshly constructed pn_data_t has both limits set to 0 (unlimited).
+ *
+ * Limits survive a call to ::pn_data_clear() — only the decoded data is
+ * cleared, not the protection settings.
+ *
+ * @note The library applies conservative limits internally when decoding peer
+ * data using @code pn_data_set_decode_limits(data, ...); @endcode
+ *
+ * @param data a pn_data_t object
+ * @param max_nodes maximum number of nodes (0 = no limit beyond the hard ceiling of 65535)
+ * @param max_buf maximum bytes of interned string/binary data (0 = no limit)
+ */
+PN_EXTERN void pn_data_set_decode_limits(pn_data_t *data, size_t max_nodes, size_t max_buf);
+
+/**
  * @cond INTERNAL
  */
 PN_EXTERN int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap);

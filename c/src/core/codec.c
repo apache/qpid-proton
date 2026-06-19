@@ -400,7 +400,37 @@ pn_data_t *pn_data(size_t capacity)
   data->base_parent = 0;
   data->base_current = 0;
   data->error = NULL;
+  /* No limits by default: pn_data_t is a trusted local object.
+   * Decode-time limits are applied by pni_switch_to_data() at each
+   * specific call site according to what kind of peer data is being
+   * decoded. */
+  data->max_nid = 0;
+  data->max_buf_size = 0;
   return data;
+}
+
+void pn_data_set_decode_limits(pn_data_t *data, size_t max_nodes, size_t max_buf)
+{
+  if (!data) return;
+  /* Clamp the caller's size_t down to pni_nid_t range on entry. */
+  data->max_nid = (pni_nid_t) pn_min(max_nodes, PNI_NID_MAX);
+  data->max_buf_size = max_buf;
+
+  /* Shrink the backing array to max(live nodes, max_nid) if it is now
+   * oversized.  A failed realloc-to-smaller is harmless: the limit is still
+   * enforced by the size >= max_nid check in pni_data_new(). */
+  if (data->max_nid > 0 && data->nodes) {
+    pni_nid_t new_cap = pn_max(data->size, data->max_nid);
+    if (new_cap < data->capacity) {
+      pni_node_t *trimmed = (pni_node_t *) pni_mem_subreallocate(
+          pn_class(data), data, data->nodes, new_cap * sizeof(pni_node_t));
+      if (trimmed) {
+        data->nodes    = trimmed;
+        data->capacity = new_cap;
+      }
+      /* If realloc failed: keep the existing buffer; limit still enforced. */
+    }
+  }
 }
 
 void pn_data_free(pn_data_t *data)
@@ -438,10 +468,16 @@ void pn_data_clear(pn_data_t *data)
 
 static int pni_data_grow(pn_data_t *data)
 {
-  size_t capacity = data->capacity ? data->capacity : 2;
-  if (capacity >= PNI_NID_MAX) return PN_OUT_OF_MEMORY;
-  else if (capacity < PNI_NID_MAX/2) capacity *= 2;
-  else capacity = PNI_NID_MAX;
+  /* Resolve the effective ceiling: the user-set limit, or the hard uint16 max. */
+  pni_nid_t effective_max = data->max_nid ? data->max_nid : PNI_NID_MAX;
+
+  /* The limit is on logical nodes in use (size), not pre-allocated capacity.
+   * pni_data_new() is the only caller and it only calls us when size >= capacity,
+   * so data->size is the count of nodes that will exist after the next add. */
+  if (data->size >= effective_max) return PN_OUT_OF_MEMORY;
+
+  /* Double current capacity, starting from 2 if still at 0, capped at effective_max. */
+  pni_nid_t capacity = pn_min(data->capacity ? data->capacity * 2 : 2, effective_max);
 
   pni_node_t *new_nodes = (pni_node_t *) pni_mem_subreallocate(pn_class(data), data, data->nodes, capacity * sizeof(pni_node_t));
   if (new_nodes == NULL) return PN_OUT_OF_MEMORY;
@@ -453,6 +489,7 @@ static int pni_data_grow(pn_data_t *data)
 static ssize_t pni_data_intern(pn_data_t *data, const char *start, size_t size)
 {
   size_t offset = pn_buffer_size(data->buf);
+  if (data->max_buf_size > 0 && offset + size > data->max_buf_size) return PN_OUT_OF_MEMORY;
   int err = pn_buffer_append(data->buf, start, size);
   if (err) return err;
   err = pn_buffer_append(data->buf, "\0", 1);
@@ -494,7 +531,10 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
   }
   size_t oldcap = pn_buffer_capacity(data->buf);
   ssize_t offset = pni_data_intern(data, bytes->start, bytes->size);
-  if (offset < 0) return offset;
+  if (offset < 0) {
+    pn_error_set(pni_data_error(data), PN_OUT_OF_MEMORY, "pn_data string buffer limit exceeded");
+    return offset;
+  }
   node->data = true;
   node->data_offset = offset;
   node->data_size = bytes->size;
@@ -1263,7 +1303,15 @@ static size_t pni_data_id(pn_data_t *data, pni_node_t *node)
 
 static pni_node_t *pni_data_new(pn_data_t *data)
 {
-  if ((data->capacity <= data->size) && (pni_data_grow(data) != 0)) return NULL;
+  /* Enforce max_nid limit on logical node count, regardless of pre-allocated capacity. */
+  if (data->max_nid > 0 && data->size >= data->max_nid) {
+    pn_error_set(pni_data_error(data), PN_OUT_OF_MEMORY, "pn_data node limit exceeded");
+    return NULL;
+  }
+  if ((data->capacity <= data->size) && (pni_data_grow(data) != 0)) {
+    pn_error_set(pni_data_error(data), PN_OUT_OF_MEMORY, "pn_data node limit exceeded");
+    return NULL;
+  }
   pni_node_t *node = pn_data_node(data, ++(data->size));
   node->next = 0;
   node->down = 0;
@@ -1499,7 +1547,7 @@ void pn_data_dump(pn_data_t *data)
     pn_fixed_string_t str = pn_fixed_string(buf, sizeof(buf));
     pni_inspect_atom((pn_atom_t *) &node->atom, &str);
     pn_fixed_string_terminate(&str);
-    printf("Node %u: prev=%" PN_ZU ", next=%" PN_ZU ", parent=%" PN_ZU ", down=%" PN_ZU 
+    printf("Node %u: prev=%" PN_ZU ", next=%" PN_ZU ", parent=%" PN_ZU ", down=%" PN_ZU
            ", children=%" PN_ZU ", type=%s (%s)\n",
            i + 1, (size_t) node->prev,
            (size_t) node->next,

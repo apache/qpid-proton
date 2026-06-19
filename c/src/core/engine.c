@@ -23,6 +23,7 @@
 #define PN_USE_DEPRECATED_API 1
 
 #include "engine-internal.h"
+#include "data.h"
 
 #include "consumers.h"
 #include "core/frame_consumers.h"
@@ -669,21 +670,24 @@ void pn_connection_set_password(pn_connection_t *connection, const char *passwor
 pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connection)
 {
   assert(connection);
-  pni_switch_to_data(&connection->offered_capabilities_raw, &connection->offered_capabilities);
+  pni_switch_to_data(&connection->offered_capabilities_raw, &connection->offered_capabilities,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return connection->offered_capabilities;
 }
 
 pn_data_t *pn_connection_desired_capabilities(pn_connection_t *connection)
 {
   assert(connection);
-  pni_switch_to_data(&connection->desired_capabilities_raw, &connection->desired_capabilities);
+  pni_switch_to_data(&connection->desired_capabilities_raw, &connection->desired_capabilities,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return connection->desired_capabilities;
 }
 
 pn_data_t *pn_connection_properties(pn_connection_t *connection)
 {
   assert(connection);
-  pni_switch_to_data(&connection->properties_raw, &connection->properties);
+  pni_switch_to_data(&connection->properties_raw, &connection->properties,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return connection->properties;
 }
 
@@ -692,7 +696,8 @@ pn_data_t *pn_connection_remote_offered_capabilities(pn_connection_t *connection
   assert(connection);
   if (!connection->transport)
     return NULL;
-  pni_switch_to_data(&connection->transport->remote_offered_capabilities_raw, &connection->remote_offered_capabilities);
+  pni_switch_to_data(&connection->transport->remote_offered_capabilities_raw, &connection->remote_offered_capabilities,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return connection->remote_offered_capabilities;
 }
 
@@ -701,7 +706,8 @@ pn_data_t *pn_connection_remote_desired_capabilities(pn_connection_t *connection
   assert(connection);
   if (!connection->transport)
     return NULL;
-  pni_switch_to_data(&connection->transport->remote_desired_capabilities_raw, &connection->remote_desired_capabilities);
+  pni_switch_to_data(&connection->transport->remote_desired_capabilities_raw, &connection->remote_desired_capabilities,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return connection->remote_desired_capabilities;
 }
 
@@ -710,7 +716,8 @@ pn_data_t *pn_connection_remote_properties(pn_connection_t *connection)
   assert(connection);
   if (!connection->transport)
     return NULL;
-  pni_switch_to_data(&connection->transport->remote_properties_raw, &connection->remote_properties);
+  pni_switch_to_data(&connection->transport->remote_properties_raw, &connection->remote_properties,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return connection->remote_properties;
 }
 
@@ -1442,7 +1449,8 @@ pn_data_t *pn_terminus_properties(pn_terminus_t *terminus)
 {
   if (!terminus)
     return NULL;
-  pni_switch_to_data(&terminus->properties_raw, &terminus->properties);
+  pni_switch_to_data(&terminus->properties_raw, &terminus->properties,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return terminus->properties;
 }
 
@@ -1450,7 +1458,8 @@ pn_data_t *pn_terminus_capabilities(pn_terminus_t *terminus)
 {
   if (!terminus)
     return NULL;
-  pni_switch_to_data(&terminus->capabilities_raw, &terminus->capabilities);
+  pni_switch_to_data(&terminus->capabilities_raw, &terminus->capabilities,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return terminus->capabilities;
 }
 
@@ -1458,7 +1467,8 @@ pn_data_t *pn_terminus_outcomes(pn_terminus_t *terminus)
 {
   if (!terminus)
     return NULL;
-  pni_switch_to_data(&terminus->outcomes_raw, &terminus->outcomes);
+  pni_switch_to_data(&terminus->outcomes_raw, &terminus->outcomes,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return terminus->outcomes;
 }
 
@@ -1466,7 +1476,8 @@ pn_data_t *pn_terminus_filter(pn_terminus_t *terminus)
 {
   if (!terminus)
     return NULL;
-  pni_switch_to_data(&terminus->filter_raw, &terminus->filter);
+  pni_switch_to_data(&terminus->filter_raw, &terminus->filter,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return terminus->filter;
 }
 
@@ -1896,7 +1907,8 @@ pn_data_t *pn_disposition_data(pn_disposition_t *disposition)
   if (disposition->type != PN_DISP_CUSTOM) {
     pni_disposition_to_raw(disposition);
   }
-  pni_switch_to_data(&disposition->u.s_custom.data_raw, &disposition->u.s_custom.data);
+  pni_switch_to_data(&disposition->u.s_custom.data_raw, &disposition->u.s_custom.data,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return disposition->u.s_custom.data;
 }
 
@@ -1975,7 +1987,8 @@ pn_data_t *pn_disposition_annotations(pn_disposition_t *disposition)
     pn_disposition_clear(disposition);
     disposition->type = PN_DISP_MODIFIED;
   }
-  pni_switch_to_data(&disposition->u.s_modified.annotations_raw, &disposition->u.s_modified.annotations);
+  pni_switch_to_data(&disposition->u.s_modified.annotations_raw, &disposition->u.s_modified.annotations,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return disposition->u.s_modified.annotations;
 }
 
@@ -2033,7 +2046,8 @@ pn_transactional_disposition_t *pn_transactional_disposition(pn_disposition_t *d
 pn_data_t *pn_custom_disposition_data(pn_custom_disposition_t *disposition)
 {
   assert(disposition);
-  pni_switch_to_data(&disposition->data_raw, &disposition->data);
+  pni_switch_to_data(&disposition->data_raw, &disposition->data,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return disposition->data;
 }
 
@@ -2105,7 +2119,8 @@ void pn_modified_disposition_set_undeliverable(pn_modified_disposition_t *dispos
 pn_data_t *pn_modified_disposition_annotations(pn_modified_disposition_t *disposition)
 {
   assert(disposition);
-  pni_switch_to_data(&disposition->annotations_raw, &disposition->annotations);
+  pni_switch_to_data(&disposition->annotations_raw, &disposition->annotations,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return disposition->annotations;
 }
 
@@ -2447,7 +2462,8 @@ pn_data_t *pn_link_remote_properties(pn_link_t *link)
   assert(link);
   // Annoying inconsistency: nearly everywhere else you *HAVE* to return an empty pn_data_t not NULL
   if (link->remote_properties_raw.size) {
-    pni_switch_to_data(&link->remote_properties_raw, &link->remote_properties);
+    pni_switch_to_data(&link->remote_properties_raw, &link->remote_properties,
+                       PNI_DATA_DEFAULT_MAX_NODES);
   }
   return link->remote_properties;
 }
@@ -2705,7 +2721,8 @@ int pn_condition_format(pn_condition_t *condition, const char *name, PN_PRINTF_F
 pn_data_t *pn_condition_info(pn_condition_t *condition)
 {
   assert(condition);
-  pni_switch_to_data(&condition->info_raw, &condition->info);
+  pni_switch_to_data(&condition->info_raw, &condition->info,
+                     PNI_DATA_DEFAULT_MAX_NODES);
   return condition->info;
 }
 
