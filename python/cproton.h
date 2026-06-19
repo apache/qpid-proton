@@ -655,6 +655,8 @@ void pn_transport_require_encryption(pn_transport_t *transport, _Bool required);
 int pn_transport_set_channel_max(pn_transport_t *transport, uint16_t channel_max);
 void pn_transport_set_idle_timeout(pn_transport_t *transport, pn_millis_t timeout);
 void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size);
+size_t pn_transport_get_max_buffered_delivery_bytes(pn_transport_t *transport);
+void pn_transport_set_max_buffered_delivery_bytes(pn_transport_t *transport, size_t limit);
 void pn_transport_set_server(pn_transport_t *transport);
 void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t tracer);
 int64_t pn_transport_tick(pn_transport_t *transport, int64_t now);

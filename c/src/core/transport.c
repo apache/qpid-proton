@@ -473,6 +473,8 @@ static void pn_transport_initialize(void *object)
 
   transport->bytes_input = 0;
   transport->bytes_output = 0;
+  transport->max_buffered_delivery_bytes = PN_DEFAULT_MAX_BUFFERED_DELIVERY_BYTES;
+  transport->buffered_delivery_bytes = 0;
 
   transport->input_pending = 0;
   transport->output_pending = 0;
@@ -1424,21 +1426,26 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   }
 
   if (delivery) {
-    int err = pn_buffer_append(delivery->bytes, payload.start, payload.size);
-    if (err) return pn_do_error(transport, "amqp:resource-limit-exceeded", "out of memory buffering incoming delivery");
-    if (more) {
-      if (!link->more_pending) {
-        if (!id_present) {
-          return pn_do_error(transport, "amqp:invalid-field", "delivery-id required for transfer");
-        }
-        // First frame of a multi-frame transfer. Remember at link level.
-        link->more_pending = true;
-        link->more_id = id;
-      }
-      delivery->done = false;
+    if (transport->max_buffered_delivery_bytes > 0 &&
+        transport->buffered_delivery_bytes + payload.size > transport->max_buffered_delivery_bytes) {
+      return pn_do_error(transport, "amqp:resource-limit-exceeded",
+                         "connection delivery buffer limit exceeded: %zu bytes buffered, limit %zu",
+                         transport->buffered_delivery_bytes, transport->max_buffered_delivery_bytes);
     }
-    else
-      delivery->done = true;
+    if (more && !link->more_pending && !id_present) {
+      return pn_do_error(transport, "amqp:invalid-field", "delivery-id required for transfer");
+    }
+    int err = pn_buffer_append(delivery->bytes, payload.start, payload.size);
+    if (err) {
+      return pn_do_error(transport, "amqp:resource-limit-exceeded", "out of memory buffering incoming delivery");
+    }
+    transport->buffered_delivery_bytes += payload.size;
+    if (more && !link->more_pending) {
+      // First frame of a multi-frame transfer. Remember at link level.
+      link->more_pending = true;
+      link->more_id = id;
+    }
+    delivery->done = !more;
 
     // XXX: need to fill in remote state: delivery->remote.state = ...;
     if (settled && !delivery->remote.settled) {
@@ -2910,6 +2917,16 @@ void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size)
 uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport)
 {
   return transport->remote_max_frame;
+}
+
+size_t pn_transport_get_max_buffered_delivery_bytes(pn_transport_t *transport)
+{
+  return transport->max_buffered_delivery_bytes;
+}
+
+void pn_transport_set_max_buffered_delivery_bytes(pn_transport_t *transport, size_t limit)
+{
+  transport->max_buffered_delivery_bytes = limit;
 }
 
 pn_millis_t pn_transport_get_idle_timeout(pn_transport_t *transport)

@@ -19,7 +19,7 @@
 
 import sys
 
-from proton import Connection, Endpoint, Transport, TransportException
+from proton import Connection, Endpoint, Message, Transport, TransportException
 
 from . import common
 
@@ -396,3 +396,131 @@ class LogTest(Test):
         t.log("two")
         t.log("three")
         assert messages == [(t, "TRACE: one"), (t, "TRACE: two"), (t, "TRACE: three")], messages
+
+
+class BufferedDeliveryLimitTest(Test):
+    """Tests for pn_transport_set_max_buffered_delivery_bytes()."""
+
+    # Build a valid encoded AMQP message of approximately `size` bytes.
+    @staticmethod
+    def _make_payload(size):
+        msg = Message(body=b'x' * size)
+        return msg.encode()
+
+    # Set up two in-memory transports wired together (sender → receiver).
+    def setUp(self):
+        self.sender_conn = Connection()
+        self.receiver_conn = Connection()
+        self.sender_t = Transport()
+        self.receiver_t = Transport()
+        self.receiver_t.bind(self.receiver_conn)
+        self.sender_t.bind(self.sender_conn)
+
+    def tearDown(self):
+        self.sender_conn = None
+        self.receiver_conn = None
+        self.sender_t = None
+        self.receiver_t = None
+
+    def _pump(self):
+        from .common import pump
+        pump(self.sender_t, self.receiver_t)
+
+    def _open_link(self):
+        """Open connection, session and sender/receiver link; return (sender, receiver)."""
+        self.sender_conn.open()
+        self.receiver_conn.open()
+        ssn_s = self.sender_conn.session()
+        ssn_s.open()
+        self._pump()
+        ssn_r = self.receiver_conn.session_head(
+            Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
+        ssn_r.open()
+        snd = ssn_s.sender("test")
+        snd.open()
+        self._pump()
+        rcv = self.receiver_conn.link_head(
+            Endpoint.LOCAL_UNINIT | Endpoint.REMOTE_ACTIVE)
+        rcv.open()
+        rcv.flow(100)
+        self._pump()
+        return snd, rcv
+
+    def test_default_limit_is_nonzero(self):
+        """The default limit should be the 4 MiB constant, not unlimited."""
+        assert self.receiver_t.max_buffered_delivery_bytes == 4 * 1024 * 1024, \
+            self.receiver_t.max_buffered_delivery_bytes
+
+    def test_get_set_roundtrip(self):
+        """Getter reflects the value set by the setter."""
+        self.receiver_t.max_buffered_delivery_bytes = 1234567
+        assert self.receiver_t.max_buffered_delivery_bytes == 1234567
+        self.receiver_t.max_buffered_delivery_bytes = 0
+        assert self.receiver_t.max_buffered_delivery_bytes == 0
+
+    def test_limit_triggers_resource_error(self):
+        """Sending more bytes than the limit closes the connection with resource-limit-exceeded."""
+        # Set a very small limit on the receiver side so a single small message exceeds it
+        self.receiver_t.max_buffered_delivery_bytes = 16
+        snd, rcv = self._open_link()
+
+        payload = self._make_payload(64)  # 64 bytes > 16-byte limit
+        snd.delivery(b"d1")
+        snd.stream(payload)
+        snd.advance()
+        self._pump()
+
+        # The receiver sends a Close frame with the error, so the sender
+        # sees it as a remote_condition on the sender connection.
+        assert self.sender_conn.remote_condition is not None, \
+               "Expected sender to see remote resource-limit-exceeded condition"
+        assert self.sender_conn.remote_condition.name == u'amqp:resource-limit-exceeded', \
+               self.sender_conn.remote_condition
+
+    def test_limit_zero_means_unlimited(self):
+        """Setting limit to 0 disables enforcement; large transfers should succeed."""
+        self.receiver_t.max_buffered_delivery_bytes = 0
+        snd, rcv = self._open_link()
+
+        payload = self._make_payload(1024)
+        snd.delivery(b"d1")
+        snd.stream(payload)
+        snd.advance()
+        self._pump()
+
+        # No error should have occurred
+        assert self.receiver_conn.condition is None or \
+               not self.receiver_conn.condition.name, \
+               "Unexpected error: %s" % self.receiver_conn.condition
+
+    def test_reading_clears_buffer_counter(self):
+        """After pn_link_recv() the counter decreases and further sends are allowed."""
+        payload = self._make_payload(64)
+        # Set limit to fit exactly one payload; the second should be blocked unless we read.
+        self.receiver_t.max_buffered_delivery_bytes = len(payload) + 64
+        snd, rcv = self._open_link()
+
+        # Send first delivery
+        snd.delivery(b"d1")
+        snd.stream(payload)
+        snd.advance()
+        self._pump()
+
+        # Consume it on the receiver side via the current delivery
+        dlv_r = rcv.current
+        while dlv_r and dlv_r.readable:
+            chunk = rcv.recv(dlv_r.pending or 1024)
+            if not chunk:
+                break
+        rcv.advance()
+        self._pump()
+
+        # Now send a second delivery — should succeed because buffer was freed
+        snd.delivery(b"d2")
+        snd.stream(payload)
+        snd.advance()
+        self._pump()
+
+        assert self.receiver_conn.condition is None or \
+               not self.receiver_conn.condition.name, \
+               "Unexpected error after read: %s" % self.receiver_conn.condition

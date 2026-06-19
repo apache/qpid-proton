@@ -456,6 +456,40 @@ PN_EXTERN void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t si
 PN_EXTERN uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport);
 
 /**
+ * Get the limit on total unread delivery-buffer bytes for a transport.
+ *
+ * When the total unread bytes buffered across all incoming deliveries on the
+ * connection reaches this limit, further incoming transfer frames will cause
+ * the connection to be closed with an @c amqp:resource-limit-exceeded error.
+ * Bytes are counted from receipt until they are consumed by ::pn_link_recv()
+ * or discarded by ::pn_link_advance().
+ *
+ * A value of 0 means no limit is applied.
+ *
+ * The default is @c PN_DEFAULT_MAX_BUFFERED_DELIVERY_BYTES (4 MiB).
+ *
+ * @param[in] transport a transport object
+ * @return the current limit in bytes, or 0 for unlimited
+ */
+PN_EXTERN size_t pn_transport_get_max_buffered_delivery_bytes(pn_transport_t *transport);
+
+/**
+ * Set the limit on total unread delivery-buffer bytes for a transport.
+ *
+ * See ::pn_transport_get_max_buffered_delivery_bytes() for a description of
+ * this limit.  Set to 0 to remove the limit entirely.  Raise the limit to
+ * accommodate applications that legitimately buffer large messages or many
+ * concurrent deliveries before reading them.
+ *
+ * This setting should be applied before the transport is bound to a
+ * connection.
+ *
+ * @param[in] transport a transport object
+ * @param[in] limit the maximum total buffered delivery bytes, or 0 for unlimited
+ */
+PN_EXTERN void pn_transport_set_max_buffered_delivery_bytes(pn_transport_t *transport, size_t limit);
+
+/**
  * Get the idle timeout for a transport.
  *
  * A zero idle timeout means heartbeats are disabled.

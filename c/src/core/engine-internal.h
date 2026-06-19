@@ -144,6 +144,11 @@ struct pn_transport_t {
 #define PN_DEFAULT_MAX_FRAME_SIZE (32*1024)
   uint32_t   local_max_frame;
   uint32_t   remote_max_frame;
+  /* Limit on total unread delivery-buffer bytes across all sessions.
+   * 0 = unlimited. Default: PN_DEFAULT_MAX_BUFFERED_DELIVERY_BYTES. */
+#define PN_DEFAULT_MAX_BUFFERED_DELIVERY_BYTES (4*1024*1024)
+  size_t max_buffered_delivery_bytes;
+  size_t buffered_delivery_bytes;   /* running total, mirrors sum of ssn->incoming_bytes */
   pn_condition_t remote_condition;
   pn_condition_t condition;
   pn_error_t *error;

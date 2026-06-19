@@ -41,6 +41,7 @@ from cproton import PN_EOS, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM
     pn_transport_get_user, pn_transport_is_authenticated, pn_transport_is_encrypted, pn_transport_log, \
     pn_transport_peek, pn_transport_pending, pn_transport_pop, pn_transport_push, pn_transport_remote_channel_max, \
     pn_transport_require_auth, pn_transport_require_encryption, pn_transport_set_channel_max, \
+    pn_transport_get_max_buffered_delivery_bytes, pn_transport_set_max_buffered_delivery_bytes, \
     pn_transport_set_idle_timeout, pn_transport_set_max_frame, pn_transport_set_pytracer, pn_transport_set_server, \
     pn_transport_tick, pn_transport_trace, pn_transport_unbind, \
     isnull
@@ -509,6 +510,21 @@ class Transport(Wrapper):
     def condition(self, cond: Condition) -> None:
         pn_cond = pn_transport_condition(self._impl)
         obj2cond(cond, pn_cond)
+
+    @property
+    def max_buffered_delivery_bytes(self) -> int:
+        """The limit on total unread delivery-buffer bytes for this transport (in bytes).
+
+        When the total unread bytes buffered across all incoming deliveries on the
+        connection reaches this limit, the connection is closed with an
+        ``amqp:resource-limit-exceeded`` error.  A value of ``0`` removes the
+        limit entirely.  The default is 4 MiB.
+        """
+        return pn_transport_get_max_buffered_delivery_bytes(self._impl)
+
+    @max_buffered_delivery_bytes.setter
+    def max_buffered_delivery_bytes(self, limit: int) -> None:
+        pn_transport_set_max_buffered_delivery_bytes(self._impl, limit)
 
     @property
     def connection(self) -> Connection:
