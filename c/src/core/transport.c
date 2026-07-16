@@ -1424,7 +1424,8 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   }
 
   if (delivery) {
-    pn_buffer_append(delivery->bytes, payload.start, payload.size);
+    int err = pn_buffer_append(delivery->bytes, payload.start, payload.size);
+    if (err) return pn_do_error(transport, "amqp:resource-limit-exceeded", "out of memory buffering incoming delivery");
     if (more) {
       if (!link->more_pending) {
         if (!id_present) {

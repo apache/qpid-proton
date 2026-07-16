@@ -154,6 +154,17 @@ static inline void pni_switch_to_raw_multiple(pn_rwbytes_t *scratch, pn_data_t *
   }
 }
 
+/* Round up to the nearest power of two >= n. If n > 0x80000000 the result wraps to 0. */
+static inline uint32_t pni_round_up_pow2(uint32_t n) {
+  n--;
+  n |= n >> 1;
+  n |= n >> 2;
+  n |= n >> 4;
+  n |= n >> 8;
+  n |= n >> 16;
+  return n + 1;
+}
+
 static inline void pni_write16(char *bytes, uint16_t value)
 {
   bytes[0] = 0xFF & (value >> 8);
