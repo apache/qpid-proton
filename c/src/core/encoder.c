@@ -84,61 +84,61 @@ static uint8_t pn_type2code(pn_encoder_t *encoder, pn_type_t type)
 
 static uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
 {
-  switch (node->atom.type) {
+  switch (node->type) {
   case PN_LONG:
-    if (-128 <= node->atom.u.as_long && node->atom.u.as_long <= 127) {
+    if (-128 <= node->u.as_long && node->u.as_long <= 127) {
       return PNE_SMALLLONG;
     } else {
       return PNE_LONG;
     }
   case PN_INT:
-    if (-128 <= node->atom.u.as_int && node->atom.u.as_int <= 127) {
+    if (-128 <= node->u.as_int && node->u.as_int <= 127) {
       return PNE_SMALLINT;
     } else {
       return PNE_INT;
     }
   case PN_ULONG:
-    if (node->atom.u.as_ulong == 0) {
+    if (node->u.as_ulong == 0) {
       return PNE_ULONG0;
-    } else if (node->atom.u.as_ulong < 256) {
+    } else if (node->u.as_ulong < 256) {
       return PNE_SMALLULONG;
     } else {
       return PNE_ULONG;
     }
   case PN_UINT:
-    if (node->atom.u.as_uint == 0) {
+    if (node->u.as_uint == 0) {
       return PNE_UINT0;
-    } else if (node->atom.u.as_uint < 256) {
+    } else if (node->u.as_uint < 256) {
       return PNE_SMALLUINT;
     } else {
       return PNE_UINT;
     }
   case PN_BOOL:
-    if (node->atom.u.as_bool) {
+    if (node->u.as_bool) {
       return PNE_TRUE;
     } else {
       return PNE_FALSE;
     }
   case PN_STRING:
-    if (node->atom.u.as_bytes.size < 256) {
+    if (node->u.as_bytes.size < 256) {
       return PNE_STR8_UTF8;
     } else {
       return PNE_STR32_UTF8;
     }
   case PN_SYMBOL:
-    if (node->atom.u.as_bytes.size < 256) {
+    if (node->u.as_bytes.size < 256) {
       return PNE_SYM8;
     } else {
       return PNE_SYM32;
     }
   case PN_BINARY:
-    if (node->atom.u.as_bytes.size < 256) {
+    if (node->u.as_bytes.size < 256) {
       return PNE_VBIN8;
     } else {
       return PNE_VBIN32;
     }
   default:
-    return pn_type2code(encoder, node->atom.type);
+    return pn_type2code(encoder, node->type);
   }
 }
 
@@ -225,23 +225,23 @@ static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *
 
 /* True if node is an element of an array - not the descriptor. */
 static bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
-  return (parent && parent->atom.type == PN_ARRAY) /* In array */
-    && !(parent->described && !node->prev); /* Not the descriptor */
+  return (parent && parent->type == PN_ARRAY) /* In array */
+    && !(parent->u.as_array.described && !node->prev); /* Not the descriptor */
 }
 
 /** True if node is the first element of an array, not the descriptor.
  *@pre pn_is_in_array(data, parent, node)
  */
 static bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
-  if (!node->prev) return !parent->described; /* First node */
-  return parent->described && (!pn_data_node(data, node->prev)->prev);
+  if (!node->prev) return !parent->u.as_array.described; /* First node */
+  return parent->u.as_array.described && (!pn_data_node(data, node->prev)->prev);
 }
 
 /** True if node is in a described list - not the descriptor.
  *  - In this case we can omit trailing nulls
  */
 static bool pn_is_in_described_list(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
-  return parent && parent->atom.type == PN_LIST && parent->described;
+  return parent && parent->type == PN_LIST && parent->u.as_list.described;
 }
 
 typedef union {
@@ -256,13 +256,12 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) ctx;
   pni_node_t *parent = pn_data_node(data, node->parent);
-  pn_atom_t *atom = &node->atom;
   uint8_t code;
   conv_t c;
 
   /** In an array we don't write the code before each element, only the first. */
   if (pn_is_in_array(data, parent, node)) {
-    code = pn_type2code(encoder, parent->type);
+    code = pn_type2code(encoder, parent->u.as_array.type);
     if (pn_is_first_in_array(data, parent, node)) {
       pn_encoder_writef8(encoder, code);
     }
@@ -285,53 +284,57 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     }
   }
 
+  pn_rwbytes_t buf = (data->buf) ? pn_buffer_memory(data->buf) : (pn_rwbytes_t){0};
   switch (code) {
   case PNE_DESCRIPTOR:
   case PNE_NULL:
   case PNE_TRUE:
   case PNE_FALSE: return 0;
-  case PNE_BOOLEAN: pn_encoder_writef8(encoder, atom->u.as_bool); return 0;
-  case PNE_UBYTE: pn_encoder_writef8(encoder, atom->u.as_ubyte); return 0;
-  case PNE_BYTE: pn_encoder_writef8(encoder, atom->u.as_byte); return 0;
-  case PNE_USHORT: pn_encoder_writef16(encoder, atom->u.as_ushort); return 0;
-  case PNE_SHORT: pn_encoder_writef16(encoder, atom->u.as_short); return 0;
+  case PNE_BOOLEAN: pn_encoder_writef8(encoder, node->u.as_bool); return 0;
+  case PNE_UBYTE: pn_encoder_writef8(encoder, node->u.as_ubyte); return 0;
+  case PNE_BYTE: pn_encoder_writef8(encoder, node->u.as_byte); return 0;
+  case PNE_USHORT: pn_encoder_writef16(encoder, node->u.as_ushort); return 0;
+  case PNE_SHORT: pn_encoder_writef16(encoder, node->u.as_short); return 0;
   case PNE_UINT0: return 0;
-  case PNE_SMALLUINT: pn_encoder_writef8(encoder, atom->u.as_uint); return 0;
-  case PNE_UINT: pn_encoder_writef32(encoder, atom->u.as_uint); return 0;
-  case PNE_SMALLINT: pn_encoder_writef8(encoder, atom->u.as_int); return 0;
-  case PNE_INT: pn_encoder_writef32(encoder, atom->u.as_int); return 0;
-  case PNE_UTF32: pn_encoder_writef32(encoder, atom->u.as_char); return 0;
+  case PNE_SMALLUINT: pn_encoder_writef8(encoder, node->u.as_uint); return 0;
+  case PNE_UINT: pn_encoder_writef32(encoder, node->u.as_uint); return 0;
+  case PNE_SMALLINT: pn_encoder_writef8(encoder, node->u.as_int); return 0;
+  case PNE_INT: pn_encoder_writef32(encoder, node->u.as_int); return 0;
+  case PNE_UTF32: pn_encoder_writef32(encoder, node->u.as_char); return 0;
   case PNE_ULONG0: return 0;
-  case PNE_ULONG: pn_encoder_writef64(encoder, atom->u.as_ulong); return 0;
-  case PNE_SMALLULONG: pn_encoder_writef8(encoder, atom->u.as_ulong); return 0;
-  case PNE_LONG: pn_encoder_writef64(encoder, atom->u.as_long); return 0;
-  case PNE_SMALLLONG: pn_encoder_writef8(encoder, atom->u.as_long); return 0;
-  case PNE_MS64: pn_encoder_writef64(encoder, atom->u.as_timestamp); return 0;
-  case PNE_FLOAT: c.f = atom->u.as_float; pn_encoder_writef32(encoder, c.i); return 0;
-  case PNE_DOUBLE: c.d = atom->u.as_double; pn_encoder_writef64(encoder, c.l); return 0;
-  case PNE_DECIMAL32: pn_encoder_writef32(encoder, atom->u.as_decimal32); return 0;
-  case PNE_DECIMAL64: pn_encoder_writef64(encoder, atom->u.as_decimal64); return 0;
-  case PNE_DECIMAL128: pn_encoder_writef128(encoder, atom->u.as_decimal128.bytes); return 0;
-  case PNE_UUID: pn_encoder_writef128(encoder, atom->u.as_uuid.bytes); return 0;
-  case PNE_VBIN8: pn_encoder_writev8(encoder, &atom->u.as_bytes); return 0;
-  case PNE_VBIN32: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
-  case PNE_STR8_UTF8: pn_encoder_writev8(encoder, &atom->u.as_bytes); return 0;
-  case PNE_STR32_UTF8: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
-  case PNE_SYM8: pn_encoder_writev8(encoder, &atom->u.as_bytes); return 0;
-  case PNE_SYM32: pn_encoder_writev32(encoder, &atom->u.as_bytes); return 0;
+  case PNE_ULONG: pn_encoder_writef64(encoder, node->u.as_ulong); return 0;
+  case PNE_SMALLULONG: pn_encoder_writef8(encoder, node->u.as_ulong); return 0;
+  case PNE_LONG: pn_encoder_writef64(encoder, node->u.as_long); return 0;
+  case PNE_SMALLLONG: pn_encoder_writef8(encoder, node->u.as_long); return 0;
+  case PNE_MS64: pn_encoder_writef64(encoder, node->u.as_timestamp); return 0;
+  case PNE_FLOAT: c.f = node->u.as_float; pn_encoder_writef32(encoder, c.i); return 0;
+  case PNE_DOUBLE: c.d = node->u.as_double; pn_encoder_writef64(encoder, c.l); return 0;
+  case PNE_DECIMAL32: pn_encoder_writef32(encoder, node->u.as_decimal32); return 0;
+  case PNE_DECIMAL64: pn_encoder_writef64(encoder, node->u.as_decimal64); return 0;
+  case PNE_DECIMAL128: pn_encoder_writef128(encoder, (buf.start + node->u.as_bytes.offset)); return 0;
+  case PNE_UUID: pn_encoder_writef128(encoder, (buf.start + node->u.as_bytes.offset)); return 0;
+  case PNE_VBIN8: { pn_bytes_t b = {node->u.as_bytes.size, buf.start + node->u.as_bytes.offset}; pn_encoder_writev8(encoder, &b); return 0; }
+  case PNE_VBIN32: { pn_bytes_t b = {node->u.as_bytes.size, buf.start + node->u.as_bytes.offset}; pn_encoder_writev32(encoder, &b); return 0; }
+  case PNE_STR8_UTF8: { pn_bytes_t b = {node->u.as_bytes.size, buf.start + node->u.as_bytes.offset}; pn_encoder_writev8(encoder, &b); return 0; }
+  case PNE_STR32_UTF8: { pn_bytes_t b = {node->u.as_bytes.size, buf.start + node->u.as_bytes.offset}; pn_encoder_writev32(encoder, &b); return 0; }
+  case PNE_SYM8: { pn_bytes_t b = {node->u.as_bytes.size, buf.start + node->u.as_bytes.offset}; pn_encoder_writev8(encoder, &b); return 0; }
+  case PNE_SYM32: { pn_bytes_t b = {node->u.as_bytes.size, buf.start + node->u.as_bytes.offset}; pn_encoder_writev32(encoder, &b); return 0; }
   case PNE_ARRAY32:
-    node->start = encoder->position;
-    node->small = false;
+    node->u.as_array.start = (uint32_t) encoder->position;
     // we'll backfill the size on exit
     encoder->position += 4;
-    pn_encoder_writef32(encoder, node->described ? node->children - 1 : node->children);
-    if (node->described)
+    pn_encoder_writef32(encoder, node->u.as_array.described ? node->children - 1 : node->children);
+    if (node->u.as_array.described)
       pn_encoder_writef8(encoder, 0);
     return 0;
   case PNE_LIST32:
+    node->u.as_list.start = (uint32_t) encoder->position;
+    // we'll backfill the size later
+    encoder->position += 4;
+    pn_encoder_writef32(encoder, node->children);
+    return 0;
   case PNE_MAP32:
-    node->start = encoder->position;
-    node->small = false;
+    node->u.as_map.start = (uint32_t) encoder->position;
     // we'll backfill the size later
     encoder->position += 4;
     pn_encoder_writef32(encoder, node->children);
@@ -350,43 +353,36 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 
   // Special case 0 length list, but not as element in an array
   pni_node_t *parent = pn_data_node(data, node->parent);
-  if (node->atom.type==PN_LIST && node->children-encoder->null_count==0 && !pn_is_in_array(data, parent, node)) {
-    encoder->position = node->start-1; // position of list opcode
+  if (node->type==PN_LIST && node->children-encoder->null_count==0 && !pn_is_in_array(data, parent, node)) {
+    encoder->position = node->u.as_list.start - 1; // position of list opcode
     pn_encoder_writef8(encoder, PNE_LIST0);
     encoder->null_count = 0;
     return 0;
   }
 
-  switch (node->atom.type) {
+  switch (node->type) {
   case PN_ARRAY:
-    if ((node->described && node->children == 1) || (!node->described && node->children == 0)) {
-      pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
+    if ((node->u.as_array.described && node->children == 1) || (!node->u.as_array.described && node->children == 0)) {
+      pn_encoder_writef8(encoder, pn_type2code(encoder, node->u.as_array.type));
     }
     PN_FALLTHROUGH;
   case PN_LIST:
-  case PN_MAP:
+  case PN_MAP: {
     pos = encoder->position;
-    encoder->position = node->start;
-    if (node->small) {
-      // backfill size
-      size_t size = pos - node->start - 1;
-      pn_encoder_writef8(encoder, size);
-      // Adjust count
-      if (encoder->null_count) {
-        pn_encoder_writef8(encoder, node->children-encoder->null_count);
-      }
-    } else {
-      // backfill size
-      size_t size = pos - node->start - 4;
-      pn_encoder_writef32(encoder, size);
-      // Adjust count
-      if (encoder->null_count) {
-        pn_encoder_writef32(encoder, node->children-encoder->null_count);
-      }
+    /* start is at the same offset in as_array/as_list/as_map — use as_list uniformly */
+    uint32_t start = node->u.as_list.start;
+    encoder->position = start;
+    // backfill size
+    size_t size = pos - start - 4;
+    pn_encoder_writef32(encoder, size);
+    // Adjust count
+    if (encoder->null_count) {
+      pn_encoder_writef32(encoder, node->children-encoder->null_count);
     }
     encoder->position = pos;
     encoder->null_count = 0;
     return 0;
+  }
   default:
     return 0;
   }

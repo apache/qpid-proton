@@ -31,21 +31,88 @@ typedef uint16_t pni_nid_t;
 #define PNI_NID_MAX ((pni_nid_t)-1)
 #define PNI_INTERN_MINSIZE 64
 
+/*
+ * Value payload for a pni_node_t.
+ *
+ * BINARY/STRING/SYMBOL/DECIMAL128/UUID nodes store their data in the intern
+ * buffer (data->buf); as_bytes.offset and as_bytes.size locate the bytes.
+ * DECIMAL128 and UUID always have as_bytes.size == 16.
+ *
+ * PN_ARRAY nodes use as_array: element type, whether the array has a
+ * descriptor child (described), and encoder scratch (start, small).
+ *
+ * PN_LIST nodes use as_list: whether the list is the body of a described
+ * value (controls trailing-null elision during encoding), and encoder
+ * scratch (start, small).
+ *
+ * PN_MAP nodes use as_map: encoder scratch (start, small).
+ *
+ * All other types (NULL, DESCRIBED) carry no payload; only the type tag
+ * on pni_node_t is meaningful.
+ */
+typedef union {
+  bool            as_bool;
+  uint8_t         as_ubyte;
+  int8_t          as_byte;
+  uint16_t        as_ushort;
+  int16_t         as_short;
+  uint32_t        as_uint;
+  int32_t         as_int;
+  uint32_t        as_char;        /* pn_char_t is typedef'd uint32_t */
+  uint64_t        as_ulong;
+  int64_t         as_long;
+  int64_t         as_timestamp;   /* pn_timestamp_t is typedef'd int64_t */
+  float           as_float;
+  double          as_double;
+  uint32_t        as_decimal32;
+  uint64_t        as_decimal64;
+  struct {
+    uint32_t      offset;         /* byte offset into data->buf */
+    uint32_t      size;           /* byte count (always 16 for decimal128/uuid) */
+  }               as_bytes;
+  struct {
+    uint32_t      start;          /* encoder scratch: output offset of size field */
+    bool          described;      /* true if first child is a descriptor */
+    uint8_t       type;           /* element type (pn_type_t fits in uint8_t: values 1-25) */
+    /* 2 implicit padding bytes */
+  }               as_array;
+  struct {
+    uint32_t      start;          /* encoder scratch: output offset of size field */
+    bool          described;      /* true if body of a described composite */
+    /* 3 implicit padding bytes */
+  }               as_list;
+  struct {
+    uint32_t      start;          /* encoder scratch: output offset of size field */
+    /* 4 implicit padding bytes */
+  }               as_map;
+} pni_node_payload_t;
+
+/*
+ * Layout (64-bit): 24 bytes.
+ *
+ *  offset  0  type        (4)  value type tag
+ *  offset  4  next        (2)  sibling link
+ *  offset  6  prev        (2)  sibling link
+ *  offset  8  down        (2)
+ *  offset 10  parent      (2)
+ *  offset 12  children    (2)
+ *  offset 14  <2 implicit alignment bytes before u>
+ *  offset 16  u           (8)  value payload (8-byte aligned)
+ *
+ * Note that there is still a bit of possibility to reduce this further:
+ * The type takes 4 bytes, but need only take 1; there is 2 bytes of padding still;
+ * I'm pretty sure that we could do away with one of the navigation links (having down
+ * and children seems redundant). However unless we can get it to 16 bytes there is
+ * little point as it must be 8 byte aligned anyway (because of the int64_t in the union).
+ */
 typedef struct {
-  size_t start;
-  size_t data_offset;
-  size_t data_size;
-  pn_atom_t atom;
-  pn_type_t type;
-  pni_nid_t next;
-  pni_nid_t prev;
-  pni_nid_t down;
-  pni_nid_t parent;
-  pni_nid_t children;
-  // for arrays
-  bool described;
-  bool data;
-  bool small;
+  pn_type_t           type;
+  pni_nid_t           next;
+  pni_nid_t           prev;
+  pni_nid_t           down;
+  pni_nid_t           parent;
+  pni_nid_t           children;
+  pni_node_payload_t  u;
 } pni_node_t;
 
 struct pn_data_t {
