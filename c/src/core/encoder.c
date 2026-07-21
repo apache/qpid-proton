@@ -382,15 +382,51 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
     pos = encoder->position;
     /* start is at the same offset in as_array/as_list/as_map — use as_list uniformly */
     uint32_t start = node->u.as_list.start;
-    encoder->position = start;
-    // backfill size
-    size_t size = pos - start - 4;
-    pn_encoder_writef32(encoder, size);
-    // Adjust count
-    if (encoder->null_count) {
-      pn_encoder_writef32(encoder, pni_node_get_children(node)-encoder->null_count);
+
+    /* content_size: bytes written after the 8-byte *32 header (size+count fields) */
+    size_t content_size = pos - start - 8;
+    uint32_t effective_count = pni_node_get_children(node) - encoder->null_count;
+    /* Use *8 encoding when content and count both fit in a byte.
+     * Excluded cases:
+     *  - described arrays (constructor byte sequence is more complex)
+     *  - any compound that is itself an element of an array: all elements in
+     *    an array share the constructor type code (e.g. PNE_LIST32), so each
+     *    element must be encoded in the *32 format the constructor declared. */
+    bool can_be_small = content_size <= 255 && effective_count <= 255
+                     && !(node->type == PN_ARRAY_DESCRIBED)
+                     && !pn_is_in_array(data, parent, node);
+    if (can_be_small) {
+      /* Slide only when all *32 content bytes were actually written into the
+       * buffer.  If content overflowed (pos > encoder->size) the bytes past
+       * the end were never written; memmove would read uninitialised memory,
+       * and claiming a smaller position would fool pn_encoder_encode into
+       * reporting success with corrupt bytes.  In the overflow case keep the
+       * large position so the caller retries with a bigger buffer; on the
+       * retry the full content will fit and the slide will execute correctly.
+       * The size-pass (encoder->output == NULL) has no buffer limit so the
+       * slide always executes there, giving the correct smaller size. */
+      if (!encoder->output || start + 8 + content_size <= encoder->size) {
+        if (encoder->output) {
+          encoder->output[start - 1] -= 0x10;
+          encoder->output[start]     = (uint8_t)(1 + content_size);
+          encoder->output[start + 1] = (uint8_t)effective_count;
+          memmove(encoder->output + start + 2, encoder->output + start + 8, content_size);
+        }
+        encoder->position = start + 2 + content_size;
+      } else {
+        /* Overflow: report the large position so pn_encoder_encode detects it */
+        encoder->position = pos;
+      }
+    } else {
+      /* Backfill the 32-bit size field; size includes the 4-byte count field */
+      encoder->position = start;
+      pn_encoder_writef32(encoder, pos - start - 4);
+      /* Adjust count field if trailing nulls were elided */
+      if (encoder->null_count) {
+        pn_encoder_writef32(encoder, effective_count);
+      }
+      encoder->position = pos;
     }
-    encoder->position = pos;
     encoder->null_count = 0;
     return 0;
   }
