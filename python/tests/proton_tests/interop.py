@@ -54,29 +54,33 @@ class InteropTest(common.Test):
         finally:
             f.close()
 
-    def decode_data(self, encoded):
+    def decode_data(self, encoded, decoded):
         buffer = encoded
         while buffer:
-            n = self.data.decode(buffer)
+            n = decoded.decode(buffer)
             buffer = buffer[n:]
-        self.data.rewind()
+        decoded.rewind()
 
     def decode_data_file(self, name):
         encoded = self.get_data(name)
-        self.decode_data(encoded)
+        self.decode_data(encoded, self.data)
         encoded_size = self.data.encoded_size()
         # Re-encode and verify pre-computed and actual encoded size match.
         reencoded = self.data.encode()
         assert encoded_size == len(reencoded), "%d != %d" % (encoded_size, len(reencoded))
-        # verify round trip bytes
-        assert reencoded == encoded, "Value mismatch: %s != %s" % (reencoded, encoded)
+        # Verify semantic round-trip: decode the re-encoded bytes and compare
+        # formatted output.  Byte-for-byte equality is not required because the
+        # encoder may legitimately choose a more compact encoding (e.g. LIST8
+        # instead of LIST32) that is semantically identical.
+        reencoded_data = Data()
+        self.decode_data(reencoded, reencoded_data)
+        assert self.data.format() == reencoded_data.format(), \
+            "Value mismatch: %s != %s" % (self.data.format(), reencoded_data.format())
 
     def decode_message_file(self, name):
         self.message.decode(self.get_data(name))
         body = self.message.body
-        if str(type(body)) == "<type 'org.apache.qpid.proton.amqp.Binary'>":
-            body = body.array.tostring()
-        self.decode_data(body)
+        self.decode_data(body, self.data)
 
     def assert_next(self, type, value):
         next_type = self.data.next()
