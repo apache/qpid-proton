@@ -2619,7 +2619,7 @@ static ssize_t pn_input_read_amqp(pn_transport_t* transport, unsigned int layer,
   }
 
 
-  ssize_t n = pn_dispatcher_input(transport, bytes, available, true, &transport->halt);
+  ssize_t n = pn_dispatcher_amqp_input(transport, bytes, available, &transport->halt);
   if (n < 0 || transport->close_rcvd) {
     return PN_EOS;
   } else {

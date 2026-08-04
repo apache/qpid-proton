@@ -39,70 +39,101 @@ int pni_bad_frame_type(pn_transport_t *transport, uint8_t frame_type, uint16_t c
   return PN_ERR;
 }
 
+static inline int pni_dispatch_amqp_action(pn_transport_t* transport, uint64_t lcode, uint16_t channel, pn_bytes_t frame_payload)
+{
+  pn_action_t *action;
+  switch (lcode) {
+  case AMQP_DESC_OPEN:            action = pn_do_open; break;
+  case AMQP_DESC_BEGIN:           action = pn_do_begin; break;
+  case AMQP_DESC_ATTACH:          action = pn_do_attach; break;
+  case AMQP_DESC_FLOW:            action = pn_do_flow; break;
+  case AMQP_DESC_TRANSFER:        action = pn_do_transfer; break;
+  case AMQP_DESC_DISPOSITION:     action = pn_do_disposition; break;
+  case AMQP_DESC_DETACH:          action = pn_do_detach; break;
+  case AMQP_DESC_END:             action = pn_do_end; break;
+  case AMQP_DESC_CLOSE:           action = pn_do_close; break;
+  default:                        action = pni_bad_frame; break;
+  };
+  return action(transport, AMQP_FRAME_TYPE, channel, frame_payload);
+}
+
+static inline int pni_dispatch_sasl_action(pn_transport_t* transport, uint64_t lcode, uint16_t channel, pn_bytes_t frame_payload)
+{
+  pn_action_t *action;
+  switch (lcode) {
+  case AMQP_DESC_SASL_MECHANISMS: action = pn_do_mechanisms; break;
+  case AMQP_DESC_SASL_INIT:       action = pn_do_init; break;
+  case AMQP_DESC_SASL_CHALLENGE:  action = pn_do_challenge; break;
+  case AMQP_DESC_SASL_RESPONSE:   action = pn_do_response; break;
+  case AMQP_DESC_SASL_OUTCOME:    action = pn_do_outcome; break;
+  default:                        action = pni_bad_frame; break;
+  };
+  return action(transport, SASL_FRAME_TYPE, channel, frame_payload);
+}
+
 // We could use a table based approach here if we needed to dynamically
 // add new performatives
 static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode, uint8_t frame_type, uint16_t channel, pn_bytes_t frame_payload)
 {
-  pn_action_t *action;
   switch (frame_type) {
   case AMQP_FRAME_TYPE:
-    /* Regular AMQP frames */
-    switch (lcode) {
-    case AMQP_DESC_OPEN:            action = pn_do_open; break;
-    case AMQP_DESC_BEGIN:           action = pn_do_begin; break;
-    case AMQP_DESC_ATTACH:          action = pn_do_attach; break;
-    case AMQP_DESC_FLOW:            action = pn_do_flow; break;
-    case AMQP_DESC_TRANSFER:        action = pn_do_transfer; break;
-    case AMQP_DESC_DISPOSITION:     action = pn_do_disposition; break;
-    case AMQP_DESC_DETACH:          action = pn_do_detach; break;
-    case AMQP_DESC_END:             action = pn_do_end; break;
-    case AMQP_DESC_CLOSE:           action = pn_do_close; break;
-    default:                        action = pni_bad_frame; break;
-    };
-    break;
+    return pni_dispatch_amqp_action(transport, lcode, channel, frame_payload);
   case SASL_FRAME_TYPE:
-    /* SASL frames */
-    switch (lcode) {
-    case AMQP_DESC_SASL_MECHANISMS: action = pn_do_mechanisms; break;
-    case AMQP_DESC_SASL_INIT:       action = pn_do_init; break;
-    case AMQP_DESC_SASL_CHALLENGE:  action = pn_do_challenge; break;
-    case AMQP_DESC_SASL_RESPONSE:   action = pn_do_response; break;
-    case AMQP_DESC_SASL_OUTCOME:    action = pn_do_outcome; break;
-    default:                        action = pni_bad_frame; break;
-    };
-    break;
-  default:                          action = pni_bad_frame_type; break;
+    return pni_dispatch_sasl_action(transport, lcode, channel, frame_payload);
+  default:
+    return pni_bad_frame_type(transport, frame_type, channel, frame_payload);
   };
-  return action(transport, frame_type, channel, frame_payload);
 }
 
-static int pni_dispatch_frame(pn_frame_t frame, pn_logger_t *logger, pn_transport_t * transport)
+static inline int pni_performative_code(pn_bytes_t frame_payload, uint64_t *lcode)
+{
+  pni_consumer_t consumer = make_consumer_from_bytes(frame_payload);
+  pni_consumer_t subconsumer;
+  if (!consume_described_ulong_descriptor(&consumer, &subconsumer, lcode)
+      || !pni_islist(&subconsumer)
+  ) {
+    return PN_ERR;
+  }
+  return PN_OK;
+}
+
+static inline int pni_dispatch_amqp_frame(pn_frame_t frame, pn_logger_t *logger, pn_transport_t * transport)
 {
   pn_bytes_t frame_payload = frame.frame_payload0;
 
   if (frame_payload.size == 0) { // ignore null frames
-    return 0;
+    return PN_OK;
   }
 
   uint64_t lcode;
-  pni_consumer_t consumer = make_consumer_from_bytes(frame_payload);
-  pni_consumer_t subconsumer;
-  if (!consume_described_ulong_descriptor(&consumer, &subconsumer, &lcode)
-      || !pni_islist(&subconsumer)
-  ) {
+  int err = pni_performative_code(frame_payload, &lcode);
+  if (err != PN_OK) {
     PN_LOG(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame");
-    return PN_ERR;
+    return err;
   }
 
-  uint8_t frame_type = frame.type;
-  uint16_t channel = frame.channel;
-
-  int err = pni_dispatch_action(transport, lcode, frame_type, channel, frame_payload);
-
-  return err;
+  return pni_dispatch_amqp_action(transport, lcode, frame.channel, frame_payload);
 }
 
-ssize_t pn_dispatcher_input(pn_transport_t *transport, const char *bytes, size_t available, bool batch, bool *halt)
+static inline int pni_dispatch_sasl_frame(pn_frame_t frame, pn_logger_t *logger, pn_transport_t * transport)
+{
+  pn_bytes_t frame_payload = frame.frame_payload0;
+
+  if (frame_payload.size == 0) { // ignore null frames
+    return PN_OK;
+  }
+
+  uint64_t lcode;
+  int err = pni_performative_code(frame_payload, &lcode);
+  if (err != PN_OK) {
+    PN_LOG(logger, PN_SUBSYSTEM_AMQP, PN_LEVEL_ERROR, "Error dispatching frame");
+    return err;
+  }
+
+  return pni_dispatch_sasl_action(transport, lcode, frame.channel, frame_payload);
+}
+
+ssize_t pn_dispatcher_amqp_input(pn_transport_t *transport, const char *bytes, size_t available, bool *halt)
 {
   size_t read = 0;
 
@@ -114,7 +145,7 @@ ssize_t pn_dispatcher_input(pn_transport_t *transport, const char *bytes, size_t
       read += n;
       available -= n;
       transport->input_frames_ct += 1;
-      int e = pni_dispatch_frame(frame, &transport->logger, transport);
+      int e = pni_dispatch_amqp_frame(frame, &transport->logger, transport);
       if (e) return e;
     } else if (n < 0) {
       pn_do_error(transport, "amqp:connection:framing-error", "malformed frame");
@@ -122,8 +153,29 @@ ssize_t pn_dispatcher_input(pn_transport_t *transport, const char *bytes, size_t
     } else {
       break;
     }
+  }
 
-    if (!batch) break;
+  return read;
+}
+
+ssize_t pn_dispatcher_sasl_input(pn_transport_t *transport, const char *bytes, size_t available, bool *halt)
+{
+  size_t read = 0;
+
+  if (available && !*halt) {
+    pn_frame_t frame;
+
+    ssize_t n = pn_read_frame(&frame, bytes + read, available, transport->local_max_frame, &transport->logger);
+    if (n > 0) {
+      read += n;
+      available -= n;
+      transport->input_frames_ct += 1;
+      int e = pni_dispatch_sasl_frame(frame, &transport->logger, transport);
+      if (e) return e;
+    } else if (n < 0) {
+      pn_do_error(transport, "amqp:connection:framing-error", "malformed frame");
+      return n;
+    }
   }
 
   return read;

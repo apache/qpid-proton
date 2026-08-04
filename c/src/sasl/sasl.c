@@ -636,7 +636,7 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
   pni_sasl_start_server_if_needed(transport);
 
   if (!pni_sasl_is_final_input_state(sasl)) {
-    ssize_t n = pn_dispatcher_input(transport, bytes, available, false, &transport->halt);
+    ssize_t n = pn_dispatcher_sasl_input(transport, bytes, available, &transport->halt);
     if (n < 0 || transport->close_rcvd) {
       return PN_EOS;
     } else {
@@ -1065,4 +1065,3 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
   pnx_sasl_set_desired_state(transport, authenticated ? SASL_RECVED_SUCCESS : SASL_RECVED_FAILURE);
   return 0;
 }
-
