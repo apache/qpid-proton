@@ -103,6 +103,7 @@ if (result EQUAL 0)  # Have minitest
     "PATH=${PATH}"
     "SSL_CERT_DIR=${TEST_CERT_DIR}"
     "RUBYLIB=${RUBYLIB}"
+    "PN_SASL_CONFIG_PATH=${PROJECT_BINARY_DIR}/sasl-conf"
     "${COVERAGE}"
     "COVERAGE_DIR=${PROJECT_BINARY_DIR}/coverage_results/ruby"
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}")

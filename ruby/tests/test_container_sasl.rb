@@ -64,7 +64,7 @@ class ContainerSASLTest < Minitest::Test
 
     def initialize()
       if SASL.extended? # Configure cyrus SASL
-        @conf_dir = File.expand_path('sasl_conf')
+        @conf_dir = ENV['PN_SASL_CONFIG_PATH'] || File.expand_path('sasl_conf')
         @conf_name = "proton-server"
         @database = File.join(@conf_dir, "proton.sasldb")
         @conf_file = File.join(conf_dir,"#{@conf_name}.conf")
