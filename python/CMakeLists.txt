@@ -165,11 +165,10 @@ else ()
 endif ()
 
 check_python_module("setuptools" SETUPTOOLS_MODULE_FOUND)
-check_python_module("wheel" WHEEL_MODULE_FOUND)
 check_python_module("cffi" CFFI_MODULE_FOUND)
 
 if (BUILD_MODULE_FOUND AND
-    (ENABLE_PYTHON_ISOLATED OR (SETUPTOOLS_MODULE_FOUND AND WHEEL_MODULE_FOUND AND CFFI_MODULE_FOUND)))
+    (ENABLE_PYTHON_ISOLATED OR (SETUPTOOLS_MODULE_FOUND AND CFFI_MODULE_FOUND)))
   if (BUILD_PYTHON_UNBUNDLED_PKG)
     add_custom_command(OUTPUT .timestamp.dist
       DEPENDS pypkg_src_copied
