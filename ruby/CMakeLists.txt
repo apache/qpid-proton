@@ -35,7 +35,7 @@ set(SWIG_OUTFILE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 include_directories(${PN_C_INCLUDE_DIR} ${RUBY_INCLUDE_PATH})
 
 swig_add_library(cproton-ruby LANGUAGE ruby SOURCES cproton.i)
-swig_link_libraries(cproton-ruby ${BINDING_DEPS_FULL} ${RUBY_LIBRARY})
+target_link_libraries(cproton-ruby PRIVATE ${BINDING_DEPS_FULL} ${RUBY_LIBRARY})
 
 # Set version-dependent compile flags
 if (RUBY_VERSION VERSION_LESS 1.9.0)
@@ -48,6 +48,13 @@ endif()
 
 # Remove -fvisibility=hidden, it causes an obscure failure in release builds.
 string(REGEX REPLACE "-fvisibility=[a-z]*" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+
+# Suppress deprecation warnings from SWIG-generated code
+# SWIG 4.4.1 still uses Data_Wrap_Struct instead of TypedData API
+if (RUBY_VERSION VERSION_GREATER_EQUAL 3.0.0)
+  set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/cprotonRUBY_wrap.c
+    PROPERTIES COMPILE_FLAGS "-Wno-deprecated-declarations")
+endif()
 
 set_target_properties(cproton-ruby
     PROPERTIES
