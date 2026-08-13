@@ -32,22 +32,20 @@ set(CMAKE_SWIG_FLAGS "-DUINTPTR_SIZE=${CMAKE_SIZEOF_VOID_P}")
 # Put the generated source in a known place, we need to copy it for the gem.
 set(SWIG_OUTFILE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
+# SWIG needs include_directories() not target_include_directories() to find .i files
 include_directories(${PN_C_INCLUDE_DIR} ${RUBY_INCLUDE_PATH})
 
 swig_add_library(cproton-ruby LANGUAGE ruby SOURCES cproton.i)
 target_link_libraries(cproton-ruby PRIVATE ${BINDING_DEPS_FULL} ${RUBY_LIBRARY})
 
-# Set version-dependent compile flags
+# Set version-dependent compile definitions
 if (RUBY_VERSION VERSION_LESS 1.9.0)
    # Don't have blocking control API
 elseif(RUBY_VERSION VERSION_LESS 2.0.0)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DRUBY_USE_rb_thread_blocking_region")
+  target_compile_definitions(cproton-ruby PRIVATE RUBY_USE_rb_thread_blocking_region)
 else()
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DRUBY_USE_rb_thread_call_without_gvl")
+  target_compile_definitions(cproton-ruby PRIVATE RUBY_USE_rb_thread_call_without_gvl)
 endif()
-
-# Remove -fvisibility=hidden, it causes an obscure failure in release builds.
-string(REGEX REPLACE "-fvisibility=[a-z]*" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 # Suppress deprecation warnings from SWIG-generated code
 # SWIG 4.4.1 still uses Data_Wrap_Struct instead of TypedData API
