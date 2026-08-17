@@ -137,6 +137,8 @@ static uint8_t pn_node2code(pn_encoder_t *encoder, pni_node_t *node)
     } else {
       return PNE_VBIN32;
     }
+  case PN_ARRAY_DESCRIBED:
+    return PNE_ARRAY32;
   default:
     return pn_type2code(encoder, node->type);
   }
@@ -225,23 +227,29 @@ static inline void pn_encoder_writev32(pn_encoder_t *encoder, const pn_bytes_t *
 
 /* True if node is an element of an array - not the descriptor. */
 static bool pn_is_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
-  return (parent && parent->type == PN_ARRAY) /* In array */
-    && !(parent->u.as_array.described && !node->prev); /* Not the descriptor */
+  if (!parent) return false;
+  if (parent->type == PN_ARRAY) return true;
+  if (parent->type == PN_ARRAY_DESCRIBED) return node->prev != 0;
+  return false;
 }
 
 /** True if node is the first element of an array, not the descriptor.
  *@pre pn_is_in_array(data, parent, node)
  */
 static bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
-  if (!node->prev) return !parent->u.as_array.described; /* First node */
-  return parent->u.as_array.described && (!pn_data_node(data, node->prev)->prev);
+  if (!node->prev) return parent->type != PN_ARRAY_DESCRIBED;
+  return (parent->type == PN_ARRAY_DESCRIBED) && (!pn_data_node(data, node->prev)->prev);
 }
 
 /** True if node is in a described list - not the descriptor.
  *  - In this case we can omit trailing nulls
  */
 static bool pn_is_in_described_list(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
-  return parent && parent->type == PN_LIST && parent->u.as_list.described;
+  if (!parent || parent->type != PN_LIST) return false;
+  pni_node_t *grandparent = pn_data_node(data, parent->parent);
+  if (!grandparent || grandparent->type != PN_DESCRIBED) return false;
+  // List is the body (value) if it's the second child (has prev sibling)
+  return parent->prev != 0;
 }
 
 typedef union {
@@ -261,7 +269,7 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
 
   /** In an array we don't write the code before each element, only the first. */
   if (pn_is_in_array(data, parent, node)) {
-    code = pn_type2code(encoder, parent->u.as_array.type);
+    code = pn_type2code(encoder, parent->array_type);
     if (pn_is_first_in_array(data, parent, node)) {
       pn_encoder_writef8(encoder, code);
     }
@@ -323,21 +331,22 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     node->u.as_array.start = (uint32_t) encoder->position;
     // we'll backfill the size on exit
     encoder->position += 4;
-    pn_encoder_writef32(encoder, node->u.as_array.described ? node->children - 1 : node->children);
-    if (node->u.as_array.described)
+    bool described = (node->type == PN_ARRAY_DESCRIBED);
+    pn_encoder_writef32(encoder, described ? node->u.as_array.children_count - 1 : node->u.as_array.children_count);
+    if (described)
       pn_encoder_writef8(encoder, 0);
     return 0;
   case PNE_LIST32:
     node->u.as_list.start = (uint32_t) encoder->position;
     // we'll backfill the size later
     encoder->position += 4;
-    pn_encoder_writef32(encoder, node->children);
+    pn_encoder_writef32(encoder, node->u.as_list.children_count);
     return 0;
   case PNE_MAP32:
     node->u.as_map.start = (uint32_t) encoder->position;
     // we'll backfill the size later
     encoder->position += 4;
-    pn_encoder_writef32(encoder, node->children);
+    pn_encoder_writef32(encoder, node->u.as_map.children_count);
     return 0;
   default:
     return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
@@ -353,7 +362,7 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 
   // Special case 0 length list, but not as element in an array
   pni_node_t *parent = pn_data_node(data, node->parent);
-  if (node->type==PN_LIST && node->children-encoder->null_count==0 && !pn_is_in_array(data, parent, node)) {
+  if (node->type==PN_LIST && node->u.as_list.children_count-encoder->null_count==0 && !pn_is_in_array(data, parent, node)) {
     encoder->position = node->u.as_list.start - 1; // position of list opcode
     pn_encoder_writef8(encoder, PNE_LIST0);
     encoder->null_count = 0;
@@ -362,8 +371,10 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 
   switch (node->type) {
   case PN_ARRAY:
-    if ((node->u.as_array.described && node->children == 1) || (!node->u.as_array.described && node->children == 0)) {
-      pn_encoder_writef8(encoder, pn_type2code(encoder, node->u.as_array.type));
+  case PN_ARRAY_DESCRIBED:
+    if ((node->type == PN_ARRAY_DESCRIBED && node->u.as_array.children_count == 1) ||
+        (node->type == PN_ARRAY && node->u.as_array.children_count == 0)) {
+      pn_encoder_writef8(encoder, pn_type2code(encoder, node->array_type));
     }
     PN_FALLTHROUGH;
   case PN_LIST:
@@ -377,7 +388,7 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
     pn_encoder_writef32(encoder, size);
     // Adjust count
     if (encoder->null_count) {
-      pn_encoder_writef32(encoder, node->children-encoder->null_count);
+      pn_encoder_writef32(encoder, pni_node_get_children(node)-encoder->null_count);
     }
     encoder->position = pos;
     encoder->null_count = 0;

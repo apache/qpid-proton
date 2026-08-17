@@ -40,9 +40,16 @@
 #include "logger_private.h"
 #include "memory.h"
 
+// Convert internal types to external API types
+static inline pn_type_t pni_type_external(uint8_t internal_type)
+{
+  if (internal_type == PN_ARRAY_DESCRIBED) return PN_ARRAY;
+  return internal_type;
+}
+
 const char *pn_type_name(pn_type_t type)
 {
-  switch (type)
+  switch ((uint8_t)type)
   {
   case PN_NULL: return "PN_NULL";
   case PN_BOOL: return "PN_BOOL";
@@ -67,6 +74,7 @@ const char *pn_type_name(pn_type_t type)
   case PN_SYMBOL: return "PN_SYMBOL";
   case PN_DESCRIBED: return "PN_DESCRIBED";
   case PN_ARRAY: return "PN_ARRAY";
+  case PN_ARRAY_DESCRIBED: return "PN_ARRAY_DESCRIBED";
   case PN_LIST: return "PN_LIST";
   case PN_MAP: return "PN_MAP";
   default: break;
@@ -90,7 +98,7 @@ static const pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
   if (!node) return NULL;
   if (node->type != PN_DESCRIBED) return NULL;
 
-  pni_node_t *descriptor = pn_data_node(data, node->down);
+  pni_node_t *descriptor = pn_data_node(data, node->u.as_described.down);
 
   if (!descriptor || descriptor->type != PN_ULONG) {
     return NULL;
@@ -291,7 +299,7 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     return 0;
   case PN_ARRAY:
     // XXX: need to fix for described arrays
-    pn_fixed_string_addf(str, "@%s[", pn_type_name(node->u.as_array.type));
+    pn_fixed_string_addf(str, "@%s[", pn_type_name(node->array_type));
     return 0;
   case PN_LIST:
     pn_fixed_string_addf(str, "[");
@@ -568,6 +576,7 @@ static int pni_normalize_multiple(pn_data_t *data, pn_data_t *src) {
   return err;
 }
 
+static int pni_data_put_deferred(pn_data_t *data, pn_type_t type);
 
 /* Format codes:
    code: AMQP-type (arguments)
@@ -652,7 +661,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     case 'Z':                   /* encode binary, must not be NULL */
       {
-	// For maximum portability, caller must pass these as two separate args, not a single struct
+        // For maximum portability, caller must pass these as two separate args, not a single struct
         size_t size = va_arg(ap, size_t);
         char *start = va_arg(ap, char *);
         err = pn_data_put_binary(data, pn_bytes(size, start));
@@ -660,7 +669,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     case 'z':                   /* encode binary or null if pointer is NULL */
       {
-	// For maximum portability, caller must pass these as two separate args, not a single struct
+        // For maximum portability, caller must pass these as two separate args, not a single struct
         size_t size = va_arg(ap, size_t);
         char *start = va_arg(ap, char *);
         if (start) {
@@ -689,14 +698,14 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     case 'D':
       /* The next 2 args are the descriptor, value for a described value. */
-      err = pn_data_put_described(data);
+      err = pni_data_put_deferred(data, PN_DESCRIBED);
       pn_data_enter(data);
       break;
     case 'T':                   /* Set type of open array */
       {
         pni_node_t *parent = pn_data_node(data, data->parent);
         if (parent->type == PN_ARRAY) {
-          parent->u.as_array.type = (uint8_t) va_arg(ap, int);
+          parent->array_type = (uint8_t) va_arg(ap, int);
         } else {
           return pn_error_format(pni_data_error(data), PN_ERR, "naked type");
         }
@@ -734,7 +743,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       break;
     case '?':
       if (!va_arg(ap, int)) {
-        err = pn_data_put_null(data);
+        err = pni_data_put_deferred(data, PN_NULL);
         if (err) return err;
         pn_data_enter(data);
       }
@@ -804,22 +813,27 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     if (err) return err;
 
     pni_node_t *parent = pn_data_node(data, data->parent);
-    pni_node_t *current = pn_data_node(data, data->current);
     while (parent) {
-      if (parent->type == PN_DESCRIBED && parent->children == 2) {
-        current->u.as_list.described = true;
-        pn_data_exit(data);
-        current = pn_data_node(data, data->current);
-        parent = pn_data_node(data, data->parent);
-      } else if (parent->type == PN_NULL && parent->children == 1) {
-        pn_data_exit(data);
-        current = pn_data_node(data, data->current);
-        current->down = 0;
-        current->children = 0;
-        parent = pn_data_node(data, data->parent);
-      } else {
-        break;
+      if (parent->type == PN_DEFER) {
+        if (parent->u.as_deferred.type == PN_DESCRIBED && parent->u.as_deferred.children_count == 2) {
+          pn_data_exit(data);
+          parent = pn_data_node(data, data->parent);
+          pni_node_t *current = pn_data_node(data, data->current);
+          pni_nid_t down = current->u.as_deferred.down;
+          uint16_t count = current->u.as_deferred.children_count;
+          current->type = PN_DESCRIBED;
+          current->u.as_described.down = down;
+          current->u.as_described.children_count = count;
+          continue;
+        } else if (parent->u.as_deferred.type == PN_NULL && parent->u.as_deferred.children_count == 1) {
+          pn_data_exit(data);
+          parent = pn_data_node(data, data->parent);
+          pni_node_t *current = pn_data_node(data, data->current);
+          current->type = PN_NULL;
+          continue;
+        }
       }
+      break;
     }
   }
 
@@ -1288,9 +1302,9 @@ static pni_node_t *pni_data_new(pn_data_t *data)
     return NULL;
   }
   pni_node_t *node = pn_data_node(data, ++(data->size));
+  node->type = PN_NULL;
   node->next = 0;
-  node->down = 0;
-  node->children = 0;
+  node->array_type = 0;
   return node;
 }
 
@@ -1352,7 +1366,7 @@ static pni_node_t *pni_data_peek(pn_data_t *data)
 
   pni_node_t *parent = pn_data_node(data, data->parent);
   if (parent) {
-    return pn_data_node(data, parent->down);
+    return pn_data_node(data, pni_node_get_down(parent));
   }
 
   return NULL;
@@ -1366,8 +1380,8 @@ bool pn_data_next(pn_data_t *data)
 
   if (current) {
     next = current->next;
-  } else if (parent && parent->down) {
-    next = parent->down;
+  } else if (parent && pni_node_get_down(parent)) {
+    next = pni_node_get_down(parent);
   } else if (!parent && data->size) {
     next = 1;
   } else {
@@ -1406,8 +1420,8 @@ int pni_data_traverse(pn_data_t *data,
     if (err) return err;
 
     size_t next = 0;
-    if (node->down) {
-      next = node->down;
+    if (pni_node_get_down(node)) {
+      next = pni_node_get_down(node);
     } else if (node->next) {
       err = exit(ctx, data, node);
       if (err) return err;
@@ -1437,7 +1451,7 @@ pn_type_t pn_data_type(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node) {
-    return node->type;
+    return pni_type_external(node->type);
   } else {
     return PN_INVALID;
   }
@@ -1457,7 +1471,7 @@ size_t pn_data_siblings(pn_data_t *data)
 {
   pni_node_t *node = pn_data_node(data, data->parent);
   if (node) {
-    return node->children;
+    return pni_node_get_children(node);
   } else {
     return 0;
   }
@@ -1532,8 +1546,8 @@ void pn_data_dump(pn_data_t *data)
            i + 1, (size_t) node->prev,
            (size_t) node->next,
            (size_t) node->parent,
-           (size_t) node->down,
-           (size_t) node->children,
+           (size_t) pni_node_get_down(node),
+           (size_t) pni_node_get_children(node),
            pn_type_name(node->type), buf);
   }
 }
@@ -1558,15 +1572,15 @@ static pni_node_t *pni_data_add(pn_data_t *data)
       current->next = pni_data_id(data, node);
       node->parent = data->parent;
       if (parent) {
-        if (!parent->down) {
-          parent->down = pni_data_id(data, node);
+        if (!pni_node_get_down(parent)) {
+          pni_node_set_down(parent, pni_data_id(data, node));
         }
-        parent->children++;
+        pni_node_inc_children(parent);
       }
     }
   } else if (parent) {
-    if (parent->down) {
-      node = pn_data_node(data, parent->down);
+    if (pni_node_get_down(parent)) {
+      node = pn_data_node(data, pni_node_get_down(parent));
     } else {
       node = pni_data_new(data);
       if (!node) return NULL;
@@ -1575,8 +1589,8 @@ static pni_node_t *pni_data_add(pn_data_t *data)
       parent = pn_data_node(data, data->parent);
       node->prev = 0;
       node->parent = data->parent;
-      parent->down = pni_data_id(data, node);
-      parent->children++;
+      pni_node_set_down(parent, pni_data_id(data, node));
+      pni_node_inc_children(parent);
     }
   } else if (data->size) {
     node = pn_data_node(data, 1);
@@ -1588,8 +1602,6 @@ static pni_node_t *pni_data_add(pn_data_t *data)
     node->parent = 0;
   }
 
-  node->down = 0;
-  node->children = 0;
   memset(&node->u, 0, sizeof(node->u));
   data->current = pni_data_id(data, node);
   return node;
@@ -1622,12 +1634,22 @@ ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
   return r;
 }
 
+static int pni_data_put_deferred(pn_data_t *data, pn_type_t type)
+{
+  pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
+  node->type = PN_DEFER;
+  node->u.as_deferred.type = (uint8_t) type;
+  return 0;
+}
+
 int pn_data_put_list(pn_data_t *data)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->type = PN_LIST;
-  node->u.as_list.described = false;
+  node->u.as_list.down = 0;
+  node->u.as_list.children_count = 0;
   return 0;
 }
 
@@ -1636,6 +1658,8 @@ int pn_data_put_map(pn_data_t *data)
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->type = PN_MAP;
+  node->u.as_map.down = 0;
+  node->u.as_map.children_count = 0;
   return 0;
 }
 
@@ -1643,16 +1667,19 @@ int pn_data_put_array(pn_data_t *data, bool described, pn_type_t type)
 {
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
-  node->type = PN_ARRAY;
-  node->u.as_array.described = described;
-  node->u.as_array.type = (uint8_t) type;
+  node->type = described ? PN_ARRAY_DESCRIBED : PN_ARRAY;
+  node->array_type = (uint8_t)type;
+  node->u.as_array.down = 0;
+  node->u.as_array.children_count = 0;
   return 0;
 }
 
 void pni_data_set_array_type(pn_data_t *data, pn_type_t type)
 {
   pni_node_t *array = pni_data_current(data);
-  if (array) array->u.as_array.type = (uint8_t) type;
+  if (array) {
+    array->array_type = (uint8_t)type;
+  }
 }
 
 int pn_data_put_described(pn_data_t *data)
@@ -1660,6 +1687,8 @@ int pn_data_put_described(pn_data_t *data)
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->type = PN_DESCRIBED;
+  node->u.as_described.down = 0;
+  node->u.as_described.children_count = 0;
   return 0;
 }
 
@@ -1874,7 +1903,7 @@ size_t pn_data_get_list(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->type == PN_LIST) {
-    return node->children;
+    return node->u.as_list.children_count;
   } else {
     return 0;
   }
@@ -1884,7 +1913,7 @@ size_t pn_data_get_map(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->type == PN_MAP) {
-    return node->children;
+    return node->u.as_map.children_count;
   } else {
     return 0;
   }
@@ -1893,32 +1922,28 @@ size_t pn_data_get_map(pn_data_t *data)
 size_t pn_data_get_array(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
-  if (node && node->type == PN_ARRAY) {
-    if (node->u.as_array.described) {
-      return node->children - 1;
-    } else {
-      return node->children;
-    }
-  } else {
-    return 0;
+  if (!node) return 0;
+
+  if (node->type == PN_ARRAY_DESCRIBED) {
+    return node->u.as_array.children_count - 1;  // Descriptor doesn't count
   }
+  if (node->type == PN_ARRAY) {
+    return node->u.as_array.children_count;
+  }
+  return 0;
 }
 
 bool pn_data_is_array_described(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
-  if (node && node->type == PN_ARRAY) {
-    return node->u.as_array.described;
-  } else {
-    return false;
-  }
+  return node && node->type == PN_ARRAY_DESCRIBED;
 }
 
 pn_type_t pn_data_get_array_type(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
-  if (node && node->type == PN_ARRAY) {
-    return node->u.as_array.type;
+  if (node && (node->type == PN_ARRAY || node->type == PN_ARRAY_DESCRIBED)) {
+    return node->array_type;
   } else {
     return PN_INVALID;
   }
@@ -2158,7 +2183,8 @@ pn_atom_t pn_data_get_atom(pn_data_t *data)
   if (!node) {
     return (pn_atom_t){PN_NULL};
   }
-  pn_atom_t t = {node->type};
+
+  pn_atom_t t = {pni_type_external(node->type)};
   switch (node->type) {
   case PN_BINARY: case PN_STRING: case PN_SYMBOL:
     t.u.as_bytes = pni_node_bytes(data, node);
