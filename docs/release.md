@@ -13,18 +13,19 @@
   - e.g "gpg --detach-sign --armor qpid-proton-${VERSION}.tar.gz"
   - e.g "sha512sum qpid-proton-${VERSION}.tar.gz > qpid-proton-${VERSION}.tar.gz.sha512"
 7. Push branch changes and tag.
-  - Also update versions to the applicable snapshot version for future work on it.
+  - Also update versions again to the applicable next -dev version for future work on it.
 8. Commit artifacts to dist dev repo in https://dist.apache.org/repos/dist/dev/qpid/proton/${TAG} dir.
 9. Send vote email, provide links to dist dev repo and JIRA release notes.
 
 
 ### After a vote succeeds:
 
-1. Tag the RC with the final version.
+1. Tag the RC commit with the final version.
+   - Run: 'git tag -m "Release ${VERSION}" ${VERSION}', e.g: git tag -m "Release 0.18.0" 0.18.0
 2. Add the artifacts to dist release repo:
    svn cp -m "add files for qpid-proton-${VERSION}" https://dist.apache.org/repos/dist/dev/qpid/proton/${TAG} https://dist.apache.org/repos/dist/release/qpid/proton/${VERSION}
-3. Give the mirrors some time to distribute things. Can take 24hrs for good coverage.
-  - Status is visible at: https://www.apache.org/mirrors/
+3. Give the some time to distribute things to downloads.apache.org and the CDN. Typically takes ~15mins.
+  - Content is viewable under: https://downloads.apache.org/qpid/proton/ and https://dlcdn.apache.org/qpid/proton/
 4. Update the website with release content.
 5. Send release announcement email.
 6. Clean out older release(s) from release repo as appropriate.
