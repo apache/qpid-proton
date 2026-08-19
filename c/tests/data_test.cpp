@@ -197,6 +197,10 @@ TEST_CASE("data_multiple") {
   pn_data_put_symbol(src, pn_bytes("baz"));
   pn_data_fill(data, "M", src.get());
   CHECK(":baz" == inspect(data));
+}
+
+TEST_CASE("data_described_list") {
+  auto_free<pn_data_t, pn_data_free> data(pn_data(1));
 
   /* Described list with open frame descriptor */
   pn_data_clear(data);
@@ -207,6 +211,24 @@ TEST_CASE("data_multiple") {
   pn_data_clear(data);
   pn_data_fill(data, "DL[SSnI]", (uint64_t)16, "container-1", 0, 965);
   CHECK("@open(16) [container-id=\"container-1\", channel-max=965]" == inspect(data));
+
+  /* Described list with items after the list */
+  pn_data_clear(data);
+  pn_data_fill(data, "DL[SSnI]S", (uint64_t)16, "container-1", 0, 965, "extra");
+  CHECK("@open(16) [container-id=\"container-1\", channel-max=965], \"extra\"" == inspect(data));
+
+  /* Conditional Described list cases */
+  pn_data_clear(data);
+  pn_data_fill(data, "?DL[SSnI]S", false, (uint64_t)16, "container-1", 0, 965, "extra");
+  CHECK("null, \"extra\"" == inspect(data));
+
+  pn_data_clear(data);
+  pn_data_fill(data, "?DL[?SSnI]?S", true, (uint64_t)16, false, "container-1", 0, 965, true, "extra");
+  CHECK("@open(16) [channel-max=965], \"extra\"" == inspect(data));
+}
+
+TEST_CASE("data_map") {
+  auto_free<pn_data_t, pn_data_free> data(pn_data(1));
 
   /* Map */
   pn_data_clear(data);
