@@ -209,21 +209,21 @@ TEST_CASE("data_described_list") {
 
   /* open frame with some fields */
   pn_data_clear(data);
-  pn_data_fill(data, "DL[SSnI]", (uint64_t)16, "container-1", 0, 965);
+  pn_data_fill(data, "DL[SSnI]", (uint64_t)16, "container-1", nullptr, 965);
   CHECK("@open(16) [container-id=\"container-1\", channel-max=965]" == inspect(data));
 
   /* Described list with items after the list */
   pn_data_clear(data);
-  pn_data_fill(data, "DL[SSnI]S", (uint64_t)16, "container-1", 0, 965, "extra");
+  pn_data_fill(data, "DL[SSnI]S", (uint64_t)16, "container-1", nullptr, 965, "extra");
   CHECK("@open(16) [container-id=\"container-1\", channel-max=965], \"extra\"" == inspect(data));
 
   /* Conditional Described list cases */
   pn_data_clear(data);
-  pn_data_fill(data, "?DL[SSnI]S", false, (uint64_t)16, "container-1", 0, 965, "extra");
+  pn_data_fill(data, "?DL[SSnI]S", false, (uint64_t)16, "container-1", nullptr, 965, "extra");
   CHECK("null, \"extra\"" == inspect(data));
 
   pn_data_clear(data);
-  pn_data_fill(data, "?DL[?SSnI]?S", true, (uint64_t)16, false, "container-1", 0, 965, true, "extra");
+  pn_data_fill(data, "?DL[?SSnI]?S", true, (uint64_t)16, false, "container-1", nullptr, 965, true, "extra");
   CHECK("@open(16) [channel-max=965], \"extra\"" == inspect(data));
 }
 
