@@ -904,6 +904,10 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   // We should only receive this if we are a sasl server
   if (sasl->client) return PN_ERR;
+  // Check the protocol state using desired_state not last_state: a pipelining peer can
+  // legitimately send its next frame before we've actually written out our own, so
+  // last_state can still be lagging behind the frame we've already committed to sending.
+  if (sasl->desired_state != SASL_POSTED_MECHANISMS) return PN_ERR;
 
   pn_bytes_t mech;
   pn_bytes_t recv;
@@ -936,6 +940,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
 
   // We should only receive this if we are a sasl client
   if (!sasl->client) return PN_ERR;
+  if (sasl->desired_state != SASL_NONE) return PN_ERR;
 
   pn_string_t *mechs = pn_string("");
 
@@ -1004,6 +1009,7 @@ int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t chan
 
   // We should only receive this if we are a sasl client
   if (!sasl->client) return PN_ERR;
+  if (sasl->desired_state != SASL_POSTED_INIT && sasl->desired_state != SASL_POSTED_RESPONSE) return PN_ERR;
 
   pn_bytes_t recv;
 
@@ -1025,6 +1031,7 @@ int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 
   // We should only receive this if we are a sasl server
   if (sasl->client) return PN_ERR;
+  if (sasl->desired_state != SASL_POSTED_CHALLENGE) return PN_ERR;
 
   pn_bytes_t recv;
 
@@ -1046,6 +1053,7 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
 
   // We should only receive this if we are a sasl client
   if (!sasl->client) return PN_ERR;
+  if (sasl->desired_state != SASL_POSTED_INIT && sasl->desired_state != SASL_POSTED_RESPONSE) return PN_ERR;
 
   uint8_t outcome;
   pn_bytes_t recv;
