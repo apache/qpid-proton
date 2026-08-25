@@ -894,8 +894,18 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
     // check if we need to break up the outbound frame
     size_t available = full_payload->size;
     if (transport->remote_max_frame) {
-      if ((available + performative.size) > transport->remote_max_frame - AMQP_HEADER_SIZE) {
-        available = transport->remote_max_frame - AMQP_HEADER_SIZE - performative.size;
+      size_t max_payload = transport->remote_max_frame - AMQP_HEADER_SIZE;
+      // The performative must fit, and must leave room for at least one byte of
+      // any payload still to send, otherwise we can never make progress.
+      if (performative.size > max_payload ||
+          (performative.size == max_payload && available > 0)) {
+        return pn_do_error(transport, "amqp:frame-size-too-small",
+                           "transfer performative does not fit remote max-frame: max payload %zu, performative %zu",
+                           max_payload, performative.size);
+      }
+
+      if ((available + performative.size) > max_payload) {
+        available = max_payload - performative.size;
         if (more_flag == false) {
           more_flag = true;
           goto compute_performatives;  // deal with flag change
@@ -1335,13 +1345,37 @@ static void pn_full_settle(pn_delivery_map_t *db, pn_delivery_t *delivery)
 
 static void pni_amqp_decode_disposition (uint64_t type, pn_bytes_t disp_data, pn_disposition_t *disp);
 
+// link->more_pending is true exactly while a multiframe delivery is assembling
+// on the link.  more_id/more_tag identify that delivery, and outlive the
+// delivery object itself: the application may settle a partial delivery, after
+// which the remaining frames still have to be matched and discarded.
+static void pni_link_more_begin(pn_link_t *link, pn_sequence_t id, pn_bytes_t tag, uint32_t format)
+{
+  assert(!link->more_pending);
+  link->more_pending = true;
+  link->more_id = id;
+  link->more_tag = pn_bytes_dup(tag);
+  link->more_format = format;
+}
+
+static void pni_link_more_end(pn_link_t *link)
+{
+  link->more_pending = false;
+  pn_bytes_free(link->more_tag);
+  link->more_tag = pn_bytes_null;
+  link->more_format = 0;
+}
+
 int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_bytes_t payload)
 {
   // XXX: multi transfer
   uint32_t handle;
+  bool tag_present;
   pn_bytes_t tag;
   bool id_present;
   pn_sequence_t id;
+  bool format_present;
+  uint32_t format;
   bool settled;
   bool more;
   bool has_type, settled_set;
@@ -1350,7 +1384,8 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 
   pn_bytes_t disp_data;
   size_t dsize =
-    pn_amqp_decode_transfer(payload, &handle, &id_present, &id, &tag,
+    pn_amqp_decode_transfer(payload, &handle, &id_present, &id, &tag_present, &tag,
+                                        &format_present, &format,
                                         &settled_set, &settled, &more, &has_type, &type, &disp_data,
                                         &resume, &aborted, &batchable);
   payload.size -= dsize;
@@ -1370,41 +1405,42 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
     return pn_do_error(transport, "amqp:invalid-field", "no such handle: %u", handle);
   }
   pn_delivery_t *delivery = NULL;
-  bool new_delivery = false;
+  // link->more_pending is true exactly while a multiframe delivery is still
+  // assembling on this link, so any transfer arriving now must continue it.
   if (link->more_pending) {
-    // Ongoing multiframe delivery.
+    // A continuation transfer may omit delivery-id, delivery-tag and
+    // message-format, but any it carries must match the first transfer.
+    if (id_present && id != link->more_id)
+      return pn_do_error(transport, "amqp:invalid-field", "invalid delivery-id for a continuation transfer");
+    if (tag_present && !pn_bytes_equal(tag, link->more_tag))
+      return pn_do_error(transport, "amqp:invalid-field", "invalid delivery-tag for a continuation transfer");
+    if (format_present && format != link->more_format)
+      return pn_do_error(transport, "amqp:invalid-field", "invalid message-format for a continuation transfer");
     if (link->unsettled_tail && !link->unsettled_tail->done) {
       delivery = link->unsettled_tail;
       if (settled_set && !settled && delivery->remote.settled)
         return pn_do_error(transport, "amqp:invalid-field", "invalid transition from settled to unsettled");
-      if (id_present && id != delivery->state.id)
-        return pn_do_error(transport, "amqp:invalid-field", "invalid delivery-id for a continuation transfer");
     } else {
-      // Application has already settled.  Delivery is no more.
-      // Ignore content and look for transition to a new delivery.
-      if (!id_present || id == link->more_id) {
-        // Still old delivery.
-        if (!more || aborted)
-          link->more_pending = false;
-      } else {
-        // New id.
-        new_delivery = true;
-        link->more_pending = false;
-      }
+      // Application has already settled the partial delivery.  Delivery is no
+      // more: discard the remaining frames, clearing more_pending on the last.
+      if (!more || aborted)
+        pni_link_more_end(link);
     }
   } else {
-    new_delivery = true;
-  }
+    // First transfer of a new delivery.
+    if (!id_present) {
+      return pn_do_error(transport, "amqp:invalid-field", "delivery-id required on initial delivery transfer");
+    }
+    if (!tag_present) {
+      return pn_do_error(transport, "amqp:invalid-field", "delivery-tag required on initial delivery transfer");
+    }
+    if (!format_present) {
+      return pn_do_error(transport, "amqp:invalid-field", "message-format required on initial delivery transfer");
+    }
 
-  if (new_delivery) {
-    assert(!link->more_pending);
-    assert(delivery == NULL);
     pn_delivery_map_t *incoming = &ssn->state.incoming;
 
     if (!ssn->state.incoming_init) {
-      if (!id_present) {
-        return pn_do_error(transport, "amqp:invalid-field", "delivery-id required on initial transfer of session");
-      }
       incoming->next = id;
       ssn->state.incoming_init = true;
       ssn->incoming_deliveries++;
@@ -1432,18 +1468,21 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
                          "connection delivery buffer limit exceeded: %zu bytes buffered, limit %zu",
                          transport->buffered_delivery_bytes, transport->max_buffered_delivery_bytes);
     }
-    if (more && !link->more_pending && !id_present) {
-      return pn_do_error(transport, "amqp:invalid-field", "delivery-id required for transfer");
-    }
     int err = pn_buffer_append(delivery->bytes, payload.start, payload.size);
     if (err) {
       return pn_do_error(transport, "amqp:resource-limit-exceeded", "out of memory buffering incoming delivery");
     }
     transport->buffered_delivery_bytes += payload.size;
-    if (more && !link->more_pending) {
-      // First frame of a multi-frame transfer. Remember at link level.
-      link->more_pending = true;
-      link->more_id = id;
+    if (more) {
+      if (!link->more_pending) {
+        // First frame of a multi-frame transfer. Remember at link level.
+        // Only reachable via the new delivery path, so both fields are present.
+        assert(id_present && tag_present);
+        pni_link_more_begin(link, id, tag, format);
+      }
+    } else {
+      // Last frame of the delivery: the link is no longer mid-assembly.
+      pni_link_more_end(link);
     }
     delivery->done = !more;
 
@@ -1458,7 +1497,7 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
       delivery->remote.settled = true;
       delivery->done = true;
       delivery->updated = true;
-      link->more_pending = false;
+      pni_link_more_end(link);
       pn_work_update(transport->connection, delivery);
     }
     pn_collector_put_object(transport->connection->collector, delivery, PN_DELIVERY);

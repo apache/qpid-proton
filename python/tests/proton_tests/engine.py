@@ -1066,6 +1066,131 @@ class TransferTest(Test):
         binary = self.rcv.recv(self.rcv.current.pending)
         assert binary == msg
 
+    def test_multiframe_settled_partial(self):
+        """
+        Settle a delivery while it is still assembling.  The remaining frames
+        of the abandoned delivery must be discarded, and the next delivery on
+        the link must still be received normally.
+        """
+        self.rcv.flow(2)
+        self.snd.delivery("tag1")
+        n = self.snd.send(b"this is a test")
+        assert n == 14
+
+        self.pump()
+
+        d = self.rcv.current
+        assert d.partial
+        # Settle the partial delivery: the receiver abandons it mid-assembly.
+        d.settle()
+
+        # Remaining frames of the abandoned delivery are discarded.
+        n = self.snd.send(b"this is more.  Error if not discarded.")
+        assert n == 38
+        self.pump()
+        assert self.snd.advance()
+        self.pump()
+
+        # A new delivery on the same link is received normally.
+        self.snd.delivery("tag2")
+        msg = b"second message"
+        n = self.snd.send(msg)
+        assert n == len(msg)
+        assert self.snd.advance()
+
+        self.pump()
+
+        d = self.rcv.current
+        assert d, "new delivery was discarded"
+        assert d.tag == "tag2", repr(d.tag)
+        assert not d.partial
+        assert self.rcv.recv(1024) == msg
+
+    def _patch_frame(self, frame, old, new):
+        """
+        Substitute bytes in a single AMQP frame, fixing up the frame size and
+        the performative list size when the length changes.
+        """
+        assert old in frame, repr(frame)
+        assert int.from_bytes(frame[0:4], "big") == len(frame), repr(frame)
+        patched = frame.replace(old, new, 1)
+        delta = len(new) - len(old)
+        if delta:
+            patched = (len(frame) + delta).to_bytes(4, "big") + patched[4:]
+            # performative is \x00S\x14 followed by a list8: \xc0 <size> <count>
+            i = patched.index(b"\x00S\x14\xc0") + 4
+            patched = patched[:i] + bytes([patched[i] + delta]) + patched[i + 1:]
+        return patched
+
+    def _corrupt_continuation(self, old, new):
+        """
+        Start a multiframe delivery, then hand the receiver a continuation
+        frame in which one of the fields that must match the first transfer
+        has been altered on the wire.  Returns the receiving transport's
+        condition.
+        """
+        self.rcv.flow(1)
+        self.snd.delivery("tag1")
+        self.snd.send(b"this is a test")
+
+        self.pump()
+        assert self.rcv.current.partial
+
+        # Take the continuation frame off the sender instead of pumping it.
+        self.snd.send(b"this is more")
+        t1 = self.snd.transport
+        frame = t1.peek(4096)
+        t1.pop(len(frame))
+        self.rcv.transport.push(self._patch_frame(frame, old, new))
+        return self.rcv.transport.condition
+
+    def _corrupt_initial(self, old, new):
+        """
+        Alter the first transfer of a delivery on the wire.  Returns the
+        receiving transport's condition.
+        """
+        self.rcv.flow(1)
+        self.pump()  # get the credit to the sender
+        t1 = self.snd.transport
+        t1.pop(len(t1.peek(4096)))  # drain any pending output
+
+        self.snd.delivery("tag1")
+        self.snd.send(b"this is a test")
+        assert self.snd.advance()
+
+        frame = t1.peek(4096)
+        t1.pop(len(frame))
+        self.rcv.transport.push(self._patch_frame(frame, old, new))
+        return self.rcv.transport.condition
+
+    def test_initial_transfer_no_format(self):
+        # Drop message-format (uint0, 0x43) from the first transfer.  The spec
+        # allows it to be omitted only on continuation transfers.
+        cond = self._corrupt_initial(b"\xa0\x04tag1\x43", b"\xa0\x04tag1\x40")
+        assert cond is not None, "initial transfer without message-format accepted"
+        assert cond.name == "amqp:invalid-field", cond
+        assert cond.description == "message-format required on initial delivery transfer", cond
+
+    def test_multiframe_continuation_tag_mismatch(self):
+        cond = self._corrupt_continuation(b"\xa0\x04tag1", b"\xa0\x04tagZ")
+        assert cond is not None, "mismatched continuation delivery-tag accepted"
+        assert cond.name == "amqp:invalid-field", cond
+        assert cond.description == "invalid delivery-tag for a continuation transfer", cond
+
+    def test_multiframe_continuation_id_mismatch(self):
+        # delivery-id 0 is encoded as uint0 (0x43); make it 1 (smalluint 0x52 0x01).
+        cond = self._corrupt_continuation(b"\x43\xa0\x04tag1", b"\x52\x01\xa0\x04tag1")
+        assert cond is not None, "mismatched continuation delivery-id accepted"
+        assert cond.name == "amqp:invalid-field", cond
+        assert cond.description == "invalid delivery-id for a continuation transfer", cond
+
+    def test_multiframe_continuation_format_mismatch(self):
+        # message-format follows the delivery-tag, 0 encoded as uint0 (0x43).
+        cond = self._corrupt_continuation(b"\xa0\x04tag1\x43", b"\xa0\x04tag1\x52\x01")
+        assert cond is not None, "mismatched continuation message-format accepted"
+        assert cond.name == "amqp:invalid-field", cond
+        assert cond.description == "invalid message-format for a continuation transfer", cond
+
     def test_disposition(self):
         self.rcv.flow(1)
 

@@ -1252,6 +1252,7 @@ static void pn_link_finalize(void *object)
     pn_free(link->unsettled_head);
   }
 
+  pn_bytes_free(link->more_tag);
   pn_free(link->context);
   pni_terminus_free(&link->source);
   pni_terminus_free(&link->target);
@@ -1304,6 +1305,8 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, pn_string_t *name)
   link->credit = 0;
   link->queued = 0;
   link->more_id = 0;
+  link->more_tag = pn_bytes_null;
+  link->more_format = 0;
   link->drain = false;
   link->drain_flag_mode = true;
   link->drained = 0;

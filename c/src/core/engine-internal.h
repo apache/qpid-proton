@@ -327,6 +327,8 @@ struct pn_link_t {
   pn_sequence_t credit;
   pn_sequence_t queued;
   pn_sequence_t more_id;
+  pn_delivery_tag_t more_tag; // owned copy, valid while more_pending
+  uint32_t more_format;
   int drained; // number of drained credits
   uint8_t snd_settle_mode;
   uint8_t rcv_settle_mode;

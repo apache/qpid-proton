@@ -752,4 +752,21 @@ static inline bool consume_binaryornull(pni_consumer_t *consumer, pn_bytes_t *bi
   }
 }
 
+static inline bool consume_binarynonull(pni_consumer_t *consumer, pn_bytes_t *binary) {
+  uint8_t type;
+  *binary  = (pn_bytes_t){.size=0, .start=0};
+  if (!pni_consumer_readf8(consumer, &type)) return false;
+  switch (type) {
+    case PNE_VBIN32:{
+      return pni_consumer_readv32(consumer, binary);
+    }
+    case PNE_VBIN8:{
+      return pni_consumer_readv8(consumer, binary);
+    }
+    default:
+      pni_consumer_skip_value(consumer, type);
+      return false;
+  }
+}
+
 #endif // PROTON_CONSUMERS_H
