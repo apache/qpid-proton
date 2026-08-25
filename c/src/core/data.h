@@ -35,6 +35,18 @@ typedef uint16_t pni_nid_t;
 #define PN_DEFER 27            // Internal type: node used only in pn_data_fill/vfill
 
 /*
+ * Bookkeeping the decoder keeps in a compound node while it is being decoded.
+ * It is dead once the node's last child has been decoded, so it can live in
+ * the node's scratch space. remaining is a pni_nid_t because a node can never
+ * have more children than the node array can hold.
+ */
+typedef struct {
+  pni_nid_t remaining;  /* children still to be decoded */
+  uint8_t   typecode;   /* constructor shared by all elements (arrays only) */
+  uint8_t   unused;
+} pni_decoder_state_t;
+
+/*
  * Value payload for a pni_node_t.
  *
  * BINARY/STRING/SYMBOL/DECIMAL128/UUID nodes store their data in the intern
@@ -79,7 +91,8 @@ typedef union {
     pni_nid_t down;            // offset 0: 2 bytes
     pni_nid_t children_count;  // offset 2: 2 bytes
     union {
-      uint32_t as_u32;
+      uint32_t            as_u32;           /* encoder: where the node's header was written */
+      pni_decoder_state_t as_decoder_state; /* decoder: what is left to decode */
     } scratch;                // offset 4: 4 bytes
   }               as_compound;     // 8 bytes
 } pni_node_payload_t;
@@ -145,6 +158,14 @@ struct pn_data_t {
 static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd)
 {
   return nd ? (data->nodes + nd - 1) : NULL;
+}
+
+/* The type of the node we are currently inside, PN_INVALID at the top level.
+ * This can be an internal type, e.g. PN_ARRAY_DESCRIBED. */
+static inline pn_type_t pni_data_parent_type(pn_data_t *data)
+{
+  pni_node_t *node = pn_data_node(data, data->parent);
+  return node ? (pn_type_t) node->type : PN_INVALID;
 }
 
 static inline pni_nid_t pni_node_get_down(pni_node_t *node)
@@ -238,6 +259,10 @@ static inline void pni_node_inc_children(pni_node_t *node)
   }
 }
 
+/* Set the element type of the array we are currently inside (data->parent).
+ * The decoder must create an array node before it has read the constructor
+ * that gives the element type, so it fills the type in afterwards. */
+void pni_data_set_parent_array_type(pn_data_t *data, pn_type_t type);
 int pni_data_traverse(pn_data_t *data,
                       int (*enter)(void *ctx, pn_data_t *data, pni_node_t *node),
                       int (*exit)(void *ctx, pn_data_t *data, pni_node_t *node),

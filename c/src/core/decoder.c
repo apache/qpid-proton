@@ -27,6 +27,21 @@
 
 #include <string.h>
 
+/*
+ * Decoding is iterative rather than recursive.
+ *
+ * Nesting depth is bounded only by the input, so a decoder that recursed once
+ * per level would consume C stack in proportion to it. The state that a
+ * recursive decoder would keep in its stack frames - how many children of the
+ * enclosing container are still to come, and, for an array, the constructor
+ * its elements share - is instead kept in the container's own node, in the
+ * scratch space the encoder also uses (pni_decoder_state()).
+ *
+ * The tree being built is therefore also the decoder's stack: the only bound
+ * on nesting is the node array, which is bounded by PNI_NID_MAX and by any
+ * limit set with pn_data_set_decode_limits().
+ */
+
 void pn_decoder_initialize(pn_decoder_t *decoder)
 {
   decoder->input = NULL;
@@ -86,14 +101,6 @@ static inline size_t pn_decoder_remaining(pn_decoder_t *decoder)
 {
   return decoder->input + decoder->size - decoder->position;
 }
-
-typedef union {
-  uint32_t i;
-  uint32_t a[2];
-  uint64_t l;
-  float f;
-  double d;
-} conv_t;
 
 static inline pn_type_t pn_code2type(uint8_t code)
 {
@@ -169,19 +176,80 @@ static inline pn_type_t pn_code2type(uint8_t code)
   }
 }
 
-static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code);
-static int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t *data);
-static int pni_decoder_single(pn_decoder_t *decoder, pn_data_t *data);
-void pni_data_set_array_type(pn_data_t *data, pn_type_t type);
+// Typecodes that introduce children which have to be decoded in turn.
+// PNE_LIST0 is not one of them: it is an empty list, so it decodes in a single
+// step like a scalar.
+static inline bool pni_decoder_is_container_code(uint8_t code)
+{
+  switch (code)
+  {
+  case PNE_ARRAY8:
+  case PNE_ARRAY32:
+  case PNE_LIST8:
+  case PNE_LIST32:
+  case PNE_MAP8:
+  case PNE_MAP32:
+    return true;
+  default:
+    return false;
+  }
+}
 
-static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
+// Everything else (bar the descriptor prefix) decodes to a single childless node.
+static inline bool pni_decoder_is_scalar_code(uint8_t code)
+{
+  return code != PNE_DESCRIPTOR && !pni_decoder_is_container_code(code);
+}
+
+/*
+ * The decoder's stack.
+ *
+ * "Open" nodes are the container and described nodes we have entered and not
+ * yet left; depth counts them and is a local of pni_decoder_decode_value().
+ * The innermost open node - the one we are putting children into - is
+ * data->parent, and it carries the state saying what is left to decode.
+ *
+ * NB the returned pointer is invalidated by any pn_data_put_*(), which may
+ * reallocate the node array; always re-fetch it after putting a node.
+ */
+static inline pni_decoder_state_t *pni_decoder_state(pn_data_t *data)
+{
+  return &pn_data_node(data, data->parent)->u.as_compound.scratch.as_decoder_state;
+}
+
+// One fewer child for the open node to wait for. Called before putting that
+// child, so a node's count reaches 0 exactly as its last child is added.
+static inline void pni_decoder_dec_remaining_children(pn_data_t *data, unsigned depth)
+{
+  if (depth > 0) pni_decoder_state(data)->remaining--;
+}
+
+// Array elements are encoded without a constructor of their own, so they are
+// decoded differently from every other value.
+static inline bool pni_decoder_in_array(pn_data_t *data, unsigned depth)
+{
+  if (depth == 0) return false;
+  pn_type_t type = pni_data_parent_type(data);
+  return type == PN_ARRAY || type == PN_ARRAY_DESCRIBED;
+}
+
+typedef union {
+  uint32_t i;
+  uint32_t a[2];
+  uint64_t l;
+  float f;
+  double d;
+} conv_t;
+
+// Decode a value that has no children to decode: any scalar, or an empty list.
+// The constructor has already been read; code is it.
+static int pni_decoder_decode_scalar(pn_decoder_t *decoder, pn_data_t *data, uint8_t code)
 {
   int err;
   conv_t conv;
   pn_decimal128_t dec128;
   pn_uuid_t uuid;
   size_t size;
-  size_t count;
 
   switch (code)
   {
@@ -336,104 +404,6 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
   case PNE_LIST0:
     err = pn_data_put_list(data);
     break;
-  case PNE_ARRAY8:
-  case PNE_ARRAY32:
-  case PNE_LIST8:
-  case PNE_LIST32:
-  case PNE_MAP8:
-  case PNE_MAP32: {
-    size_t min_expected_size = 0;
-    switch (code)
-    {
-    case PNE_ARRAY8:
-      min_expected_size += 1; // Array has a constructor of at least 1 byte
-      PN_FALLTHROUGH;
-    case PNE_LIST8:
-    case PNE_MAP8:
-      min_expected_size += 1; // All these types have a count
-      if (pn_decoder_remaining(decoder) < min_expected_size+1) return PN_UNDERFLOW;
-      size = pn_decoder_readf8(decoder);
-      // size must be at least big enough for count or count+constructor
-      if (size < min_expected_size) {
-        return pn_error_format(pn_data_error(data), PN_ARG_ERR,
-                               "%s size %zu too small to hold its own header",
-                               pn_type_name(pn_code2type(code)), size);
-      }
-      if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
-      count = pn_decoder_readf8(decoder);
-      break;
-    case PNE_ARRAY32:
-      min_expected_size += 1; // Array has a constructor of at least 1 byte
-      PN_FALLTHROUGH;
-    case PNE_LIST32:
-    case PNE_MAP32:
-      min_expected_size += 4; // All these types have a count
-      if (pn_decoder_remaining(decoder) < min_expected_size+4) return PN_UNDERFLOW;
-      size = pn_decoder_readf32(decoder);
-      // size must be at least big enough for count or count+constructor
-      if (size < min_expected_size) {
-        return pn_error_format(pn_data_error(data), PN_ARG_ERR,
-                               "%s size %zu too small to hold its own header",
-                               pn_type_name(pn_code2type(code)), size);
-      }
-      if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
-      count = pn_decoder_readf32(decoder);
-      break;
-    default:
-      return pn_error_format(pn_data_error(data), PN_ARG_ERR, "internal error");
-    }
-
-    switch (code)
-    {
-    case PNE_ARRAY8:
-    case PNE_ARRAY32:
-      {
-        uint8_t next = *decoder->position;
-        bool described = (next == PNE_DESCRIPTOR);
-        err = pn_data_put_array(data, described, (pn_type_t) 0);
-        if (err) return err;
-
-        pn_data_enter(data);
-        uint8_t acode;
-        int e = pni_decoder_decode_type(decoder, data, &acode);
-        if (e) return e;
-        pn_type_t type = pn_code2type(acode);
-        if ((int)type < 0) {
-          return pn_error_format(pn_data_error(data), (int) type, "unrecognized array element typecode: %u", acode);
-        }
-        for (size_t i = 0; i < count; i++)
-        {
-          e = pni_decoder_decode_value(decoder, data, acode);
-          if (e) return e;
-        }
-        pn_data_exit(data);
-
-        pni_data_set_array_type(data, type);
-      }
-      return 0;
-    case PNE_LIST8:
-    case PNE_LIST32:
-      err = pn_data_put_list(data);
-      if (err) return err;
-      break;
-    case PNE_MAP8:
-    case PNE_MAP32:
-      err = pn_data_put_map(data);
-      if (err) return err;
-      break;
-    default:
-      return pn_error_format(pn_data_error(data), PN_ARG_ERR, "internal error");
-    }
-    pn_data_enter(data);
-    for (size_t i = 0; i < count; i++)
-    {
-      int e = pni_decoder_single(decoder, data);
-      if (e) return e;
-    }
-    pn_data_exit(data);
-
-    return 0;
-  }
   default:
     return pn_error_format(pn_data_error(data), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
@@ -441,87 +411,190 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
   return err;
 }
 
-pn_type_t pni_data_parent_type(pn_data_t *data);
-
-static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8_t *code)
+// Decode the value of a descriptor. Descriptors are restricted to scalars: a
+// compound descriptor buys nothing and is a nesting path we would rather not
+// have to bound.
+static int pni_decoder_decode_descriptor(pn_decoder_t *decoder, pn_data_t *data)
 {
-  int err;
+  if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
 
-  if (!pn_decoder_remaining(decoder)) {
-    return PN_UNDERFLOW;
-  }
+  uint8_t code = *decoder->position++;
 
-  uint8_t next = *decoder->position++;
-
-  if (next != PNE_DESCRIPTOR) {
-    *code = next;
-    return 0;
-  }
-
-  pn_type_t parent_type = pni_data_parent_type(data);
-  if (parent_type != PN_ARRAY && parent_type != PN_ARRAY_DESCRIBED) {
-    err = pn_data_put_described(data);
-    if (err) return err;
-
-    // pni_decoder_single has the corresponding exit
-    pn_data_enter(data);
-  }
-
-  err = pni_decoder_single_described(decoder, data);
-  if (err) return err;
-
-  err = pni_decoder_decode_type(decoder, data, code);
-  if (err) return err;
-
-  return 0;
-}
-
-size_t pn_data_siblings(pn_data_t *data);
-
-// We disallow using any compound type as a described descriptor to avoid recursion
-// in decoding. Although these seem syntactically valid they don't seem to be of any
-// conceivable use!
-static inline bool pni_allowed_descriptor_code(uint8_t code)
-{
-  return
-    code != PNE_DESCRIPTOR &&
-    code != PNE_ARRAY8 && code != PNE_ARRAY32 &&
-    code != PNE_LIST8 && code != PNE_LIST32 &&
-    code != PNE_MAP8 && code != PNE_MAP32;
-}
-
-int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t *data)
-{
-  if (!pn_decoder_remaining(decoder)) {
-    return PN_UNDERFLOW;
-  }
-
-  uint8_t code = *decoder->position++;;
-
-  if (!pni_allowed_descriptor_code(code)) {
+  if (!pni_decoder_is_scalar_code(code)) {
     return pn_error_format(pn_data_error(data), PN_ARG_ERR, "invalid descriptor value typecode: %u", code);
   }
 
-  int err = pni_decoder_decode_value(decoder, data, code);
-  if (err) return err;
+  return pni_decoder_decode_scalar(decoder, data, code);
+}
 
-  if (pni_data_parent_type(data) == PN_DESCRIBED && pn_data_siblings(data) > 1) {
-    pn_data_exit(data);
+// How many descriptors may prefix a single value: @d1:@d2:value is accepted,
+// another level of chaining is not.
+#define PNI_DECODER_MAX_DESCRIPTORS 2
+
+/*
+ * Read the constructor of the next value: the descriptors prefixing it, if
+ * any, and then its format code, which is returned in *code.
+ *
+ * Each descriptor puts a PN_DESCRIBED node and enters it. Such a node holds
+ * exactly two children: the descriptor value, decoded here, and the value it
+ * describes. The node is left open for that value, which the caller decodes
+ * and which closes the node.
+ */
+static int pni_decoder_decode_constructor(pn_decoder_t *decoder, pn_data_t *data,
+                                          unsigned *depth, uint8_t *code)
+{
+  unsigned descriptors = 0;
+
+  while (true) {
+    if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
+
+    uint8_t next = *decoder->position++;
+    if (next != PNE_DESCRIPTOR) {
+      *code = next;
+      return 0;
+    }
+
+    if (++descriptors > PNI_DECODER_MAX_DESCRIPTORS) {
+      return pn_error_format(pn_data_error(data), PN_ARG_ERR, "nested described type depth exceeded");
+    }
+
+    pni_decoder_dec_remaining_children(data, *depth);
+    int err = pn_data_put_described(data);
+    if (err) return err;
+    pn_data_enter(data);
+    (*depth)++;
+
+    // Of the node's two children the descriptor is decoded right here, leaving
+    // just the value it describes for the caller.
+    pni_decoder_state(data)->remaining = 1;
+    err = pni_decoder_decode_descriptor(decoder, data);
+    if (err) return err;
   }
+}
+
+/*
+ * Put an array node, enter it and read the constructor its elements share.
+ *
+ * An array may be prefixed by a descriptor, which describes the array as a
+ * whole rather than any one element. It is held as the array node's first
+ * child, so it is added before the element count is recorded and does not
+ * count towards it.
+ */
+static int pni_decoder_open_array(pn_decoder_t *decoder, pn_data_t *data, unsigned *depth, pni_nid_t count)
+{
+  // The header check in pni_decoder_open_container leaves at least the one
+  // constructor byte an array must have, so this peek is in bounds.
+  bool described = (*decoder->position == PNE_DESCRIPTOR);
+
+  int err = pn_data_put_array(data, described, (pn_type_t) 0);
+  if (err) return err;
+  pn_data_enter(data);
+  (*depth)++;
+
+  if (described) {
+    decoder->position++;
+    err = pni_decoder_decode_descriptor(decoder, data);
+    if (err) return err;
+  }
+
+  if (!pn_decoder_remaining(decoder)) return PN_UNDERFLOW;
+  uint8_t element_code = *decoder->position++;
+
+  if (element_code == PNE_DESCRIPTOR) {
+    return pn_error_format(pn_data_error(data), PN_ARG_ERR,
+                           "chained descriptor not supported for a described array");
+  }
+
+  pn_type_t element_type = pn_code2type(element_code);
+  if ((int) element_type < 0) {
+    return pn_error_format(pn_data_error(data), (int) element_type,
+                           "unrecognized array element typecode: %u", element_code);
+  }
+  // The array node had to be created before its element type could be known.
+  pni_data_set_parent_array_type(data, element_type);
+
+  pni_decoder_state_t *state = pni_decoder_state(data);
+  state->remaining = count;
+  state->typecode = element_code;
   return 0;
 }
 
-int pni_decoder_single(pn_decoder_t *decoder, pn_data_t *data)
+/*
+ * Read a container header - the byte size and the child count - then put the
+ * container node and enter it. Its children are decoded by the main loop; the
+ * state left in the node says how many of them are still to come.
+ */
+static int pni_decoder_open_container(pn_decoder_t *decoder, pn_data_t *data, unsigned *depth, uint8_t code)
 {
-  uint8_t code;
-  int err = pni_decoder_decode_type(decoder, data, &code);
-  if (err) return err;
-  err = pni_decoder_decode_value(decoder, data, code);
-  if (err) return err;
-  if (pni_data_parent_type(data) == PN_DESCRIBED && pn_data_siblings(data) > 1) {
-    pn_data_exit(data);
+  const pn_type_t type = pn_code2type(code);  // PN_LIST, PN_MAP or PN_ARRAY
+  size_t width;                               // bytes in each of the size and count fields
+
+  switch (code)
+  {
+  case PNE_LIST8:  case PNE_MAP8:  case PNE_ARRAY8:  width = 1; break;
+  case PNE_LIST32: case PNE_MAP32: case PNE_ARRAY32: width = 4; break;
+  default:
+    return pn_error_format(pn_data_error(data), PN_ARG_ERR, "internal error");
   }
+
+  // What the size field has to cover: the count, and for an array at least one
+  // byte of the constructor its elements share.
+  const size_t min_size = width + (type == PN_ARRAY ? 1 : 0);
+
+  if (pn_decoder_remaining(decoder) < width + min_size) return PN_UNDERFLOW;
+  size_t size = (width == 1) ? pn_decoder_readf8(decoder) : pn_decoder_readf32(decoder);
+  if (size < min_size) {
+    return pn_error_format(pn_data_error(data), PN_ARG_ERR,
+                           "%s size %zu too small to hold its own header",
+                           pn_type_name(type), size);
+  }
+  if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
+  size_t count = (width == 1) ? pn_decoder_readf8(decoder) : pn_decoder_readf32(decoder);
+
+  if (type == PN_ARRAY) return pni_decoder_open_array(decoder, data, depth, (pni_nid_t) count);
+
+  int err = (type == PN_LIST) ? pn_data_put_list(data) : pn_data_put_map(data);
+  if (err) return err;
+  pn_data_enter(data);
+  (*depth)++;
+  pni_decoder_state(data)->remaining = (pni_nid_t) count;
   return 0;
+}
+
+// Decode one complete value - with all of its descendants - into data.
+static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data)
+{
+  unsigned depth = 0;  // open nodes: how deep into the value we currently are
+
+  while (true)
+  {
+    uint8_t code = 0;
+    int err;
+
+    if (pni_decoder_in_array(data, depth)) {
+      code = pni_decoder_state(data)->typecode;  // every element shares it
+    } else {
+      err = pni_decoder_decode_constructor(decoder, data, &depth, &code);
+      if (err) return err;
+    }
+
+    // Whatever we decode next is one of the children the open node is waiting for.
+    pni_decoder_dec_remaining_children(data, depth);
+
+    err = pni_decoder_is_container_code(code)
+      ? pni_decoder_open_container(decoder, data, &depth, code)
+      : pni_decoder_decode_scalar(decoder, data, code);
+    if (err) return err;
+
+    // Leave every node that now has all of its children - a container opened
+    // empty is complete as soon as it is opened. Back at depth 0 the one value
+    // we were asked for is complete.
+    while (depth > 0 && pni_decoder_state(data)->remaining == 0) {
+      pn_data_exit(data);
+      depth--;
+    }
+    if (depth == 0) return 0;
+  }
 }
 
 ssize_t pn_decoder_decode(pn_decoder_t *decoder, const char *src, size_t size, pn_data_t *dst)
@@ -530,7 +603,7 @@ ssize_t pn_decoder_decode(pn_decoder_t *decoder, const char *src, size_t size, p
   decoder->size = size;
   decoder->position = src;
 
-  int err = pni_decoder_single(decoder, dst);
+  int err = pni_decoder_decode_value(decoder, dst);
 
   if (err == PN_UNDERFLOW)
       return pn_error_format(pn_data_error(dst), PN_UNDERFLOW, "not enough data to decode");

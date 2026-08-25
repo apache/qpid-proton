@@ -1457,16 +1457,6 @@ pn_type_t pn_data_type(pn_data_t *data)
   }
 }
 
-pn_type_t pni_data_parent_type(pn_data_t *data)
-{
-  pni_node_t *node = pn_data_node(data, data->parent);
-  if (node) {
-    return node->type;
-  } else {
-    return PN_INVALID;
-  }
-}
-
 size_t pn_data_siblings(pn_data_t *data)
 {
   pni_node_t *node = pn_data_node(data, data->parent);
@@ -1674,9 +1664,9 @@ int pn_data_put_array(pn_data_t *data, bool described, pn_type_t type)
   return 0;
 }
 
-void pni_data_set_array_type(pn_data_t *data, pn_type_t type)
+void pni_data_set_parent_array_type(pn_data_t *data, pn_type_t type)
 {
-  pni_node_t *array = pni_data_current(data);
+  pni_node_t *array = pn_data_node(data, data->parent);
   if (array) {
     array->array_type = (uint8_t)type;
   }
