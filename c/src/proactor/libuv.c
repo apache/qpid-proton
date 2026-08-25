@@ -172,6 +172,7 @@ typedef struct pconnection_t {
   uv_connect_t connect;         /* Outgoing connection only */
   int connected;      /* 0: not connected, <0: connecting after error, 1 = connected ok */
   bool connect_started;         /* Outgoing connect sequence has been started */
+  bool disconnecting; /* Close requested by pn_proactor_disconnect() */
 
   lsocket_t *lsocket;           /* Incoming connection only */
 
@@ -250,6 +251,11 @@ struct pn_proactor_t {
   pn_millis_t timeout;
   size_t active;         /* connection/listener count for INACTIVE events */
   pn_condition_t *disconnect_cond; /* disconnect condition */
+
+  /* Leader thread only: snapshot of disconnect_cond taken under lock when the
+     disconnect request is consumed, so the walk and the deferred per-connection
+     close can read it without racing a later pn_proactor_disconnect(). */
+  pn_condition_t *leader_disconnect_cond;
 
   bool has_leader;             /* A thread is working as leader */
   bool disconnect;             /* disconnect requested */
@@ -910,6 +916,15 @@ static void check_wake(pconnection_t *pc) {
 /* Process a pconnection, return true if it has events for a worker thread */
 static bool leader_process_pconnection(pconnection_t *pc) {
   /* Important to do the following steps in order */
+  if (pc->disconnecting) {
+    pc->disconnecting = false;
+    pn_condition_t *cond = pc->work.proactor->leader_disconnect_cond;
+    if (cond) {
+      pn_condition_copy(pn_transport_condition(pc->driver.transport), cond);
+    }
+    pn_connection_driver_close(&pc->driver);
+  }
+
   if (!pc->connected) {
     /* Retries are driven by the libuv connect callbacks. Restarting here would
        re-run uv_tcp_init() on the live uv_tcp_t, re-initializing its watcher
@@ -991,18 +1006,14 @@ static void on_proactor_disconnect(uv_handle_t* h, void* v) {
     switch (*(struct_type*)h->data) {
      case T_CONNECTION: {
        pconnection_t *pc = (pconnection_t*)h->data;
-       pn_condition_t *cond = pc->work.proactor->disconnect_cond;
-       if (cond) {
-         pn_condition_copy(pn_transport_condition(pc->driver.transport), cond);
-       }
-       pn_connection_driver_close(&pc->driver);
+       pc->disconnecting = true;
        work_notify(&pc->work);
        break;
      }
      case T_LSOCKET: {
        pn_listener_t *l = ((lsocket_t*)h->data)->parent;
        if (l) {
-         pn_condition_t *cond = l->work.proactor->disconnect_cond;
+         pn_condition_t *cond = l->work.proactor->leader_disconnect_cond;
          if (cond) {
            pn_condition_copy(pn_listener_condition(l), cond);
          }
@@ -1028,6 +1039,11 @@ static pn_event_batch_t *leader_lead_lh(pn_proactor_t *p, uv_run_mode mode) {
   if (p->disconnect) {
     p->disconnect = false;
     if (p->active) {
+      /* Snapshot while we still hold the lock: from here on only the leader
+         touches leader_disconnect_cond, so the readers below need no lock. */
+      if (p->leader_disconnect_cond && p->disconnect_cond) {
+        pn_condition_copy(p->leader_disconnect_cond, p->disconnect_cond);
+      }
       uv_mutex_unlock(&p->lock);
       uv_walk(&p->loop, on_proactor_disconnect, NULL);
       uv_mutex_lock(&p->lock);
@@ -1276,6 +1292,7 @@ pn_proactor_t *pn_proactor(void) {
   uv_timer_init(&p->loop, &p->timer);
   p->timer.data = p;
   p->disconnect_cond = pn_condition();
+  p->leader_disconnect_cond = pn_condition();
   return p;
 }
 
@@ -1297,6 +1314,7 @@ void pn_proactor_free(pn_proactor_t *p) {
   uv_cond_destroy(&p->cond);
   pn_collector_free(p->collector);
   pn_condition_free(p->disconnect_cond);
+  pn_condition_free(p->leader_disconnect_cond);
   free(p);
 }
 
