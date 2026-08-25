@@ -121,9 +121,12 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
   size_t old_head = pni_buffer_head(buf);
   bool wrapped = pni_buffer_wrapped(buf);
 
-  uint32_t needed = (uint32_t)(buf->size + size);
+  uint64_t needed = (uint64_t) buf->size + size;
   if (needed < 32) needed = 32;
-  uint32_t new_capacity = pni_round_up_pow2(needed);
+  if (needed > 0x80000000ULL) {
+    return PN_OUT_OF_MEMORY;
+  }
+  uint32_t new_capacity = pni_round_up_pow2((uint32_t) needed);
 
   char* new_bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes, new_capacity);
   if (!new_bytes) {

@@ -25,9 +25,11 @@
 
 #include "core/fixed_string.h"
 #include "core/memory.h"
+#include "core/util.h"
 
 #include <stdio.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
@@ -110,9 +112,17 @@ pn_string_t *pn_stringn(const char *bytes, size_t n)
 {
   static const pn_class_t clazz = PN_CLASS(pn_string);
   pn_string_t *string = (pn_string_t *) pn_class_new(&clazz, sizeof(pn_string_t));
-  string->capacity = n ? n * sizeof(char) : 16;
-  string->bytes = (char *) pni_mem_suballocate(&clazz, string, string->capacity);
-  pn_string_setn(string, bytes, n);
+  if (!string) return NULL;
+
+  /* Make the object safe to finalize before anything can fail */
+  string->bytes = NULL;
+  string->capacity = 0;
+  string->size = PNI_NULL_SIZE;
+
+  if (pn_string_setn(string, bytes, n)) {
+    pn_free(string);
+    return NULL;
+  }
   return string;
 }
 
@@ -152,20 +162,22 @@ int pn_string_grow(pn_string_t *string, size_t capacity)
 {
   if (!string) return PN_ARG_ERR;
 
-  bool grow = false;
-  while (string->capacity < (capacity*sizeof(char) + 1)) {
-    string->capacity *= 2;
-    grow = true;
-  }
+  /* Reject the request before doing any arithmetic on it. Capping the string
+   * at INT32_MAX bytes leaves room for the trailing null within uint32_t and
+   * keeps the (signed) size field from overflowing. */
+  if (capacity > INT32_MAX) return PN_OUT_OF_MEMORY;
 
-  if (grow) {
-    char *growed = (char *) pni_mem_subreallocate(pn_class(string), string, string->bytes, string->capacity);
-    if (growed) {
-      string->bytes = growed;
-    } else {
-      return PN_ERR;
-    }
-  }
+  // Never allocate less than 16 bytes, to avoid work for small strings.
+  uint32_t needed = (uint32_t) pn_max(16, capacity + 1);
+  if (needed <= string->capacity) return 0;
+
+  uint32_t new_capacity = pni_round_up_pow2(needed);
+
+  char *growed = (char *) pni_mem_subreallocate(pn_class(string), string, string->bytes, new_capacity);
+  if (!growed) return PN_OUT_OF_MEMORY;
+
+  string->bytes = growed;
+  string->capacity = new_capacity;
 
   return 0;
 }
@@ -216,7 +228,8 @@ int pn_string_format(pn_string_t *string, PN_PRINTF_FORMAT const char *format, .
 
 int pn_string_vformat(pn_string_t *string, const char *format, va_list ap)
 {
-  pn_string_set(string, "");
+  int err = pn_string_set(string, "");
+  if (err) return err;
   return pn_string_vaddf(string, format, ap);
 }
 
@@ -245,7 +258,8 @@ int pn_string_vaddf(pn_string_t *string, const char *format, va_list ap)
     if (err < 0) {
       return err;
     } else if ((size_t) err >= string->capacity - string->size) {
-      pn_string_grow(string, string->size + err);
+      int grow_err = pn_string_grow(string, (size_t) string->size + (size_t) err);
+      if (grow_err) return grow_err;
     } else {
       string->size += err;
       return 0;
