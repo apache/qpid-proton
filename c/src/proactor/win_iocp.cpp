@@ -932,7 +932,8 @@ ssize_t pni_iocp_begin_write(iocpdesc_t *iocpd, const void *buf, size_t len, boo
   }
   if (iocpd->write_closed) {
     assert(pn_error_code(iocpd->error));
-    pn_error_copy(error, iocpd->error);
+    if (error != iocpd->error)
+      pn_error_copy(error, iocpd->error);
     if (iocpd->iocp->iocp_trace)
       iocp_log("write error: %s\n", pn_error_text(error));
     return SOCKET_ERROR;
@@ -1122,10 +1123,12 @@ ssize_t pni_iocp_recv(iocpdesc_t *iocpd, void *buf, size_t size, bool *would_blo
     return SOCKET_ERROR;
   }
   if (iocpd->read_closed) {
-    if (pn_error_code(iocpd->error))
-      pn_error_copy(error, iocpd->error);
-    else
+    if (pn_error_code(iocpd->error)) {
+      if (error != iocpd->error)
+        pn_error_copy(error, iocpd->error);
+    } else {
       set_iocp_error_status(error, PN_ERR, WSAENOTCONN);
+    }
     return SOCKET_ERROR;
   }
 
