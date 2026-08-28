@@ -26,6 +26,7 @@
 
 #include <proton/annotations.h>
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -43,6 +44,9 @@ typedef struct pn_string_const_t {
 } pn_string_const_t;
 
 static inline pn_fixed_string_t pn_fixed_string(char *bytes, uint32_t size) {
+  // A fixed string has nowhere to put even the terminating null unless it has
+  // at least one byte, so a zero sized buffer is never meaningful.
+  assert(size > 0);
   return (pn_fixed_string_t) {.bytes=bytes, .size=size, .position=0};
 }
 
@@ -92,8 +96,12 @@ static inline void pn_fixed_string_quote(pn_fixed_string_t *str, const char *dat
   }
 }
 
+static inline bool pn_fixed_string_is_full(pn_fixed_string_t *str) {
+  return str->position==str->size;
+}
+
 static inline void pn_fixed_string_terminate(pn_fixed_string_t *str) {
-  if (str->position==str->size) str->position--;
+  if (pn_fixed_string_is_full(str)) str->position--;
   str->bytes[str->position] = 0;
 }
 

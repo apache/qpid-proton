@@ -450,6 +450,26 @@ TEST_CASE("data_decode_into_entered_container") {
   CHECK("[[5, null]]" == inspect(data));
 }
 
+TEST_CASE("data_format_no_free_space") {
+  auto_free<pn_data_t, pn_data_free> data(pn_data(0));
+  REQUIRE(pn_data_put_int(data, 5) == 0);
+
+  // No free space at all: there is nowhere to put even the terminating null,
+  // so there is nothing to format and the buffer must be left alone. As with a
+  // buffer that is merely too small, this is not reported as an overflow.
+  char buf[1] = {'x'};
+  size_t size = 0;
+  CHECK(pn_data_format(data, buf, &size) == 0);
+  CHECK(buf[0] == 'x');
+  CHECK(size == 0);
+
+  // One byte is just enough to hold the terminating null of a truncated result.
+  size = sizeof(buf);
+  CHECK(pn_data_format(data, buf, &size) == 0);
+  CHECK(buf[0] == '\0');
+  CHECK(size == 0);
+}
+
 TEST_CASE("data_map") {
   auto_free<pn_data_t, pn_data_free> data(pn_data(1));
 

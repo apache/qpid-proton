@@ -1277,6 +1277,11 @@ int pn_data_print(pn_data_t *data)
 
 int pn_data_format(pn_data_t *data, char *bytes, size_t *size)
 {
+  // With no free space there is nowhere to put even the terminating null, so
+  // there is no formatting to be done. Overflow is not reported here, as it
+  // isn't for a buffer that merely turns out to be too small.
+  if (*size == 0) return 0;
+
   pn_fixed_string_t str = pn_fixed_string(bytes, *size);
   pn_data_inspect(data, &str);
   pn_fixed_string_terminate(&str);

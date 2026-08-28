@@ -41,12 +41,17 @@ static inline pn_bytes_t pn_bytes_advance(pn_bytes_t bytes, size_t size) {
 // This is only used in places where a described value is not wanted/allowed
 // So we interpret type to mean the 'base' type of the described value in this case
 static inline void pni_frame_get_type_value2(pni_consumer_t* consumer, uint8_t* type, pn_bytes_t* value) {
+  // Skip over a (possibly empty) chain of descriptors. Each descriptor is followed by
+  // its own code, which is discarded here since only the base type/value is wanted.
+  uint32_t descriptor_count = 0;
   if (!pni_consumer_readf8(consumer, type)) goto error;
-  if (*type==PNE_DESCRIPTOR) {
-    // Skip over descriptor potentially recursively
-    uint8_t dtype;
-    pn_bytes_t dvalue;
-    pni_frame_get_type_value2(consumer, &dtype, &dvalue);
+  while (*type==PNE_DESCRIPTOR) {
+    descriptor_count++;
+    if (!pni_consumer_readf8(consumer, type)) goto error;
+  }
+  for (uint32_t i = 0; i < descriptor_count; i++) {
+    pn_bytes_t discarded;
+    if (!pni_consumer_read_value_not_described(consumer, *type, &discarded)) goto error;
     if (!pni_consumer_readf8(consumer, type)) goto error;
   }
   if (!pni_consumer_read_value_not_described(consumer, *type, value)) goto error;
@@ -502,6 +507,12 @@ void pn_value_dump_array(uint32_t count, pn_bytes_t value, pn_fixed_string_t *ou
 }
 
 void pn_value_dump_nondescribed_value(uint8_t type, pn_bytes_t value, pn_fixed_string_t *output){
+  // Once the output buffer is full there's nothing left to write, so stop here
+  // rather than walking the rest of the value.
+  if (pn_fixed_string_is_full(output)) {
+    return;
+  }
+
   if (!type_iscompund(type)) {
     // The one exception to 'scalar' is LIST0 which is encoded as a special type
     pn_value_dump_scalar(type, value, output);
@@ -618,6 +629,10 @@ size_t pni_value_dump(pn_bytes_t frame, pn_fixed_string_t *output)
 
 size_t pn_value_dump(pn_bytes_t frame, char *bytes, uint32_t size)
 {
+  // With no output buffer there is nowhere to put even the terminating null,
+  // so nothing is dumped and nothing is consumed.
+  if (size == 0) return 0;
+
   pn_fixed_string_t output = pn_fixed_string(bytes, size);
   size_t fsize = pni_value_dump(frame, &output);
   pn_fixed_string_terminate(&output);
