@@ -27,23 +27,15 @@
 
 #include <string.h>
 
-static inline pn_error_t *pni_decoder_error(pn_decoder_t *decoder)
-{
-  if (!decoder->error) decoder->error = pn_error();
-  return decoder->error;
-}
-
 void pn_decoder_initialize(pn_decoder_t *decoder)
 {
   decoder->input = NULL;
   decoder->size = 0;
   decoder->position = NULL;
-  decoder->error = NULL;
 }
 
 void pn_decoder_finalize(pn_decoder_t *decoder)
 {
-  pn_error_free(decoder->error);
 }
 
 static inline uint8_t pn_decoder_readf8(pn_decoder_t *decoder)
@@ -315,7 +307,7 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
       size = pn_decoder_readf32(decoder);
       break;
     default:
-      return PN_ARG_ERR;
+      return pn_error_format(pn_data_error(data), PN_ARG_ERR, "unrecognized variable-width typecode: %u", code);
     }
 
     if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
@@ -335,7 +327,7 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
         err = pn_data_put_symbol(data, bytes);
         break;
       default:
-        return PN_ARG_ERR;
+        return pn_error_format(pn_data_error(data), PN_ARG_ERR, "unrecognized variable-width typecode: %u", code);
       }
     }
 
@@ -362,7 +354,11 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
       if (pn_decoder_remaining(decoder) < min_expected_size+1) return PN_UNDERFLOW;
       size = pn_decoder_readf8(decoder);
       // size must be at least big enough for count or count+constructor
-      if (size < min_expected_size) return PN_ARG_ERR;
+      if (size < min_expected_size) {
+        return pn_error_format(pn_data_error(data), PN_ARG_ERR,
+                               "%s size %zu too small to hold its own header",
+                               pn_type_name(pn_code2type(code)), size);
+      }
       if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
       count = pn_decoder_readf8(decoder);
       break;
@@ -375,12 +371,16 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
       if (pn_decoder_remaining(decoder) < min_expected_size+4) return PN_UNDERFLOW;
       size = pn_decoder_readf32(decoder);
       // size must be at least big enough for count or count+constructor
-      if (size < min_expected_size) return PN_ARG_ERR;
+      if (size < min_expected_size) {
+        return pn_error_format(pn_data_error(data), PN_ARG_ERR,
+                               "%s size %zu too small to hold its own header",
+                               pn_type_name(pn_code2type(code)), size);
+      }
       if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
       count = pn_decoder_readf32(decoder);
       break;
     default:
-      return PN_ARG_ERR;
+      return pn_error_format(pn_data_error(data), PN_ARG_ERR, "internal error");
     }
 
     switch (code)
@@ -398,7 +398,9 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
         int e = pni_decoder_decode_type(decoder, data, &acode);
         if (e) return e;
         pn_type_t type = pn_code2type(acode);
-        if ((int)type < 0) return (int)type;
+        if ((int)type < 0) {
+          return pn_error_format(pn_data_error(data), (int) type, "unrecognized array element typecode: %u", acode);
+        }
         for (size_t i = 0; i < count; i++)
         {
           e = pni_decoder_decode_value(decoder, data, acode);
@@ -420,7 +422,7 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
       if (err) return err;
       break;
     default:
-      return PN_ARG_ERR;
+      return pn_error_format(pn_data_error(data), PN_ARG_ERR, "internal error");
     }
     pn_data_enter(data);
     for (size_t i = 0; i < count; i++)
@@ -433,7 +435,7 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
     return 0;
   }
   default:
-    return pn_error_format(pni_decoder_error(decoder), PN_ARG_ERR, "unrecognized typecode: %u", code);
+    return pn_error_format(pn_data_error(data), PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
 
   return err;
@@ -497,7 +499,7 @@ int pni_decoder_single_described(pn_decoder_t *decoder, pn_data_t *data)
   uint8_t code = *decoder->position++;;
 
   if (!pni_allowed_descriptor_code(code)) {
-    return PN_ARG_ERR;
+    return pn_error_format(pn_data_error(data), PN_ARG_ERR, "invalid descriptor value typecode: %u", code);
   }
 
   int err = pni_decoder_decode_value(decoder, data, code);
@@ -530,7 +532,7 @@ ssize_t pn_decoder_decode(pn_decoder_t *decoder, const char *src, size_t size, p
 
   int err = pni_decoder_single(decoder, dst);
 
-  if (err == PN_UNDERFLOW) 
+  if (err == PN_UNDERFLOW)
       return pn_error_format(pn_data_error(dst), PN_UNDERFLOW, "not enough data to decode");
   if (err) return err;
 

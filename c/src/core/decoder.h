@@ -26,7 +26,6 @@ typedef struct pn_decoder_t {
   const char *input;
   size_t size;
   const char *position;
-  pn_error_t *error;
 } pn_decoder_t;
 
 void pn_decoder_initialize(pn_decoder_t *decoder);
