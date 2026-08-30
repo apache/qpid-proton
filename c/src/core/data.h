@@ -41,17 +41,12 @@ typedef uint16_t pni_nid_t;
  * buffer (data->buf); as_bytes.offset and as_bytes.size locate the bytes.
  * DECIMAL128 and UUID always have as_bytes.size == 16.
  *
- * PN_ARRAY nodes use as_array: element type, whether the array has a
- * descriptor child (described), and encoder scratch (start, small).
+ * Compound nodes share a single layout for down/children and scratch state:
+ * PN_ARRAY, PN_ARRAY_DESCRIBED, PN_LIST, PN_MAP and PN_DESCRIBED all use
+ * as_compound.
  *
- * PN_LIST nodes use as_list: whether the list is the body of a described
- * value (controls trailing-null elision during encoding), and encoder
- * scratch (start, small).
- *
- * PN_MAP nodes use as_map: encoder scratch (start, small).
- *
- * All other types (NULL, DESCRIBED) carry no payload; only the type tag
- * on pni_node_t is meaningful.
+ * All other types carry no payload; only the type tag on pni_node_t is
+ * meaningful.
  */
 typedef union {
   bool            as_bool;
@@ -79,29 +74,14 @@ typedef union {
     uint8_t       type;           /* deferred type */
   }               as_deferred;
 
-  // Compound types include navigation
+  // Compound types share the same navigation and scratch layout.
   struct {
-    pni_nid_t     down;            // offset 0: 2 bytes
-    pni_nid_t     children_count;  // offset 2: 2 bytes
-    uint32_t      start;           // offset 4: 4 bytes
-  }               as_array;        // 8 bytes
-
-  struct {
-    pni_nid_t     down;            // offset 0: 2 bytes
-    pni_nid_t     children_count;  // offset 2: 2 bytes
-    uint32_t      start;           // offset 4: 4 bytes
-  }               as_list;         // 8 bytes
-
-  struct {
-    pni_nid_t     down;            // offset 0: 2 bytes
-    pni_nid_t     children_count;  // offset 2: 2 bytes
-    uint32_t      start;           // offset 4: 4 bytes
-  }               as_map;          // 8 bytes
-
-  struct {
-    pni_nid_t     down;            // offset 0: 2 bytes
-    pni_nid_t     children_count;  // offset 2: 2 bytes
-  }               as_described;    // 4 bytes (union is 8)
+    pni_nid_t down;            // offset 0: 2 bytes
+    pni_nid_t children_count;  // offset 2: 2 bytes
+    union {
+      uint32_t as_u32;
+    } scratch;                // offset 4: 4 bytes
+  }               as_compound;     // 8 bytes
 } pni_node_payload_t;
 
 /*
@@ -173,13 +153,10 @@ static inline pni_nid_t pni_node_get_down(pni_node_t *node)
   switch (node->type) {
     case PN_ARRAY:
     case PN_ARRAY_DESCRIBED:
-      return node->u.as_array.down;
     case PN_LIST:
-      return node->u.as_list.down;
     case PN_MAP:
-      return node->u.as_map.down;
     case PN_DESCRIBED:
-      return node->u.as_described.down;
+      return node->u.as_compound.down;
     case PN_DEFER:
       return node->u.as_deferred.down;
     default:
@@ -193,16 +170,10 @@ static inline void pni_node_set_down(pni_node_t *node, pni_nid_t down)
   switch (node->type) {
     case PN_ARRAY:
     case PN_ARRAY_DESCRIBED:
-      node->u.as_array.down = down;
-      break;
     case PN_LIST:
-      node->u.as_list.down = down;
-      break;
     case PN_MAP:
-      node->u.as_map.down = down;
-      break;
     case PN_DESCRIBED:
-      node->u.as_described.down = down;
+      node->u.as_compound.down = down;
       break;
     case PN_DEFER:
       node->u.as_deferred.down = down;
@@ -218,13 +189,10 @@ static inline pni_nid_t pni_node_get_children(pni_node_t *node)
   switch (node->type) {
     case PN_ARRAY:
     case PN_ARRAY_DESCRIBED:
-      return node->u.as_array.children_count;
     case PN_LIST:
-      return node->u.as_list.children_count;
     case PN_MAP:
-      return node->u.as_map.children_count;
     case PN_DESCRIBED:
-      return node->u.as_described.children_count;
+      return node->u.as_compound.children_count;
     case PN_DEFER:
       return node->u.as_deferred.children_count;
     default:
@@ -238,16 +206,10 @@ static inline void pni_node_set_children(pni_node_t *node, pni_nid_t count)
   switch (node->type) {
     case PN_ARRAY:
     case PN_ARRAY_DESCRIBED:
-      node->u.as_array.children_count = count;
-      break;
     case PN_LIST:
-      node->u.as_list.children_count = count;
-      break;
     case PN_MAP:
-      node->u.as_map.children_count = count;
-      break;
     case PN_DESCRIBED:
-      node->u.as_described.children_count = count;
+      node->u.as_compound.children_count = count;
       break;
     case PN_DEFER:
       node->u.as_deferred.children_count = count;
@@ -263,16 +225,10 @@ static inline void pni_node_inc_children(pni_node_t *node)
   switch (node->type) {
     case PN_ARRAY:
     case PN_ARRAY_DESCRIBED:
-      node->u.as_array.children_count++;
-      break;
     case PN_LIST:
-      node->u.as_list.children_count++;
-      break;
     case PN_MAP:
-      node->u.as_map.children_count++;
-      break;
     case PN_DESCRIBED:
-      node->u.as_described.children_count++;
+      node->u.as_compound.children_count++;
       break;
     case PN_DEFER:
       node->u.as_deferred.children_count++;

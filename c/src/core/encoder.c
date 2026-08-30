@@ -328,25 +328,25 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
   case PNE_SYM8: { pn_bytes_t b = {node->u.as_bytes.size, buf.start + node->u.as_bytes.offset}; pn_encoder_writev8(encoder, &b); return 0; }
   case PNE_SYM32: { pn_bytes_t b = {node->u.as_bytes.size, buf.start + node->u.as_bytes.offset}; pn_encoder_writev32(encoder, &b); return 0; }
   case PNE_ARRAY32:
-    node->u.as_array.start = (uint32_t) encoder->position;
+    node->u.as_compound.scratch.as_u32 = (uint32_t) encoder->position;
     // we'll backfill the size on exit
     encoder->position += 4;
     bool described = (node->type == PN_ARRAY_DESCRIBED);
-    pn_encoder_writef32(encoder, described ? node->u.as_array.children_count - 1 : node->u.as_array.children_count);
+    pn_encoder_writef32(encoder, described ? node->u.as_compound.children_count - 1 : node->u.as_compound.children_count);
     if (described)
       pn_encoder_writef8(encoder, 0);
     return 0;
   case PNE_LIST32:
-    node->u.as_list.start = (uint32_t) encoder->position;
+    node->u.as_compound.scratch.as_u32 = (uint32_t) encoder->position;
     // we'll backfill the size later
     encoder->position += 4;
-    pn_encoder_writef32(encoder, node->u.as_list.children_count);
+    pn_encoder_writef32(encoder, node->u.as_compound.children_count);
     return 0;
   case PNE_MAP32:
-    node->u.as_map.start = (uint32_t) encoder->position;
+    node->u.as_compound.scratch.as_u32 = (uint32_t) encoder->position;
     // we'll backfill the size later
     encoder->position += 4;
-    pn_encoder_writef32(encoder, node->u.as_map.children_count);
+    pn_encoder_writef32(encoder, node->u.as_compound.children_count);
     return 0;
   default:
     return pn_error_format(pn_data_error(data), PN_ERR, "unrecognized encoding: %u", code);
@@ -362,8 +362,8 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
 
   // Special case 0 length list, but not as element in an array
   pni_node_t *parent = pn_data_node(data, node->parent);
-  if (node->type==PN_LIST && node->u.as_list.children_count-encoder->null_count==0 && !pn_is_in_array(data, parent, node)) {
-    encoder->position = node->u.as_list.start - 1; // position of list opcode
+  if (node->type==PN_LIST && node->u.as_compound.children_count-encoder->null_count==0 && !pn_is_in_array(data, parent, node)) {
+    encoder->position = node->u.as_compound.scratch.as_u32 - 1; // position of list opcode
     pn_encoder_writef8(encoder, PNE_LIST0);
     encoder->null_count = 0;
     return 0;
@@ -372,16 +372,16 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
   switch (node->type) {
   case PN_ARRAY:
   case PN_ARRAY_DESCRIBED:
-    if ((node->type == PN_ARRAY_DESCRIBED && node->u.as_array.children_count == 1) ||
-        (node->type == PN_ARRAY && node->u.as_array.children_count == 0)) {
+    if ((node->type == PN_ARRAY_DESCRIBED && node->u.as_compound.children_count == 1) ||
+        (node->type == PN_ARRAY && node->u.as_compound.children_count == 0)) {
       pn_encoder_writef8(encoder, pn_type2code(encoder, node->array_type));
     }
     PN_FALLTHROUGH;
   case PN_LIST:
   case PN_MAP: {
     pos = encoder->position;
-    /* start is at the same offset in as_array/as_list/as_map — use as_list uniformly */
-    uint32_t start = node->u.as_list.start;
+    /* all compound node payloads share the same navigation and scratch layout */
+    uint32_t start = node->u.as_compound.scratch.as_u32;
 
     /* content_size: bytes written after the 8-byte *32 header (size+count fields) */
     size_t content_size = pos - start - 8;

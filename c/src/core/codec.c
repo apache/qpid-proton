@@ -98,7 +98,7 @@ static const pn_fields_t *pni_node_fields(pn_data_t *data, pni_node_t *node)
   if (!node) return NULL;
   if (node->type != PN_DESCRIBED) return NULL;
 
-  pni_node_t *descriptor = pn_data_node(data, node->u.as_described.down);
+  pni_node_t *descriptor = pn_data_node(data, node->u.as_compound.down);
 
   if (!descriptor || descriptor->type != PN_ULONG) {
     return NULL;
@@ -822,8 +822,8 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
           pni_nid_t down = current->u.as_deferred.down;
           uint16_t count = current->u.as_deferred.children_count;
           current->type = PN_DESCRIBED;
-          current->u.as_described.down = down;
-          current->u.as_described.children_count = count;
+          current->u.as_compound.down = down;
+          current->u.as_compound.children_count = count;
           continue;
         } else if (parent->u.as_deferred.type == PN_NULL && parent->u.as_deferred.children_count == 1) {
           pn_data_exit(data);
@@ -1648,8 +1648,8 @@ int pn_data_put_list(pn_data_t *data)
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->type = PN_LIST;
-  node->u.as_list.down = 0;
-  node->u.as_list.children_count = 0;
+  node->u.as_compound.down = 0;
+  node->u.as_compound.children_count = 0;
   return 0;
 }
 
@@ -1658,8 +1658,8 @@ int pn_data_put_map(pn_data_t *data)
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->type = PN_MAP;
-  node->u.as_map.down = 0;
-  node->u.as_map.children_count = 0;
+  node->u.as_compound.down = 0;
+  node->u.as_compound.children_count = 0;
   return 0;
 }
 
@@ -1669,8 +1669,8 @@ int pn_data_put_array(pn_data_t *data, bool described, pn_type_t type)
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->type = described ? PN_ARRAY_DESCRIBED : PN_ARRAY;
   node->array_type = (uint8_t)type;
-  node->u.as_array.down = 0;
-  node->u.as_array.children_count = 0;
+  node->u.as_compound.down = 0;
+  node->u.as_compound.children_count = 0;
   return 0;
 }
 
@@ -1687,8 +1687,8 @@ int pn_data_put_described(pn_data_t *data)
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_OUT_OF_MEMORY;
   node->type = PN_DESCRIBED;
-  node->u.as_described.down = 0;
-  node->u.as_described.children_count = 0;
+  node->u.as_compound.down = 0;
+  node->u.as_compound.children_count = 0;
   return 0;
 }
 
@@ -1903,7 +1903,7 @@ size_t pn_data_get_list(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->type == PN_LIST) {
-    return node->u.as_list.children_count;
+    return node->u.as_compound.children_count;
   } else {
     return 0;
   }
@@ -1913,7 +1913,7 @@ size_t pn_data_get_map(pn_data_t *data)
 {
   pni_node_t *node = pni_data_current(data);
   if (node && node->type == PN_MAP) {
-    return node->u.as_map.children_count;
+    return node->u.as_compound.children_count;
   } else {
     return 0;
   }
@@ -1925,10 +1925,10 @@ size_t pn_data_get_array(pn_data_t *data)
   if (!node) return 0;
 
   if (node->type == PN_ARRAY_DESCRIBED) {
-    return node->u.as_array.children_count - 1;  // Descriptor doesn't count
+    return node->u.as_compound.children_count - 1;  // Descriptor doesn't count
   }
   if (node->type == PN_ARRAY) {
-    return node->u.as_array.children_count;
+    return node->u.as_compound.children_count;
   }
   return 0;
 }
