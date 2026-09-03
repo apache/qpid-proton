@@ -23,6 +23,7 @@
 #include <proton/codec.h>
 #include "encodings.h"
 #include "decoder.h"
+#include "data.h"
 
 #include <string.h>
 
@@ -455,7 +456,8 @@ static int pni_decoder_decode_type(pn_decoder_t *decoder, pn_data_t *data, uint8
     return 0;
   }
 
-  if (pni_data_parent_type(data) != PN_ARRAY) {
+  pn_type_t parent_type = pni_data_parent_type(data);
+  if (parent_type != PN_ARRAY && parent_type != PN_ARRAY_DESCRIBED) {
     err = pn_data_put_described(data);
     if (err) return err;
 

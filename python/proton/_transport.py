@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import weakref
 from typing import Callable, Optional, Union, TYPE_CHECKING
 
 from cproton import PN_EOS, PN_SASL_AUTH, PN_SASL_NONE, PN_SASL_OK, PN_SASL_PERM, PN_SASL_SYS, PN_SASL_TEMP, \
@@ -571,10 +572,19 @@ class SASL:
         if not transport._sasl:
             sasl = super().__new__(cls)
             sasl._sasl = pn_sasl(transport._impl)
+            sasl._transport = weakref.ref(transport)
             transport._sasl = sasl
             return sasl
         else:
             return transport._sasl
+
+    def _check_alive(self) -> None:
+        """Check that the parent Transport is still alive.
+
+        :raise: :exc:`SASLException` if the Transport has been destroyed.
+        """
+        if self._transport() is None:
+            raise SASLException("Cannot access SASL object - parent Transport has been destroyed")
 
     def _check(self, err):
         if err < 0:
@@ -599,6 +609,7 @@ class SASL:
                 * Otherwise a string containing the user is
                   returned.
         """
+        self._check_alive()
         return pn_sasl_get_user(self._sasl)
 
     @property
@@ -624,6 +635,7 @@ class SASL:
                 * Otherwise a string containing the user is
                   returned.
         """
+        self._check_alive()
         return pn_sasl_get_authorization(self._sasl)
 
     @property
@@ -636,6 +648,7 @@ class SASL:
 
         :rtype: The authentication mechanism selected by the SASL layer.
         """
+        self._check_alive()
         return pn_sasl_get_mech(self._sasl)
 
     @property
@@ -646,6 +659,7 @@ class SASL:
         :rtype: * ``None`` if no negotiation has taken place.
                 * Otherwise the outcome of the negotiation.
         """
+        self._check_alive()
         outcome = pn_sasl_outcome(self._sasl)
         if outcome == PN_SASL_NONE:
             return None
@@ -675,6 +689,7 @@ class SASL:
                       ``"mech1 mech2 ..."``, or a Python list of strings
                       ``["mech1", "mech2", ...]``.
         """
+        self._check_alive()
         if isinstance(mechs, list):
             mechs = " ".join(mechs)
         pn_sasl_allowed_mechs(self._sasl, mechs)
@@ -682,10 +697,12 @@ class SASL:
     @property
     def allow_insecure_mechs(self) -> bool:
         """Allow unencrypted cleartext passwords (PLAIN mech)"""
+        self._check_alive()
         return pn_sasl_get_allow_insecure_mechs(self._sasl)
 
     @allow_insecure_mechs.setter
     def allow_insecure_mechs(self, insecure: bool) -> None:
+        self._check_alive()
         pn_sasl_set_allow_insecure_mechs(self._sasl, insecure)
 
     def done(self, outcome):
@@ -693,6 +710,7 @@ class SASL:
         Set the outcome of SASL negotiation. Used by the server to set the
         result of the negotiation process.
         """
+        self._check_alive()
         pn_sasl_done(self._sasl, outcome)
 
     def config_name(self, name: str):
@@ -707,6 +725,7 @@ class SASL:
 
         :param name: The configuration name.
         """
+        self._check_alive()
         pn_sasl_config_name(self._sasl, name)
 
     def config_path(self, path: str):
@@ -724,6 +743,7 @@ class SASL:
         :param path: The configuration path, may contain colon-separated list
                      if more than one path is specified.
         """
+        self._check_alive()
         pn_sasl_config_path(self._sasl, path)
 
 
@@ -879,6 +899,14 @@ class SSL:
         else:
             return err
 
+    def _check_alive(self) -> None:
+        """Check that the parent Transport is still alive.
+
+        :raise: :exc:`SSLException` if the Transport has been destroyed.
+        """
+        if self._transport() is None:
+            raise SSLException("Cannot access SSL object - parent Transport has been destroyed")
+
     def __new__(
             cls: type['SSL'],
             transport: Transport,
@@ -907,6 +935,7 @@ class SSL:
                 raise SSLUnavailable()
             if domain:
                 pn_ssl_init(obj._ssl, domain._domain, session_id)
+            obj._transport = weakref.ref(transport)
             transport._ssl = obj
         return transport._ssl
 
@@ -922,6 +951,7 @@ class SSL:
 
         :return: The cypher name, or ``None`` if no cipher in use.
         """
+        self._check_alive()
         return pn_ssl_get_cipher_name(self._ssl, 128)
 
     def protocol_name(self) -> Optional[str]:
@@ -936,6 +966,7 @@ class SSL:
         :return: The protocol name if SSL is active, or ``None`` if SSL connection
                  is not ready or active.
         """
+        self._check_alive()
         return pn_ssl_get_protocol_name(self._ssl, 128)
 
     SHA1 = PN_SSL_SHA1
@@ -986,6 +1017,7 @@ class SSL:
         :return: A string which contains the requested sub field value which
                  is valid until the ssl object is destroyed.
         """
+        self._check_alive()
         subfield_value = pn_ssl_get_remote_subject_subfield(self._ssl, subfield_name)
         return subfield_value
 
@@ -995,6 +1027,7 @@ class SSL:
 
         :return: A string containing the full subject.
         """
+        self._check_alive()
         subject = pn_ssl_get_remote_subject(self._ssl)
         return subject
 
@@ -1073,6 +1106,7 @@ class SSL:
                             :const:`SHA256`, :const:`SHA512`,  :const:`MD5`.
         :return: Hex fingerprint in a string, or ``None`` if an error occurred.
         """
+        self._check_alive()
         return pn_ssl_get_cert_fingerprint(self._ssl, fingerprint_length, digest_name)
 
     # Convenience functions for obtaining fingerprint for specific hashing algorithms
@@ -1122,6 +1156,7 @@ class SSL:
         """
         The subject from the peers certificate.
         """
+        self._check_alive()
         return pn_ssl_get_remote_subject(self._ssl)
 
     RESUME_UNKNOWN = PN_SSL_RESUME_UNKNOWN
@@ -1151,6 +1186,7 @@ class SSL:
                  * :const:`RESUME_NEW`
                  * :const:`RESUME_REUSED`
         """
+        self._check_alive()
         return pn_ssl_resume_status(self._ssl)
 
     @property
@@ -1170,12 +1206,14 @@ class SSL:
         .. note:: Verification of the hostname is only done if
             :const:`SSLDomain.VERIFY_PEER_NAME` is set using
             :meth:`SSLDomain.set_peer_authentication`."""
+        self._check_alive()
         err, name = pn_ssl_get_peer_hostname(self._ssl, 1024)
         self._check(err)
         return name
 
     @peer_hostname.setter
     def peer_hostname(self, hostname: Optional[str]) -> None:
+        self._check_alive()
         self._check(pn_ssl_set_peer_hostname(self._ssl, hostname))
 
 

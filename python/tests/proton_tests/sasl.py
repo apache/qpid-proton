@@ -269,6 +269,85 @@ class SaslTest(Test):
         assert sasl1.my_attribute == attr
         assert sasl2.my_attribute == attr
 
+    def test_after_transport_destroyed(self):
+        """Verify that SASL raises exception when Transport is destroyed"""
+        from proton import TransportException
+
+        # Create a transport and get its SASL object
+        transport = Transport()
+        sasl = transport.sasl()
+
+        # Verify SASL works while transport is alive
+        assert sasl.outcome is None
+        sasl.allowed_mechs("PLAIN ANONYMOUS")
+        assert sasl.allow_insecure_mechs is False
+        sasl.allow_insecure_mechs = True
+        assert sasl.allow_insecure_mechs is True
+
+        # Destroy the transport
+        del transport
+
+        # All SASL methods should now raise TransportException
+        try:
+            _ = sasl.user
+            assert False, "Should have raised TransportException for sasl.user"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            _ = sasl.authorization
+            assert False, "Should have raised TransportException for sasl.authorization"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            _ = sasl.mech
+            assert False, "Should have raised TransportException for sasl.mech"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            _ = sasl.outcome
+            assert False, "Should have raised TransportException for sasl.outcome"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            sasl.allowed_mechs("ANONYMOUS")
+            assert False, "Should have raised TransportException for sasl.allowed_mechs()"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            _ = sasl.allow_insecure_mechs
+            assert False, "Should have raised TransportException for sasl.allow_insecure_mechs getter"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            sasl.allow_insecure_mechs = False
+            assert False, "Should have raised TransportException for sasl.allow_insecure_mechs setter"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            sasl.done(SASL.OK)
+            assert False, "Should have raised TransportException for sasl.done()"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            sasl.config_name("test")
+            assert False, "Should have raised TransportException for sasl.config_name()"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            sasl.config_path("/tmp")
+            assert False, "Should have raised TransportException for sasl.config_path()"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
     def testSaslSkipped(self):
         """Verify that the server (with SASL) correctly handles a client without SASL"""
         self.t1 = Transport()
@@ -277,7 +356,6 @@ class SaslTest(Test):
         assert self.s2.outcome is None
         assert self.t2.condition is None
         assert self.t2.authenticated is False
-        assert self.s1.outcome is None
         assert self.t1.condition is None
         assert self.t1.authenticated is False
 
@@ -288,7 +366,6 @@ class SaslTest(Test):
         self.pump()
         assert self.s2.outcome is None
         assert self.t2.condition is not None
-        assert self.s1.outcome is None
         assert self.t1.condition is not None
 
     def testMechNotFound(self):

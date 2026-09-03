@@ -149,7 +149,7 @@ class SslTest(common.Test):
         server.connection.close()
         self._pump(client, server)
 
-    def test_ssl_with_small_buffer(self):
+    def test_with_small_buffer(self):
         self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
                                            self._testpath("server-private-key.pem"),
                                            "server-password")
@@ -968,3 +968,67 @@ class SslTest(common.Test):
             assert False, "Expected error did not occur!"
         except SSLException:
             pass
+
+    def test_after_transport_destroyed(self):
+        """Verify that SSL raises exception when Transport is destroyed"""
+        from proton import TransportException
+
+        # Create a transport and get its SSL object
+        transport = Transport()
+        ssl = SSL(transport, self.client_domain)
+
+        # Verify SSL works while transport is alive
+        assert ssl.cipher_name() is None  # No cipher until handshake
+        assert ssl.protocol_name() is None  # No protocol until handshake
+
+        # Destroy the transport
+        del transport
+
+        # All SSL methods should now raise TransportException
+        try:
+            _ = ssl.cipher_name()
+            assert False, "Should have raised TransportException for ssl.cipher_name()"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            _ = ssl.protocol_name()
+            assert False, "Should have raised TransportException for ssl.protocol_name()"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            _ = ssl.remote_subject
+            assert False, "Should have raised TransportException for ssl.remote_subject"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            _ = ssl.resume_status()
+            assert False, "Should have raised TransportException for ssl.resume_status()"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            _ = ssl.peer_hostname
+            assert False, "Should have raised TransportException for ssl.peer_hostname getter"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            ssl.peer_hostname = "example.com"
+            assert False, "Should have raised TransportException for ssl.peer_hostname setter"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            _ = ssl.get_cert_subject()
+            assert False, "Should have raised TransportException for ssl.get_cert_subject()"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)
+
+        try:
+            _ = ssl.get_cert_fingerprint(41, SSL.SHA1)
+            assert False, "Should have raised TransportException for ssl.get_cert_fingerprint()"
+        except TransportException as e:
+            assert "parent Transport has been destroyed" in str(e)

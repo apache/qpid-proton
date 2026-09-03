@@ -25,9 +25,9 @@
 #
 # Sets the following variables:
 #
-#   Libuv_FOUND            - True if headers and requested libraries were found
-#   Libuv_INCLUDE_DIRS     - Libuv include directories
-#   Libuv_LIBRARIES        - Link these to use libuv.
+#   libuv_FOUND            - True if headers and requested libraries were found
+#   libuv_INCLUDE_DIRS     - Libuv include directories
+#   libuv_LIBRARIES        - Link these to use libuv.
 #
 # This module reads hints about search locations from variables::
 #   LIBUV_ROOT             - Preferred installation prefix
@@ -37,35 +37,35 @@
 find_package (PkgConfig)
 pkg_check_modules (PC_Libuv QUIET libuv)
 
-find_library(Libuv_LIBRARY NAMES uv libuv
+find_library(libuv_LIBRARY NAMES uv libuv
   HINTS ${LIBUV_LIBRARYDIR} ${LIBUV_ROOT}/lib ${CMAKE_INSTALL_PREFIX}/lib
   PATHS ${PC_Libuv_LIBRARY_DIRS})
 
-find_path(Libuv_INCLUDE_DIR NAMES uv.h
+find_path(libuv_INCLUDE_DIR NAMES uv.h
   HINTS ${LIBUV_INCLUDEDIR} ${LIBUV_ROOT}/include ${CMAKE_INSTALL_PREFIX}/include
   PATHS /usr/include ${PC_Libuv_INCLUDE_DIRS})
 
-set(Libuv_VERSION ${PC_Libuv_VERSION})
+set(libuv_VERSION ${PC_Libuv_VERSION})
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Libuv
-  FOUND_VAR Libuv_FOUND
-  REQUIRED_VARS Libuv_LIBRARY Libuv_INCLUDE_DIR
-  VERSION_VAR Libuv_VERSION)
+find_package_handle_standard_args(libuv
+  FOUND_VAR libuv_FOUND
+  REQUIRED_VARS libuv_LIBRARY libuv_INCLUDE_DIR
+  VERSION_VAR libuv_VERSION)
 
-if (Libuv_FOUND)
-  set(Libuv_INCLUDE_DIRS ${Libuv_INCLUDE_DIR})
-  set(Libuv_LIBRARIES ${Libuv_LIBRARY})
+if (libuv_FOUND)
+  set(libuv_INCLUDE_DIRS ${libuv_INCLUDE_DIR})
+  set(libuv_LIBRARIES ${libuv_LIBRARY})
 
-  if (NOT TARGET Libuv::Libuv)
-    add_library(Libuv::Libuv UNKNOWN IMPORTED)
-    set_target_properties(Libuv::Libuv
+  if (NOT TARGET libuv::uv)
+    add_library(libuv::uv UNKNOWN IMPORTED)
+    set_target_properties(libuv::uv
       PROPERTIES
-        IMPORTED_LOCATION "${Libuv_LIBRARY}"
-        INTERFACE_INCLUDE_DIRECTORIES "${Libuv_INCLUDE_DIR}"
+        IMPORTED_LOCATION "${libuv_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${libuv_INCLUDE_DIR}"
     )
   endif ()
 
 endif ()
 
-mark_as_advanced (Libuv_LIBRARY Libuv_INCLUDE_DIR)
+mark_as_advanced (libuv_LIBRARY libuv_INCLUDE_DIR)
