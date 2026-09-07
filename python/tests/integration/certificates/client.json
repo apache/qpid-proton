@@ -1,0 +1,17 @@
+{
+  "CN": "client",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "GB",
+      "L": "London",
+      "O": "Custom Widgets",
+      "OU": "Custom Widgets Hosts",
+      "ST": "England"
+    }
+  ],
+  "hosts": []
+}
