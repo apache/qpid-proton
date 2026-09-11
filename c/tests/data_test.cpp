@@ -392,6 +392,42 @@ TEST_CASE("data_decode_rejects_deeply_nested_values_on_node_limit") {
   CHECK(pn_data_errno(data) == PN_OUT_OF_MEMORY);
 }
 
+TEST_CASE("data_decode_rejects_element_count_beyond_node_limit") {
+  auto_free<pn_data_t, pn_data_free> data(pn_data(0));
+
+  // array32 of null: null elements are zero width, so the declared count is not
+  // bounded by the declared size and can name more elements than the node array
+  // could ever hold. That must be rejected.
+  // 0xe0 size=0x00000005 count=0x00010000 0x40(null)
+  const uint8_t encoded[] = {
+    0xf0, 0x00, 0x00, 0x00, 0x05, 0x00, 0x01, 0x00, 0x00, 0x40
+  };
+
+  pn_data_set_decode_limits(data, 0, 0); // unlimited: only the hard node-id ceiling applies
+  ssize_t dec = pn_data_decode(data, (const char *) encoded, sizeof(encoded));
+  CHECK(dec == PN_OUT_OF_MEMORY);
+  CHECK(pn_data_errno(data) == PN_OUT_OF_MEMORY);
+}
+
+TEST_CASE("data_decode_rejects_element_count_beyond_configured_node_limit") {
+  auto_free<pn_data_t, pn_data_free> data(pn_data(0));
+
+  // Same shape, but with a count (100) that is under the hard node-id ceiling
+  // and only over the limit this pn_data_t was configured with. The count is
+  // measured against that limit, so the array is rejected from its header
+  // rather than after the budget has been spent decoding its elements.
+  // 0xf0 size=0x00000005 count=0x00000064 0x40(null)
+  const uint8_t encoded[] = {
+    0xf0, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x64, 0x40
+  };
+
+  pn_data_set_decode_limits(data, 10, 0);
+  ssize_t dec = pn_data_decode(data, (const char *) encoded, sizeof(encoded));
+  CHECK(dec == PN_OUT_OF_MEMORY);
+  CHECK(pn_data_errno(data) == PN_OUT_OF_MEMORY);
+  CHECK(pn_data_size(data) == 0);  // rejected from the header, before any node was put
+}
+
 TEST_CASE("data_decode_into_entered_container") {
   auto_free<pn_data_t, pn_data_free> data(pn_data(0));
 

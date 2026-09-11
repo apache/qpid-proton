@@ -155,6 +155,13 @@ struct pn_data_t {
 #define PNI_DATA_DEFAULT_MAX_NODES 1024
 #define PNI_DATA_BODY_MAX_NODES    0
 
+/* The most nodes this pn_data_t is allowed to hold: the limit set with
+ * pn_data_set_decode_limits(), or the hard pni_nid_t ceiling if none is set. */
+static inline pni_nid_t pni_data_max_nid(pn_data_t *data)
+{
+  return data->max_nid ? data->max_nid : PNI_NID_MAX;
+}
+
 static inline pni_node_t * pn_data_node(pn_data_t *data, pni_nid_t nd)
 {
   return nd ? (data->nodes + nd - 1) : NULL;

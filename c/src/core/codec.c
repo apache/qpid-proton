@@ -486,8 +486,7 @@ void pn_data_clear(pn_data_t *data)
 
 static int pni_data_grow(pn_data_t *data)
 {
-  /* Resolve the effective ceiling: the user-set limit, or the hard uint16 max. */
-  pni_nid_t effective_max = data->max_nid ? data->max_nid : PNI_NID_MAX;
+  pni_nid_t effective_max = pni_data_max_nid(data);
 
   /* The limit is on logical nodes in use (size), not pre-allocated capacity.
    * pni_data_new() is the only caller and it only calls us when size >= capacity,
@@ -1292,8 +1291,8 @@ static size_t pni_data_id(pn_data_t *data, pni_node_t *node)
 
 static pni_node_t *pni_data_new(pn_data_t *data)
 {
-  /* Enforce max_nid limit on logical node count, regardless of pre-allocated capacity. */
-  if (data->max_nid > 0 && data->size >= data->max_nid) {
+  /* Enforce the node limit on logical node count, regardless of pre-allocated capacity. */
+  if (data->size >= pni_data_max_nid(data)) {
     pn_error_set(pni_data_error(data), PN_OUT_OF_MEMORY, "pn_data node limit exceeded");
     return NULL;
   }

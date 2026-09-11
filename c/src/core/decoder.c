@@ -551,6 +551,16 @@ static int pni_decoder_open_container(pn_decoder_t *decoder, pn_data_t *data, un
   if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
   size_t count = (width == 1) ? pn_decoder_readf8(decoder) : pn_decoder_readf32(decoder);
 
+  // Array elements of a zero width type (null, true, ...) take no input bytes
+  // at all, so a count is not bounded by the size the way a list's is. Reject
+  // any count that could never fit in this pn_data_t - whose node budget may be
+  // well below the hard ceiling - rather than truncating it.
+  if (count > pni_data_max_nid(data)) {
+    return pn_error_format(pn_data_error(data), PN_OUT_OF_MEMORY,
+                           "%s count %zu exceeds the pn_data node limit",
+                           pn_type_name(type), count);
+  }
+
   if (type == PN_ARRAY) return pni_decoder_open_array(decoder, data, depth, (pni_nid_t) count);
 
   int err = (type == PN_LIST) ? pn_data_put_list(data) : pn_data_put_map(data);
