@@ -679,6 +679,56 @@ TEST_CASE("string_addf") {
   pn_free(str);
 }
 
+TEST_CASE("string_setn_overflow") {
+  pn_string_t *str = pn_string("hello");
+  CHECK(str);
+
+  // A size that can't be represented is refused outright, without touching
+  // the string and without reading from bytes
+  for (size_t n : {(size_t)INT32_MAX + 1, SIZE_MAX - 1, SIZE_MAX}) {
+    CHECK(pn_string_setn(str, "world", n) != 0);
+    CHECK(pn_string_size(str) == 5);
+    CHECK_THAT("hello", Equals(pn_string_get(str)));
+  }
+
+  // The refused growth must not have recorded a capacity that was never
+  // allocated - if it had, appending here would run off the heap block
+  CHECK(pn_string_addf(str, "%s", " world") == 0);
+  CHECK_THAT("hello world", Equals(pn_string_get(str)));
+  CHECK(pn_string_size(str) == 11);
+
+  CHECK(pn_string_set(str, "goodbye") == 0);
+  CHECK_THAT("goodbye", Equals(pn_string_get(str)));
+  pn_free(str);
+}
+
+TEST_CASE("string_addf_repeated") {
+  // Exercises the grow-and-retry loop in pn_string_vaddf
+  pn_string_t *str = pn_string("");
+  CHECK(str);
+  for (int i = 0; i < 1000; i++) {
+    CHECK(pn_string_addf(str, "%s", "0123456789") == 0);
+  }
+  CHECK(pn_string_size(str) == 10000);
+  CHECK(strlen(pn_string_get(str)) == 10000);
+  pn_free(str);
+}
+
+TEST_CASE("string_setn_sizes") {
+  // Round trip a range of sizes across the power-of-two growth boundaries
+  pn_string_t *str = pn_string(NULL);
+  CHECK(str);
+  std::string value;
+  for (size_t n = 0; n < 1100; n++) {
+    value.push_back('a' + (char)(n % 26));
+    CHECK(pn_string_setn(str, value.data(), value.size()) == 0);
+    CHECK(pn_string_size(str) == value.size());
+    CHECK(memcmp(pn_string_get(str), value.data(), value.size()) == 0);
+    CHECK(pn_string_get(str)[value.size()] == '\0');
+  }
+  pn_free(str);
+}
+
 TEST_CASE("map_iteration") {
   int n = 5;
   pn_list_t *pairs = pn_list(PN_OBJECT, 2 * n);

@@ -117,21 +117,25 @@ int pn_buffer_ensure(pn_buffer_t *buf, size_t size)
 {
   if (pn_buffer_available(buf) >= size) return 0;
 
-  size_t old_capacity = buf->capacity;
-  size_t old_head = pni_buffer_head(buf);
-  bool wrapped = pni_buffer_wrapped(buf);
-
+  // Reject the request before adding it to the size, so the sum can't wrap
+  if (size > 0x80000000ULL) {
+    return PN_OUT_OF_MEMORY;
+  }
   uint64_t needed = (uint64_t) buf->size + size;
   if (needed < 32) needed = 32;
   if (needed > 0x80000000ULL) {
     return PN_OUT_OF_MEMORY;
   }
   uint32_t new_capacity = pni_round_up_pow2((uint32_t) needed);
-
   char* new_bytes = (char *) pni_mem_subreallocate(PN_CLASSCLASS(pn_buffer), buf, buf->bytes, new_capacity);
   if (!new_bytes) {
     return PN_OUT_OF_MEMORY;
   }
+
+  size_t old_capacity = buf->capacity;
+  size_t old_head = pni_buffer_head(buf);
+  bool wrapped = pni_buffer_wrapped(buf);
+
   buf->bytes = new_bytes;
   buf->capacity = new_capacity;
 
