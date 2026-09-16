@@ -71,20 +71,6 @@ static inline int pni_dispatch_sasl_action(pn_transport_t* transport, uint64_t l
   return action(transport, SASL_FRAME_TYPE, channel, frame_payload);
 }
 
-// We could use a table based approach here if we needed to dynamically
-// add new performatives
-static inline int pni_dispatch_action(pn_transport_t* transport, uint64_t lcode, uint8_t frame_type, uint16_t channel, pn_bytes_t frame_payload)
-{
-  switch (frame_type) {
-  case AMQP_FRAME_TYPE:
-    return pni_dispatch_amqp_action(transport, lcode, channel, frame_payload);
-  case SASL_FRAME_TYPE:
-    return pni_dispatch_sasl_action(transport, lcode, channel, frame_payload);
-  default:
-    return pni_bad_frame_type(transport, frame_type, channel, frame_payload);
-  };
-}
-
 static inline int pni_performative_code(pn_bytes_t frame_payload, uint64_t *lcode)
 {
   pni_consumer_t consumer = make_consumer_from_bytes(frame_payload);
