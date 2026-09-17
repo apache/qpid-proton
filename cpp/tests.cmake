@@ -92,11 +92,20 @@ endif()
 # See c/tests/ for more interesting examples.
 # Eventually all the C++ tests will migrate to Catch2.
 
+# Suppress Clang warning about __COUNTER__ used by Catch2 which is now in C++26
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-Wno-c2y-extensions" HAS_WNO_C2Y_EXTENSIONS)
+if(HAS_WNO_C2Y_EXTENSIONS)
+  set(SUPPRESS_COUNTER_WARNING "-Wno-c2y-extensions")
+endif()
+
 include_directories(${PROJECT_SOURCE_DIR}/tests/include)
 add_executable(cpp-test src/cpp-test.cpp src/url_test.cpp)
+target_compile_options(cpp-test PRIVATE ${SUPPRESS_COUNTER_WARNING})
 target_link_libraries(cpp-test qpid-proton-cpp ${PLATFORM_LIBS})
 # tests that require access to pn_ functions in qpid-proton-core
 add_executable(cpp-core-test src/cpp-test.cpp src/object_test.cpp)
+target_compile_options(cpp-core-test PRIVATE ${SUPPRESS_COUNTER_WARNING})
 target_link_libraries(cpp-core-test qpid-proton-cpp qpid-proton-core ${PLATFORM_LIBS})
 
 macro(add_catch_test tag)

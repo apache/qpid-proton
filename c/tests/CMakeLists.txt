@@ -37,12 +37,20 @@ endif()
 
 if (CMAKE_CXX_COMPILER)
 
+  # Suppress Clang warning about __COUNTER__ used by Catch2 which is now in C++26
+  include(CheckCXXCompilerFlag)
+  check_cxx_compiler_flag("-Wno-c2y-extensions" HAS_WNO_C2Y_EXTENSIONS)
+  if(HAS_WNO_C2Y_EXTENSIONS)
+    set(SUPPRESS_COUNTER_WARNING "-Wno-c2y-extensions")
+  endif()
+
   add_library(test_main OBJECT test_main.cpp)
   set_target_properties(test_main PROPERTIES
     COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
 
   macro(add_c_test exe)
     add_executable(${exe} $<TARGET_OBJECTS:test_main> pn_test.cpp ${ARGN})
+    target_compile_options(${exe} PRIVATE ${SUPPRESS_COUNTER_WARNING})
     set_target_properties(${exe} PROPERTIES
       COMPILE_FLAGS "${CXX_WARNING_FLAGS}"
       LINK_FLAGS "${CATCH_UNDEFINED}")
