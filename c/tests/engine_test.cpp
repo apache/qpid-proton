@@ -656,3 +656,98 @@ TEST_CASE("max_frame") {
   pn_transport_free(t2);
   pn_connection_free(c2);
 }
+
+TEST_CASE("delivery_tag_limit") {
+  // The spec allows 32 octets of delivery-tag. A stringified UUID is 36, a
+  // common way for applications to overrun the limit.
+  const char uuid_tag[] = "f81d4fae-7dec-11d0-a765-00a0c91e6bf6";
+  REQUIRE(strlen(uuid_tag) == 36);
+
+  pn_connection_t *c1 = pn_connection();
+  pn_transport_t *t1 = pn_transport();
+  pn_transport_bind(t1, c1);
+
+  pn_connection_t *c2 = pn_connection();
+  pn_transport_t *t2 = pn_transport();
+  pn_transport_set_server(t2);
+  pn_transport_bind(t2, c2);
+
+  test_setup(c1, t1, c2, t2);
+
+  pn_link_t *tx = pn_link_head(c1, (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
+  REQUIRE(tx);
+  pn_link_t *rx = pn_link_head(c2, (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
+  REQUIRE(rx);
+  pn_link_flow(rx, 10);
+
+  // An over long outgoing tag is truncated to the maximum, keeping the leading octets.
+  pn_delivery_t *d1 = pn_delivery(tx, pn_dtag(uuid_tag, 36));
+  pn_delivery_tag_t sent = pn_delivery_tag(d1);
+  REQUIRE(sent.size == 32);
+  REQUIRE(memcmp(sent.start, uuid_tag, 32) == 0);
+
+  while (pump(t1, t2)) {
+    process_endpoints(c1);
+    process_endpoints(c2);
+  }
+  REQUIRE(pn_delivery_writable(d1));
+  pn_link_send(tx, "ABC", 4);
+  pn_link_advance(tx);
+  while (pump(t1, t2)) {
+    process_endpoints(c1);
+    process_endpoints(c2);
+  }
+
+  // The receiver sees the same truncated tag, i.e. what we report locally is what
+  // actually went on the wire.
+  pn_delivery_t *rd = pn_link_current(rx);
+  REQUIRE(rd);
+  pn_delivery_tag_t received = pn_delivery_tag(rd);
+  REQUIRE(received.size == 32);
+  REQUIRE(memcmp(received.start, uuid_tag, 32) == 0);
+  pn_delivery_settle(rd);
+  pn_delivery_settle(d1);
+
+  // Truncation still applies once the one-shot warning for this link has fired.
+  pn_delivery_t *d2 = pn_delivery(tx, pn_dtag(uuid_tag, 36));
+  REQUIRE(pn_delivery_tag(d2).size == 32);
+  pn_link_advance(tx);
+  pn_delivery_settle(d2);
+
+  // A tag exactly at the limit is left alone.
+  pn_delivery_t *d3 = pn_delivery(tx, pn_dtag(uuid_tag, 32));
+  REQUIRE(pn_delivery_tag(d3).size == 32);
+  pn_link_advance(tx);
+  pn_delivery_settle(d3);
+
+  // As is a short one.
+  pn_delivery_t *d4 = pn_delivery(tx, pn_dtag("tag-4", 6));
+  REQUIRE(pn_delivery_tag(d4).size == 6);
+  pn_link_advance(tx);
+  pn_delivery_settle(d4);
+
+  // Inbound tags are left alone: an over long tag from a peer is its spec violation
+  // to report, not something to rewrite under the application.
+  pn_delivery_t *d5 = pn_delivery(rx, pn_dtag(uuid_tag, 36));
+  REQUIRE(pn_delivery_tag(d5).size == 36);
+
+  // Binary tags truncate too. A fresh link so the one-shot warning fires again, and
+  // octets 0x00-0x1f are all unprintable, so the quoted form used in that warning is
+  // at its longest: 32 * strlen("\\xNN").
+  char binary_tag[40];
+  for (size_t i = 0; i < sizeof(binary_tag); i++) binary_tag[i] = (char)i;
+  pn_link_t *tx2 = pn_sender(pn_session_head(c1, 0), "binary-tag-sender");
+  REQUIRE(tx2);
+  pn_delivery_t *d6 = pn_delivery(tx2, pn_dtag(binary_tag, sizeof(binary_tag)));
+  pn_delivery_tag_t binary_sent = pn_delivery_tag(d6);
+  REQUIRE(binary_sent.size == 32);
+  REQUIRE(memcmp(binary_sent.start, binary_tag, 32) == 0);
+
+  pn_transport_unbind(t1);
+  pn_transport_free(t1);
+  pn_connection_free(c1);
+
+  pn_transport_unbind(t2);
+  pn_transport_free(t2);
+  pn_connection_free(c2);
+}

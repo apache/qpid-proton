@@ -1314,6 +1314,7 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, pn_string_t *name)
   link->remote_rcv_settle_mode = PN_RCV_FIRST;
   link->detached = false;
   link->more_pending = false;
+  link->tag_truncated = false;
   link->properties = 0;
   link->properties_raw = (pn_bytes_t){0, NULL};
   link->remote_properties = 0;
@@ -1734,6 +1735,28 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   }
   delivery->link = link;
   pn_incref(delivery->link);  // keep link until finalized
+  // The spec allows at most 32 octets of delivery-tag, so truncate rather than put
+  // an illegal transfer on the wire. Only outbound tags: a receiver's tag comes off
+  // the wire, and an over long one there is the peer's violation to report, not
+  // something to silently rewrite under our own application. Warn once per link, as
+  // an over long tag is a property of the caller's tag scheme, not of any one delivery.
+  if (tag.size > AMQP_MAX_DELIVERY_TAG_SIZE && pn_link_is_sender(link)) {
+    size_t original_size = tag.size;
+    tag.size = AMQP_MAX_DELIVERY_TAG_SIZE;
+    if (!link->tag_truncated) {
+      link->tag_truncated = true;
+      // An unbound connection has no transport, and so no logger of its own.
+      pn_transport_t *transport = link->session->connection->transport;
+      const char *name = pn_link_name(link);
+      char quoted[4*AMQP_MAX_DELIVERY_TAG_SIZE + 1]; // worst case every octet escaped as \xNN
+      pn_quote_data(quoted, sizeof(quoted), tag.start, tag.size);
+      PN_LOG(transport ? &transport->logger : pn_default_logger(),
+             PN_SUBSYSTEM_AMQP, PN_LEVEL_WARNING,
+             "link '%s': %zu octet delivery-tag truncated to the %d octet maximum, sending '%s'; "
+             "tags must remain unique amongst the unsettled deliveries on a link",
+             name ? name : "", original_size, AMQP_MAX_DELIVERY_TAG_SIZE, quoted);
+    }
+  }
   delivery->tag = pn_bytes_dup(tag);
   pn_disposition_clear(&delivery->local);
   pn_disposition_clear(&delivery->remote);

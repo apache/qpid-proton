@@ -33,6 +33,7 @@
 #define AMQP_HEADER_SIZE (8)
 #define AMQP_MIN_MAX_FRAME_SIZE ((uint32_t)512) // minimum allowable max-frame
 #define AMQP_MAX_WINDOW_SIZE (2147483647)
+#define AMQP_MAX_DELIVERY_TAG_SIZE (32) // maximum delivery-tag octets allowed by the spec
 
 #define AMQP_FRAME_TYPE (0)
 #define SASL_FRAME_TYPE (1)

@@ -336,6 +336,7 @@ struct pn_link_t {
   bool drain;
   bool detached;
   bool more_pending;
+  bool tag_truncated; // a delivery-tag on this link has been truncated (warn once)
 };
 
 typedef enum pn_disposition_type_t {

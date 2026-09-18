@@ -1108,7 +1108,7 @@ class TransferTest(Test):
             (bytearray([1, 2, 32, 254, 255]), '\x01\x02 \udcfe\udcff'),
             (b'\xff'+(29*b' ')+b'\xff\x00', '\udcff                             \udcff\x00'),
             (chr(1024), chr(1024)),
-            (chr(1024) * 32, chr(1024) * 32)        # I think this should fail but it doesn't
+            (chr(1024) * 16, chr(1024) * 16)        # This a bit weird, but should max out the allowed size
         ]
 
         self.rcv.flow(len(test_tags))
