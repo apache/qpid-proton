@@ -37,10 +37,17 @@ keytool -storetype pkcs12 -keystore bad-server.pkcs12 -storepass server-password
 openssl pkcs12 -nocerts -passin pass:server-password -in bad-server.pkcs12 -passout pass:server-password -out bad-server-private-key.pem
 openssl pkcs12 -nokeys  -passin pass:server-password -in bad-server.pkcs12 -passout pass:server-password -out bad-server-certificate.pem
 
-# Create a server certificate with several alternate names, including a wildcarded common name:
-keytool -ext san=dns:alternate.name.one.com,dns:another.name.com -storetype pkcs12 -keystore server-wc.pkcs12 -storepass server-password -alias server-wc-certificate -keypass server-password -keyalg EC -genkeypair -dname "O=Server,CN=*.prefix*.domain.com" -validity 99999
-keytool -ext san=dns:alternate.name.one.com,dns:another.name.com -storetype pkcs12 -keystore server-wc.pkcs12 -storepass server-password -alias server-wc-certificate -keypass server-password -certreq -file server-wc-request.pem
-keytool -ext san=dns:alternate.name.one.com,dns:another.name.com  -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile server-wc-request.pem -outfile server-wc-certificate.pem
+# Create a server certificate with several alternate names, one of them a wildcard.
+#
+# RFC 9525 s6.3 allows a wildcard only as the complete left-most label, so "*.wildcard.domain.com"
+# is the only form the library honours.  The common name is deliberately left as the older
+# "*.prefix*.domain.com": because this certificate carries DNS SubjectAltNames the CN must be
+# ignored altogether, and a CN that would otherwise match makes that a testable property.
+# The iPAddress name covers a peer named by address rather than by hostname.
+WC_SAN=san=dns:alternate.name.one.com,dns:another.name.com,dns:*.wildcard.domain.com,ip:127.0.0.1
+keytool -ext "$WC_SAN" -storetype pkcs12 -keystore server-wc.pkcs12 -storepass server-password -alias server-wc-certificate -keypass server-password -keyalg EC -genkeypair -dname "O=Server,CN=*.prefix*.domain.com" -validity 99999
+keytool -ext "$WC_SAN" -storetype pkcs12 -keystore server-wc.pkcs12 -storepass server-password -alias server-wc-certificate -keypass server-password -certreq -file server-wc-request.pem
+keytool -ext "$WC_SAN" -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile server-wc-request.pem -outfile server-wc-certificate.pem
 openssl pkcs12 -nocerts -passin pass:server-password -in server-wc.pkcs12 -passout pass:server-password -out server-wc-private-key.pem
 
 # Create a certificate for a subordinate (intermediate) CA certificate issued by the root CA

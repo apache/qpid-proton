@@ -374,17 +374,28 @@ PN_EXTERN pn_ssl_resume_status_t pn_ssl_resume_status(pn_ssl_t *ssl);
  *
  * The hostname is used for two purposes: 1) when set on an SSL client, it is sent to the
  * server during the handshake (if Server Name Indication is supported), and 2) it is used
- * to check against the identifying name provided in the peer's certificate. If the
- * supplied name does not exactly match a SubjectAltName (type DNS name), or the
- * CommonName entry in the peer's certificate, the peer is considered unauthenticated
- * (potential imposter), and the SSL connection is aborted.
+ * to check against the identifying name provided in the peer's certificate. If it does not
+ * match, the peer is considered unauthenticated (potential imposter), and the SSL
+ * connection is aborted.
+ *
+ * Name matching follows RFC 9525 section 6.3. The hostname is compared, case
+ * insensitively, against the SubjectAltName entries of type DNS name. A certificate name
+ * may use a wildcard, but only as the complete left-most label ("*.example.com"), and it
+ * then matches exactly one label ("a.example.com" but neither "example.com" nor
+ * "a.b.example.com"). Partial wildcards such as "ba*.example.com" are not honoured. The
+ * CommonName entry of the subject is consulted only when the certificate carries no
+ * SubjectAltName of type DNS name.
+ *
+ * On OpenSSL, a hostname given as an IP address literal is additionally accepted if it
+ * matches a SubjectAltName entry of type IP address. Windows SChannel compares only against
+ * DNS names, so such a hostname matches only a CommonName holding the same literal.
  *
  * @note Verification of the hostname is only done if PN_SSL_VERIFY_PEER_NAME is enabled.
  * See ::pn_ssl_domain_set_peer_authentication.
  *
  * @param[in] ssl the ssl session.
  * @param[in] hostname the expected identity of the remote. Must conform to the syntax as
- * given in RFC1034, Section 3.5.
+ * given in RFC1034, Section 3.5; in particular it must not begin with a '.'.
  * @return 0 on success.
  */
 PN_EXTERN int pn_ssl_set_peer_hostname(pn_ssl_t *ssl, const char *hostname);

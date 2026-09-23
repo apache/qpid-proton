@@ -723,119 +723,69 @@ class SslTest(common.Test):
         self.tearDown()
 
         # Wildcarded Certificate
-        # Assumes:
-        #   1) certificate contains Server Alternate Names:
-        #        "alternate.name.one.com" and "another.name.com"
-        #   2) certificate has wildcarded CommonName "*.prefix*.domain.com"
+        # Assumes the server-wc certificate:
+        #   1) has SubjectAltNames "alternate.name.one.com", "another.name.com",
+        #      "*.wildcard.domain.com" and the IP address 127.0.0.1
+        #   2) has the CommonName "*.prefix*.domain.com"
         #
+        # RFC 9525 s6.3 honours a wildcard only as the complete left-most label, and requires
+        # the CommonName to be ignored entirely when the certificate carries DNS SANs.  The CN
+        # here would match "*.prefix*.domain.com" patterns under the old matcher, so the cases
+        # below double as a regression test for that precedence.
+        wildcard_names = [
+            # (peer hostname, handshake succeeds?, rationale)
+            ("alternate.Name.one.com", True, "exact SAN, case insensitive"),
+            ("ANOTHER.NAME.COM", True, "exact SAN, case insensitive"),
+            ("foo.wildcard.domain.com", True, "wildcard SAN matches one label"),
+            ("FOO.Wildcard.Domain.Com", True, "wildcard SAN, case insensitive"),
+            ("wildcard.domain.com", False, "wildcard must not match the bare domain"),
+            ("a.b.wildcard.domain.com", False, "wildcard spans a single label only"),
+            ("foo.WILDCARD.domain.com.evil.com", False, "wildcard is anchored at the end"),
+            (".wildcard.domain.com", False, "a leading dot must not mean 'any sub-domain'"),
+            (".one.com", False, "a leading dot must not mean 'any sub-domain'"),
+            ("SOME.PREfix.domain.COM", False, "CN is ignored when the cert carries SANs"),
+            ("FOO.PREfixZZZ.domain.com", False, "partial wildcards are not honoured"),
+        ]
 
-        # Pass: match an alternate
-        self.setUp()
-        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
-                                           self._testpath("server-wc-private-key.pem"),
-                                           "server-password")
-        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-        self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME)
+        if os.name != "nt":
+            # SChannel's matcher only ever looks at DNS names, so an address literal reaches
+            # it as a name that matches nothing.  It has never matched an iPAddress SAN.
+            wildcard_names += [
+                ("127.0.0.1", True, "an address literal matches an iPAddress SAN"),
+                ("127.0.0.2", False, "a different address does not"),
+            ]
 
-        server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
-        client = SslTest.SslTestConnection(self.client_domain)
+        for peer_hostname, should_pass, rationale in wildcard_names:
+            reason = "%s (%s)" % (peer_hostname, rationale)
+            self.setUp()
+            self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
+                                               self._testpath("server-wc-private-key.pem"),
+                                               "server-password")
+            self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+            self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME)
 
-        client.ssl.peer_hostname = "alternate.Name.one.com"
-        self._do_handshake(client, server)
-        del client
-        del server
-        self.tearDown()
+            server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
+            client = SslTest.SslTestConnection(self.client_domain)
 
-        # Pass: match an alternate
-        self.setUp()
-        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
-                                           self._testpath("server-wc-private-key.pem"),
-                                           "server-password")
-        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-        self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME)
-
-        server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
-        client = SslTest.SslTestConnection(self.client_domain)
-
-        client.ssl.peer_hostname = "ANOTHER.NAME.COM"
-        self._do_handshake(client, server)
-        del client
-        del server
-        self.tearDown()
-
-        # Pass: match the pattern
-        self.setUp()
-        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
-                                           self._testpath("server-wc-private-key.pem"),
-                                           "server-password")
-        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-        self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME)
-
-        server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
-        client = SslTest.SslTestConnection(self.client_domain)
-
-        client.ssl.peer_hostname = "SOME.PREfix.domain.COM"
-        self._do_handshake(client, server)
-        del client
-        del server
-        self.tearDown()
-
-        # Pass: match the pattern
-        self.setUp()
-        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
-                                           self._testpath("server-wc-private-key.pem"),
-                                           "server-password")
-        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-        self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME)
-
-        server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
-        client = SslTest.SslTestConnection(self.client_domain)
-
-        client.ssl.peer_hostname = "FOO.PREfixZZZ.domain.com"
-        self._do_handshake(client, server)
-        del client
-        del server
-        self.tearDown()
-
-        # Fail: must match prefix on wildcard
-        self.setUp()
-        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
-                                           self._testpath("server-wc-private-key.pem"),
-                                           "server-password")
-        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-        self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME)
-
-        server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
-        client = SslTest.SslTestConnection(self.client_domain)
-
-        client.ssl.peer_hostname = "FOO.PREfi.domain.com"
-        self._do_handshake(client, server)
-        assert client.transport.closed
-        assert server.transport.closed
-        assert client.connection.state & Endpoint.REMOTE_UNINIT
-        assert server.connection.state & Endpoint.REMOTE_UNINIT
-        del server
-        del client
-        self.tearDown()
-
-        # Fail: leading wildcards are not optional
-        self.setUp()
-        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
-                                           self._testpath("server-wc-private-key.pem"),
-                                           "server-password")
-        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-        self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME)
-
-        server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
-        client = SslTest.SslTestConnection(self.client_domain)
-
-        client.ssl.peer_hostname = "PREfix.domain.COM"
-        self._do_handshake(client, server)
-        assert client.transport.closed
-        assert server.transport.closed
-        assert client.connection.state & Endpoint.REMOTE_UNINIT
-        assert server.connection.state & Endpoint.REMOTE_UNINIT
-        self.tearDown()
+            client.ssl.peer_hostname = peer_hostname
+            self._do_handshake(client, server)
+            # On success _do_handshake closes the connection again, so transport.closed is
+            # true either way; REMOTE_UNINIT is what distinguishes "peer never opened".
+            if should_pass:
+                assert not client.connection.state & Endpoint.REMOTE_UNINIT, \
+                    "should have matched: " + reason
+                assert not server.connection.state & Endpoint.REMOTE_UNINIT, \
+                    "should have matched: " + reason
+            else:
+                assert client.transport.closed, "should have been rejected: " + reason
+                assert server.transport.closed, "should have been rejected: " + reason
+                assert client.connection.state & Endpoint.REMOTE_UNINIT, \
+                    "should have been rejected: " + reason
+                assert server.connection.state & Endpoint.REMOTE_UNINIT, \
+                    "should have been rejected: " + reason
+            del server
+            del client
+            self.tearDown()
 
         # Pass: ensure that the user can give an alternate name that overrides
         # the connection's configured hostname
@@ -851,12 +801,16 @@ class SslTest(common.Test):
                                            conn_hostname="This.Name.Does.not.Match",
                                            ssl_peername="alternate.name.one.com")
         self._do_handshake(client, server)
+        assert not client.connection.state & Endpoint.REMOTE_UNINIT
+        assert not server.connection.state & Endpoint.REMOTE_UNINIT
         del client
         del server
         self.tearDown()
 
         # Pass: ensure that the hostname supplied by the connection is used if
-        # none has been specified for the SSL instance
+        # none has been specified for the SSL instance.  server-certificate has no
+        # SubjectAltName at all, so this also covers the CommonName still being consulted
+        # when - and only when - there is no DNS SAN to consult instead.
         self.setUp()
         self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
                                            self._testpath("server-private-key.pem"),
@@ -868,6 +822,8 @@ class SslTest(common.Test):
         client = SslTest.SslTestConnection(self.client_domain,
                                            conn_hostname="a1.good.server.domain.com")
         self._do_handshake(client, server)
+        assert not client.connection.state & Endpoint.REMOTE_UNINIT
+        assert not server.connection.state & Endpoint.REMOTE_UNINIT
         del client
         del server
         self.tearDown()

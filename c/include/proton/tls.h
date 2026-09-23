@@ -309,17 +309,27 @@ PN_TLS_EXTERN bool pn_tls_get_protocol_version(pn_tls_t *tls, const char **versi
  *
  * The hostname is used for two purposes: 1) when set on an TLS client, it is sent to the
  * server during the handshake (if Server Name Indication is supported), and 2) it is used
- * to check against the identifying name provided in the peer's certificate. If the
- * supplied name does not exactly match a SubjectAltName (type DNS name), or the
- * CommonName entry in the peer's certificate, the peer is considered unauthenticated
- * (potential imposter), and the TLS connection is aborted.
+ * to check against the identifying name provided in the peer's certificate. If it does not
+ * match, the peer is considered unauthenticated (potential imposter), and the TLS
+ * connection is aborted.
+ *
+ * Name matching follows RFC 9525 section 6.3. The hostname is compared, case
+ * insensitively, against the SubjectAltName entries of type DNS name. A certificate name
+ * may use a wildcard, but only as the complete left-most label ("*.example.com"), and it
+ * then matches exactly one label ("a.example.com" but neither "example.com" nor
+ * "a.b.example.com"). Partial wildcards such as "ba*.example.com" are not honoured. The
+ * CommonName entry of the subject is consulted only when the certificate carries no
+ * SubjectAltName of type DNS name.
+ *
+ * A hostname given as an IP address literal is additionally accepted if it matches a
+ * SubjectAltName entry of type IP address.
  *
  * @note Verification of the hostname is only done if PN_TLS_VERIFY_PEER_NAME is enabled.
  * See ::pn_tls_config_set_peer_authentication.
  *
  * @param[in] tls the tls session.
  * @param[in] hostname the expected identity of the remote. Must conform to the syntax as
- * given in RFC1034, Section 3.5.
+ * given in RFC1034, Section 3.5; in particular it must not begin with a '.'.
  * @return 0 on success.
  */
 PN_TLS_EXTERN int pn_tls_set_peer_hostname(pn_tls_t *tls, const char *hostname);

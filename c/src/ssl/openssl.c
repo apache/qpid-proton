@@ -51,6 +51,12 @@
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
 
+// Peer name verification is delegated to X509_VERIFY_PARAM_set1_host()/SSL_set_hostflags(),
+// the latter of which needs 1.1.0.
+#if (OPENSSL_VERSION_NUMBER < 0x10100000L)
+#error "Proton requires OpenSSL 1.1.0 or later."
+#endif
+
 #if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
 #include <openssl/provider.h>
 #include <openssl/store.h>
@@ -85,9 +91,7 @@ struct pn_ssl_domain_t {
   char *ciphers;
 
   int   ref_count;
-#ifdef SSL_SECOP_PEER
-  int default_seclevel;
-#endif
+  int   default_seclevel;
   pn_ssl_mode_t mode;
   pn_ssl_verify_mode_t verify_mode;
 
@@ -242,59 +246,41 @@ static int ssl_failed(pn_transport_t *transport, int reason)
   return PN_EOS;
 }
 
-/* match the DNS name pattern from the peer certificate against our configured peer
-   hostname */
-static bool match_dns_pattern( const char *hostname,
-                               const char *pattern, int plen )
+/* A peer hostname we are prepared to verify against.  OpenSSL reads a leading '.' as "any
+   sub-domain of", a broader match than anything we previously accepted, and a DNS name
+   cannot begin with a dot anyway - so treat it as a configuration error alongside a missing
+   name rather than let it silently widen what the peer is allowed to present. */
+static bool usable_peer_hostname( const char *name )
 {
-  int slen = (int) strlen(hostname);
-  if (memchr( pattern, '*', plen ) == NULL)
-    return (plen == slen &&
-            pn_strncasecmp( pattern, hostname, plen ) == 0);
+  return name && *name && name[0] != '.';
+}
 
-  /* dns wildcarded pattern - RFC2818 */
-  char plabel[64];   /* max label length < 63 - RFC1034 */
-  char slabel[64];
+/* Hand peer name verification to OpenSSL.  It applies the RFC 9525 s6.3 rules: a wildcard
+   is honoured only as the complete left-most label, and the subject CN is ignored whenever
+   the certificate carries a DNS SubjectAltName.  NO_PARTIAL_WILDCARDS additionally rejects
+   "ba*.example.com" style patterns, which OpenSSL would otherwise still accept.
 
-  while (plen > 0 && slen > 0) {
-    const char *cptr;
-    int len;
+   Deliberately not SSL_set1_host(): from 3.0 that quietly converts a name which parses as an
+   IP literal into an iPAddress-SubjectAltName-only check, so a certificate naming its address
+   in the CommonName - which Proton has always accepted, and which our own test certificates
+   use - would stop verifying.  Older OpenSSL does not do the conversion, so the same call
+   would also mean different things on different builds.  Ask for the name check explicitly
+   and let verify_callback pick up an iPAddress SubjectAltName. */
+static bool set_verify_host( pn_transport_t *transport, pni_ssl_t *ssl )
+{
+  if (!ssl->ssl || ssl->verify_mode != PN_SSL_VERIFY_PEER_NAME) return true;
+  /* Leave the check unarmed for an unusable name; verify_callback fails the handshake at
+     the point it would matter, however late the name is supplied.  Arming it with an empty
+     name would disable name checking altogether. */
+  if (!usable_peer_hostname( ssl->peer_hostname )) return true;
 
-    cptr = (const char *) memchr( pattern, '.', plen );
-    len = (cptr) ? cptr - pattern : plen;
-    if (len > (int) sizeof(plabel) - 1) return false;
-    memcpy( plabel, pattern, len );
-    plabel[len] = 0;
-    if (cptr) ++len;    // skip matching '.'
-    pattern += len;
-    plen -= len;
-
-    cptr = (const char *) memchr( hostname, '.', slen );
-    len = (cptr) ? cptr - hostname : slen;
-    if (len > (int) sizeof(slabel) - 1) return false;
-    memcpy( slabel, hostname, len );
-    slabel[len] = 0;
-    if (cptr) ++len;    // skip matching '.'
-    hostname += len;
-    slen -= len;
-
-    char *star = strchr( plabel, '*' );
-    if (!star) {
-      if (pn_strcasecmp( plabel, slabel )) return false;
-    } else {
-      *star = '\0';
-      char *prefix = plabel;
-      int prefix_len = strlen(prefix);
-      char *suffix = star + 1;
-      int suffix_len = strlen(suffix);
-      if (prefix_len && pn_strncasecmp( prefix, slabel, prefix_len )) return false;
-      if (suffix_len && pn_strncasecmp( suffix,
-                                        slabel + (strlen(slabel) - suffix_len),
-                                        suffix_len )) return false;
-    }
+  SSL_set_hostflags( ssl->ssl, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS );
+  if (!X509_VERIFY_PARAM_set1_host( SSL_get0_param( ssl->ssl ), ssl->peer_hostname, 0 )) {
+    ssl_log(transport, PN_LEVEL_ERROR, "Error: unable to configure peer hostname '%s' for verification",
+            ssl->peer_hostname);
+    return false;
   }
-
-  return plen == slen;
+  return true;
 }
 
 // Certificate chain verification callback: return 1 if verified,
@@ -302,11 +288,10 @@ static bool match_dns_pattern( const char *hostname,
 //
 static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 {
-  if (!preverify_ok || X509_STORE_CTX_get_error_depth(ctx) != 0)
-    // already failed, or not at peer cert in chain
+  if (X509_STORE_CTX_get_error_depth(ctx) != 0)
+    // not at peer cert in chain
     return preverify_ok;
 
-  X509 *cert = X509_STORE_CTX_get_current_cert(ctx);
   SSL *ssn = (SSL *) X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx());
   if (!ssn) {
     ssl_log(NULL, PN_LEVEL_ERROR, "Error: unexpected error - SSL session info not available for peer verify!");
@@ -321,65 +306,38 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
   pni_ssl_t *ssl = transport->ssl;
   if (ssl->verify_mode != PN_SSL_VERIFY_PEER_NAME) return preverify_ok;
-  if (!ssl->peer_hostname) {
-    ssl_log(transport, PN_LEVEL_ERROR, "Error: configuration error: PN_SSL_VERIFY_PEER_NAME configured, but no peer hostname set!");
+
+  /* The name match itself was done by OpenSSL, armed by set_verify_host().  A name it would
+     not arm the check with leaves it unarmed, which would silently accept whatever name the
+     peer cert carries, so reject that here rather than let the handshake through. */
+  if (!usable_peer_hostname( ssl->peer_hostname )) {
+    if (!ssl->peer_hostname || !*ssl->peer_hostname)
+      ssl_log(transport, PN_LEVEL_ERROR, "Error: configuration error: PN_SSL_VERIFY_PEER_NAME configured, but no peer hostname set!");
+    else
+      ssl_log(transport, PN_LEVEL_ERROR, "Error: configuration error: invalid peer hostname '%s' - must not start with '.'",
+              ssl->peer_hostname);
     return 0;  // fail connection
   }
 
-  ssl_log(transport, PN_LEVEL_TRACE, "Checking identifying name in peer cert against '%s'", ssl->peer_hostname);
-
-  bool matched = false;
-
-  /* first check any SubjectAltName entries, as per RFC2818 */
-  GENERAL_NAMES *sans = (GENERAL_NAMES *) X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
-  if (sans) {
-    int name_ct = sk_GENERAL_NAME_num( sans );
-    int i;
-    for (i = 0; !matched && i < name_ct; ++i) {
-      GENERAL_NAME *name = sk_GENERAL_NAME_value( sans, i );
-      if (name->type == GEN_DNS) {
-        ASN1_STRING *asn1 = name->d.dNSName;
-        if (asn1 && ASN1_STRING_get0_data(asn1) && ASN1_STRING_length(asn1) > 0){
-          unsigned char *str;
-          int len = ASN1_STRING_to_UTF8( &str, asn1 );
-          if (len >= 0) {
-            ssl_log(transport, PN_LEVEL_TRACE, "SubjectAltName (dns) from peer cert = '%.*s'", len, str );
-            matched = match_dns_pattern( ssl->peer_hostname, (const char *)str, len );
-            OPENSSL_free( str );
-          }
-        }
+  if (!preverify_ok) {
+    if (X509_STORE_CTX_get_error(ctx) == X509_V_ERR_HOSTNAME_MISMATCH) {
+      /* No name matched, but a peer named by address may carry it in an iPAddress
+         SubjectAltName, which the name check does not look at.  X509_check_ip_asc() rejects
+         anything that is not an address literal, so this only ever admits an exact match. */
+      if (X509_check_ip_asc(X509_STORE_CTX_get_current_cert(ctx), ssl->peer_hostname, 0) == 1) {
+        ssl_log(transport, PN_LEVEL_TRACE, "Address in peer cert matched '%s' - peer is valid.",
+                ssl->peer_hostname);
+        X509_STORE_CTX_set_error(ctx, X509_V_OK);
+        return 1;
       }
+      ssl_log(transport, PN_LEVEL_ERROR, "Error: no name matching %s found in peer cert - rejecting handshake.",
+              ssl->peer_hostname);
     }
-    GENERAL_NAMES_free( sans );
+    return preverify_ok;
   }
 
-  /* if no general names match, try the CommonName from the subject */
-  const X509_NAME *name = X509_get_subject_name(cert);
-  int i = -1;
-  while (!matched && (i = X509_NAME_get_index_by_NID(name, NID_commonName, i)) >= 0) {
-    const X509_NAME_ENTRY *ne = X509_NAME_get_entry(name, i);
-    const ASN1_STRING *name_asn1 = X509_NAME_ENTRY_get_data(ne);
-    if (name_asn1) {
-      unsigned char *str;
-      int len = ASN1_STRING_to_UTF8( &str, name_asn1);
-      if (len >= 0) {
-        ssl_log(transport, PN_LEVEL_TRACE, "commonName from peer cert = '%.*s'", len, str);
-        matched = match_dns_pattern( ssl->peer_hostname, (const char *)str, len );
-        OPENSSL_free(str);
-      }
-    }
-  }
-
-  if (!matched) {
-    ssl_log(transport, PN_LEVEL_ERROR, "Error: no name matching %s found in peer cert - rejecting handshake.",
-            ssl->peer_hostname);
-    preverify_ok = 0;
-#ifdef X509_V_ERR_APPLICATION_VERIFICATION
-    X509_STORE_CTX_set_error( ctx, X509_V_ERR_APPLICATION_VERIFICATION );
-#endif
-  } else {
-    ssl_log(transport, PN_LEVEL_TRACE, "Name from peer cert matched - peer is valid.");
-  }
+  ssl_log(transport, PN_LEVEL_TRACE, "Name from peer cert matched '%s' - peer is valid.",
+          SSL_get0_peername(ssn) ? SSL_get0_peername(ssn) : ssl->peer_hostname);
   return preverify_ok;
 }
 
@@ -387,16 +345,6 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
-// This was introduced in v1.1
-#if OPENSSL_VERSION_NUMBER < 0x10100000
-int DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
-{
-  dh->p = p;
-  dh->q = q;
-  dh->g = g;
-  return 1;
-}
-#endif
 
 // this code was generated using the command:
 // "openssl dhparam -C -2 2048"
@@ -576,9 +524,7 @@ static bool pni_init_ssl_domain( pn_ssl_domain_t * domain, pn_ssl_mode_t mode )
     ;
   SSL_CTX_set_options(domain->ctx, reject_insecure);
 
-# ifdef SSL_SECOP_PEER
   domain->default_seclevel = SSL_CTX_get_security_level(domain->ctx);
-# endif
 
   DH *dh = get_dh2048();
   if (dh) {
@@ -875,9 +821,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
    case PN_SSL_VERIFY_PEER:
    case PN_SSL_VERIFY_PEER_NAME:
 
-#ifdef SSL_SECOP_PEER
     SSL_CTX_set_security_level(domain->ctx, domain->default_seclevel);
-#endif
 
     if (domain->mode == PN_SSL_MODE_SERVER) {
       // openssl requires that server connections supply a list of trusted CAs which is
@@ -905,10 +849,6 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 
     SSL_CTX_set_verify( domain->ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
                         verify_callback);
-#if (OPENSSL_VERSION_NUMBER < 0x00905100L)
-    SSL_CTX_set_verify_depth(domain->ctx, 1);
-#endif
-
     // A bit of a hack - If we asked for peer verification then disallow anonymous ciphers
     // A much more robust thing would be to ensure that we actually have a peer certificate
     // when we've finished the SSL handshake
@@ -919,10 +859,8 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
     break;
 
    case PN_SSL_ANONYMOUS_PEER:   // hippie free love mode... :)
-#ifdef SSL_SECOP_PEER
     // Must use lowest OpenSSL security level to enable anonymous ciphers.
     SSL_CTX_set_security_level(domain->ctx, 0);
-#endif
     SSL_CTX_set_verify( domain->ctx, SSL_VERIFY_NONE, NULL );
     // Only allow anonymous ciphers if we allow anonymous peers
     if (!domain->ciphers && !SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_ANONYMOUS )) {
@@ -1439,11 +1377,11 @@ static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl, pn_ssl_dom
   // store backpointer to pn_transport_t in SSL object:
   SSL_set_ex_data(ssl->ssl, ssl_ex_data_index, transport);
 
-#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
   if (ssl->peer_hostname && ssl->mode == PN_SSL_MODE_CLIENT) {
     SSL_set_tlsext_host_name(ssl->ssl, ssl->peer_hostname);
   }
-#endif
+
+  if (!set_verify_host(transport, ssl)) return -1;
 
   // restore session, if available
   ssn_restore(transport, ssl);
@@ -1517,11 +1455,11 @@ int pn_ssl_set_peer_hostname(pn_ssl_t *ssl0, const char *hostname)
   if (hostname) {
     ssl->peer_hostname = pn_strdup(hostname);
     if (!ssl->peer_hostname) return -2;
-#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
     if (ssl->ssl && ssl->mode == PN_SSL_MODE_CLIENT) {
       SSL_set_tlsext_host_name(ssl->ssl, ssl->peer_hostname);
     }
-#endif
+    // may be set after the socket exists but before the handshake - re-arm the name check
+    if (!set_verify_host((pn_transport_t *)ssl0, ssl)) return -2;
   }
   return 0;
 }

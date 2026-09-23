@@ -1987,57 +1987,25 @@ static bool store_contains(HCERTSTORE store, PCCERT_CONTEXT cert)
 }
 
 /* Match the DNS name pattern from the peer certificate against our configured peer
-   hostname */
+   hostname.  RFC 9525 s6.3 permits a wildcard only as the complete left-most label, so
+   partial wildcards ("ba*.example.com") and stars in any other label are rejected. */
 static bool match_dns_pattern(const char *hostname, const char *pattern, int plen)
 {
   int slen = (int) strlen(hostname);
-  if (memchr( pattern, '*', plen ) == NULL)
-    return (plen == slen &&
-            pn_strncasecmp( pattern, hostname, plen ) == 0);
+  if (plen <= 0 || slen <= 0) return false;
 
-  /* dns wildcarded pattern - RFC2818 */
-  char plabel[64];   /* max label length < 63 - RFC1034 */
-  char slabel[64];
-
-  while (plen > 0 && slen > 0) {
-    const char *cptr;
-    int len;
-
-    cptr = (const char *) memchr( pattern, '.', plen );
-    len = (cptr) ? cptr - pattern : plen;
-    if (len > (int) sizeof(plabel) - 1) return false;
-    memcpy( plabel, pattern, len );
-    plabel[len] = 0;
-    if (cptr) ++len;    // skip matching '.'
-    pattern += len;
-    plen -= len;
-
-    cptr = (const char *) memchr( hostname, '.', slen );
-    len = (cptr) ? cptr - hostname : slen;
-    if (len > (int) sizeof(slabel) - 1) return false;
-    memcpy( slabel, hostname, len );
-    slabel[len] = 0;
-    if (cptr) ++len;    // skip matching '.'
-    hostname += len;
-    slen -= len;
-
-    char *star = strchr( plabel, '*' );
-    if (!star) {
-      if (pn_strcasecmp( plabel, slabel )) return false;
-    } else {
-      *star = '\0';
-      char *prefix = plabel;
-      int prefix_len = strlen(prefix);
-      char *suffix = star + 1;
-      int suffix_len = strlen(suffix);
-      if (prefix_len && pn_strncasecmp( prefix, slabel, prefix_len )) return false;
-      if (suffix_len && pn_strncasecmp( suffix,
-                                     slabel + (strlen(slabel) - suffix_len),
-                                     suffix_len )) return false;
-    }
+  if (plen > 2 && pattern[0] == '*' && pattern[1] == '.') {
+    const char *dot = strchr( hostname, '.' );
+    if (!dot || dot == hostname) return false;   /* needs a non-empty label to consume */
+    pattern += 2;  plen -= 2;
+    hostname = dot + 1;  slen = (int) strlen(hostname);
+  } else if (memchr( pattern, '*', plen ) != NULL) {
+    return false;                                /* any other wildcard form is rejected */
   }
 
-  return plen == slen;
+  /* Comparing plen against slen rejects a pattern with an embedded NUL, whose declared
+     length will not equal the length of the C string it appears to be. */
+  return (plen == slen && pn_strncasecmp( pattern, hostname, plen ) == 0);
 }
 
 // Caller must free the returned buffer
@@ -2059,8 +2027,11 @@ static char* wide_to_utf8(LPWSTR wstring)
 
 static bool server_name_matches(const char *server_name, CERT_EXTENSION *alt_name_ext, PCCERT_CONTEXT cert)
 {
-  // As for openssl.c: alt names first, then CN
+  // As for openssl.c: DNS alt names take precedence, and the CN is consulted only when the
+  // certificate carries no DNS SubjectAltName at all - RFC 9525 s6.3.  Falling back to the
+  // CN when SANs are merely unmatched lets a permissive legacy CN override tighter SANs.
   bool matched = false;
+  bool have_dns_san = false;
 
   if (alt_name_ext) {
     CERT_ALT_NAME_INFO* alt_name_info = NULL;
@@ -2076,6 +2047,7 @@ static bool server_name_matches(const char *server_name, CERT_EXTENSION *alt_nam
     int name_ct = alt_name_info->cAltEntry;
     for (int i = 0; !matched && i < name_ct; ++i) {
       if (alt_name_info->rgAltEntry[i].dwAltNameChoice == CERT_ALT_NAME_DNS_NAME) {
+        have_dns_san = true;
         char *alt_name = wide_to_utf8(alt_name_info->rgAltEntry[i].pwszDNSName);
         if (alt_name) {
           matched = match_dns_pattern(server_name, (const char *) alt_name, strlen(alt_name));
@@ -2086,7 +2058,7 @@ static bool server_name_matches(const char *server_name, CERT_EXTENSION *alt_nam
     LocalFree(alt_name_info);
   }
 
-  if (!matched) {
+  if (!matched && !have_dns_san) {
     PCERT_INFO info = cert->pCertInfo;
     DWORD len = CertGetNameString(cert, CERT_NAME_ATTR_TYPE, 0, szOID_COMMON_NAME, 0, 0);
     char *name = (char *) malloc(len);

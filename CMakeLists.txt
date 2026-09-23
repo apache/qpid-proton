@@ -30,7 +30,7 @@ include (CheckLibraryExists)
 include (CheckSymbolExists)
 include (CheckPythonModule)
 
-find_package (OpenSSL)
+find_package (OpenSSL 1.1)
 find_package (Threads)
 find_package (SWIG)
 find_package (CyrusSASL)
