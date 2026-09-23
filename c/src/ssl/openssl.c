@@ -690,9 +690,12 @@ static EVP_PKEY *read_private_key_pkcs11( const char *uri, const char *key_pass 
 }
 #endif
 
+/* A NULL path is no more a PKCS#11 URI than any other non-matching string.  The private key
+   is documented as optional and pn_messenger passes whatever it was given straight through,
+   so this is reached with NULL in ordinary use. */
 static bool is_pkcs11_uri( const char *file_path )
 {
-  return strncmp(file_path, "pkcs11:", sizeof("pkcs11:") - 1) == 0;
+  return file_path && strncmp(file_path, "pkcs11:", sizeof("pkcs11:") - 1) == 0;
 }
 
 int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,

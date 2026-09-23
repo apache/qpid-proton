@@ -21,6 +21,31 @@
 
 #include "./pn_test.hpp"
 
+#include <cstdlib>
+#include <filesystem>
+#include <string>
+
+static std::string ssl_file_path(const std::string &name) {
+  auto env = getenv("TEST_CERT_DIR");
+  const char *cert_dir = env ? env : "ssl-certs";
+  return (std::filesystem::path(cert_dir) / name).string();
+}
+
+// The private key is documented as optional, and pn_messenger passes it through unchecked,
+// so it reaches the backend as NULL whenever a certificate is configured without one.
+TEST_CASE("ssl_credentials_no_private_key") {
+  if (!pn_ssl_present()) {
+    WARN("SSL not available, skipping");
+    return;
+  }
+  pn_test::auto_free<pn_ssl_domain_t, pn_ssl_domain_free> sd(
+      pn_ssl_domain(PN_SSL_MODE_SERVER));
+
+  // Must report the missing key rather than crash - PROTON-2594 made this a NULL deref.
+  CHECK(pn_ssl_domain_set_credentials(
+            sd, ssl_file_path("tserver-certificate.pem").c_str(), NULL, NULL) != 0);
+}
+
 TEST_CASE("ssl_protocols") {
   if (!pn_ssl_present()) {
     WARN("SSL not available, skipping");
