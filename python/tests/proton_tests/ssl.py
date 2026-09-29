@@ -229,6 +229,80 @@ class SslTest(common.Test):
         server.connection.close()
         self._pump(client, server)
 
+    def _system_ca_domains(self, system_ca):
+        """ Build a fresh client/server domain pair with the system default trust store
+        pointed at system_ca.
+
+        OpenSSL reads SSL_CERT_FILE when the domain installs the system defaults, so the
+        variable has to be in place before the domains are constructed - hence the fresh
+        pair rather than the ones setUp() made.  SChannel takes its default from the
+        Windows certificate store and ignores the variable.
+        """
+        old = os.environ.get("SSL_CERT_FILE")
+        os.environ["SSL_CERT_FILE"] = system_ca
+        try:
+            return (SSLDomain(SSLDomain.MODE_SERVER), SSLDomain(SSLDomain.MODE_CLIENT))
+        finally:
+            if old is None:
+                del os.environ["SSL_CERT_FILE"]
+            else:
+                os.environ["SSL_CERT_FILE"] = old
+
+    def test_trusted_ca_db_replaces_system_default(self):
+        """ A configured CA database overrides the system default rather than adding to it.
+
+        Without this the system store stays in the trust set, so a certificate issued by
+        any CA the machine happens to trust verifies against a domain configured to trust
+        one private CA.  bad-server is self-signed, so treating it as a system root makes
+        it exactly such a certificate.
+        """
+        if os.name == "nt":
+            raise Skipped("Windows SChannel does not use SSL_CERT_FILE.")
+        server_domain, client_domain = self._system_ca_domains(
+            self._testpath("bad-server-certificate.pem"))
+
+        server_domain.set_credentials(self._testpath("bad-server-certificate.pem"),
+                                      self._testpath("bad-server-private-key.pem"),
+                                      "server-password")
+        client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
+
+        server = SslTest.SslTestConnection(server_domain, mode=Transport.SERVER)
+        client = SslTest.SslTestConnection(client_domain)
+
+        client.connection.open()
+        server.connection.open()
+        self._pump(client, server)
+
+        assert client.transport.closed
+        assert server.transport.closed
+        assert client.connection.state & Endpoint.REMOTE_UNINIT
+        assert server.connection.state & Endpoint.REMOTE_UNINIT
+
+    def test_system_default_ca_db_used_when_unconfigured(self):
+        """ With no CA database configured the system default is still the trust set.
+        """
+        if os.name == "nt":
+            raise Skipped("Windows SChannel does not use SSL_CERT_FILE.")
+        server_domain, client_domain = self._system_ca_domains(
+            self._testpath("bad-server-certificate.pem"))
+
+        server_domain.set_credentials(self._testpath("bad-server-certificate.pem"),
+                                      self._testpath("bad-server-private-key.pem"),
+                                      "server-password")
+        client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
+
+        server = SslTest.SslTestConnection(server_domain, mode=Transport.SERVER)
+        client = SslTest.SslTestConnection(client_domain)
+
+        client.connection.open()
+        server.connection.open()
+        self._pump(client, server)
+        assert client.ssl.protocol_name() is not None
+        client.connection.close()
+        server.connection.close()
+        self._pump(client, server)
+
     def test_intermediate_ca(self):
         """ Ensure an intermediate/subordinate certificate can be used as a CA for validation.
         """

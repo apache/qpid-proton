@@ -912,11 +912,28 @@ int pn_tls_config_set_trusted_certs(pn_tls_config_t *domain,
     file = certificate_db;
   }
 
-  if (SSL_CTX_load_verify_locations( domain->ctx, file, dir ) != 1) {
-    ssl_log_error("SSL_CTX_load_verify_locations( %s ) failed", certificate_db);
+  /* Replace the context's store rather than loading into it: the store already holds the
+     system default certificates, installed when the domain was created, and the documented
+     contract is that naming a database overrides that default rather than adding to it.
+     Loading into the existing store would leave every system CA a trust anchor, so a peer
+     holding any publicly issued certificate would verify against a domain configured to
+     trust one private CA. SSL_CTX_set_cert_store() takes ownership and frees the old
+     store. */
+  X509_STORE *store = X509_STORE_new();
+  if (!store) {
+    ssl_log_error("Unable to allocate certificate store");
+    return -1;
+  }
+  // Support intermediate/subordinate CAs as trust anchors, as the replaced store did.
+  X509_STORE_set_flags(store, X509_V_FLAG_PARTIAL_CHAIN);
+
+  if (X509_STORE_load_locations( store, file, dir ) != 1) {
+    ssl_log_error("X509_STORE_load_locations( %s ) failed", certificate_db);
+    X509_STORE_free(store);
     return -1;
   }
 
+  SSL_CTX_set_cert_store( domain->ctx, store );
   return 0;
 }
 

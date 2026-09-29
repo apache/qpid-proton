@@ -174,6 +174,11 @@ PN_EXTERN int  pn_ssl_domain_set_credentials(pn_ssl_domain_t *domain,
  * will depend on how the OS is set up. When using the Windows SChannel implementation the default
  * will be the users default trusted certificate store.
  *
+ * @note The database given here replaces that default rather than adding to it, so after
+ * this call the certificates named here are the only trust anchors the domain will accept.
+ * Repeating the call replaces the database again; to trust more than one CA, name a
+ * directory or a file holding all of them.
+ *
  * @param[in] domain the ssl domain that will use the database.
  * @param[in] certificate_db database of trusted CAs, used to authenticate the peer.
  * @return 0 on success
