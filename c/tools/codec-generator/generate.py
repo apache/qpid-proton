@@ -34,6 +34,8 @@ Structural:
     ]       End of list
     @T      Start of typed array (T = type marker)
     ?       Optional field - followed by presence boolean, then the value
+            (pair with Z rather than z: z treats null as a value in its own
+            right, so ?z would always report the field as present)
     !       Suffix: omit entire described list if resulting list would be empty
 
 Primitive Types:

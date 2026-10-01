@@ -428,13 +428,17 @@ TEST_CASE("session_capacity") {
 
   // This is complicated by messy accounting: max_frame_size is a proxy for frames buffered on the
   // receiver side, but payload per transfer frame is strictly less than max frame size due to
-  // frame headers.  For this test 997 bytes of payload fits in a 1024 byte transfer frame.
+  // frame headers.  Only the first transfer of a delivery carries delivery-id, delivery-tag and
+  // message-format; continuation transfers omit them, so their performative is smaller and they
+  // carry correspondingly more payload.  For this test, with a 6 byte delivery-tag, 997 bytes of
+  // payload fit in the first 1024 byte transfer frame and 1004 bytes in each continuation frame.
   // Senders and receivers count/update frames a bit differently.
 
-  size_t payloadsz = 997;
-  size_t onefrm = 1 * payloadsz;
-  size_t fourfrm = 4 * payloadsz;
-  size_t fivefrm = 5 * payloadsz;
+  size_t firstfrm = 997;
+  size_t contfrm = 1004;
+  size_t onefrm = contfrm;
+  size_t fourfrm = firstfrm + 3 * contfrm;
+  size_t fivefrm = firstfrm + 4 * contfrm;
 
   pn_delivery_t *d1 = pn_delivery(tx, pn_dtag("tag-1", 6));
   REQUIRE(link_send(tx, fivefrm) == (ssize_t) fivefrm);
@@ -533,13 +537,17 @@ TEST_CASE("session_window") {
 
   // This is complicated by messy accounting: max_frame_size is a proxy for frames buffered on the
   // receiver side, but payload per transfer frame is strictly less than max frame size due to
-  // frame headers.  For this test 997 bytes of payload fits in a 1024 byte transfer frame.
+  // frame headers.  Only the first transfer of a delivery carries delivery-id, delivery-tag and
+  // message-format; continuation transfers omit them, so their performative is smaller and they
+  // carry correspondingly more payload.  For this test, with a 6 byte delivery-tag, 997 bytes of
+  // payload fit in the first 1024 byte transfer frame and 1004 bytes in each continuation frame.
   // Senders and receivers count/update frames a bit differently.
 
-  size_t payloadsz = 997;
-  size_t onefrm = 1 * payloadsz;
-  size_t fourfrm = 4 * payloadsz;
-  size_t fivefrm = 5 * payloadsz;
+  size_t firstfrm = 997;
+  size_t contfrm = 1004;
+  size_t onefrm = contfrm;
+  size_t fourfrm = firstfrm + 3 * contfrm;
+  size_t fivefrm = firstfrm + 4 * contfrm;
 
   REQUIRE(pn_link_credit(txa) > 0);
   REQUIRE(pn_link_credit(txb) > 0);

@@ -1019,8 +1019,10 @@ class TransferTest(Test):
         assert sd.aborted
 
         # Confirm abort discards the sender's buffered content, i.e. no data in generated transfer frame.
+        # The abort is a continuation of the delivery, so delivery-id, delivery-tag and
+        # message-format are omitted.
         # We want:
-        # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag", message-format=0, settled=true, aborted=true]
+        # @transfer(20) [handle=0, settled=true, aborted=true]
         # wanted = b"\x00\x00\x00%\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x15\x00\x00\x00\nR\x00R'\
         #          b'\x00\xa0\x03tagR\x00A@@@@A"
         # wanted = b"\x00\x00\x00\x26\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x16\x00\x00\x00\x0bR\x00R'\
@@ -1028,7 +1030,8 @@ class TransferTest(Test):
         # wanted = b'\x00\x00\x00\x20\x02\x00\x00\x00\x00S\x14\xc0\x13\x0bR\x00R\x00\xa0\x03tagR\x00A@@@@A@'
         # wanted = b'\x00\x00\x00"\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x12\x00\x00\x00\nCC\xa0\x03tagCA@@@@A'
         # wanted = b'\x00\x00\x00\x1d\x02\x00\x00\x00\x00S\x14\xc0\x10\x0bCC\xa0\x03tagCA@@@@A@'
-        wanted = b'\x00\x00\x00\x1c\x02\x00\x00\x00\x00S\x14\xc0\x0f\x0aCC\xa0\x03tagCA@@@@A'
+        # wanted = b'\x00\x00\x00\x1c\x02\x00\x00\x00\x00S\x14\xc0\x0f\x0aCC\xa0\x03tagCA@@@@A'
+        wanted = b'\x00\x00\x00\x18\x02\x00\x00\x00\x00S\x14\xc0\x0b\x0aC@@@A@@@@A'
         t = self.snd.transport
         wire_bytes = t.peek(1024)
         assert wanted == wire_bytes, wire_bytes
@@ -1171,25 +1174,59 @@ class TransferTest(Test):
         assert cond.name == "amqp:invalid-field", cond
         assert cond.description == "message-format required on initial delivery transfer", cond
 
+    # A continuation transfer omits delivery-id, delivery-tag and message-format, so
+    # its performative list starts: handle (uint0, 0x43), then three nulls (0x40).
+    # Each test below puts one of those fields back with a value that does not match
+    # the first transfer of the delivery.
+
     def test_multiframe_continuation_tag_mismatch(self):
-        cond = self._corrupt_continuation(b"\xa0\x04tag1", b"\xa0\x04tagZ")
+        # Replace the null delivery-tag with b"tagZ" (vbin8 0xa0), not b"tag1".
+        cond = self._corrupt_continuation(b"\x43\x40\x40", b"\x43\x40\xa0\x04tagZ")
         assert cond is not None, "mismatched continuation delivery-tag accepted"
         assert cond.name == "amqp:invalid-field", cond
         assert cond.description == "invalid delivery-tag for a continuation transfer", cond
 
     def test_multiframe_continuation_id_mismatch(self):
-        # delivery-id 0 is encoded as uint0 (0x43); make it 1 (smalluint 0x52 0x01).
-        cond = self._corrupt_continuation(b"\x43\xa0\x04tag1", b"\x52\x01\xa0\x04tag1")
+        # Replace the null delivery-id with 1 (smalluint 0x52 0x01), not 0.
+        cond = self._corrupt_continuation(b"\x43\x40", b"\x43\x52\x01")
         assert cond is not None, "mismatched continuation delivery-id accepted"
         assert cond.name == "amqp:invalid-field", cond
         assert cond.description == "invalid delivery-id for a continuation transfer", cond
 
     def test_multiframe_continuation_format_mismatch(self):
-        # message-format follows the delivery-tag, 0 encoded as uint0 (0x43).
-        cond = self._corrupt_continuation(b"\xa0\x04tag1\x43", b"\xa0\x04tag1\x52\x01")
+        # Replace the null message-format with 1 (smalluint 0x52 0x01), not 0.
+        cond = self._corrupt_continuation(b"\x43\x40\x40\x40", b"\x43\x40\x40\x52\x01")
         assert cond is not None, "mismatched continuation message-format accepted"
         assert cond.name == "amqp:invalid-field", cond
         assert cond.description == "invalid message-format for a continuation transfer", cond
+
+    def test_multiframe_continuation_omits_fields(self):
+        # The first transfer of a delivery carries delivery-id, delivery-tag and
+        # message-format; continuation transfers must not repeat them.
+        self.rcv.flow(1)
+        self.pump()  # get the credit to the sender
+        t1 = self.snd.transport
+        t1.pop(len(t1.peek(4096)))  # drain any pending output
+
+        self.snd.delivery("tag1")
+        self.snd.send(b"this is a test")
+        # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag1", message-format=0, more=true]
+        # handle, delivery-id and message-format are uint0 (0x43), settled is null (0x40).
+        first = b'\x00\x00\x00\x27\x02\x00\x00\x00\x00S\x14\xc0\x0c\x06CC\xa0\x04tag1C@Athis is a test'
+        assert t1.peek(4096) == first, repr(t1.peek(4096))
+        t1.pop(len(t1.peek(4096)))
+
+        self.snd.send(b"this is more")
+        # @transfer(20) [handle=0, more=true] - id, tag and format are all null (0x40).
+        cont = b'\x00\x00\x00\x20\x02\x00\x00\x00\x00S\x14\xc0\x07\x06C@@@@Athis is more'
+        assert t1.peek(4096) == cont, repr(t1.peek(4096))
+        t1.pop(len(t1.peek(4096)))
+
+        # The receiver accepts the continuation and reassembles the delivery.
+        self.rcv.transport.push(first + cont)
+        assert self.rcv.transport.condition is None, self.rcv.transport.condition
+        assert self.rcv.current.partial
+        assert self.rcv.recv(1024) == b"this is a testthis is more"
 
     def test_disposition(self):
         self.rcv.flow(1)
@@ -1575,7 +1612,9 @@ class MaxFrameTransferTest(Test):
         sd.abort()
         assert sd.aborted
         # Expect a single abort transfer frame with no content.  One credit is consumed.
-        # @transfer(20) [handle=0, delivery-id=0, delivery-tag=b"tag_1", message-format=0, settled=true, aborted=true]
+        # The abort is a continuation of the delivery, so delivery-id, delivery-tag and
+        # message-format are omitted.
+        # @transfer(20) [handle=0, settled=true, aborted=true]
         # wanted = b"\x00\x00\x00\x27\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x17\x00\x00\x00\nR\x00R'\
         #          b'\x00\xa0\x05tag_1R\x00A@@@@A"
         # wanted = b"\x00\x00\x00\x28\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x18\x00\x00\x00\x0bR\x00R'\
@@ -1583,7 +1622,8 @@ class MaxFrameTransferTest(Test):
         # wanted = b'\x00\x00\x00\x22\x02\x00\x00\x00\x00S\x14\xc0\x15\x0bR\x00R\x00\xa0\x05tag_1R\x00A@@@@A@'
         # wanted = b'\x00\x00\x00\x24\x02\x00\x00\x00\x00S\x14\xd0\x00\x00\x00\x14\x00\x00\x00\nCC\xa0\x05tag_1CA@@@@A'
         # wanted = b'\x00\x00\x00\x1f\x02\x00\x00\x00\x00S\x14\xc0\x12\x0bCC\xa0\x05tag_1CA@@@@A@'
-        wanted = b'\x00\x00\x00\x1e\x02\x00\x00\x00\x00S\x14\xc0\x11\x0aCC\xa0\x05tag_1CA@@@@A'
+        # wanted = b'\x00\x00\x00\x1e\x02\x00\x00\x00\x00S\x14\xc0\x11\x0aCC\xa0\x05tag_1CA@@@@A'
+        wanted = b'\x00\x00\x00\x18\x02\x00\x00\x00\x00S\x14\xc0\x0b\x0aC@@@A@@@@A'
         t = self.snd.transport
         wire_bytes = t.peek(2048)
         assert wanted == wire_bytes, wire_bytes

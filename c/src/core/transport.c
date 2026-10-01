@@ -863,33 +863,40 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
                                         pn_disposition_t *disposition,
                                         bool resume,
                                         bool aborted,
-                                        bool batchable)
+                                        bool batchable,
+                                        bool continuation)
 {
   bool more_flag = more;
   unsigned framecount = 0;
+  pn_bytes_t performative = {0, NULL};
+  // The encoded performative is stale whenever one of the fields it depends on
+  // changes: the 'more' flag, or whether this is a continuation transfer.
+  bool stale = true;
 
-  // create performative, assuming 'more' flag need not change
- compute_performatives:;
-  /* "DL[IIzI?o?on?DLC?o?o?o]" */
-  pn_bytes_t performative =
-    pn_amqp_encode_transfer(&transport->scratch_space, AMQP_DESC_TRANSFER,
-                         handle,
-                         id,
-                         tag.size, tag.start,
-                         message_format,
-                         settled, settled,
-                         more_flag, more_flag,
-                         disposition,
-                         resume, resume,
-                         aborted, aborted,
-                         batchable, batchable);
-  if (!performative.start) {
-    return PN_ERR;
-  }
+  do { // send as many frames as possible without re-encoding...
 
-  // At this point the side affect of the fill is to encode the performative into transport->scratch_space
-
-  do { // send as many frames as possible without changing the 'more' flag...
+    if (stale) {
+      /* "DL[I?I?Z?I?o?ond?o?o?o]" */
+      // delivery-id, delivery-tag and message-format are only carried by the
+      // first transfer of a delivery; continuation transfers must omit them.
+      performative =
+        pn_amqp_encode_transfer(&transport->scratch_space, AMQP_DESC_TRANSFER,
+                             handle,
+                             !continuation, id,
+                             !continuation, tag.size, tag.start,
+                             !continuation, message_format,
+                             settled, settled,
+                             more_flag, more_flag,
+                             disposition,
+                             resume, resume,
+                             aborted, aborted,
+                             batchable, batchable);
+      if (!performative.start) {
+        return PN_ERR;
+      }
+      // At this point the side affect of the fill is to encode the performative into transport->scratch_space
+      stale = false;
+    }
 
     // check if we need to break up the outbound frame
     size_t available = full_payload->size;
@@ -908,12 +915,14 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
         available = max_payload - performative.size;
         if (more_flag == false) {
           more_flag = true;
-          goto compute_performatives;  // deal with flag change
+          stale = true;
+          continue;  // deal with flag change
         }
       } else if (more_flag == true && more == false) {
         // caller has no more, and this is the last frame
         more_flag = false;
-        goto compute_performatives;
+        stale = true;
+        continue;
       }
     }
     pn_bytes_t payload = {.size = available, .start = full_payload->start};
@@ -922,7 +931,12 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
     full_payload->start += available;
     full_payload->size -= available;
     framecount++;
-  } while (full_payload->size > 0 && framecount < frame_limit);
+    // The next transfer continues this one exactly when this one said 'more'.
+    if (continuation != more_flag) {
+      continuation = more_flag;
+      stale = true;
+    }
+  } while (full_payload->size != 0 && framecount < (unsigned) frame_limit);
 
   return framecount;
 }
@@ -2307,7 +2321,9 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
                                                &delivery->local,
                                                false, /* Resume */
                                                delivery->aborted,
-                                               false /* Batchable */
+                                               false, /* Batchable */
+                                               /* Continuation: a previously sent frame said 'more' */
+                                               state->sending
       );
       if (count < 0) return count;
       state->sending = true;
