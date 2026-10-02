@@ -29,6 +29,7 @@ include (CheckLanguage)
 include (CheckLibraryExists)
 include (CheckSymbolExists)
 include (CheckPythonModule)
+include (GNUInstallDirs)
 
 find_package (OpenSSL 1.1)
 find_package (Threads)
@@ -147,7 +148,6 @@ endif()
 # off if building there:
 if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set (NOENABLE_WARNING_ERROR ON)
-  set (LIB_SUFFIX "")
 endif ()
 
 # Benchmarks should be disabled by default
@@ -295,50 +295,13 @@ endif()
 
 message(STATUS "PN_VERSION: ${PN_VERSION} (${PN_VERSION_QUALIFIER})")
 
-# In rpm builds the build sets some variables:
-#  CMAKE_INSTALL_PREFIX - this is a standard cmake variable
-#  INCLUDE_INSTALL_DIR
-#  LIB_INSTALL_DIR
-#  SYSCONF_INSTALL_DIR
-#  SHARE_INSTALL_DIR
-# So make these cached variables and the specific variables non cached
-# and derived from them.
-
-if (NOT DEFINED LIB_SUFFIX)
-    get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
-    if ("${LIB64}" STREQUAL "TRUE" AND ${CMAKE_SIZEOF_VOID_P} STREQUAL "8")
-        set(LIB_SUFFIX 64)
-    else()
-        set(LIB_SUFFIX "")
-    endif()
-endif()
-
 # Start of variables used during install
-set (INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
-set (LIB_INSTALL_DIR "lib${LIB_SUFFIX}" CACHE PATH "Library object file directory")
-set (SYSCONF_INSTALL_DIR etc CACHE PATH "System read only configuration directory")
-set (SHARE_INSTALL_DIR share CACHE PATH "Shared read only data directory")
-set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
-mark_as_advanced (INCLUDE_INSTALL_DIR LIB_INSTALL_DIR SYSCONF_INSTALL_DIR SHARE_INSTALL_DIR MAN_INSTALL_DIR)
+set (PROTON_SHARE ${CMAKE_INSTALL_DATADIR}/proton)
 
-# Sets variable NAME to contain relative path from ROOT to VALUE
-# if VALUE is already relative, it does nothing
-macro (pn_relative_install_dir NAME ROOT VALUE)
-  if (IS_ABSOLUTE ${VALUE})
-    file(RELATIVE_PATH "${NAME}" "${ROOT}" "${VALUE}")
-  else ()
-    set (${NAME} "${VALUE}")
-  endif ()
-endmacro ()
-
-pn_relative_install_dir (INCLUDEDIR "${CMAKE_INSTALL_PREFIX}" "${INCLUDE_INSTALL_DIR}")
-pn_relative_install_dir (LIBDIR "${CMAKE_INSTALL_PREFIX}" "${LIB_INSTALL_DIR}")
+# End of variables used during install
 
 ## LANGUAGE BINDINGS
-
-set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton)
-# End of variables used during install
 
 # Set result to a native search path - used by examples and binding tests.
 # args after result are directories or search paths.
@@ -458,6 +421,5 @@ configure_file(${PROJECT_SOURCE_DIR}/misc/config.sh.in
 configure_file(${PROJECT_SOURCE_DIR}/misc/config.bat.in
                ${PROJECT_BINARY_DIR}/config.bat @ONLY)
 
-# Tests that aren't unit tests - typically they require a separate broker process               
+# Tests that aren't unit tests - typically they require a separate broker process
 add_subdirectory(tests)
-

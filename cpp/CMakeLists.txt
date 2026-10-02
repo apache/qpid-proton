@@ -165,16 +165,16 @@ set_target_properties (
 install(TARGETS qpid-proton-cpp
   EXPORT  ProtonCppTargets
   RUNTIME DESTINATION bin
-  ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-  LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-  INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 if (BUILD_STATIC_LIBS)
   install(TARGETS qpid-proton-cpp-static
     EXPORT  ProtonCppStaticTargets
     RUNTIME DESTINATION bin
-    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-    LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-    INCLUDES DESTINATION ${INCLUDE_INSTALL_DIR})
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif ()
 
 # Install windows qpid-proton-cpp pdb files
@@ -185,7 +185,7 @@ if (MSVC)
     OPTIONAL)
 endif (MSVC)
 
-install (DIRECTORY "include/proton" DESTINATION ${INCLUDE_INSTALL_DIR} FILES_MATCHING PATTERN "*.hpp")
+install (DIRECTORY "include/proton" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} FILES_MATCHING PATTERN "*.hpp")
 install (DIRECTORY "examples/"
   DESTINATION "${PROTON_SHARE}/examples/cpp"
   USE_SOURCE_PERMISSIONS
@@ -211,27 +211,28 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc @ONLY)
 install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc
-  DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 install(EXPORT ProtonCppTargets
   FILE ProtonCppTargets.cmake
   NAMESPACE Proton::
-  DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ProtonCpp)
 if (BUILD_STATIC_LIBS)
   install(EXPORT ProtonCppStaticTargets
     FILE ProtonCppTargetsStatic.cmake
     NAMESPACE Proton::
-    DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ProtonCpp)
 endif ()
 
 include(CMakePackageConfigHelpers)
 include(WriteBasicConfigVersionFile)
 
+set (INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
 configure_package_config_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake
   PATH_VARS INCLUDE_INSTALL_DIR
-  INSTALL_DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ProtonCpp)
 write_basic_config_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
   VERSION ${PN_VERSION}
@@ -239,7 +240,7 @@ write_basic_config_version_file(
 install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
-  DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/ProtonCpp)
 
 if (BUILD_TESTING)
   include(tests.cmake)

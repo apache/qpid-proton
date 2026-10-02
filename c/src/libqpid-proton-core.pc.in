@@ -17,10 +17,10 @@
  * under the License.
  */
 
-prefix=${pcfiledir}/../..
+prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix=${prefix}
-libdir=${prefix}/@LIBDIR@
-includedir=${prefix}/@INCLUDEDIR@
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
 
 Name: Proton Core
 Description: Qpid Proton C core protocol library

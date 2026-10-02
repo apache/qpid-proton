@@ -93,10 +93,10 @@ if (BUILD_GO)
   endif (BUILD_EXAMPLES)
 
   # Install go sources.
-  set (GO_INSTALL_DIR ${SHARE_INSTALL_DIR}/gocode/pkg CACHE PATH "Installation directory for Go code")
+  set (GO_INSTALL_DIR ${CMAKE_INSTALL_DATAROOTDIR}/gocode CACHE PATH "Installation directory for Go code")
   mark_as_advanced (GO_INSTALL_DIR)
 
-  install(DIRECTORY pkg DESTINATION ${GO_INSTALL_DIR} COMPONENT Go)
+  install(DIRECTORY pkg DESTINATION ${GO_INSTALL_DIR}/src COMPONENT Go)
   install(DIRECTORY examples/
     DESTINATION "${PROTON_SHARE}/examples/go"
     COMPONENT Go
