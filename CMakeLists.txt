@@ -351,6 +351,7 @@ macro(set_search_path result)
 endmacro()
 
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  add_definitions(-D_WIN32_WINNT=0x0601)
   # CMake uses semicolon as list separator. Change ';'->'\;'
   function(to_native_path path result)
     file (TO_NATIVE_PATH "${path}" path)
