@@ -341,9 +341,11 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
   return preverify_ok;
 }
 
+#ifdef __GNUC__
 // Temporary: PROTON-2544 for build.  Next release: replace or remove DH_xxx() functions.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif // __GNUC__
 
 
 // this code was generated using the command:
@@ -537,7 +539,9 @@ static bool pni_init_ssl_domain( pn_ssl_domain_t * domain, pn_ssl_mode_t mode )
 }
 
 // PROTON-2544: see earlier related push.  Temporary only.
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
+#endif // __GNUC__
 
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
@@ -1677,6 +1681,7 @@ static size_t buffered_output(pn_transport_t *transport)
 
 
 /* Thread-safe locking and initialization for POSIX and Windows */
+static void initialize(void);
 
 static bool init_ok = false;
 
@@ -1688,17 +1693,31 @@ static inline void pni_mutex_lock(pni_mutex_t *m) { EnterCriticalSection(m); }
 static inline void pni_mutex_unlock(pni_mutex_t *m) { LeaveCriticalSection(m); }
 static inline unsigned long id_callback(void) { return (unsigned long)GetCurrentThreadId(); }
 INIT_ONCE initialize_once = INIT_ONCE_STATIC_INIT;
+
+static inline BOOL pni_init_once_fn(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *Context) { 
+    (void) InitOnce;
+    (void) Parameter;
+    (void) Context;
+
+    initialize();
+
+    if (ERR_peek_error()) {
+        ssl_log_flush(NULL, PN_LEVEL_ERROR);
+        return false;
+    }
+
+    return true;
+}
+
 static inline bool ensure_initialized(void) {
   void* dummy;
-  InitOnceExecuteOnce(&initialize_once, &initialize, NULL, &dummy);
+  InitOnceExecuteOnce(&initialize_once, &pni_init_once_fn, NULL, &dummy);
   return init_ok;
 }
 
 #else  /* POSIX */
 
 #include <pthread.h>
-
-static void initialize(void);
 
 typedef pthread_mutex_t pni_mutex_t;
 static inline int pni_mutex_init(pni_mutex_t *m) { return pthread_mutex_init(m, NULL); }

@@ -151,7 +151,7 @@ endif()
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
   set (pn_ssl_impl src/ssl/openssl.c)
-  set (SSL_LIB OpenSSL::SSL Threads::Threads)
+  set (SSL_LIB OpenSSL::SSL OpenSSL::Crypto Threads::Threads)
 elseif (SSL_IMPL STREQUAL schannel)
   set (pn_ssl_impl src/ssl/schannel.cpp)
   set (SSL_LIB Crypt32.lib Secur32.lib)
