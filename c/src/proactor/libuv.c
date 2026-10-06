@@ -171,6 +171,7 @@ typedef struct pconnection_t {
 
   uv_connect_t connect;         /* Outgoing connection only */
   int connected;      /* 0: not connected, <0: connecting after error, 1 = connected ok */
+  bool connect_started;         /* Outgoing connect sequence has been started */
 
   lsocket_t *lsocket;           /* Incoming connection only */
 
@@ -910,6 +911,13 @@ static void check_wake(pconnection_t *pc) {
 static bool leader_process_pconnection(pconnection_t *pc) {
   /* Important to do the following steps in order */
   if (!pc->connected) {
+    /* Retries are driven by the libuv connect callbacks. Restarting here would
+       re-run uv_tcp_init() on the live uv_tcp_t, re-initializing its watcher
+       while the loop still has it queued and corrupting loop->watcher_queue. */
+    if (pc->connect_started) {
+      return pn_connection_driver_has_event(&pc->driver);
+    }
+    pc->connect_started = true;
     return leader_connect(pc);
   }
   if (pc->writing) {
