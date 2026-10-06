@@ -3160,6 +3160,9 @@ static void listener_begin_close(pn_listener_t* l) {
 
 void pn_listener_close(pn_listener_t* l) {
   csguard g(&l->context.cslock);
+  /* Don't crash if we never passed it to a proactor */
+  if (!l->context.proactor)
+    return;
   listener_begin_close(l);
   wakeup(&l->psockets[0]);
 }

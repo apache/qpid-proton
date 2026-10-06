@@ -1367,7 +1367,10 @@ pn_listener_t *pn_listener(void) {
 void pn_listener_close(pn_listener_t* l) {
   /* May be called from any thread */
   uv_mutex_lock(&l->lock);
-  listener_close_lh(l);
+  /* Don't crash if we never passed it to a proactor */
+  if (l->work.proactor) {
+    listener_close_lh(l);
+  }
   uv_mutex_unlock(&l->lock);
 }
 

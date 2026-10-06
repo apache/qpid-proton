@@ -194,6 +194,15 @@ TEST_CASE("proactor_connect_close_before_open") {
   REQUIRE(h.proactor_inactive_);
 }
 
+/* Close a listener that was never passed to pn_proactor_listen(). Thread safety
+   is the only documented precondition, so this must not crash. */
+TEST_CASE("proactor_listener_close_before_listen") {
+  pn_listener_t *l = pn_listener();
+  REQUIRE(l != nullptr);
+  pn_listener_close(l);
+  pn_listener_free(l);
+}
+
 /* Failing name lookup - connect to invalid hostname. */
 TEST_CASE("proactor_name_lookup_fails") {
   common_handler h;
