@@ -299,8 +299,8 @@ static void work_start(work_t *w) {
     w->working = false;
     work_push(&w->proactor->leader_q, w);
     notify(w->proactor);
-    uv_mutex_unlock(&w->proactor->lock);
   }
+  uv_mutex_unlock(&w->proactor->lock);
 }
 
 static void parse_addr(addr_t *addr, const char *str) {
