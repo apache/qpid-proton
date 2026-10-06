@@ -71,6 +71,7 @@ if (CMAKE_CXX_COMPILER)
     condition_test.cpp
     connection_driver_test.cpp
     data_test.cpp
+    error_test.cpp
     engine_test.cpp
     refcount_test.cpp
     ${platform_test_src})

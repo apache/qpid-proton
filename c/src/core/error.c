@@ -71,11 +71,14 @@ void pn_error_clear(pn_error_t *error)
 int pn_error_set(pn_error_t *error, int code, const char *text)
 {
   assert(error);
-  pn_error_clear(error);
-  if (code) {
-    error->code = code;
-    error->text = pn_strdup(text);
+  if (!code) {
+    pn_error_clear(error);
+    return 0;
   }
+  char *new_text = pn_strdup(text);
+  pn_error_clear(error);
+  error->code = code;
+  error->text = new_text;
   return code;
 }
 
@@ -116,6 +119,9 @@ int pn_error_copy(pn_error_t *error, pn_error_t *src)
 {
   assert(error);
   if (src) {
+    if (src==error) {
+      return error->code;
+    }
     return pn_error_set(error, pn_error_code(src), pn_error_text(src));
   } else {
     pn_error_clear(error);
