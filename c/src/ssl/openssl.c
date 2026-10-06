@@ -336,9 +336,10 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 }
 
 // Temporary: PROTON-2544 for build.  Next release: replace or remove DH_xxx() functions.
+#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
+#endif
 
 // this code was generated using the command:
 // "openssl dhparam -C -2 2048"
@@ -531,7 +532,9 @@ static bool pni_init_ssl_domain( pn_ssl_domain_t * domain, pn_ssl_mode_t mode )
 }
 
 // PROTON-2544: see earlier related push.  Temporary only.
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
+#endif
 
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
