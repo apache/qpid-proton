@@ -34,12 +34,6 @@
 // winsock.h
 
 #ifdef _MSC_VER
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0501
-#endif
-#if _WIN32_WINNT < 0x0501
-#error "Proton requires Windows API support for XP or later."
-#endif
 #include <winsock2.h>
 #include <mswsock.h>
 #include <Ws2tcpip.h>
