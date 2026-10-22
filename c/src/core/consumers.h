@@ -129,7 +129,7 @@ static inline bool pni_consumer_readv8(pni_consumer_t *consumer, pn_bytes_t* byt
 static inline bool pni_consumer_readv32(pni_consumer_t *consumer, pn_bytes_t* bytes){
   uint32_t size;
   if (!pni_consumer_readf32(consumer, &size)) return false;
-  if (consumer->position+size > consumer->size) {
+  if (size > consumer->size - consumer->position) {
     consumer->position = consumer->size;
     return false;
   }
@@ -194,7 +194,7 @@ static inline bool pni_consumer_read_value_not_described(pni_consumer_t* consume
     case 0xF: {
       uint32_t size;
       if (!pni_consumer_readf32(consumer, &size)) return false;
-      if (consumer->position+size > consumer->size) break;
+      if (size > consumer->size - consumer->position) break;
       *value = (pn_bytes_t){.size=size,.start=(const char *)consumer->output_start+consumer->position};
       consumer->position += size;
       return true;
