@@ -21,29 +21,34 @@
 # Run the C examples and verify that they behave as expected.
 # Example executables must be in PATH
 
+import socket
+import subprocess
 import unittest
 
 from test_subprocess import Popen, Server, TestProcessError, check_output
 
-MESSAGES=10
+MESSAGES = 10
 
-def receive_expect_messages(n=MESSAGES): return ''.join(['{"sequence"=%s}\n'%i for i in range(1, n+1)])
-def receive_expect_total(n=MESSAGES): return "%s messages received\n"%n
-def receive_expect(n=MESSAGES): return receive_expect_messages(n)+receive_expect_total(n)
+
+def receive_expect_messages(n=MESSAGES): return ''.join(['{"sequence"=%s}\n' % i for i in range(1, n + 1)])
+def receive_expect_total(n=MESSAGES): return "%s messages received\n" % n
+def receive_expect(n=MESSAGES): return receive_expect_messages(n) + receive_expect_total(n)
 def send_expect(n=MESSAGES): return "%s messages sent and acknowledged\n" % n
 def send_abort_expect(n=MESSAGES): return "%s messages started and aborted\n" % n
+
 
 class Broker(Server):
     def __init__(self):
         super(Broker, self).__init__(["broker", "", "0"], kill_me=True)
 
+
 class ExampleTest(unittest.TestCase):
 
-    def runex(self, name, port, messages=MESSAGES):
+    def runex(self, name, port, messages: int = MESSAGES) -> str:
         """Run an example with standard arguments, return output"""
         return check_output([name, "", port, "xtest", str(messages)])
 
-    def startex(self, name, port, messages=MESSAGES):
+    def startex(self, name, port, messages: int = MESSAGES) -> Popen:
         """Start an example sub-process with standard arguments"""
         return Popen([name, "", port, "xtest", str(messages)])
 
@@ -68,7 +73,7 @@ class ExampleTest(unittest.TestCase):
 
     def test_receive_direct(self):
         """Receive from direct server"""
-        d =  Server(["direct", "", "0"])
+        d = Server(["direct", "", "0"])
         self.assertMultiLineEqual(receive_expect(), self.runex("receive", d.port))
         self.assertEqual("10 messages sent and acknowledged\n", d.communicate()[0])
 
@@ -80,8 +85,8 @@ class ExampleTest(unittest.TestCase):
             for i in range(MESSAGES):
                 self.assertEqual("Message aborted\n", b.stdout.readline())
             self.assertEqual(send_expect(), self.runex("send", b.port))
-            expect = receive_expect_messages(MESSAGES)+receive_expect_messages(MESSAGES)+receive_expect_total(20)
-            self.assertMultiLineEqual(expect, self.runex("receive", b.port, "20"))
+            expect = receive_expect_messages(MESSAGES) + receive_expect_messages(MESSAGES) + receive_expect_total(20)
+            self.assertMultiLineEqual(expect, self.runex("receive", b.port, 20))
 
     def test_send_abort_direct(self):
         """Send aborted messages to the direct server"""
@@ -89,7 +94,7 @@ class ExampleTest(unittest.TestCase):
         self.assertEqual(send_expect(), self.runex("send", d.port))
         self.assertEqual(send_abort_expect(), self.runex("send-abort", d.port))
         self.assertEqual(send_expect(), self.runex("send", d.port))
-        expect = receive_expect_messages() + "Message aborted\n"*MESSAGES + receive_expect_messages()+receive_expect_total(20)
+        expect = receive_expect_messages() + "Message aborted\n" * MESSAGES + receive_expect_messages() + receive_expect_total(20)
         self.maxDiff = None
         self.assertMultiLineEqual(expect, d.communicate()[0])
 
@@ -106,6 +111,42 @@ class ExampleTest(unittest.TestCase):
                 print("Skipping %s: SSL not available" % self.id())
             else:
                 raise
+
+    def test_raw_connect(self):
+        message = b"At thee! Have at thee!\n"
+
+        with Server(["raw_echo", "", "0"], kill_me=True) as server:
+            client = subprocess.Popen(args=["raw_connect", "", server.port],
+                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            client.stdin.write(message)
+            client.stdin.flush()
+            stdout, _ = client.communicate()
+
+            expected_brief = b'**raw connection connected\n' + message + b'**raw connection disconnected\n'
+            expected_polite = b'**raw connection connected\n' + message + b'** Goodbye ****raw connection disconnected\n'
+
+            expected = expected_polite if b'Goodbye' in stdout else expected_brief
+
+            self.assertEqual(expected, stdout)
+            self.assertEqual(client.returncode, 0)
+
+    def test_raw_echo(self):
+        """raw_echo example implements a TCP echo server"""
+        message = b"Hello world\n"
+
+        with Server(["raw_echo", "", "0"], kill_me=True) as server:
+            s = socket.socket()
+            s.connect(("localhost", int(server.port)))
+            s.sendall(message)
+
+            data = b""
+            while len(data) != len(message):
+                buf = s.recv(1024)
+                data += buf
+
+            self.assertEqual(message, data)
+            s.close()
+
 
 if __name__ == "__main__":
     unittest.main()
