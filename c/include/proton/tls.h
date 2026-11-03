@@ -479,10 +479,12 @@ PN_TLS_EXTERN uint32_t pn_tls_get_last_encrypt_output_buffer_size(pn_tls_t*);
 
 
 // Configurable.  Zero implies "use default".  No effect after pn_tls_start().
-PN_TLS_EXTERN void pn_tls_set_encrypt_input_buffer_max_capacity(pn_tls_t*, size_t s);
-PN_TLS_EXTERN void pn_tls_set_decrypt_input_buffer_max_capacity(pn_tls_t*, size_t s);
-PN_TLS_EXTERN void pn_tls_set_encrypt_output_buffer_max_capacity(pn_tls_t*, size_t s);
-PN_TLS_EXTERN void pn_tls_set_decrypt_output_buffer_max_capacity(pn_tls_t*, size_t s);
+// The engine addresses its buffers by a 16 bit index, so UINT16_MAX is the
+// largest capacity that can be requested.
+PN_TLS_EXTERN void pn_tls_set_encrypt_input_buffer_max_capacity(pn_tls_t*, uint16_t s);
+PN_TLS_EXTERN void pn_tls_set_decrypt_input_buffer_max_capacity(pn_tls_t*, uint16_t s);
+PN_TLS_EXTERN void pn_tls_set_encrypt_output_buffer_max_capacity(pn_tls_t*, uint16_t s);
+PN_TLS_EXTERN void pn_tls_set_decrypt_output_buffer_max_capacity(pn_tls_t*, uint16_t s);
 
 // Process as much unencrypted data to encrypted result data as possible.
 // Also process as much undecrypted data to decryptedcrypted result data as possible.

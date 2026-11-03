@@ -29,8 +29,10 @@
 #include <errno.h>
 #endif
 
+#include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <vector>
 
 using namespace pn_test;
 using Catch::Matchers::Contains;
@@ -547,4 +549,97 @@ TEST_CASE("buffer release on pn_tls_stop()") {
   take_count += count;
 
   REQUIRE(take_count == give_count);
+}
+
+// The engine addresses buffers with a 16 bit index, so UINT16_MAX is both the
+// largest capacity a caller can request and the boundary at which the free list
+// construction in tls_initialize_buffers() can overflow that index.
+TEST_CASE("maximum buffer capacity") {
+  TestPeer client(false);
+  client.config = default_client_config();
+  REQUIRE(client.config);
+  client.tls = pn_tls(client.config);
+  REQUIRE(client.tls);
+  pn_tls_t *tls = client.tls;
+
+  pn_tls_set_encrypt_input_buffer_max_capacity(tls, UINT16_MAX);
+  pn_tls_set_decrypt_input_buffer_max_capacity(tls, UINT16_MAX);
+  pn_tls_set_encrypt_output_buffer_max_capacity(tls, UINT16_MAX);
+  pn_tls_set_decrypt_output_buffer_max_capacity(tls, UINT16_MAX);
+
+  client.init();  // pn_tls_start(): builds the four free lists
+
+  REQUIRE(pn_tls_get_encrypt_input_buffer_capacity(tls) == UINT16_MAX);
+  REQUIRE(pn_tls_get_decrypt_input_buffer_capacity(tls) == UINT16_MAX);
+  REQUIRE(pn_tls_get_encrypt_output_buffer_capacity(tls) == UINT16_MAX);
+  REQUIRE(pn_tls_get_decrypt_output_buffer_capacity(tls) == UINT16_MAX);
+
+  // Walk the whole free list: all UINT16_MAX buffers must be accepted, which
+  // only holds if every link including the terminator was built correctly.
+  std::vector<pn_raw_buffer_t> bufs(UINT16_MAX);
+  for (auto &b : bufs) b = new_rbuf(1);
+  REQUIRE(pn_tls_give_encrypt_input_buffers(tls, bufs.data(), bufs.size()) == UINT16_MAX);
+  REQUIRE(pn_tls_get_encrypt_input_buffer_capacity(tls) == 0);
+
+  // A full list accepts nothing more.
+  pn_raw_buffer_t extra = new_rbuf(1);
+  REQUIRE(pn_tls_give_encrypt_input_buffers(tls, &extra, 1) == 0);
+  free_rbuf(extra);
+
+  pn_tls_stop(tls);
+  size_t returned = 0;
+  while (size_t n = pn_tls_take_encrypt_input_buffers(tls, bufs.data(), bufs.size())) {
+    for (size_t i = 0; i < n; i++) free_rbuf(bufs[i]);
+    returned += n;
+  }
+  REQUIRE(returned == UINT16_MAX);
+}
+
+// Zero means "use the default", so a zero capacity must not leave the engine
+// with no buffers at all.
+TEST_CASE("zero buffer capacity means default") {
+  TestPeer client(false);
+  client.config = default_client_config();
+  REQUIRE(client.config);
+  client.tls = pn_tls(client.config);
+  REQUIRE(client.tls);
+  pn_tls_t *tls = client.tls;
+
+  pn_tls_set_encrypt_input_buffer_max_capacity(tls, 0);
+  pn_tls_set_decrypt_input_buffer_max_capacity(tls, 0);
+  pn_tls_set_encrypt_output_buffer_max_capacity(tls, 0);
+  pn_tls_set_decrypt_output_buffer_max_capacity(tls, 0);
+
+  client.init();
+
+  // The documented default is 4 of each.
+  REQUIRE(pn_tls_get_encrypt_input_buffer_capacity(tls) == 4);
+  REQUIRE(pn_tls_get_decrypt_input_buffer_capacity(tls) == 4);
+  REQUIRE(pn_tls_get_encrypt_output_buffer_capacity(tls) == 4);
+  REQUIRE(pn_tls_get_decrypt_output_buffer_capacity(tls) == 4);
+}
+
+// A capacity of one exercises the shortest possible free list: a single buffer
+// that must both start and terminate the chain.
+TEST_CASE("single buffer capacity") {
+  TestPeer client(false);
+  client.config = default_client_config();
+  REQUIRE(client.config);
+  client.tls = pn_tls(client.config);
+  REQUIRE(client.tls);
+  pn_tls_t *tls = client.tls;
+
+  pn_tls_set_encrypt_input_buffer_max_capacity(tls, 1);
+  client.init();
+
+  REQUIRE(pn_tls_get_encrypt_input_buffer_capacity(tls) == 1);
+
+  pn_raw_buffer_t bufs[2] = {new_rbuf(1), new_rbuf(1)};
+  REQUIRE(pn_tls_give_encrypt_input_buffers(tls, bufs, 2) == 1);  // only one fits
+  REQUIRE(pn_tls_get_encrypt_input_buffer_capacity(tls) == 0);
+  free_rbuf(bufs[1]);
+
+  pn_tls_stop(tls);
+  REQUIRE(pn_tls_take_encrypt_input_buffers(tls, bufs, 2) == 1);
+  free_rbuf(bufs[0]);
 }

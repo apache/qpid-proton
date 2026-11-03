@@ -95,6 +95,7 @@ typedef enum {
 
 
 typedef uint16_t buff_ptr; // This is always the index+1 so that 0 can be special
+typedef buff_ptr buff_count; // A number of buffers; bounded by the largest buff_ptr
 
 typedef struct pbuffer_t {
   uintptr_t context;
@@ -138,17 +139,17 @@ struct pn_tls_t {
   pbuffer_t *dresult_buffers;
   pbuffer_t *encrypt_buffers;
   pbuffer_t *decrypt_buffers;
-  size_t eresult_buffer_count;
-  size_t dresult_buffer_count;
-  size_t encrypt_buffer_count;
-  size_t decrypt_buffer_count;
+  buff_count eresult_buffer_count;
+  buff_count dresult_buffer_count;
+  buff_count encrypt_buffer_count;
+  buff_count decrypt_buffer_count;
 
-  uint16_t encrypt_buffer_empty_count;
-  uint16_t decrypt_buffer_empty_count;
-  uint16_t eresult_encrypted_count;
-  uint16_t eresult_empty_count;
-  uint16_t dresult_decrypted_count;
-  uint16_t dresult_empty_count;
+  buff_count encrypt_buffer_empty_count;
+  buff_count decrypt_buffer_empty_count;
+  buff_count eresult_encrypted_count;
+  buff_count eresult_empty_count;
+  buff_count dresult_decrypted_count;
+  buff_count dresult_empty_count;
 
   // Lists within encrypt_buffers
   buff_ptr encrypt_first_empty;   // unordered: no encryp_last_empty
@@ -223,24 +224,24 @@ static int pn_tls_alpn_cb(SSL *ssn, const unsigned char **out, unsigned char *ou
 static void release_buffers(pn_tls_t *
 );
 
+// Chain count buffers into a single free list; a count of zero yields an empty list.
+// Note that i is compared against count rather than running to it inclusive, so it
+// cannot wrap when count is the largest value a buff_count can hold.
+static void initialize_free_list(pbuffer_t *buffers, buff_count count) {
+  assert(count); // Callers always supply at least the default number of buffers.
+  for (buff_count i = 0; i < count; i++) {
+    // next is a buff_ptr (index+1), so buffer i chains to i+2 and the last ends the list.
+    buffers[i].next = (i + 1 == count) ? 0 : i + 2;
+    buffers[i].type = buff_empty;
+  }
+}
+
 static void tls_initialize_buffers(pn_tls_t *tls) {
   // Link together free lists
-  for (buff_ptr i = 1; i<=tls->encrypt_buffer_count; i++) {
-    tls->encrypt_buffers[i-1].next = i==tls->encrypt_buffer_count ? 0 : i+1;
-    tls->encrypt_buffers[i-1].type = buff_empty;
-  }
-  for (buff_ptr i = 1; i<=tls->decrypt_buffer_count; i++) {
-    tls->decrypt_buffers[i-1].next = i==tls->decrypt_buffer_count ? 0 : i+1;
-    tls->decrypt_buffers[i-1].type = buff_empty;
-  }
-  for (buff_ptr i = 1; i<=tls->eresult_buffer_count; i++) {
-    tls->eresult_buffers[i-1].next = i==tls->eresult_buffer_count ? 0 : i+1;
-    tls->eresult_buffers[i-1].type = buff_empty;
-  }
-  for (buff_ptr i = 1; i<=tls->dresult_buffer_count; i++) {
-    tls->dresult_buffers[i-1].next = i==tls->dresult_buffer_count ? 0 : i+1;
-    tls->dresult_buffers[i-1].type = buff_empty;
-  }
+  initialize_free_list(tls->encrypt_buffers, tls->encrypt_buffer_count);
+  initialize_free_list(tls->decrypt_buffers, tls->decrypt_buffer_count);
+  initialize_free_list(tls->eresult_buffers, tls->eresult_buffer_count);
+  initialize_free_list(tls->dresult_buffers, tls->dresult_buffer_count);
 
   tls->encrypt_buffer_empty_count = tls->encrypt_buffer_count;
   tls->decrypt_buffer_empty_count = tls->decrypt_buffer_count;
@@ -2185,16 +2186,16 @@ bool pn_tls_is_decrypt_output_pending(pn_tls_t *tls)
 }
 
 
-void pn_tls_set_encrypt_input_buffer_max_capacity(pn_tls_t *tls, size_t s) {
+void pn_tls_set_encrypt_input_buffer_max_capacity(pn_tls_t *tls, uint16_t s) {
   if (!tls->started) tls->encrypt_buffer_count = s;
 }
-void pn_tls_set_decrypt_input_buffer_max_capacity(pn_tls_t *tls, size_t s) {
+void pn_tls_set_decrypt_input_buffer_max_capacity(pn_tls_t *tls, uint16_t s) {
   if (!tls->started) tls->decrypt_buffer_count = s;
 }
-void pn_tls_set_encrypt_output_buffer_max_capacity(pn_tls_t *tls, size_t s) {
+void pn_tls_set_encrypt_output_buffer_max_capacity(pn_tls_t *tls, uint16_t s) {
   if (!tls->started) tls->eresult_buffer_count = s;
 }
-void pn_tls_set_decrypt_output_buffer_max_capacity(pn_tls_t *tls, size_t s) {
+void pn_tls_set_decrypt_output_buffer_max_capacity(pn_tls_t *tls, uint16_t s) {
   if (!tls->started) tls->dresult_buffer_count = s;
 }
 
