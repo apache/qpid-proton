@@ -393,7 +393,7 @@ static void parse_options( int argc, char **argv, Options_t *opts )
     }
 
     // default target if none specified
-    if (opts->targets.count == 0) addresses_add( &opts->targets, "amqp://0.0.0.0" );
+    if (opts->targets.count == 0) addresses_add( &opts->targets, "amqp://127.0.0.1" );
 }
 
 

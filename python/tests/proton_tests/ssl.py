@@ -940,7 +940,7 @@ class SslTest(common.Test):
         receiver.start()
 
         sender = common.MessengerSenderC()
-        sender.targets = ["amqps://0.0.0.0:%s/X" % port]
+        sender.targets = ["amqps://127.0.0.1:%s/X" % port]
         sender.send_count = 1
         sender.timeout = self.timeout
         sender.start()

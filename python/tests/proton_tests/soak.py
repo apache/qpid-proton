@@ -149,7 +149,7 @@ class MessengerTests(AppTests):
         receiver.timeout = MessengerTests._timeout
         self.receivers.append(receiver)
 
-        sender.targets = ["%s://0.0.0.0:%s/X%d" % (domain, port, j) for j in range(target_count)]
+        sender.targets = ["%s://127.0.0.1:%s/X%d" % (domain, port, j) for j in range(target_count)]
         sender.send_count = send_total
         sender.timeout = MessengerTests._timeout
         self.senders.append(sender)
@@ -180,7 +180,7 @@ class MessengerTests(AppTests):
         receiver.timeout = MessengerTests._timeout
         self.receivers.append(receiver)
 
-        sender.targets = ["%s://0.0.0.0:%s/%dY" % (domain, port, j) for j in range(target_count)]
+        sender.targets = ["%s://127.0.0.1:%s/%dY" % (domain, port, j) for j in range(target_count)]
         sender.send_count = send_total
         sender.get_reply = True
         sender.send_batch = send_batch
@@ -234,7 +234,7 @@ class MessengerTests(AppTests):
 
         for i in range(sender_count):
             sender = s_factory()
-            sender.targets = ["%s://0.0.0.0:%s/%d" % (domain, port, j) for port in ports for j in range(target_count)]
+            sender.targets = ["%s://127.0.0.1:%s/%d" % (domain, port, j) for port in ports for j in range(target_count)]
             sender.send_count = send_total
             sender.send_batch = send_batch
             sender.get_reply = True
