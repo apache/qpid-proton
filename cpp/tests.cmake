@@ -36,7 +36,8 @@ if(CyrusSASL_Saslpasswd_EXECUTABLE)
 endif()
 
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  set(test_env ${test_env} "PATH=$<TARGET_FILE_DIR:qpid-proton>")
+  # Windows looks for DLLs on PATH
+  set(test_path $<TARGET_FILE_DIR:qpid-proton>)
 endif()
 
 macro(add_cpp_test test)
@@ -45,7 +46,8 @@ macro(add_cpp_test test)
   pn_add_test(
     EXECUTABLE
     NAME cpp-${test}
-    APPEND_ENVIRONMENT ${test_env}
+    ENVIRONMENT ${test_env}
+    PATH_PREPEND ${test_path}
     COMMAND $<TARGET_FILE:${test}>
     ${ARGN})
 endmacro(add_cpp_test)
@@ -72,12 +74,11 @@ if (ENABLE_JSONCPP)
   file(COPY  "${CMAKE_CURRENT_SOURCE_DIR}/testdata" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 
   if (NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
-    add_executable (pkcs11_test src/pkcs11_test.cpp)
-    target_link_libraries (pkcs11_test qpid-proton-cpp qpid-proton-core ${PLATFORM_LIBS})
-    # PKCS#11 URIs contain semicolons, which CMake would interpret as
-    # list sepearator, so we side step add_cpp_test and pass the env
-    # through as is.
-    add_test(NAME cpp-pkcs11_test COMMAND $<TARGET_FILE:pkcs11_test>)
+    # Reads its PKCS#11 URIs from the ambient environment, and skips if they
+    # are not set. pn_add_test only adds to the inherited environment, so
+    # they still reach the test.
+    add_cpp_test(pkcs11_test)
+    target_link_libraries (pkcs11_test qpid-proton-core)
     set_tests_properties(cpp-pkcs11_test PROPERTIES SKIP_RETURN_CODE 127)
   endif()
 endif()
@@ -112,7 +113,8 @@ macro(add_catch_test tag)
   pn_add_test(
     EXECUTABLE
     NAME cpp-${tag}-test
-    APPEND_ENVIRONMENT ${test_env}
+    ENVIRONMENT ${test_env}
+    PATH_PREPEND ${test_path}
     COMMAND $<TARGET_FILE:cpp-test> "[${tag}]")
   set_tests_properties(cpp-${tag}-test PROPERTIES  FAIL_REGULAR_EXPRESSION ".*No tests ran.*")
 endmacro(add_catch_test)
@@ -121,7 +123,8 @@ macro(add_core_catch_test tag)
   pn_add_test(
           EXECUTABLE
           NAME cpp-${tag}-test
-          APPEND_ENVIRONMENT ${test_env}
+          ENVIRONMENT ${test_env}
+          PATH_PREPEND ${test_path}
           COMMAND $<TARGET_FILE:cpp-core-test> "[${tag}]")
   set_tests_properties(cpp-${tag}-test PROPERTIES  FAIL_REGULAR_EXPRESSION ".*No tests ran.*")
 endmacro(add_core_catch_test)

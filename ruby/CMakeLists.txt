@@ -94,24 +94,20 @@ install(DIRECTORY examples/
         USE_SOURCE_PERMISSIONS)
 ## Tests
 
-to_native_path("${src}/lib;${src}/tests;${src}/spec;${bin};${c_lib_dir};$ENV{RUBYLIB}" RUBYLIB)
-to_native_path("${bin};${c_lib_dir};$ENV{PATH}" PATH)
-
-if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-  set(COVERAGE "COVERAGE=1")
-endif ()
+set(test_rubylib ${src}/lib ${src}/tests ${src}/spec ${bin} ${c_lib_dir})
+set(test_path ${bin} ${c_lib_dir})
 
 execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
   RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 if (result EQUAL 0)  # Have minitest
   set(test_env
-    "PATH=${PATH}"
     "SSL_CERT_DIR=${TEST_CERT_DIR}"
-    "RUBYLIB=${RUBYLIB}"
     "PN_SASL_CONFIG_PATH=${PROJECT_BINARY_DIR}/sasl-conf"
-    "${COVERAGE}"
     "COVERAGE_DIR=${PROJECT_BINARY_DIR}/coverage_results/ruby"
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}")
+  if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+    list(APPEND test_env "COVERAGE=1")
+  endif ()
 
   macro(add_ruby_test script)
     get_filename_component(name ${script} NAME_WE)
@@ -119,7 +115,9 @@ if (result EQUAL 0)  # Have minitest
     pn_add_test(
       INTERPRETED
       NAME ${name}
-      PREPEND_ENVIRONMENT ${test_env}
+      ENVIRONMENT ${test_env}
+      PATH_PREPEND ${test_path}
+      RUBYLIB_PREPEND ${test_rubylib}
       COMMAND ${RUBY_EXECUTABLE} -r${CMAKE_CURRENT_SOURCE_DIR}/tests/collect_coverage.rb ${script} -v
       WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}  # simplecov doesn't report on code not under $CWD
       ${ARGN})
@@ -128,7 +126,9 @@ if (result EQUAL 0)  # Have minitest
   pn_add_test(
     INTERPRETED
     NAME ruby-example-test
-    PREPEND_ENVIRONMENT ${test_env}
+    ENVIRONMENT ${test_env}
+    PATH_PREPEND ${test_path}
+    RUBYLIB_PREPEND ${test_rubylib}
     COMMAND ${RUBY_EXECUTABLE} testme -v
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples)
 

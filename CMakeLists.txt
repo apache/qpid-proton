@@ -17,7 +17,7 @@
 # under the License.
 #
 
-cmake_minimum_required (VERSION 3.16)
+cmake_minimum_required (VERSION 3.26)
 
 project (Proton C)
 
@@ -58,7 +58,6 @@ set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/config)
 
 ## Variables used across components
 
-set (PN_ENV_SCRIPT "${Python_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/scripts/env.py")
 set (PN_C_INCLUDE_DIR "${PROJECT_BINARY_DIR}/c/include")
 set (PN_C_LIBRARY_DIR "${PROJECT_BINARY_DIR}/c")
 set (PN_C_SOURCE_DIR "${PROJECT_BINARY_DIR}/c/src")
@@ -307,33 +306,6 @@ set (PROTON_SHARE ${CMAKE_INSTALL_DATADIR}/proton)
 # End of variables used during install
 
 ## LANGUAGE BINDINGS
-
-# Set result to a native search path - used by examples and binding tests.
-# args after result are directories or search paths.
-macro(set_search_path result)
-  set(${result} ${ARGN})
-  if (UNIX)
-    string(REPLACE ";" ":" ${result} "${${result}}") # native search path separators.
-  endif()
-  file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
-endmacro()
-
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  # CMake uses semicolon as list separator. Change ';'->'\;'
-  function(to_native_path path result)
-    file (TO_NATIVE_PATH "${path}" path)
-    string (REPLACE ";" "\;" path "${path}")
-    # without this, ...;last\dir\ would later combine with list separator ; into \;
-    set (${result} "${path}\;" PARENT_SCOPE)
-  endfunction()
-else (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  # Just change ';'->':'
-  function(to_native_path path result)
-    file (TO_NATIVE_PATH "${path}" path)
-    string (REPLACE ";" ":" path "${path}")
-    set (${result} "${path}" PARENT_SCOPE)
-  endfunction()
-endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
 add_custom_target(docs)
 add_custom_target(doc DEPENDS docs)

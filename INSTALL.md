@@ -30,6 +30,8 @@ Windows dependencies
 CMake (Linux)
 -------------
 
+Building Proton requires CMake 3.26 or newer.
+
 The following prerequisites are required to do a full build on
 RPM-based systems (RHEL, Fedora, etc.).  If you do not wish to build a
 given language binding you can omit the devel package for that
@@ -109,7 +111,7 @@ The following packages must be installed:
 
   - Visual Studio 2019 or newer (Community or Enterprise Editions)
   - Python 3.9 or newer (www.python.org)
-  - CMake (www.cmake.org)
+  - CMake 3.26 or newer (www.cmake.org)
 
 Additional packages are required for language bindings:
 

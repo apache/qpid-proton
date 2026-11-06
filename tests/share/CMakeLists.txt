@@ -17,11 +17,12 @@
 # under the License.
 #
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required (VERSION 3.26)
 
 project(ProtonExamples)
 include(CTest)
 include("tests/RuntimeCheck.cmake")
+include("tests/PNAddTest.cmake")
 
 # find example sub-directories that contain "CMakeLists.txt" or "testme"
 set(ex_dir "${PROJECT_SOURCE_DIR}/examples")

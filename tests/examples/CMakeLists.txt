@@ -22,42 +22,38 @@ if (NOT Python_EXECUTABLE)
   return()
 endif()
 
+set(c_test_path $<TARGET_FILE_DIR:c-broker>)
 if(WIN32)
-  # NOTE: need to escape semicolons as cmake uses them as list separators.
-  set(c_test_path "$<TARGET_FILE_DIR:c-broker>\;$<TARGET_FILE_DIR:qpid-proton-core>\;$<TARGET_FILE_DIR:qpid-proton-proactor>")
-else()
-  set(c_test_path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
+  # Windows looks for DLLs on PATH
+  list(APPEND c_test_path
+    $<TARGET_FILE_DIR:qpid-proton-core> $<TARGET_FILE_DIR:qpid-proton-proactor>)
 endif()
-
-set(c_test_env
-  "PATH=${c_test_path}"
-  "SSL_CERT_DIR=${TEST_CERT_DIR}"
-  "PYTHONPATH=${Proton_SOURCE_DIR}/tests/py")
 
 pn_add_test(
   UNWRAPPED
   NAME c-example-tests
-  PREPEND_ENVIRONMENT "${c_test_env}"
+  ENVIRONMENT "SSL_CERT_DIR=${TEST_CERT_DIR}"
+  PATH_PREPEND ${c_test_path}
+  PYTHONPATH_PREPEND "${Proton_SOURCE_DIR}/tests/py"
   WORKING_DIRECTORY ${ProtonCExamples_SOURCE_DIR}
   COMMAND ${Python_EXECUTABLE} testme -v)
 
 if (BUILD_CPP)
+  set(cpp_test_path $<TARGET_FILE_DIR:broker>)
   if(WIN32)
-    # NOTE: need to escape semicolons as cmake uses them as list separators.
-    set(cpp_test_path "$<TARGET_FILE_DIR:broker>\;$<TARGET_FILE_DIR:qpid-proton-core>\;$<TARGET_FILE_DIR:qpid-proton-cpp>")
-  else()
-    set(cpp_test_path "$<TARGET_FILE_DIR:broker>:$ENV{PATH}")
+    # Windows looks for DLLs on PATH
+    list(APPEND cpp_test_path
+      $<TARGET_FILE_DIR:qpid-proton-core> $<TARGET_FILE_DIR:qpid-proton-cpp>)
   endif()
 
-  set(cpp_test_env
-    "PATH=${cpp_test_path}"
-    "TEST_CERT_DIR=${TEST_CERT_DIR}"
-    "PYTHONPATH=${Proton_SOURCE_DIR}/tests/py")
+  set(cpp_test_env "TEST_CERT_DIR=${TEST_CERT_DIR}")
 
   pn_add_test(
     UNWRAPPED
     NAME cpp-example-container
-    PREPEND_ENVIRONMENT "${cpp_test_env}"
+    ENVIRONMENT ${cpp_test_env}
+    PATH_PREPEND ${cpp_test_path}
+    PYTHONPATH_PREPEND "${Proton_SOURCE_DIR}/tests/py"
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMAND ${Python_EXECUTABLE} ${ProtonCppExamples_SOURCE_DIR}/testme -v ContainerExampleTest)
 
@@ -65,7 +61,9 @@ if (BUILD_CPP)
     pn_add_test(
       UNWRAPPED
       NAME cpp-example-container-ssl
-      PREPEND_ENVIRONMENT "${cpp_test_env}"
+      ENVIRONMENT ${cpp_test_env}
+      PATH_PREPEND ${cpp_test_path}
+      PYTHONPATH_PREPEND "${Proton_SOURCE_DIR}/tests/py"
       WORKING_DIRECTORY ${ProtonCppExamples_SOURCE_DIR}
       COMMAND ${Python_EXECUTABLE} testme -v ContainerExampleSSLTest)
   endif()

@@ -72,9 +72,9 @@ if (NOT SPHINX_MODULE_FOUND)
 else ()
     add_custom_target(docs-py
 	      DEPENDS .timestamp.test_env
-        COMMAND ${PN_ENV_SCRIPT} --
-        PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
-        LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/c"
+        COMMAND ${CMAKE_COMMAND} -E env
+        PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}
+        --
         ${Python_EXECUTABLE} -m sphinx "${CMAKE_CURRENT_SOURCE_DIR}/docs" "${CMAKE_CURRENT_BINARY_DIR}/docs")
     add_dependencies(docs docs-py)
     install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/docs/"
@@ -234,15 +234,18 @@ endif()
 if (BUILD_TESTING)
   # python test: python/tests/proton-test
   set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
-  # These are only needed on Windows due to build differences
-  set (py_bld "$<$<PLATFORM_ID:Windows>:$<TARGET_FILE_DIR:qpid-proton-core>>")
   set (py_tests "${py_src}/tests")
   set (tests_py "${py_src}/../tests/py")
 
-  set (py_path $<$<TARGET_EXISTS:msgr-recv>:$<TARGET_FILE_DIR:msgr-recv>> ${py_bld} $ENV{PATH})
-  set (py_pythonpath ${py_tests} ${py_src} ${py_bin} ${tests_py} $ENV{PYTHONPATH})
-  to_native_path ("${py_pythonpath}" py_pythonpath)
-  to_native_path ("${py_path}" py_path)
+  unset (py_path)
+  if (TARGET msgr-recv)
+    list (APPEND py_path $<TARGET_FILE_DIR:msgr-recv>)
+  endif ()
+  if (WIN32)
+    # Only needed on Windows due to build differences: DLLs are found on PATH
+    list (APPEND py_path $<TARGET_FILE_DIR:qpid-proton-core>)
+  endif ()
+  set (py_pythonpath ${py_tests} ${py_src} ${py_bin} ${tests_py})
 
   if (CMAKE_BUILD_TYPE MATCHES "Coverage")
     set (python_coverage_module "coverage")
@@ -280,20 +283,20 @@ if (BUILD_TESTING)
     pn_add_test(
       INTERPRETED
       NAME python-test
-      PREPEND_ENVIRONMENT
-        "PATH=${py_path}"
+      ENVIRONMENT
         "PYTHONPATH=."
         "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+      PATH_PREPEND ${py_path}
       COMMAND ${pytest_executable} ${python_coverage_options} -- "${py_tests}/proton-test")
 
     set(PYTHON_TEST_COMMAND "-m" "unittest")
     pn_add_test(
       INTERPRETED
       NAME python-integration-test
-      PREPEND_ENVIRONMENT
-        "PATH=${py_path}"
-        "PYTHONPATH=.:${py_pythonpath}"
+      ENVIRONMENT
         "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+      PATH_PREPEND ${py_path}
+      PYTHONPATH_PREPEND . ${py_pythonpath}
       COMMAND
         ${pytest_executable}
           ${python_coverage_options}
@@ -334,12 +337,11 @@ if (BUILD_TESTING)
     pn_add_test(
       INTERPRETED
       NAME python-tox-test
-      WORKING_DIRECTORY ${py_dist_dir}
-      PREPEND_ENVIRONMENT
-        "PATH=${py_path}"
+      ENVIRONMENT
         "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
         "TOXENV=${TOX_ENVLIST}"
         "PY_TEST_DIR=${CMAKE_CURRENT_SOURCE_DIR}/tests"
+      PATH_PREPEND ${py_path}
       COMMAND ${Python_EXECUTABLE} -m tox)
     set_tests_properties(python-tox-test
       PROPERTIES

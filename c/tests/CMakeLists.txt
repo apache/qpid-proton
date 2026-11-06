@@ -18,10 +18,11 @@
 #
 
 include_directories(${PROJECT_SOURCE_DIR}/tests/include)
+set(test_env "TEST_CERT_DIR=${TEST_CERT_DIR}")
 if (WIN32)
-  set(test_env "PATH=$<TARGET_FILE_DIR:qpid-proton-core>;TEST_CERT_DIR=${TEST_CERT_DIR}")
+  # Windows looks for DLLs on PATH
+  set(test_path $<TARGET_FILE_DIR:qpid-proton-core>)
 else()
-  set(test_env "TEST_CERT_DIR=${TEST_CERT_DIR}")
   set(platform_test_src ssl_test.cpp)
 endif()
 
@@ -57,7 +58,8 @@ if (CMAKE_CXX_COMPILER)
     pn_add_test(
       EXECUTABLE
       NAME ${exe}
-      PREPEND_ENVIRONMENT ${test_env}
+      ENVIRONMENT ${test_env}
+      PATH_PREPEND ${test_path}
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       COMMAND $<TARGET_FILE:${exe}>)
   endmacro()
@@ -110,29 +112,29 @@ if (CMAKE_CXX_COMPILER)
       pn_add_test(
         EXECUTABLE
         NAME c-threaderciser
-        PREPEND_ENVIRONMENT ${test_env}
+        ENVIRONMENT ${test_env}
+        PATH_PREPEND ${test_path}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND $<TARGET_FILE:c-threaderciser>)
     endif()
 
+    set(fdlimit_path $<TARGET_FILE_DIR:c-broker>)
     if(WIN32)
-      set(path "$<TARGET_FILE_DIR:c-broker>\\;$<TARGET_FILE_DIR:qpid-proton>")
-    else(WIN32)
-      set(path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
-    endif(WIN32)
-
-    set(pypath "${PROJECT_SOURCE_DIR}/tests/py")
+      list(APPEND fdlimit_path $<TARGET_FILE_DIR:qpid-proton>)
+    endif()
 
     # Disable fdlimit test by default. Flaky throughout its history and implementations.
     # Very useful for proactor development, so keep around.
     option(ENABLE_FDLIMIT_TEST "Run the fdlimit recovery test" OFF)
     if (ENABLE_FDLIMIT_TEST)
-      # unset TEST_EXE_PREFIX as valgrind does not run successfully when fds are limited
       pn_add_test(
         UNWRAPPED
         NAME c-fdlimit-tests
-        PREPEND_ENVIRONMENT "PATH=${path}" "PYTHONPATH=${pypath}" "${test_env}"
-        APPEND_ENVIRONMENT "TEST_EXE_PREFIX="
+        ENVIRONMENT ${test_env}
+        PATH_PREPEND ${fdlimit_path}
+        PYTHONPATH_PREPEND "${PROJECT_SOURCE_DIR}/tests/py"
+        # valgrind does not run successfully when fds are limited
+        UNSET_ENVIRONMENT TEST_EXE_PREFIX
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
     endif()

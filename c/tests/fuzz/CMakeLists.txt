@@ -63,7 +63,8 @@ macro (pn_add_fuzz_test test)
     pn_add_test(
       EXECUTABLE
       NAME ${test}
-      PREPEND_ENVIRONMENT ${test_env}
+      ENVIRONMENT ${test_env}
+      PATH_PREPEND ${test_path}
       COMMAND $<TARGET_FILE:${test}> "@${CMAKE_CURRENT_BINARY_DIR}/${test}-files")
   else ()
     pn_add_test(

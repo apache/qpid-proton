@@ -66,7 +66,7 @@ if (BUILD_GO)
     "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
     CACHE INTERNAL "Run a command with Go environment variables")
 
-  set(GO ${PN_ENV_SCRIPT} -- ${GO_ENV} ${GO_EXE} CACHE INTERNAL "Run go with environment set")
+  set(GO ${CMAKE_COMMAND} -E env ${GO_ENV} -- ${GO_EXE} CACHE INTERNAL "Run go with environment set")
 
   set(GO_BUILD ${GO} build ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} CACHE INTERNAL "Run go build")
   set(GO_INSTALL ${GO} install ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go install" )
