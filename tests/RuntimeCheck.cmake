@@ -23,6 +23,7 @@
 # Normally they are set as a result of the RUNTIME_CHECK value,
 # but can be set directly for unsupported tools or unusual flags
 # e.g. -DTEST_EXE_PREFIX=rr or -DTEST_EXE_PREFIX="valgrind --tool=massif"
+# A prefix set that way wins: RUNTIME_CHECK will not overwrite it.
 
 set(TEST_EXE_PREFIX "" CACHE STRING "Prefix for test executable command line")
 set(TEST_WRAP_PREFIX "" CACHE STRING "Prefix for interpreter tests (e.g. python, ruby) that load proton as an extension")
@@ -32,6 +33,23 @@ set(TEST_ENV "" CACHE STRING "Extra environment for tests: name1=value1;name2=va
 set(TEST_CERT_DIR "${Proton_SOURCE_DIR}/tests/ssl-certs" CACHE PATH "Directory containing test SSL certificates")
 
 mark_as_advanced(FORCE TEST_EXE_PREFIX TEST_WRAP_PREFIX TEST_ENV TEST_CERT_DIR)
+
+# Remember the values the user gave us, before the RUNTIME_CHECK settings
+# below have a chance to replace them.
+set(USER_TEST_EXE_PREFIX "${TEST_EXE_PREFIX}")
+set(USER_TEST_WRAP_PREFIX "${TEST_WRAP_PREFIX}")
+
+# Set a test command prefix for the chosen RUNTIME_CHECK, unless the user
+# asked for a particular prefix, in which case theirs is left alone.
+# TEST_ENV does not need this: it is appended to, so anything the user sets
+# is already kept.
+macro(set_test_prefix var value)
+  if(USER_${var})
+    message(STATUS "${var} set explicitly, not overridden by RUNTIME_CHECK=${RUNTIME_CHECK}: ${USER_${var}}")
+  else()
+    set(${var} "${value}")
+  endif()
+endmacro()
 
 # Check for valgrind
 find_program(VALGRIND_EXECUTABLE valgrind DOC "location of valgrind program")
@@ -123,20 +141,20 @@ endmacro()
 if(RUNTIME_CHECK STREQUAL "memcheck")
   assert_has_valgrind()
   message(STATUS "Runtime memory checker: valgrind memcheck")
-  set(TEST_EXE_PREFIX "${VALGRIND_EXECUTABLE} --tool=memcheck --leak-check=full ${VALGRIND_COMMON_ARGS}")
+  set_test_prefix(TEST_EXE_PREFIX "${VALGRIND_EXECUTABLE} --tool=memcheck --leak-check=full ${VALGRIND_COMMON_ARGS}")
   # TODO aconway 2018-09-06: NO TEST_WRAP_PREFIX, need --trace-children + many suppressions
 
 elseif(RUNTIME_CHECK STREQUAL "helgrind")
   assert_has_valgrind()
   message(STATUS "Runtime race checker: valgrind helgrind")
-  set(TEST_EXE_PREFIX "${VALGRIND_EXECUTABLE} --tool=helgrind ${VALGRIND_COMMON_ARGS}")
+  set_test_prefix(TEST_EXE_PREFIX "${VALGRIND_EXECUTABLE} --tool=helgrind ${VALGRIND_COMMON_ARGS}")
   # TODO aconway 2018-09-06: NO TEST_WRAP_PREFIX, need --trace-children + many suppressions
 
 elseif(RUNTIME_CHECK STREQUAL "asan")
   assert_has_sanitizers()
   message(STATUS "Runtime memory checker: gcc/clang memory sanitizers")
   set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer ${SHARED_LIBASAN_${CMAKE_C_COMPILER_ID}} -fsanitize=address,undefined -fsanitize-recover=vptr")
-  set(TEST_WRAP_PREFIX "${PROJECT_SOURCE_DIR}/tests/preload_asan.sh $<TARGET_FILE:qpid-proton-core>")
+  set_test_prefix(TEST_WRAP_PREFIX "${PROJECT_SOURCE_DIR}/tests/preload_asan.sh $<TARGET_FILE:qpid-proton-core>")
   list(APPEND TEST_ENV "UBSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tests/ubsan.supp")
   list(APPEND TEST_ENV "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tests/lsan.supp")
   sanitizer_runtime_rpath(SANITIZER_RPATH)
@@ -145,7 +163,7 @@ elseif(RUNTIME_CHECK STREQUAL "tsan")
   assert_has_sanitizers()
   message(STATUS "Runtime race checker: gcc/clang thread sanitizer")
   set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=thread")
-  set(TEST_WRAP_PREFIX "${PROJECT_SOURCE_DIR}/tests/preload_tsan.sh $<TARGET_FILE:qpid-proton-core>")
+  set_test_prefix(TEST_WRAP_PREFIX "${PROJECT_SOURCE_DIR}/tests/preload_tsan.sh $<TARGET_FILE:qpid-proton-core>")
   list(APPEND TEST_ENV "TSAN_OPTIONS=second_deadlock_stack=1 suppressions=${PROJECT_SOURCE_DIR}/tests/tsan.supp")
   sanitizer_runtime_rpath(SANITIZER_RPATH)
 
