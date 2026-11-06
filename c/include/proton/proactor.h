@@ -325,7 +325,7 @@ PNP_EXTERN void pn_connection_wake(pn_connection_t *connection);
 /**
  * **Unsettled API** Send available AMQP protocol frames to the remote peer.
  *
- * Generate as many currently availabe AMQP frames for @p connection that can be sent on
+ * Generate as many currently available AMQP frames for @p connection that can be sent on
  * the network to the remote peer without blocking.  May help reduce latency, at the expense of
  * extra processing overhead, for event handlers that spend a long time processing a
  * single event batch.  Has little effect if called soon before a call to
