@@ -47,6 +47,41 @@ if((CMAKE_C_COMPILER_ID MATCHES "GNU"
   set(HAS_SANITIZERS TRUE)
 endif()
 
+# Per-compiler sanitizer settings, selected by the ..._${CMAKE_C_COMPILER_ID}
+# suffix below. A compiler with no entry gets an empty value and no special
+# treatment.
+
+# clang defaults to static sanitizer libs (which is preferred), but then we
+# cannot LD_PRELOAD.
+set(SHARED_LIBASAN_Clang "-shared-libasan")
+
+# Having linked the sanitizer runtime dynamically, clang puts it in a
+# directory that the loader does not search by default, so anything built
+# here fails to start. Ask the compiler where that directory is, to put it in
+# the RPATH. gcc's sanitizer libraries are already on the default search path.
+set(PRINT_RUNTIME_DIR_Clang "-print-runtime-dir")
+
+# Set <result> to a link flag that finds the compiler's sanitizer runtime at
+# run time, or to empty for a compiler that does not need one. Using RPATH
+# rather than LD_LIBRARY_PATH keeps the binaries runnable on their own,
+# outside of ctest.
+function(sanitizer_runtime_rpath result)
+  set(${result} "" PARENT_SCOPE)
+  set(print_runtime_dir ${PRINT_RUNTIME_DIR_${CMAKE_C_COMPILER_ID}})
+  if(NOT print_runtime_dir)
+    return()
+  endif()
+  execute_process(
+    COMMAND ${CMAKE_C_COMPILER} ${print_runtime_dir}
+    OUTPUT_VARIABLE runtime_dir
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+  if(runtime_dir)
+    file(REAL_PATH "${runtime_dir}" runtime_dir)
+    set(${result} "-Wl,-rpath,${runtime_dir}" PARENT_SCOPE)
+  endif()
+endfunction()
+
 # Valid values for RUNTIME_CHECK
 set(runtime_checks OFF asan tsan memcheck helgrind)
 
@@ -100,15 +135,11 @@ elseif(RUNTIME_CHECK STREQUAL "helgrind")
 elseif(RUNTIME_CHECK STREQUAL "asan")
   assert_has_sanitizers()
   message(STATUS "Runtime memory checker: gcc/clang memory sanitizers")
-  # clang defaults to static sanitizer libs (which is preferred), but then we cannot LD_PRELOAD
-  if (CMAKE_C_COMPILER_ID MATCHES "Clang")
-      set(CLANG_ASAN_FLAG "-shared-libasan")
-  endif()
-
-  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer ${CLANG_ASAN_FLAG} -fsanitize=address,undefined -fsanitize-recover=vptr")
+  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer ${SHARED_LIBASAN_${CMAKE_C_COMPILER_ID}} -fsanitize=address,undefined -fsanitize-recover=vptr")
   set(TEST_WRAP_PREFIX "${PROJECT_SOURCE_DIR}/tests/preload_asan.sh $<TARGET_FILE:qpid-proton-core>")
   list(APPEND TEST_ENV "UBSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tests/ubsan.supp")
   list(APPEND TEST_ENV "LSAN_OPTIONS=suppressions=${PROJECT_SOURCE_DIR}/tests/lsan.supp")
+  sanitizer_runtime_rpath(SANITIZER_RPATH)
 
 elseif(RUNTIME_CHECK STREQUAL "tsan")
   assert_has_sanitizers()
@@ -116,6 +147,7 @@ elseif(RUNTIME_CHECK STREQUAL "tsan")
   set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=thread")
   set(TEST_WRAP_PREFIX "${PROJECT_SOURCE_DIR}/tests/preload_tsan.sh $<TARGET_FILE:qpid-proton-core>")
   list(APPEND TEST_ENV "TSAN_OPTIONS=second_deadlock_stack=1 suppressions=${PROJECT_SOURCE_DIR}/tests/tsan.supp")
+  sanitizer_runtime_rpath(SANITIZER_RPATH)
 
 elseif(RUNTIME_CHECK)
   message(FATAL_ERROR "'RUNTIME_CHECK=${RUNTIME_CHECK}' is invalid, valid values: ${runtime_checks}")
@@ -123,8 +155,15 @@ endif()
 
 if(SANITIZE_FLAGS)
   set(ENABLE_UNDEFINED_ERROR OFF CACHE BOOL "Disabled for sanitizers" FORCE)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SANITIZE_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SANITIZE_FLAGS}")
+  string(APPEND CMAKE_C_FLAGS " ${SANITIZE_FLAGS}")
+  string(APPEND CMAKE_CXX_FLAGS " ${SANITIZE_FLAGS}")
+  # A link flag only: in CMAKE_<LANG>_FLAGS it would also reach the compile
+  # line, where clang reports it as an unused argument. SANITIZER_RPATH is
+  # empty unless we are building with a compiler that needs it, and these
+  # appends then add nothing but a space.
+  string(APPEND CMAKE_EXE_LINKER_FLAGS " ${SANITIZER_RPATH}")
+  string(APPEND CMAKE_SHARED_LINKER_FLAGS " ${SANITIZER_RPATH}")
+  string(APPEND CMAKE_MODULE_LINKER_FLAGS " ${SANITIZER_RPATH}")
 endif()
 
 if(TEST_EXE_PREFIX)
