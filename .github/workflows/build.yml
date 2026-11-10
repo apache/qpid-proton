@@ -58,7 +58,10 @@ jobs:
     - name: Install MacOS dependencies
       if: runner.os == 'macOS'
       run: |
-        brew install libuv swig pkgconfig jsoncpp
+        brew install libuv pkgconfig jsoncpp openssl@3.6
+        OPENSSL_PREFIX="$(brew --prefix openssl@3.6)"
+        echo "OPENSSL_ROOT_DIR=$OPENSSL_PREFIX" >> "$GITHUB_ENV"
+        echo "PKG_CONFIG_PATH=$OPENSSL_PREFIX/lib/pkgconfig" >> "$GITHUB_ENV"
     - name: OTel build/install
       if: runner.os == 'Linux'
       working-directory: ${{github.workspace}}
