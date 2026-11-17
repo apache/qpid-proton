@@ -13,13 +13,14 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
 import os
-import sys
-sys.path.insert(0, os.path.abspath('../python'))
+
+# import sys
+# sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
 project = 'Qpid Proton Python API'
-copyright = '2019, Apache Qpid Contributors'
+copyright = '2026, Apache Qpid Contributors'
 author = 'Apache Qpid Contributors'
 
 # The short X.Y version
@@ -196,4 +197,3 @@ epub_exclude_files = ['search.html']
 
 
 # -- Extension configuration -------------------------------------------------
-autodoc_mock_imports = ['cproton_ffi']

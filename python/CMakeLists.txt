@@ -71,6 +71,7 @@ if (NOT SPHINX_MODULE_FOUND)
     message(STATUS "Sphinx modules not found; doc generation disabled.")
 else ()
     add_custom_target(docs-py
+	      DEPENDS .timestamp.test_env
         COMMAND ${PN_ENV_SCRIPT} --
         PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
         LD_LIBRARY_PATH="${CMAKE_CURRENT_BINARY_DIR}/c"
@@ -188,10 +189,51 @@ if (BUILD_MODULE_FOUND AND
   add_custom_target(pydist ALL DEPENDS .timestamp.dist)
 endif ()
 
+set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
+
+if (ENABLE_PYTHON_ISOLATED)
+  # Create Python virtual environment to run tests
+  set(pytest_venv "${py_bin}/pytest_env")
+  # Have to use a conditional here as you can't use generator expressions in OUTPUT or BYPRODUCTS
+  if (WIN32)
+  set(py_venv_bin "Scripts")
+  else()
+  set(py_venv_bin "bin")
+  endif()
+  set(pytest_bin "${pytest_venv}/${py_venv_bin}")
+  set(pytest_executable "${pytest_bin}/python${CMAKE_EXECUTABLE_SUFFIX}")
+
+  add_custom_command(
+    OUTPUT .timestamp.test_env
+    COMMAND ${Python_EXECUTABLE} -m venv ${pytest_venv}
+    COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi "${python_coverage_module}"
+    COMMAND ${CMAKE_COMMAND} -E env
+      "CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}"
+      "QPID_PROTON_CORE_TARGET_DIR=$<TARGET_FILE_DIR:qpid-proton-core>"
+      "QPID_PYTHON_UNBUNDLING=devtree"
+      ${pytest_executable} -m pip install -e .
+    COMMAND ${pytest_executable} -m pip freeze > ${pytest_venv}/env.txt
+    COMMAND ${CMAKE_COMMAND} -E touch .timestamp.test_env
+    BYPRODUCTS ${pytest_executable}
+  )
+elseif(CFFI_MODULE_FOUND)
+  set(pytest_executable "${Python_EXECUTABLE}")
+  set(pytest_venv "${py_bin}")
+  add_custom_command(
+    OUTPUT .timestamp.test_env
+    COMMAND ${CMAKE_COMMAND} -E remove -f ${pytest_venv}/env.txt
+    COMMAND ${CMAKE_COMMAND} -E env
+      "CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}"
+      "QPID_PROTON_CORE_TARGET_DIR=$<TARGET_FILE_DIR:qpid-proton-core>"
+      ${pytest_executable} ext_build_devtree.py
+    COMMAND ${CMAKE_COMMAND} -E touch .timestamp.test_env
+    DEPENDS pysrc_copied qpid-proton-core
+  )
+endif()
+
 if (BUILD_TESTING)
   # python test: python/tests/proton-test
   set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
-  set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
   # These are only needed on Windows due to build differences
   set (py_bld "$<$<PLATFORM_ID:Windows>:$<TARGET_FILE_DIR:qpid-proton-core>>")
   set (py_tests "${py_src}/tests")
@@ -207,51 +249,11 @@ if (BUILD_TESTING)
     set (python_coverage_options -m ${python_coverage_module} run --branch --parallel-mode)
   endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
-  if (ENABLE_PYTHON_ISOLATED)
-    # Create Python virtual environment to run tests
-    set(pytest_venv "${py_bin}/pytest_env")
-    # Have to use a conditional here as you can't use generator expressions in OUTPUT or BYPRODUCTS
-    if (WIN32)
-    set(py_venv_bin "Scripts")
-    else()
-    set(py_venv_bin "bin")
-    endif()
-    set(pytest_bin "${pytest_venv}/${py_venv_bin}")
-    set(pytest_executable "${pytest_bin}/python${CMAKE_EXECUTABLE_SUFFIX}")
-
-    add_custom_command(
-      OUTPUT .timestamp.test_env
-      COMMAND ${Python_EXECUTABLE} -m venv ${pytest_venv}
-      COMMAND ${pytest_executable} -m pip install --disable-pip-version-check cffi "${python_coverage_module}"
-      COMMAND ${CMAKE_COMMAND} -E env
-        "CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}"
-        "QPID_PROTON_CORE_TARGET_DIR=$<TARGET_FILE_DIR:qpid-proton-core>"
-        "QPID_PYTHON_UNBUNDLING=devtree"
-        ${pytest_executable} -m pip install -e .
-      COMMAND ${pytest_executable} -m pip freeze > ${pytest_venv}/env.txt
-      COMMAND ${CMAKE_COMMAND} -E touch .timestamp.test_env
-      BYPRODUCTS ${pytest_executable}
-    )
-    add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
-  elseif(CFFI_MODULE_FOUND)
-    set(pytest_executable "${Python_EXECUTABLE}")
-    set(pytest_venv "${py_bin}")
-    add_custom_command(
-      OUTPUT .timestamp.test_env
-      COMMAND ${CMAKE_COMMAND} -E remove -f ${pytest_venv}/env.txt
-      COMMAND ${CMAKE_COMMAND} -E env
-        "CMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}"
-        "QPID_PROTON_CORE_TARGET_DIR=$<TARGET_FILE_DIR:qpid-proton-core>"
-        ${pytest_executable} ext_build_devtree.py
-      COMMAND ${CMAKE_COMMAND} -E touch .timestamp.test_env
-      DEPENDS pysrc_copied qpid-proton-core
-    )
-    add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
-  endif()
-
   # Export the pytest executable to the parent scope so it can be used by other tests
   set(PYTHON_TEST_EXECUTABLE "${pytest_executable}" PARENT_SCOPE)
-  
+
+  add_custom_target(pytest_cffi ALL DEPENDS .timestamp.test_env)
+
   # If we are doing coverage, then post process the python coverage data before running the coverage target
   if (CMAKE_BUILD_TYPE MATCHES "Coverage")
     add_custom_command(

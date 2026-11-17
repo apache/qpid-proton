@@ -92,6 +92,7 @@ class EventType:
     """
     _lock = threading.Lock()
     _extended = TypeExtender(10000)
+    #: :meta private:
     TYPES = {}
 
     def __init__(self, name: Optional[str] = None, number: Optional[int] = None, method: Optional[str] = None) -> None:

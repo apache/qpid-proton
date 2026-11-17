@@ -673,7 +673,7 @@ class Delivery(Wrapper):
         :const:`REJECTED`, :const:`RELEASED`.
 
         :param state: State of delivery, if omitted we assume the delivery state is already set
-        by other means
+                      by other means
         """
         if state:
             if isinstance(state, LocalDisposition):
