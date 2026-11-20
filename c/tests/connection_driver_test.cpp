@@ -618,3 +618,30 @@ TEST_CASE("driver_empty_last_frame") {
              cond_empty());
   CHECK_THAT(*pn_connection_condition(d.server.connection), cond_empty());
 }
+
+/* A str32 length near UINT32_MAX must not pass the consumer bounds check.
+   position+size wrapped on a 32-bit size_t and the oversized string was accepted.
+*/
+TEST_CASE("driver_open_oversized_str32") {
+  pn_connection_driver_t d;
+  pn_connection_driver_init(&d, NULL, NULL);
+  pn_transport_set_server(d.transport);
+
+  const char frame[] =
+    "AMQP\x00\x01\x00\x00"
+    "\x00\x00\x00\x17\x02\x00\x00\x00" /* frame header: size 23, doff 2, AMQP, channel 0 */
+    "\x00\x53\x10"                     /* open performative */
+    "\xc0\x0a\x01"                     /* list8, size 10, count 1 */
+    "\xb1\xff\xff\xff\xff"             /* container-id: str32 claiming 0xFFFFFFFF bytes */
+    "AAAA";
+  size_t len = sizeof(frame) - 1;
+  pn_rwbytes_t buf = pn_connection_driver_read_buffer(&d);
+  REQUIRE(buf.size >= len);
+  memcpy(buf.start, frame, len);
+  pn_connection_driver_read_done(&d, len);
+  while (pn_connection_driver_next_event(&d))
+    ;
+
+  CHECK(pn_connection_remote_container(d.connection) == NULL);
+  pn_connection_driver_destroy(&d);
+}
