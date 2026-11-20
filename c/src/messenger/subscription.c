@@ -111,9 +111,9 @@ int pni_subscription_set_address(pn_subscription_t *sub, const char *address)
     return pn_string_set(sub->address, address);
   } else {
     pn_string_set(sub->address, "");
-    bool scheme = pn_string_get(sub->scheme);
+    const char *scheme = pn_string_get(sub->scheme);
     if (scheme) {
-      int e = pn_string_addf(sub->address, "%s:", pn_string_get(sub->scheme));
+      int e = pn_string_addf(sub->address, "%s:", scheme);
       if (e) return e;
     }
     if (pn_string_get(sub->host)) {

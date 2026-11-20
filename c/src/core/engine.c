@@ -943,7 +943,7 @@ static bool pn_ep_bound(pn_endpoint_t *endpoint)
 
   switch (endpoint->type) {
   case CONNECTION:
-    return ((pn_connection_t *)endpoint)->transport;
+    return ((pn_connection_t *)endpoint)->transport != NULL;
   case SESSION:
     ssn = (pn_session_t *) endpoint;
     return (((int16_t) ssn->state.local_channel) >= 0 || ((int16_t) ssn->state.remote_channel) >= 0);

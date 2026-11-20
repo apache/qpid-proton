@@ -206,7 +206,7 @@ bool pn_collector_pop(pn_collector_t *collector) {
   if (event) {
     pn_decref(event);
   }
-  return event;
+  return event != NULL;
 }
 
 pn_event_t *pn_collector_next(pn_collector_t *collector) {
