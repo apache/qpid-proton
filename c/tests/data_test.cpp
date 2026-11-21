@@ -470,6 +470,23 @@ TEST_CASE("data_format_no_free_space") {
   CHECK(size == 0);
 }
 
+// A container whose declared content is smaller than the fixed-width fields it
+// must contain (the element count, and for an array the element constructor)
+// must be textified without reading past the frame.
+TEST_CASE("value_dump_truncated_container") {
+  char buf[64];
+
+  // LIST32 whose declared content size (1) cannot hold the 4-byte count.
+  const uint8_t list32[] = {0xd0, 0x00, 0x00, 0x00, 0x01, 0x55};
+  pn_value_dump(pn_bytes(sizeof(list32), (const char *)list32), buf, sizeof(buf));
+  CHECK(std::string(buf) == "[]");
+
+  // ARRAY32 carrying only its (zero) count, with no element constructor.
+  const uint8_t array32[] = {0xf0, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00};
+  pn_value_dump(pn_bytes(sizeof(array32), (const char *)array32), buf, sizeof(buf));
+  CHECK(std::string(buf) == "@<!!>[]");
+}
+
 TEST_CASE("data_map") {
   auto_free<pn_data_t, pn_data_free> data(pn_data(1));
 

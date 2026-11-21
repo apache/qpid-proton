@@ -324,6 +324,13 @@ static inline uint32_t consume_count(uint8_t type, pn_bytes_t *value) {
     count = value->start[0];
     *value = pn_bytes_advance(*value, 1);
   } else {
+    // A 32 bit count is four bytes; a truncated frame can leave fewer. Reading
+    // them anyway runs off the end of the value and underflows the remaining
+    // size, so treat a short count as an empty container.
+    if (value->size < 4) {
+      *value = pn_bytes_advance(*value, value->size);
+      return 0;
+    }
     count = pni_read32(value->start);
     *value = pn_bytes_advance(*value, 4);
   }
@@ -457,6 +464,12 @@ void pn_value_dump_array(uint32_t count, pn_bytes_t value, pn_fixed_string_t *ou
   uint8_t type = 0;
   pn_bytes_t evalue;
   if (count==0) {
+    // Even an empty array carries its element constructor, but a truncated
+    // frame may not: with no bytes left there is nothing to read.
+    if (value.size==0) {
+      pn_fixed_string_addf(output, "@<!!>[]");
+      return;
+    }
     type = *value.start;
   } else {
     size_t size = pni_frame_get_type_value(value, &type, &evalue);
